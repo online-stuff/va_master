@@ -8,9 +8,10 @@ from pbkdf2 import crypt
 
 @tornado.gen.coroutine
 def get_or_create_token(handler, username):
+    found = False
     try:
         token_doc = yield handler.datastore.get('tokens/by_username/%s' % username)
-        raise tornado.gen.Return(token_doc['token'])
+        found = True
     except:
         doc = {
             'token': uuid.uuid4().hex,
@@ -19,6 +20,9 @@ def get_or_create_token(handler, username):
         yield handler.datastore.insert('tokens/by_username/%s' % username, doc)
         yield handler.datastore.insert('tokens/by_token/%s' % doc['token'], doc)
         raise tornado.gen.Return(doc['token'])
+    finally:
+        if found:
+            raise tornado.gen.Return(token_doc['token'])
 
 @tornado.gen.coroutine
 def is_token_valid(handler, token):

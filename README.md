@@ -10,7 +10,7 @@ The requirement for running it is a virtual machine with Debian 8 Server or any 
 ```bash
 git clone this_repo
 mv this_repo /usr/lib/va_master/
-./usr/lib/va_master/install.py dc1
+/usr/lib/va_master/install.py dc1
 ```
 
 ## Docs
@@ -21,4 +21,4 @@ The docs are available [here](docs/)
 At the moment we are working on a test suite, which should contain unit tests and integration tests (with Salt-Cloud and Consul).
 
 ## License
-This project is distributed under [the GPL v3 license](http://www.gnu.org/licenses/gpl-3.0.en.html). 
+This project is distributed under [the GPL v3 license](http://www.gnu.org/licenses/gpl-3.0.en.html).
