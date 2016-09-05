@@ -1,0 +1,101 @@
+body{
+    margin: 0;
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    background: url('sidebar.png') repeat-y;
+    background-position: -200px top;
+}
+
+body.login {
+    background: #006eab;
+}
+
+.clearfix{
+    clear: both;
+}
+
+ul.left-menu{
+    list-style: none;
+    margin: 0;
+    margin-top: 15px;
+    padding: 0;
+    display: block;
+}
+ul.left-menu li{
+    display: list-item;
+    margin: 0;
+    padding: 0;
+}
+ul.left-menu a{
+    color: #555;
+    text-decoration: none;
+    display: block;
+    padding-top: 12px;
+    padding-bottom: 12px;
+    padding-left: 10px;
+    background: #e7e7e7;
+    font-size: 13px;
+}
+ul.left-menu a.active{
+    background: #006eab;
+    color: #fff;
+}
+
+.splash-login{
+    background: #fff;
+    box-shadow: 0 3px 7px rgba(0, 0, 0, 0.3);
+    border-radius: 6px;
+    position: absolute;
+    top: 80px;
+    left: 50%;
+    width: 390px;
+    margin-left: -195px;
+    padding: 20px 30px;
+}
+
+.top-header{
+    background: #006eab;
+    padding-top: 10px;
+    padding-bottom: 3px;
+    box-shadow: 0px 1px 2px rgba(0, 0, 0, 0.26);
+}
+
+.top-header img.logo {
+    float: left;
+}
+
+.top-header button.logout{
+    float: right;
+    margin-right: 10px;
+}
+
+.sidebar{
+    margin-left: -220px;
+    position: absolute;
+    left: 220px;
+    width: 220px;
+}
+
+.main-content{
+    padding-left: 235px;
+    padding-right: 15px;
+    padding-top: 10px;
+}
+
+.main-content .app-block{
+    float: left;
+    margin-right: 10px;
+}
+
+.main-content .app-block .icon-wrapper{
+    float: left;
+    padding-top: 10px;
+}
+
+.main-content .app-block .name-wrapper{
+    float: left;
+    padding-left: 10px;
+}
+
+.main-content .app-block .fa{
+    font-size: 32px;
+}
