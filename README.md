@@ -5,13 +5,30 @@ This is the core project of VapourApps, the master which contains:
 * The scheduler (spawning instances using `salt-cloud`, life-checks, key-value db)
 
 ## Installing
-The requirement for running it is a virtual machine with Debian 8 Server or any derivative such as Ubuntu Server. Python 2.7 must be installed. To install the master, run
+Requirements for installing:
+* Debian Server 8 or any derivative (such as Ubuntu Server)
+* No servers running on tcp/80, tcp/443, tcp/8600, tcp/8500, tcp/8400, tcp/8300
+* Python 2.7 and pip
 
 ```bash
-git clone this_repo
-mv this_repo /usr/lib/va_master/
-/usr/lib/va_master/install.py dc1
+sudo pip install .
+sudo vapourapps start 10.0.10.12 # enter the ip from which this machine can be accessed
 ```
+
+### Development mode
+Additional requirements for development:
+* NodeJS (to compile dashboard JavaScript code)
+* npm (to compile dashboard JavaScript code)
+
+```bash
+sudo pip install -e . # the additional flag allows editing Python code
+sudo vapourapps start --dev 10.0.10.12
+```
+
+### virtualenv warning
+`sudo pip` is not functional during a virtualenv session, because it's going to use
+the system's pip executable. Instead, login as root before activating the session (`sudo -i`).
+After doing that, everything should work nicely.
 
 ## Docs
 
