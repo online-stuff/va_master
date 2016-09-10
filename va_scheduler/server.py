@@ -2,20 +2,21 @@ import tornado.ioloop
 import tornado.web
 import tornado.gen
 import json
+import os
 from . import api
 
-class MainHandler(tornado.web.RequestHandler):
+class IndexHandler(tornado.web.RequestHandler):
+    """Handles the index page of the dashboard."""
+
+    def initialize(self, path):
+        index_path = os.path.join(path, 'index.html')
+        with open(index_path, 'r') as f:
+            self.index_code = f.read()
+
     def get(self):
-        self.write("""<!DOCTYPE html>
-            <head>
-                <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
-                <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.6.3/css/font-awesome.min.css">
-                <link rel="stylesheet" href="/static/style.css">
-                <script type="text/javascript" src="https://code.jquery.com/jquery-2.2.4.min.js"></script>
-                <script type="text/javascript" src="/static/bundle.js"></script>
-            </head>
-            <body class="nav-md"> <div id="body-wrapper"></body> </body>
-            </html>""")
+        self.write(self.index_code)
+        self.flush()
+        self.finish()
 
 class DebugStaticHandler(tornado.web.StaticFileHandler):
     """A static file handler that has debug features like no asset caching."""
@@ -26,10 +27,12 @@ class DebugStaticHandler(tornado.web.StaticFileHandler):
 
 
 def start(config):
+    path_settings = {'path': config.server_static_path}
+
     app = tornado.web.Application([
-        (r"/", MainHandler),
+        (r"/", IndexHandler, path_settings),
         (r"/api/(.*)", api.ApiHandler, {'config': config}),
-        (r"/static/(.*)", DebugStaticHandler, {'path':config.server_static_path})
+        (r"/static/(.*)", DebugStaticHandler, path_settings)
     ])
     # TODO: If config.release, disable debug mode for static assets
     # Note: running the debug mode is not dangerous in production, but it's slower.
