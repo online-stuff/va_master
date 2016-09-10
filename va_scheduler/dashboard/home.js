@@ -169,7 +169,7 @@ var Apps = React.createClass({
             <div>
                 <h1>Launch new app</h1>
                 <form onSubmit={this.onSubmit} className='form-horizontal'>
-                    <div className='form-group'
+                    <div className='form-group'>
                     <select>
                     </select> <br/>
                     <select>
@@ -179,6 +179,7 @@ var Apps = React.createClass({
                     <button>Launch</button>
                     <div style={{width: '100%', padding: 10, borderRadius: 5, background: statusColor, display: statusDisplay}}>
                         {statusMessage}
+                    </div>
                     </div>
                 </form>
             </div>

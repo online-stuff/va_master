@@ -5,8 +5,7 @@ from . import datastore
 
 def get_server_static():
     # get the server assets static path
-    return os.path.abspath(os.path.join(os.path.dirname( __file__ ), '..',
-       'dashboard', 'static'))
+    return os.path.abspath(os.path.join(os.path.dirname( __file__ ), 'dashboard', 'static'))
 
 class Config(object):
     """A `Config` contains the configuration options for the whole master. It doesn't

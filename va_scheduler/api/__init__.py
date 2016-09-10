@@ -1,7 +1,8 @@
 import tornado.web
 import tornado.gen
 from tornado.httpclient import AsyncHTTPClient, HTTPRequest
-from . import login
+from . import status, login, hosts, apps
+import json
 
 class ApiHandler(tornado.web.RequestHandler):
     def initialize(self, config):
@@ -16,7 +17,9 @@ class ApiHandler(tornado.web.RequestHandler):
 
     @tornado.gen.coroutine
     def get(self, path):
-        if path == 'drivers':
+        if path == 'status':
+            yield status.status(self)
+        elif path == 'drivers':
             yield hosts.list_drivers(self)
         elif path == 'hosts':
             yield hosts.list_hosts(self)
@@ -25,10 +28,8 @@ class ApiHandler(tornado.web.RequestHandler):
 
     @tornado.gen.coroutine
     def post(self, path):
-        if path == 'login/admin':
+        if path == 'login':
             yield login.admin_login(self)
-        elif path == 'login/ldap':
-            yield login.ldap_login(self)
         elif path == 'hosts':
             yield hosts.new_host(self)
         elif path == 'apps':

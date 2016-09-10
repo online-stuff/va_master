@@ -4,11 +4,19 @@ from tornado.httpclient import AsyncHTTPClient, HTTPRequest
 import json
 import base64
 
+class NotFound(IOError):
+    def __init__(self, doc_id):
+        super(IOError, self).__init__('The DataStore doesn\'t have the ' + \
+        'following doc_id: %s' % doc_id)
+        self.doc_id = doc_id
+
 class DataStore(object):
     """A DataStore is an abstract definition of a key-value store that can
     contain objects targeted by id, and it should support CRUD operations.
     It is used for storing app metadata, scheduling data and configuration."""
     __metaclass__ =  ABCMeta
+    NotFound = NotFound
+    HTTPError = tornado.httpclient.HTTPError
 
     @abstractmethod
     def insert(self, doc_id, document): pass
@@ -42,10 +50,16 @@ class ConsulStore(DataStore):
 
     @tornado.gen.coroutine
     def get(self, doc_id):
-        resp = yield self.client.fetch('%s/v1/kv/%s' % (self.path, doc_id))
-        resp = json.loads(resp.body)[0]['Value']
-        resp = json.loads(base64.b64decode(resp))
-        raise gen.Return(resp)
+        try:
+            resp = yield self.client.fetch('%s/v1/kv/%s' % (self.path, doc_id))
+            resp = json.loads(resp.body)[0]['Value']
+            resp = json.loads(base64.b64decode(resp))
+            raise gen.Return(resp)
+        except tornado.httpclient.HTTPError as e:
+            if e.code == 404:
+                raise NotFound(doc_id)
+            else:
+                raise
 
     @tornado.gen.coroutine
     def delete(self, doc_id):
