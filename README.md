@@ -27,8 +27,8 @@ sudo vapourapps start --dev 10.0.10.12
 
 ### virtualenv warning
 `sudo pip` is not functional during a virtualenv session, because it's going to use
-the system's pip executable. Instead, login as root before activating the session (`sudo -i`).
-After doing that, everything should work nicely.
+the system's pip executable. Instead, login as root before activating the session (`sudo -i`) and run the commands
+without the `sudo` prefix, for example: `root@deb# pip install .`
 
 ## Docs
 
