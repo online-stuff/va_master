@@ -2,6 +2,7 @@ import setuptools
 import distutils
 import sys
 import os
+import stat
 import logging
 import subprocess
 import urllib
@@ -48,6 +49,8 @@ def install_deps():
     consul_zip = zipfile.ZipFile(consul_zip_path, 'r')
     consul_zip.extractall('/usr/bin')
     consul_zip.close()
+    os.chmod('/usr/bin/consul', st.st_mode | stat.S_IEXEC)
+
     pkgs = ['supervisor', 'python-virtualenv', 'build-essential', 'python-dev',
         'libssl-dev', 'libffi-dev', 'libzmq3', 'libzmq3-dev']
     try:
@@ -62,17 +65,17 @@ def write_supervisor_conf():
         'python_path': sys.executable
     }
     supervisor_conf = '''[supervisord]
-    loglevel = debug
+loglevel=debug
 
-    [program:saltmaster]
-    command=%(salt_master_path)s
+[program:saltmaster]
+command=%(salt_master_path)s
 
-    [program:consul]
-    command = /usr/bin/consul agent -config-file=/etc/consul.json
-    startretries = 1
+[program:consul]
+command=/usr/bin/consul agent -config-file=/etc/consul.json
+startretries=1
 
-    [program:va_master]
-    command = %(python_path)s -m va_scheduler''' % paths
+[program:va_master]
+command=%(python_path)s -m va_scheduler''' % paths
     with open('/etc/supervisor/conf.d/supervisor_master.conf', 'w') as f:
         f.write(supervisor_conf)
 

@@ -85,6 +85,40 @@ def install():
 
 from . import config
 from .api import login
+import json
+import os
+import sys
+import argparse
+
+consul_conf_path = '/etc/consul.json'
+
+def is_cli():
+    # TODO: Find a way to separate a CLI entrypoint execution versus
+    # a standard module import
+    return True
+
+def cli_info(msg):
+    """Outputs a CLI information message to the console."""
+    if not is_cli(): return
+    sys.stdout.write('%s\n' % msg)
+
+def cli_success(msg):
+    """Outputs a CLI success message to the console."""
+    if not is_cli(): return
+    sys.stdout.write('%(green)s[success]%(nocolor)s %(msg)s\n' % {
+        'green': '\033[92m',
+        'nocolor': '\033[0m',
+        'msg': msg
+    })
+
+def cli_error(msg):
+    """Outputs a CLI error message to the console."""
+    if not is_cli(): return
+    sys.stderr.write('%(red)s[error]%(nocolor)s %(msg)s\n' % {
+        'red': '\033[91m',
+        'nocolor': '\033[0m',
+        'msg': msg
+    })
 
 def get_cli_config():
     """Get a valid `Config` that can be used during the CLI session."""
@@ -92,14 +126,44 @@ def get_cli_config():
     return config.Config()
 
 def handle_start(args):
-    """Handles cli `start` command"""
-    write_consul_conf()
+    """Handles cli `start` command. Should write proper conf and start daemon."""
+    def write_consul_conf(ip):
+        cli_info('Writing a Consul server configuration file...')
+        consul_conf = {
+            'datacenter': 'dc1',
+            'data_dir': '/usr/share/consul',
+            'advertise_addr': ip,
+            'bootstrap_expect': 1,
+            'server': True
+        }
+        with open(consul_conf_path, 'w') as f:
+            try:
+                json.dump(consul_conf, f) # Dump the configuration as JSON
+                cli_success('Consul configuration written, advertising %s as IP.' \
+                % ip)
+            except Exception as e:
+                cli_error('Cannot write Consul configuration, error: %s' % repr(e))
+    write_consul_conf(args.ip)
+    cli_info('Reloading the daemon...')
+    try:
+        subprocess.check_call(['supervisorctl', 'reread'])
+        subprocess.check_call(['supervisorctl', 'reload'])
+        cli_success('Reloaded the daemon.')
+    except:
+        cli_error('Failed reloading the daemon, check supervisor logs.' + \
+        '\nYou may try `service supervisor restart` or ' + \
+        '/var/log/supervisor/supervisord.log')
 
-def new_admin(args):
-    """Handles cli `newadmin` command"""
+def handle_newadmin(args):
+    """Handles cli `newadmin` command. Should create new admin account."""
     pass
 
 def entry():
+    if os.geteuid() != 0:
+        prog = os.path.basename(sys.argv[0]) # program name
+        sys.stderr.write('You are not running as root. Try `sudo %s`\n' % prog)
+        sys.exit(1)
+
     parser = argparse.ArgumentParser(description='A VapourApps client interface')
     subparsers = parser.add_subparsers(help='action')
 
@@ -113,10 +177,10 @@ def entry():
     admin_sub.add_argument('username', help='Username of the account')
     admin_sub.add_argument('password', help='Password of the account')
     # args.sub will equal 'newadmin' if this subparser is used
-    start_sub.set_defaults(sub='newadmin') #
+    admin_sub.set_defaults(sub='newadmin') #
 
     args = parser.parse_args()
     # Define handlers for each subparser
     handlers = {'start': handle_start, 'newadmin': handle_newadmin}
-    # Call the specific subparser
+    # Call the proper handler based on the subparser argument
     handlers[args.sub](args)
