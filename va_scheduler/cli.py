@@ -1,11 +1,16 @@
-from . import config, installer
+from . import config, environment
 from .api import login
 from datetime import datetime
+import tornado.ioloop
 import json
 import os
 import sys
+import time
 import argparse
 import subprocess
+import distutils
+import traceback
+import functools
 
 consul_conf_path = '/etc/consul.json'
 
@@ -37,26 +42,23 @@ def cli_error(msg):
         'msg': msg
     })
 
-def get_cli_config():
-    """Get a valid `Config` that can be used during the CLI session."""
-    # TODO: Use persistent config file
-    return config.Config()
 
-def handle_start(args):
+def handle_init(args):
     """Handles cli `start` command. Should write proper conf and start daemon."""
+    # If optional arguments weren't specified, interactively ask.
     attrs = [
         ('ip', 'Enter the IPv4 addr. of this machine'),
         ('admin_user', 'Enter username for the first admin'),
         ('admin_pass', 'Enter password for the first admin')]
     values = {}
     for attr in attrs:
-        if getattr(args, attr[0]) is None:
-            values[attr] = raw_input('%s: ' % attr[1])
-        else:
-            values[attr] = getattr(args, attr[0])
-
-    if os.geteuid() != 0:
-        cli_info('You are not running as root, going to interactively ask' + \
+        name = attr[0]
+        cmdhelp = attr[1]
+        values[name] = getattr(args, name)
+        if values[name] is None:
+            values[name] = raw_input('%s: ' % cmdhelp)
+    if os.geteuid() != 0: # Not root, re-run the same thing with sudo
+        cli_info('\n----\n[!] You are not running as root, going to interactively ask' + \
         ' for sudo.')
         has_sudo = os.path.isfile('/usr/bin/sudo')
         if not has_sudo:
@@ -65,30 +67,68 @@ def handle_start(args):
             return
         else:
             this_executable = distutils.spawn.find_executable('vapourapps')
+            # Note, `argparse` translates dashes('-') into underscores('_')
+            # in order to be Pythonic
+            this_args = [
+                '--ip', values['ip'],
+                '--admin-user', values['admin_user'],
+                '--admin-pass', values['admin_pass']]
             try:
-                subprocess.check_call('sudo', this_executable, 'pkgsetup', values['ip'])
+                subprocess.check_call(['sudo', this_executable, 'init'] + this_args)
             except:
-                pass
+                traceback.print_exc()
     else:
-        handle_pkgsetup(values['ip'])
-    tries = 0
-    while tries < 5:
-        
-def handle_pkgsetup(args):
-    """Handles `pkginstall` command. This is always ran as root."""
-    if os.geteuid() != 0:
-        cli_error('pkgsetup needs root.')
-        sys.exit(1)
-    cli_info('Configuring Consul...')
-    installer.conf_consul(args.ip)
-    cli_info('Installing packages...')
-    installer.install_pkgs()
-    cli_info('Reloading daemon...')
-    result = installer.reload_daemon()
-    if not result:
-        cli_error('Failed reloading the daemon, check supervisor logs.' + \
-        '\nYou may try `service supervisor restart` or ' + \
-        '/var/log/supervisor/supervisord.log')
+        result = True
+        try:
+            environment.write_supervisor_conf()
+            cli_success('Configured Supervisor.')
+        except:
+            cli_error('Failed configuring Supervisor: ')
+            traceback.print_exc()
+            result = False
+        try:
+            environment.write_consul_conf(values['ip'])
+            cli_success('Configured Consul.')
+        except:
+            cli_error('Failed configuring Consul: ')
+            traceback.print_exc()
+            result = False
+
+        if not result:
+            cli_error('Initialization failed because of one or more errors.')
+        else:
+            try:
+                environment.reload_daemon()
+                cli_success('Started daemon.')
+            except:
+                cli_error('Failed reloading the daemon, check supervisor logs.' + \
+                '\nYou may try `service supervisor restart` or ' + \
+                '/var/log/supervisor/supervisord.log')
+                traceback.print_exc()
+                sys.exit(1)
+
+            from .api import login
+            from . import datastore
+            store = datastore.ConsulStore()
+            run_sync = tornado.ioloop.IOLoop.instance().run_sync
+            tries = 1
+            failed = True
+            cli_info('Waiting for the key value store to come alive...')
+            while tries < 6:
+                is_running = run_sync(store.check_connection)
+                cli_info('  -> attempt #%i...' % tries)
+                if is_running:
+                    failed = False
+                    break
+                else:
+                    time.sleep(5)
+                    tries+= 1
+            if failed:
+                cli_error('Store connection timeout.')
+            else:
+                create_admin = functools.partial(login.create_admin,
+                    store, values['admin_user'], values['admin_pass'])
+                run_sync(create_admin)
 
 def entry():
     parser = argparse.ArgumentParser(description='A VapourApps client interface')
@@ -100,12 +140,7 @@ def entry():
     init_sub.add_argument('--admin-user', help='Username of the first admin')
     init_sub.add_argument('--admin-pass', help='Password of the first admin')
     # args.sub will equal 'start' if this subparser is used
-    start_sub.set_defaults(sub='init')
-
-    pkgsetup_sub = subparsers.add_parser('pkgsetup',
-        help='Installs required APT packages and sets up configuration')
-    pkgsetup_sub.add_argument('ip', help='IP address of this machine')
-    pkgsetup_sub.set_defaults(sub='pkgsetup')
+    init_sub.set_defaults(sub='init')
 
     stop_sub = subparsers.add_parser('stop', help='Stops the server')
     stop_sub.set_defaults(sub='stop')
@@ -114,8 +149,7 @@ def entry():
     # Define handlers for each subparser
     handlers = {
         'init': handle_init,
-        'pkgsetup': handle_pkgsetup,
-        'stop': handle_stop
+        'stop': lambda x: None
     }
     # Call the proper handler based on the subparser argument
     handlers[args.sub](args)

@@ -1,6 +1,7 @@
 from abc import ABCMeta, abstractmethod
-import tornado.gen
 from tornado.httpclient import AsyncHTTPClient, HTTPRequest
+import tornado.gen
+import tornado.ioloop
 import json
 import base64
 
@@ -15,33 +16,35 @@ class StoreError(Exception):
         """Parameters:
           exc - The internal exception that happened during Store transaction
         """
-        super(Exception, self).__init__(str(exc))
+        super(Exception, self).__init__(repr(exc))
         self.exc = exc
 
 class DataStore(object):
-    """A DataStore is an abstract definition of a key-value store that can
-    contain objects targeted by id, and it should support CRUD operations.
+    """A DataStore is an abstract definition of an async key-value store that
+    can contain objects targeted by id, and it should support CRUD operations.
     It is used for storing app metadata, scheduling data and configuration."""
     __metaclass__ =  ABCMeta
     KeyNotFound = KeyNotFound
     StoreError = StoreError
 
     @abstractmethod
+    @tornado.gen.coroutine
     def check_connection(self): pass
 
     @abstractmethod
-    def check_connection_sync(self): pass
-
-    @abstractmethod
+    @tornado.gen.coroutine
     def insert(self, doc_id, document): pass
 
     @abstractmethod
+    @tornado.gen.coroutine
     def update(self, doc_id, document): pass
 
     @abstractmethod
+    @tornado.gen.coroutine
     def get(self, doc_id): pass
 
     @abstractmethod
+    @tornado.gen.coroutine
     def delete(self, doc_id): pass
 
 class ConsulStore(DataStore):
@@ -54,13 +57,10 @@ class ConsulStore(DataStore):
     @tornado.gen.coroutine
     def check_connection(self):
         try:
-            result = yield self.client.fetch('%s/' % self.path)
+            result = yield self.client.fetch('%s/v1/status/leader' % self.path)
         except:
             raise tornado.gen.Return(False)
-        raise tornado.gen.Return(result.body == 'Consul Agent')
-
-    def check_connection_sync(self):
-        return ioloop.IOLoop.instance().run_sync(check_connection)
+        raise tornado.gen.Return(result.code == 200 and result.body != '""')
 
     @tornado.gen.coroutine
     def insert(self, doc_id, document):
@@ -69,33 +69,38 @@ class ConsulStore(DataStore):
             body=document_json)
         try:
             yield self.client.fetch(req)
-        except tornado.httpclient.HTTPError as e:
+        except Exception as e:
             raise StoreError(e)
 
     @tornado.gen.coroutine
     def update(self, doc_id, document):
         try:
             yield self.insert(doc_id, document)
-        except tornado.httpclient.HTTPError as e:
+        except Exception as e:
             raise StoreError(e)
 
     @tornado.gen.coroutine
     def get(self, doc_id):
+        is_ok = False
         try:
             resp = yield self.client.fetch('%s/v1/kv/%s' % (self.path, doc_id))
             resp = json.loads(resp.body)[0]['Value']
             resp = json.loads(base64.b64decode(resp))
-            raise tornado.gen.Return(resp)
+            is_ok = True
         except tornado.httpclient.HTTPError as e:
             if e.code == 404:
                 raise KeyNotFound(doc_id)
             else:
                 raise StoreError(e)
+        except Exception as e:
+            raise StoreError(e)
+        if is_ok:
+            raise tornado.gen.Return(resp)
 
     @tornado.gen.coroutine
     def delete(self, doc_id):
         try:
             req = HTTPRequest('%s/v1/kv/%s' % (self.path, doc_id), method='DELETE')
             yield self.client.fetch(req)
-        except tornado.httpclient.HTTPError as e:
+        except Exception as e:
             raise StoreError(e)
