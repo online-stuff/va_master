@@ -15,7 +15,7 @@ sudo pip install .
 sudo vapourapps start 10.0.10.12 # enter the ip from which this machine can be accessed
 ```
 
-### Development mode
+### Development on local machine
 Additional requirements for development:
 * NodeJS (to compile dashboard JavaScript code)
 * npm (to compile dashboard JavaScript code)

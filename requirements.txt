@@ -1,5 +1,0 @@
-tornado
-salt
-apache-libcloud
-python-novaclient
-pbkdf2
