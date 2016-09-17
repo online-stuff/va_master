@@ -113,18 +113,25 @@ def handle_init(args):
             run_sync(create_admin)
             cli_success('Created first account. Setup is finished.')
 
-def handle_jsbundle(args):
+def handle_jsbuild(args):
     try:
-        subprocess.check_call(['nodejs', bundle_path])
+        build_path = os.path.join(os.path.dirname(__file__), 'dashboard',
+            'build.js')
+        build_path = os.path.abspath(build_path)
+        subprocess.check_call(['node', build_path])
     except (OSError, subprocess.CalledProcessError):
-        cli_error('An error occured during compile invocation:')
+        cli_error('An error occured during compile invocation. Make sure' + \
+        ' NodeJS interpreter is in PATH, with name `node`.')
         traceback.print_exc()
+    else:
+        cli_success(('Compiled JS using the command `node %s`, into `' + \
+            'dashboard/static/*`') % build_path)
 
 def entry():
     parser = argparse.ArgumentParser(description='A VapourApps client interface')
     subparsers = parser.add_subparsers(help='action')
 
-    init_sub = subparsers.add_parser('init', help='Set up VapourApps')
+    init_sub = subparsers.add_parser('init', help='Initializes and starts server')
     init_sub.add_argument('--ip', help='The IP of this machine, which is ' + \
         'going to be advertised to apps')
     init_sub.add_argument('--admin-user', help='Username of the first admin')
@@ -132,9 +139,9 @@ def entry():
     # args.sub will equal 'start' if this subparser is used
     init_sub.set_defaults(sub='init')
 
-    js_bundle_sub = subparsers.add_parser('jsbundle', help='Compiles and' + \
+    jsbuild_sub = subparsers.add_parser('jsbuild', help='Compiles and' + \
     ' minifies JavaScript')
-    js_bundle_sub.set_defaults(sub='jsbundle')
+    jsbuild_sub.set_defaults(sub='jsbuild')
 
     stop_sub = subparsers.add_parser('stop', help='Stops the server')
     stop_sub.set_defaults(sub='stop')
@@ -143,7 +150,7 @@ def entry():
     # Define handlers for each subparser
     handlers = {
         'init': handle_init,
-        'jsbundle': handle_jsbundle,
+        'jsbuild': handle_jsbuild,
         'stop': lambda x: None
     }
     # Call the proper handler based on the subparser argument
