@@ -1,9 +1,9 @@
+from .api.handler import ApiHandler
 import tornado.ioloop
 import tornado.web
 import tornado.gen
 import json
 import os
-from . import api
 
 class IndexHandler(tornado.web.RequestHandler):
     """Handles the index page of the dashboard."""
@@ -31,7 +31,7 @@ def start(config):
 
     app = tornado.web.Application([
         (r"/", IndexHandler, path_settings),
-        (r"/api/(.*)", api.ApiHandler, {'config': config}),
+        (r"/api/(.*)", ApiHandler, {'config': config}),
         (r"/static/(.*)", DebugStaticHandler, path_settings)
     ])
     # TODO: If config.release, disable debug mode for static assets

@@ -1,24 +1,20 @@
 var React = require('react');
 var Router = require('react-router');
 var connect = require('react-redux').connect;
+var Network = require('./network');
 
 var Login = React.createClass({
     onSubmit: function(e) {
         e.preventDefault();
-        var data = JSON.stringify({
+        var data = {
             username: this.refs.username.value,
             password: this.refs.password.value
-        });
+        };
 
         var dispatch = this.props.dispatch;
-
-        $.ajax({
-            type: 'POST',
-            url: '/api/login',
-            contentType: 'application/json',
-            data: data
-        }).done(function(data){
-            dispatch({type: 'LOGIN', token: data.token});
+        Network.post('/api/login', null, data).done(function(d) {
+            dispatch({type: 'LOGIN', token: d.token,
+            username: data.username});
         }).fail(function(xhr){
             alert(xhr.status);
         });
@@ -38,6 +34,7 @@ var Login = React.createClass({
         return (
             <div className='splash-login'>
             <form className='login-form form-horizontal' onSubmit={this.onSubmit}>
+                <img src='/static/logo-splash.png' alt='VapourApps' className='splash-logo'/> 
                 <div className='form-group'>
                 <input placeholder='Username' className='form-control' ref='username'/>
                 </div>

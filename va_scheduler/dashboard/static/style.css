@@ -9,6 +9,11 @@ body.login {
     background: #006eab;
 }
 
+.splash-logo{
+    display: block;
+    margin-bottom: 50px;
+}
+
 .clearfix{
     clear: both;
 }

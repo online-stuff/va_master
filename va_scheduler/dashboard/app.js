@@ -9,30 +9,34 @@ var Provider = ReactRedux.Provider;
 
 function auth(state, action){
     if(typeof state === 'undefined'){
-        return {token: window.localStorage.getItem('token')};
+        var storageState = window.localStorage.getItem('auth'); // Check session
+        if(storageState !== null) {
+            return JSON.parse(storageState);
+        } else {
+            return {token: null, username: null};
+        }
     }
 
     var newState = Object.assign({}, state);
     if(action.type === 'LOGIN') {
-        window.localStorage.setItem('token', action.token);
+        newState.username = action.username;
         newState.token = action.token;
-        return newState;
     } else if(action.type === 'LOGOUT') {
-        window.localStorage.removeItem('token');
+        newState.username = null;
         newState.token = null;
-        return newState;
-    } else {
-        return state;
     }
+    // Add into session
+    window.localStorage.setItem('auth', JSON.stringify(newState));
+    return newState;
 };
 
 var mainReducer = Redux.combineReducers({auth: auth});
 var store = Redux.createStore(mainReducer);
 
-var Home = require('./home').Home;
-var Overview = require('./home').Overview;
-var Hosts = require('./home').Hosts;
-var Apps = require('./home').Apps;
+var Home = require('./tabs/home');
+var Overview = require('./tabs/overview');
+var Hosts = require('./tabs/hosts');
+var Apps = require('./tabs/apps');
 
 var Login = require('./login');
 var App = React.createClass({
@@ -50,7 +54,7 @@ var App = React.createClass({
   }
 });
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', function() {
   var el = document.getElementById('body-wrapper');
   ReactDOM.render(<Provider store={store}>
         <App/>

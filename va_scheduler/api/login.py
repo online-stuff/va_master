@@ -29,11 +29,24 @@ def get_or_create_token(datastore, username):
 def is_token_valid(datastore, token):
     valid = True
     try:
-        res = yield handler.datastore.get('tokens/by_token/%s' % token)
-    except:
+        res = yield datastore.get('tokens/by_token/%s' % token)
+    except datastore.KeyNotFound:
         valid = False
 
     raise tornado.gen.Return(valid)
+
+
+def auth_only(coroutine):
+    @tornado.gen.coroutine
+    def func(handler):
+        token = handler.request.headers.get('Authorization', '')
+        token = token.replace('Token ', '')
+        is_valid = yield is_token_valid(handler.datastore, token)
+        if not is_valid:
+            handler.json({'error': 'bad_token'}, 401)
+        else:
+            yield coroutine(handler)
+    return func
 
 @tornado.gen.coroutine
 def admin_login(handler):
@@ -41,10 +54,9 @@ def admin_login(handler):
 
     try:
         body = json.loads(handler.request.body)
+        username = body['username'].decode('utf8')
+        password = body['password'].decode('utf8')
     except:
-        handler.json({'error': 'bad_body'}, 400)
-
-    if 'username' not in body or 'password' not in body:
         handler.json({'error': 'bad_body'}, 400)
 
     try:
@@ -54,23 +66,24 @@ def admin_login(handler):
         # TODO: handle this gracefully?
         raise tornado.gen.Return()
 
-    username = body['username']
-    password = body['password']
-
     account_info = None
     for admin in admins:
         if admin['username'] == username:
             account_info = admin
             break
     if not account_info:
-        handler.json({'error': 'invalid_username'}, 401)
+        # Prevent timing attacks
+        account_info = {
+            'password_hash': '$c4k2f$CZoGExK0$aCCa3aKIGo/exx2j5AAsfhPtOePtwWbs'
+            'username': '__invalid__',
+            'timestamp_created': 0
+        }
+    pw_hash = account_info['password_hash']
+    if crypt(password, pw_hash) == pw_hash:
+        token = yield get_or_create_token(handler.datastore, username)
+        handler.json({'token': token})
     else:
-        pw_hash = account_info['password_hash']
-        if crypt(password, pw_hash) == pw_hash:
-            token = yield get_or_create_token(handler.datastore, username)
-            handler.json({'token': token})
-        else:
-            handler.json({'error': 'invalid_password'}, 401)
+        handler.json({'error': 'invalid_password'}, 401)
 
 @tornado.gen.coroutine
 def create_admin(datastore, username, password):

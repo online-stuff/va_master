@@ -77,25 +77,26 @@ def handle_init(args):
                 subprocess.check_call(['sudo', this_executable, 'init'] + this_args)
             except:
                 traceback.print_exc()
-    else:
-        result = True
+    else: # User ran this as root, or this is a root sudo subprocess.
+        result = True # If `result` is True, all actions completed successfully
         try:
             environment.write_supervisor_conf()
             cli_success('Configured Supervisor.')
         except:
             cli_error('Failed configuring Supervisor: ')
             traceback.print_exc()
-            result = False
+            result = False # We failed with step #1
         try:
             environment.write_consul_conf(values['ip'])
             cli_success('Configured Consul.')
         except:
             cli_error('Failed configuring Consul: ')
             traceback.print_exc()
-            result = False
+            result = False # We failed with step #2
 
         if not result:
             cli_error('Initialization failed because of one or more errors.')
+            sys.exit(1)
         else:
             try:
                 environment.reload_daemon()
@@ -112,7 +113,7 @@ def handle_init(args):
             store = datastore.ConsulStore()
             run_sync = tornado.ioloop.IOLoop.instance().run_sync
             tries = 1
-            failed = True
+            failed = True # True if timeout occured
             cli_info('Waiting for the key value store to come alive...')
             while tries < 6:
                 is_running = run_sync(store.check_connection)
@@ -125,11 +126,17 @@ def handle_init(args):
                     tries+= 1
             if failed:
                 cli_error('Store connection timeout.')
+                sys.exit(1)
             else:
+                # We have a connection, create an admin account
                 create_admin = functools.partial(login.create_admin,
                     store, values['admin_user'], values['admin_pass'])
                 run_sync(create_admin)
+                cli_success('Created first account. Setup is finished.')
 
+def handle_jsbundle(args):
+    try:
+        subprocess.check_call(['nodejs', ''])
 def entry():
     parser = argparse.ArgumentParser(description='A VapourApps client interface')
     subparsers = parser.add_subparsers(help='action')
@@ -142,6 +149,10 @@ def entry():
     # args.sub will equal 'start' if this subparser is used
     init_sub.set_defaults(sub='init')
 
+    js_bundle_sub = subparsers.add_parser('jsbundle', help='Compiles and' + \
+    ' minifies JavaScript')
+    js_bundle_sub.set_defaults(sub='jsbundle')
+
     stop_sub = subparsers.add_parser('stop', help='Stops the server')
     stop_sub.set_defaults(sub='stop')
 
@@ -149,6 +160,7 @@ def entry():
     # Define handlers for each subparser
     handlers = {
         'init': handle_init,
+        'jsbundle': handle_jsbundle,
         'stop': lambda x: None
     }
     # Call the proper handler based on the subparser argument

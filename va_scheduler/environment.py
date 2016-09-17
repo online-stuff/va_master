@@ -51,7 +51,6 @@ def write_consul_conf(ip):
 
 def reload_daemon():
     try:
-        subprocess.check_call(['supervisorctl', 'reread'])
         subprocess.check_call(['supervisorctl', 'reload'])
         return True
     except:
