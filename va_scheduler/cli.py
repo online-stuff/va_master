@@ -55,7 +55,7 @@ def handle_init(args):
         name = attr[0]
         cmdhelp = attr[1]
         values[name] = getattr(args, name)
-        if values[name] is None:
+        if values[name] is None: # The CLI `args` doesn't have it, ask.
             values[name] = raw_input('%s: ' % cmdhelp)
     if os.geteuid() != 0: # Not root, re-run the same thing with sudo
         cli_info('\n----\n[!] You are not running as root, going to interactively ask' + \
@@ -64,7 +64,7 @@ def handle_init(args):
         if not has_sudo:
             cli_error('Could not find `sudo` command in order to gain superuser' + \
             'priviliges. Try to install `sudo` and check if /usr/bin/sudo exists.')
-            return
+            sys.exit(1)
         else:
             this_executable = distutils.spawn.find_executable('vapourapps')
             # Note, `argparse` translates dashes('-') into underscores('_')

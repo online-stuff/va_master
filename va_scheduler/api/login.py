@@ -1,4 +1,4 @@
-import tornado.gen
+fimport tornado.gen
 import time
 import json
 import uuid
@@ -74,7 +74,7 @@ def admin_login(handler):
     if not account_info:
         # Prevent timing attacks
         account_info = {
-            'password_hash': '$c4k2f$CZoGExK0$aCCa3aKIGo/exx2j5AAsfhPtOePtwWbs'
+            'password_hash': '$c4k2f$CZoGExK0$aCCa3aKIGo/exx2j5AAsfhPtOePtwWbs',
             'username': '__invalid__',
             'timestamp_created': 0
         }
