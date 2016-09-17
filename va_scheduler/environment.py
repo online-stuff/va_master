@@ -10,8 +10,15 @@ import tempfile
 import platform
 import json
 
+# Datastore connection retry time
+DATASTORE_RETRY_TIME = 5
+DATASTORE_ATTEMPTS = 5
+# Supervisor configuration file path
+SUPERVISOR_CONF_PATH = '/etc/supervisor/conf.d/va_scheduler.conf'
+# Consul configuration file path
+CONSUL_CONF_PATH = '/etc/consul.json'
 # The template of running programs for Supervisor daemon
-supervisor_template = '''[supervisord]
+SUPERVISOR_TEMPLATE = '''[supervisord]
 loglevel=debug
 
 [program:saltmaster]
@@ -31,8 +38,9 @@ def write_supervisor_conf():
         'python_path': sys.executable
     }
     supervisor_conf = supervisor_template % paths
-    with open('/etc/supervisor/conf.d/supervisor_master.conf', 'w') as f:
+    with tempfile.NamedTemporaryFile(delete=false) as f:
         f.write(supervisor_conf)
+    subprocess.check_call(['sudo', 'mv', f.name, SUPERVISOR_CONF_PATH])
 
 def write_consul_conf(ip):
     """Writes configuration file for Consul server.
@@ -46,8 +54,9 @@ def write_consul_conf(ip):
         'bootstrap_expect': 1,
         'server': True
     }
-    with open('/etc/consul.json', 'w') as f:
+    with tempfile.NamedTemporaryFile(delete=false) as f:
         json.dump(json_conf, f)
+    subprocess.check_call(['sudo', 'mv', f.name, CONSUL_CONF_PATH])
 
 def reload_daemon():
     try:

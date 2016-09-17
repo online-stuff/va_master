@@ -57,27 +57,6 @@ def handle_init(args):
         values[name] = getattr(args, name)
         if values[name] is None: # The CLI `args` doesn't have it, ask.
             values[name] = raw_input('%s: ' % cmdhelp)
-    if os.geteuid() != 0: # Not root, re-run the same thing with sudo
-        cli_info('\n----\n[!] You are not running as root, going to interactively ask' + \
-        ' for sudo.')
-        has_sudo = os.path.isfile('/usr/bin/sudo')
-        if not has_sudo:
-            cli_error('Could not find `sudo` command in order to gain superuser' + \
-            'priviliges. Try to install `sudo` and check if /usr/bin/sudo exists.')
-            sys.exit(1)
-        else:
-            this_executable = distutils.spawn.find_executable('vapourapps')
-            # Note, `argparse` translates dashes('-') into underscores('_')
-            # in order to be Pythonic
-            this_args = [
-                '--ip', values['ip'],
-                '--admin-user', values['admin_user'],
-                '--admin-pass', values['admin_pass']]
-            try:
-                subprocess.check_call(['sudo', this_executable, 'init'] + this_args)
-            except:
-                traceback.print_exc()
-    else: # User ran this as root, or this is a root sudo subprocess.
         result = True # If `result` is True, all actions completed successfully
         try:
             environment.write_supervisor_conf()
@@ -112,20 +91,20 @@ def handle_init(args):
             from . import datastore
             store = datastore.ConsulStore()
             run_sync = tornado.ioloop.IOLoop.instance().run_sync
-            tries = 1
-            failed = True # True if timeout occured
+            attempts, failed = 1, True
             cli_info('Waiting for the key value store to come alive...')
-            while tries < 6:
+            while attempts <= environment.DATASTORE_ATTEMPTS:
                 is_running = run_sync(store.check_connection)
-                cli_info('  -> attempt #%i...' % tries)
+                cli_info('  -> attempt #%i...' % attempts)
                 if is_running:
                     failed = False
                     break
                 else:
-                    time.sleep(5)
-                    tries+= 1
+                    time.sleep(environment.DATASTORE_RETRY_TIME)
+                    attempts+= 1
             if failed:
-                cli_error('Store connection timeout.')
+                cli_error('Store connection timeout after %i attempts.' \
+                    % attempts)
                 sys.exit(1)
             else:
                 # We have a connection, create an admin account

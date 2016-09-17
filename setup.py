@@ -49,7 +49,8 @@ def install_osdeps():
 
     urllib.URLopener().retrieve(consul_url, consul_zip_path)
     consul_zip = zipfile.ZipFile(consul_zip_path, 'r')
-    consul_zip.extract('consul', consul_exe_path)
+    with open(consul_exe_path, 'w') as f:
+        f.write(consul_zip.read('consul'))
     consul_zip.close()
 
     pkgs = ['supervisor', 'python-virtualenv', 'build-essential', 'python-dev',
