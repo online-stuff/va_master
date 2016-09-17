@@ -57,65 +57,69 @@ def handle_init(args):
         values[name] = getattr(args, name)
         if values[name] is None: # The CLI `args` doesn't have it, ask.
             values[name] = raw_input('%s: ' % cmdhelp)
-        result = True # If `result` is True, all actions completed successfully
-        try:
-            environment.write_supervisor_conf()
-            cli_success('Configured Supervisor.')
-        except:
-            cli_error('Failed configuring Supervisor: ')
-            traceback.print_exc()
-            result = False # We failed with step #1
-        try:
-            environment.write_consul_conf(values['ip'])
-            cli_success('Configured Consul.')
-        except:
-            cli_error('Failed configuring Consul: ')
-            traceback.print_exc()
-            result = False # We failed with step #2
+    result = True # If `result` is True, all actions completed successfully
+    try:
+        environment.write_supervisor_conf()
+        cli_success('Configured Supervisor.')
+    except:
+        cli_error('Failed configuring Supervisor: ')
+        traceback.print_exc()
+        result = False # We failed with step #1
+    try:
+        environment.write_consul_conf(values['ip'])
+        cli_success('Configured Consul.')
+    except:
+        cli_error('Failed configuring Consul: ')
+        traceback.print_exc()
+        result = False # We failed with step #2
 
-        if not result:
-            cli_error('Initialization failed because of one or more errors.')
+    if not result:
+        cli_error('Initialization failed because of one or more errors.')
+        sys.exit(1)
+    else:
+        try:
+            environment.reload_daemon()
+            cli_success('Started daemon.')
+        except:
+            cli_error('Failed reloading the daemon, check supervisor logs.' + \
+            '\nYou may try `service supervisor restart` or ' + \
+            '/var/log/supervisor/supervisord.log')
+            traceback.print_exc()
+            sys.exit(1)
+
+        from .api import login
+        from . import datastore
+        store = datastore.ConsulStore()
+        run_sync = tornado.ioloop.IOLoop.instance().run_sync
+        attempts, failed = 1, True
+        cli_info('Waiting for the key value store to come alive...')
+        while attempts <= environment.DATASTORE_ATTEMPTS:
+            is_running = run_sync(store.check_connection)
+            cli_info('  -> attempt #%i...' % attempts)
+            if is_running:
+                failed = False
+                break
+            else:
+                time.sleep(environment.DATASTORE_RETRY_TIME)
+                attempts+= 1
+        if failed:
+            cli_error('Store connection timeout after %i attempts.' \
+                % attempts)
             sys.exit(1)
         else:
-            try:
-                environment.reload_daemon()
-                cli_success('Started daemon.')
-            except:
-                cli_error('Failed reloading the daemon, check supervisor logs.' + \
-                '\nYou may try `service supervisor restart` or ' + \
-                '/var/log/supervisor/supervisord.log')
-                traceback.print_exc()
-                sys.exit(1)
-
-            from .api import login
-            from . import datastore
-            store = datastore.ConsulStore()
-            run_sync = tornado.ioloop.IOLoop.instance().run_sync
-            attempts, failed = 1, True
-            cli_info('Waiting for the key value store to come alive...')
-            while attempts <= environment.DATASTORE_ATTEMPTS:
-                is_running = run_sync(store.check_connection)
-                cli_info('  -> attempt #%i...' % attempts)
-                if is_running:
-                    failed = False
-                    break
-                else:
-                    time.sleep(environment.DATASTORE_RETRY_TIME)
-                    attempts+= 1
-            if failed:
-                cli_error('Store connection timeout after %i attempts.' \
-                    % attempts)
-                sys.exit(1)
-            else:
-                # We have a connection, create an admin account
-                create_admin = functools.partial(login.create_admin,
-                    store, values['admin_user'], values['admin_pass'])
-                run_sync(create_admin)
-                cli_success('Created first account. Setup is finished.')
+            # We have a connection, create an admin account
+            create_admin = functools.partial(login.create_admin,
+                store, values['admin_user'], values['admin_pass'])
+            run_sync(create_admin)
+            cli_success('Created first account. Setup is finished.')
 
 def handle_jsbundle(args):
     try:
-        subprocess.check_call(['nodejs', ''])
+        subprocess.check_call(['nodejs', bundle_path])
+    except (OSError, subprocess.CalledProcessError):
+        cli_error('An error occured during compile invocation:')
+        traceback.print_exc()
+
 def entry():
     parser = argparse.ArgumentParser(description='A VapourApps client interface')
     subparsers = parser.add_subparsers(help='action')

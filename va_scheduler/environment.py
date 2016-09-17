@@ -13,6 +13,7 @@ import json
 # Datastore connection retry time
 DATASTORE_RETRY_TIME = 5
 DATASTORE_ATTEMPTS = 5
+
 # Supervisor configuration file path
 SUPERVISOR_CONF_PATH = '/etc/supervisor/conf.d/va_scheduler.conf'
 # Consul configuration file path
@@ -37,8 +38,8 @@ def write_supervisor_conf():
         'salt_master_path': distutils.spawn.find_executable('salt-master'),
         'python_path': sys.executable
     }
-    supervisor_conf = supervisor_template % paths
-    with tempfile.NamedTemporaryFile(delete=false) as f:
+    supervisor_conf = SUPERVISOR_TEMPLATE % paths
+    with tempfile.NamedTemporaryFile(delete=False) as f:
         f.write(supervisor_conf)
     subprocess.check_call(['sudo', 'mv', f.name, SUPERVISOR_CONF_PATH])
 
@@ -54,13 +55,13 @@ def write_consul_conf(ip):
         'bootstrap_expect': 1,
         'server': True
     }
-    with tempfile.NamedTemporaryFile(delete=false) as f:
+    with tempfile.NamedTemporaryFile(delete=False) as f:
         json.dump(json_conf, f)
     subprocess.check_call(['sudo', 'mv', f.name, CONSUL_CONF_PATH])
 
 def reload_daemon():
     try:
-        subprocess.check_call(['supervisorctl', 'reload'])
+        subprocess.check_call(['sudo', 'supervisorctl', 'reload'])
         return True
     except:
         return False
