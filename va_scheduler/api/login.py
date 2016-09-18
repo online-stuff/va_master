@@ -33,6 +33,8 @@ def is_token_valid(datastore, token):
     except datastore.KeyNotFound:
         valid = False
 
+    if valid:
+        valid = (res['username'] != '__invalid__')
     raise tornado.gen.Return(valid)
 
 
@@ -71,10 +73,11 @@ def admin_login(handler):
         if admin['username'] == username:
             account_info = admin
             break
+    invalid_acc_hash = crypt('__invalidpassword__')
     if not account_info:
         # Prevent timing attacks
         account_info = {
-            'password_hash': '$c4k2f$CZoGExK0$aCCa3aKIGo/exx2j5AAsfhPtOePtwWbs',
+            'password_hash': invalid_acc_hash,
             'username': '__invalid__',
             'timestamp_created': 0
         }
