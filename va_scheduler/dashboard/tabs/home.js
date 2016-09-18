@@ -37,9 +37,18 @@ var Home = React.createClass({
             </Bootstrap.Navbar>
             <div className='sidebar'>
                 <ul className='left-menu'>
-                    <li><Router.IndexLink to='' activeClassName='active'>Overview</Router.IndexLink></li>
-                    <li><Router.Link to='hosts' activeClassName='active'>Hosts</Router.Link></li>
-                    <li><Router.Link to='apps' activeClassName='active'>Apps</Router.Link></li>
+                    <li>
+                    <Router.IndexLink to='' activeClassName='active'>
+                    <Bootstrap.Glyphicon glyph='home' /> Overview</Router.IndexLink>
+                    </li>
+                    <li>
+                    <Router.Link to='hosts' activeClassName='active'>
+                    <Bootstrap.Glyphicon glyph='hdd' /> Hosts</Router.Link>
+                    </li>
+                    <li>
+                    <Router.Link to='apps' activeClassName='active'>
+                    <Bootstrap.Glyphicon glyph='th' /> Apps</Router.Link>
+                    </li>
                 </ul>
             </div>
             <div className='main-content'>

@@ -32,11 +32,12 @@ ul.left-menu a{
     padding-top: 12px;
     padding-bottom: 12px;
     padding-left: 10px;
-    background: #e7e7e7;
+    border-bottom: 1px solid #ddd;
     font-size: 13px;
 }
 ul.left-menu a.active{
-    background: #006eab;
+    box-shadow: 0px 0px 3px #002090 inset;
+    background: #007ebb;
     color: #fff;
 }
 
@@ -57,8 +58,16 @@ ul.left-menu a.active{
     box-shadow: 0px 1px 2px rgba(0, 0, 0, 0.26);
     border: 0;
     border-radius: 0;
+    margin-bottom: 0;
 }
 
+.navbar-brand{
+    padding: 0px 15px;
+    height: 35px;
+    position: relative;
+    top: 7px;
+    left: 5px;
+}
 .navbar .container{
     padding: 0;
     margin: 0;
@@ -84,7 +93,6 @@ ul.left-menu a.active{
 .main-content{
     padding-left: 235px;
     padding-right: 15px;
-    padding-top: 10px;
 }
 
 .main-content .app-block{

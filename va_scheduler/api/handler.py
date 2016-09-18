@@ -30,8 +30,8 @@ class ApiHandler(tornado.web.RequestHandler):
     def post(self, path):
         if path == 'login':
             yield login.admin_login(self)
-        elif path == 'hosts':
-            yield hosts.new_host(self)
+        elif path == 'hosts/creation_step':
+            yield hosts.new_host_step(self)
         elif path == 'apps':
             yield apps.launch_app(self)
         else:

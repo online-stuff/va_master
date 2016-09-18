@@ -2,6 +2,7 @@ import tornado.gen
 import time
 import json
 import uuid
+import functools
 from pbkdf2 import crypt
 
 # TODO: Check if the implementation of the `pbkdf2` lib is credible,
@@ -40,6 +41,7 @@ def is_token_valid(datastore, token):
 
 def auth_only(coroutine):
     @tornado.gen.coroutine
+    @functools.wraps(coroutine)
     def func(handler):
         token = handler.request.headers.get('Authorization', '')
         token = token.replace('Token ', '')
