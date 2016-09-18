@@ -13,17 +13,24 @@ function auth(state, action){
         if(storageState !== null) {
             return JSON.parse(storageState);
         } else {
-            return {token: null, username: null};
+            return {token: null, username: null, loginError: false, inProgress: false};
         }
     }
 
     var newState = Object.assign({}, state);
-    if(action.type === 'LOGIN') {
-        newState.username = action.username;
-        newState.token = action.token;
-    } else if(action.type === 'LOGOUT') {
+    if(action.type == 'LOGIN_START' || action.type === 'LOGOUT' || action.type == 'LOGIN_ERROR'){
         newState.username = null;
         newState.token = null;
+        newState.loginError = false;
+        newState.inProgress = false;
+    }
+    if(action.type === 'LOGIN_START') newState.inProgress = true;
+    if(action.type === 'LOGIN_ERROR') newState.loginError = true;
+    if(action.type === 'LOGIN_GOOD') {
+        newState.username = action.username;
+        newState.token = action.token;
+        newState.loginError = false;
+        newState.inProgress = false;
     }
     // Add into session
     window.localStorage.setItem('auth', JSON.stringify(newState));

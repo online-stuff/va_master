@@ -1,5 +1,6 @@
 var React = require('react');
 var Router = require('react-router');
+var Bootstrap = require('react-bootstrap');
 var connect = require('react-redux').connect;
 
 var Network = require('../network');
@@ -15,17 +16,25 @@ var Home = React.createClass({
             Router.hashHistory.push('/login');
         }
     },
-    logOut: function () {
+    logOut: function (key, event) {
+        if(key === 'logout')
         this.props.dispatch({type: 'LOGOUT'});
     },
     render: function () {
         return (
         <div>
-            <div className='top-header'>
-                <img src='/static/logo.png' className='logo' style={{float: 'left'}}/>
-                <button className='btn btn-default logout' onClick={this.logOut}>Logout ({this.props.auth.username})</button>
-                <div className='clearfix' />
-            </div>
+            <Bootstrap.Navbar bsStyle='inverse'>
+                <Bootstrap.Navbar.Header>
+                    <Bootstrap.Navbar.Brand><img src='/static/logo.png' className='top-logo'/></Bootstrap.Navbar.Brand>
+                </Bootstrap.Navbar.Header>
+                <Bootstrap.Navbar.Collapse>
+                    <Bootstrap.Nav pullRight={true}>
+                        <Bootstrap.NavDropdown title={this.props.auth.username} onSelect={this.logOut}>
+                                <Bootstrap.MenuItem eventKey='logout'>Logout</Bootstrap.MenuItem>
+                        </Bootstrap.NavDropdown>
+                    </Bootstrap.Nav>
+                </Bootstrap.Navbar.Collapse>
+            </Bootstrap.Navbar>
             <div className='sidebar'>
                 <ul className='left-menu'>
                     <li><Router.IndexLink to='' activeClassName='active'>Overview</Router.IndexLink></li>

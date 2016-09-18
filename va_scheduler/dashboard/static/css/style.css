@@ -1,7 +1,7 @@
 body{
     margin: 0;
     font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
-    background: url('sidebar.png') repeat-y;
+    background: url('../sidebar.png') repeat-y;
     background-position: -200px top;
 }
 
@@ -14,14 +14,9 @@ body.login {
     margin-bottom: 50px;
 }
 
-.clearfix{
-    clear: both;
-}
-
 ul.left-menu{
     list-style: none;
     margin: 0;
-    margin-top: 15px;
     padding: 0;
     display: block;
 }
@@ -57,20 +52,26 @@ ul.left-menu a.active{
     padding: 20px 30px;
 }
 
-.top-header{
+.navbar{
     background: #006eab;
-    padding-top: 10px;
-    padding-bottom: 3px;
     box-shadow: 0px 1px 2px rgba(0, 0, 0, 0.26);
+    border: 0;
+    border-radius: 0;
 }
 
-.top-header img.logo {
-    float: left;
+.navbar .container{
+    padding: 0;
+    margin: 0;
+    width: 100%;
 }
 
-.top-header button.logout{
-    float: right;
-    margin-right: 10px;
+.navbar-inverse .navbar-nav>li>a, .navbar-inverse .navbar-nav>li>a:hover{
+    color: #fff;
+    background: #007ebb;
+}
+
+.navbar-inverse .navbar-nav>.open>a, .navbar-inverse .navbar-nav>.open>a:focus, .navbar-inverse .navbar-nav>.open>a:hover{
+    background: #004e9b;
 }
 
 .sidebar{
