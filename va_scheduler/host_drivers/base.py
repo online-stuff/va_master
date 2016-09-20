@@ -16,19 +16,16 @@ class Step(object):
         self.fields.append({'type': 'description', 'id': id_, 'name': name})
 
     def validate(self, field_values):
-        error = False
+        no_error = True
         for field in self.fields:
             if field['type'] in ('str', 'options'):
                 # Check if exists at all
                 if field['id'] not in field_values:
-                    error = True
-            if field['type'] == 'str':
-                # Check length
-                val = field_values.get(field['id'], '')
-                print(val)
-                if len(val) < 1:
-                    error = True
-        return error
+                    no_error = False
+                else:
+                    if len(field_values[field['id']]) < 1:
+                        no_error = False
+        return no_error
 
     def serialize(self):
         return {'name': self.name, 'fields': self.fields}

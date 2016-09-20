@@ -68,8 +68,8 @@ if os.environ.get('osdeps', '') == '1':
 
 setuptools.setup(
   name='vapourapps',
-  packages=['va_scheduler'],
-  version='0.0.1',
+  packages=setuptools.find_packages(),
+  version='0.0.4',
   description='This package contains the master server of VapourApps, a DevOps tool for corporate apps.',
   keywords=['vapourapps'],
   author='Filip Dimitrovski',

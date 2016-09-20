@@ -56,8 +56,9 @@ var HostStep = React.createClass({
             } else if(field.type === 'options') {
                 formControl = (
                     <Bootstrap.FormControl componentClass='select' id={field.id} onChange={this.onChange}>
+                        <option key={-1} value=''>Choose</option>
                         {this.props.optionChoices[field.id].map(function(option, i) {
-                            return <option key={i} value={i}>{option}</option>
+                            return <option key={i} value={option}>{option}</option>
                         })}
                     </Bootstrap.FormControl>
                 );
@@ -213,7 +214,11 @@ var NewHostForm = React.createClass({
             var data = {driver_id: this.state.currentDriver.id, step_index: this.state.stepIndex,
                 field_values: this.state.fieldValues};
             Network.post('/api/hosts/new/validate_fields', this.props.auth.token, data).done(function(d) {
-                me.setState({stepIndex: d.new_step_index, optionChoices: d.option_choices, errors: d.errors});
+                var mergeChoices = Object.assign({}, me.state.optionChoices);
+                for(var id in d.option_choices){
+                    mergeChoices[id] = d.option_choices[id];
+                }
+                me.setState({stepIndex: d.new_step_index, optionChoices: mergeChoices, errors: d.errors});
             });
             //var data = {driver_id: this.state.currentDriver.id, current_index: this.state.stepIndex,
             //}

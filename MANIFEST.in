@@ -1,0 +1,2 @@
+recursive-include va_scheduler/dashboard *.js *.css *.png *.html *.woff *.svg *.ttf *.eot
+recursive-exclude va_scheduler/dashboard/node_modules *
