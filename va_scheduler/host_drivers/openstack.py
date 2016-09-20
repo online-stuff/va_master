@@ -78,7 +78,7 @@ class OpenStackDriver(base.DriverBase):
         raise tornado.gen.Return([host_info, net_sec, ssh, imagesize])
 
     @tornado.gen.coroutine
-    def get_token(self, host, username, password, tenant):
+    def get_token(self, field_values):
         host, username, password, tenant = (field_values['hostname'],
             field_values['username'], field_values['password'],
             field_values['tenant'])

@@ -33,25 +33,25 @@ def validate_newhost_fields(handler):
         step_index = int(body['step_index'])
     except:
         handler.json({'error': 'bad_body'}, 400)
-        ok = False
-    if ok:
-        found_driver = yield handler.config.deploy_handler.get_driver_by_id(driver_id, handler)
-        if found_driver is None:
-            handler.json({'error': 'bad_driver'}, 400)
+        raise tornado.gen.Return(None)
+
+    found_driver = yield handler.config.deploy_handler.get_driver_by_id(driver_id)
+    if found_driver is None:
+        handler.json({'error': 'bad_driver'}, 400)
+    else:
+        driver_steps = yield found_driver.get_steps()
+        if step_index >= len(driver_steps):
+            handler.json({'error': 'bad_step'}, 400)
         else:
-            driver_steps = yield found_driver.get_steps()
-            if step_index >= len(driver_steps):
-                handler.json({'error': 'bad_step'}, 400)
+            if step_index < 0 or driver_steps[step_index].validate(field_values):
+                result = yield found_driver.validate_field_values(step_index, field_values)
+                handler.json(result.serialize())
             else:
-                if step_index < 0 or driver_steps[step_index].validate(field_values):
-                    result = yield found_driver.validate_field_values(step_index, field_values)
-                    handler.json(result.serialize())
-                else:
-                    handler.json({
-                        'errors': ['Some fields are not filled.'],
-                        'new_step_index': step_index,
-                        'option_choices': None
-                    })
+                handler.json({
+                    'errors': ['Some fields are not filled.'],
+                    'new_step_index': step_index,
+                    'option_choices': None
+                })
 
 
 @auth_only

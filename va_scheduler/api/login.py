@@ -32,10 +32,9 @@ def is_token_valid(datastore, token):
     try:
         res = yield datastore.get('tokens/by_token/%s' % token)
     except datastore.KeyNotFound:
-        valid = False
+        raise tornado.gen.Return(False)
 
-    if valid:
-        valid = (res['username'] != '__invalid__')
+    valid = (res['username'] != '__invalid__')
     raise tornado.gen.Return(valid)
 
 

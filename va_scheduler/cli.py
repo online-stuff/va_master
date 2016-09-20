@@ -1,4 +1,4 @@
-from . import config, cli_cli_environment
+from . import config, cli_environment
 from .api import login
 from datetime import datetime
 import tornado.ioloop

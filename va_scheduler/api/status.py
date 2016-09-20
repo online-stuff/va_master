@@ -2,9 +2,6 @@ import tornado.gen
 
 @tornado.gen.coroutine
 def status(handler):
-    init = True
-    try:
-        yield handler.datastore.get('initialized')
-    except handler.datastore.NotFound:
-        init = False
-    handler.json({'is_initialized': init})
+    handler.json({'e': True})
+    raise tornado.gen.Return()
+    handler.json({'a': 5})

@@ -102,7 +102,7 @@ var HostStep = React.createClass({
 var NewHostForm = React.createClass({
     getInitialState: function () {
         return {currentDriver: null, drivers: [], stepIndex: -1, optionChoices: {},
-            errors: [], fieldValues: {}};
+            errors: [], fieldValues: {}, isLoading: false};
     },
     componentDidMount: function () {
         var me = this;
@@ -178,9 +178,15 @@ var NewHostForm = React.createClass({
             );
         }
 
+        var progressBar = null;
+        if(this.state.isLoading) {
+            progressBar = <Bootstrap.ProgressBar active now={100} />;
+        }
+
         return (
             <div style={{paddingTop: 10}}>
                 <Bootstrap.Panel header='Add host' bsStyle='primary'>
+                    {progressBar}
                     <Bootstrap.Tabs activeKey={this.state.stepIndex}>
                         <Bootstrap.Tab title='Choose host' eventKey={-1}>
                             <Bootstrap.FormGroup controlId="formControlsSelect">
@@ -195,7 +201,7 @@ var NewHostForm = React.createClass({
 
                     {errors}
                     <Bootstrap.ButtonGroup>
-                        <Bootstrap.Button bsStyle='primary' onClick={this.nextStep}>
+                        <Bootstrap.Button disabled={this.state.isLoading} bsStyle='primary' onClick={this.nextStep}>
                             <Bootstrap.Glyphicon glyph='menu-right'></Bootstrap.Glyphicon> Next step</Bootstrap.Button>
                     </Bootstrap.ButtonGroup>
                 </Bootstrap.Panel>
@@ -211,6 +217,7 @@ var NewHostForm = React.createClass({
             });
         } else {
             var me = this;
+            me.setState({isLoading: true});
             var data = {driver_id: this.state.currentDriver.id, step_index: this.state.stepIndex,
                 field_values: this.state.fieldValues};
             Network.post('/api/hosts/new/validate_fields', this.props.auth.token, data).done(function(d) {
@@ -218,7 +225,7 @@ var NewHostForm = React.createClass({
                 for(var id in d.option_choices){
                     mergeChoices[id] = d.option_choices[id];
                 }
-                me.setState({stepIndex: d.new_step_index, optionChoices: mergeChoices, errors: d.errors});
+                me.setState({stepIndex: d.new_step_index, optionChoices: mergeChoices, errors: d.errors, isLoading: false});
             });
             //var data = {driver_id: this.state.currentDriver.id, current_index: this.state.stepIndex,
             //}

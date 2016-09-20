@@ -25,10 +25,10 @@ class Config(object):
         self.server_port = 80
         self.server_static_path = get_server_static()
         self.deploy_pool_count = 3
-        self.deploy_handler = deploy_handler.DeployHandler(self)
         # Now dynamically inject any kwargs
         for kw in kwargs:
             setattr(self, kw, kwargs[kw])
+        self.deploy_handler = deploy_handler.DeployHandler(self.datastore, self.deploy_pool_count)
 
     def pretty_version(self):
         return '.'.join([str(x) for x in self.version])
