@@ -5,13 +5,13 @@ import json
 @auth_only
 @tornado.gen.coroutine
 def list_hosts(handler):
-    yield tornado.gen.sleep(1)
-    handler.json({'hi': True})
+    hosts = yield handler.config.deploy_handler.list_hosts()
+    handler.json({'hosts': hosts})
 
 @auth_only
 @tornado.gen.coroutine
 def list_drivers(handler):
-    drivers = handler.config.host_drivers
+    drivers = yield handler.config.deploy_handler.get_drivers()
     out = {'drivers': []}
     for driver in drivers:
         driver_id = yield driver.driver_id()
@@ -21,16 +21,6 @@ def list_drivers(handler):
         out['drivers'].append({'id': driver_id,
             'friendly_name': name, 'steps': steps})
     handler.json(out)
-
-@tornado.gen.coroutine
-def get_driver_by_id(driver_id, handler):
-    found_driver = None
-    for allowed_driver in handler.config.host_drivers:
-        allowed_id = yield allowed_driver.driver_id()
-        if allowed_id == driver_id:
-            found_driver = allowed_driver
-            break
-    raise tornado.gen.Return(found_driver)
 
 @auth_only
 @tornado.gen.coroutine
@@ -45,7 +35,7 @@ def validate_newhost_fields(handler):
         handler.json({'error': 'bad_body'}, 400)
         ok = False
     if ok:
-        found_driver = yield get_driver_by_id(driver_id, handler)
+        found_driver = yield handler.config.deploy_handler.get_driver_by_id(driver_id, handler)
         if found_driver is None:
             handler.json({'error': 'bad_driver'}, 400)
         else:
@@ -62,3 +52,17 @@ def validate_newhost_fields(handler):
                         'new_step_index': step_index,
                         'option_choices': None
                     })
+
+
+@auth_only
+@tornado.gen.coroutine
+def create_host(handler):
+    try:
+        body = json.loads(handler.request.body)
+        host_name = str(body['host_name'])
+        driver = str(body['driver_id'])
+        field_values = dict(body['field_values'])
+    except:
+        handler.json({'error' 'bad_body'}, 400)
+    else:
+        handler.config.deploy_handler.create_host(host_name, driver, field_values)

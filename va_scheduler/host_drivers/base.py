@@ -67,3 +67,8 @@ class DriverBase(object):
     @abc.abstractmethod
     def validate_field_values(self, step_index, field_values):
         pass
+
+    @tornado.gen.coroutine
+    @abc.abstractmethod
+    def get_salt_configs(self, field_values):
+        pass

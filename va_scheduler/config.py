@@ -24,8 +24,8 @@ class Config(object):
         self.logger.addHandler(ch)
         self.server_port = 80
         self.server_static_path = get_server_static()
+        self.deploy_pool_count = 3
         self.deploy_handler = deploy_handler.DeployHandler(self)
-        self.host_drivers = [openstack.OpenStackDriver()]
         # Now dynamically inject any kwargs
         for kw in kwargs:
             setattr(self, kw, kwargs[kw])

@@ -1,4 +1,4 @@
-from . import config, environment
+from . import config, cli_cli_environment
 from .api import login
 from datetime import datetime
 import tornado.ioloop
@@ -59,14 +59,14 @@ def handle_init(args):
             values[name] = raw_input('%s: ' % cmdhelp)
     result = True # If `result` is True, all actions completed successfully
     try:
-        environment.write_supervisor_conf()
+        cli_environment.write_supervisor_conf()
         cli_success('Configured Supervisor.')
     except:
         cli_error('Failed configuring Supervisor: ')
         traceback.print_exc()
         result = False # We failed with step #1
     try:
-        environment.write_consul_conf(values['ip'])
+        cli_environment.write_consul_conf(values['ip'])
         cli_success('Configured Consul.')
     except:
         cli_error('Failed configuring Consul: ')
@@ -78,7 +78,7 @@ def handle_init(args):
         sys.exit(1)
     else:
         try:
-            environment.reload_daemon()
+            cli_environment.reload_daemon()
             cli_success('Started daemon.')
         except:
             cli_error('Failed reloading the daemon, check supervisor logs.' + \
@@ -93,14 +93,14 @@ def handle_init(args):
         run_sync = tornado.ioloop.IOLoop.instance().run_sync
         attempts, failed = 1, True
         cli_info('Waiting for the key value store to come alive...')
-        while attempts <= environment.DATASTORE_ATTEMPTS:
+        while attempts <= cli_environment.DATASTORE_ATTEMPTS:
             is_running = run_sync(store.check_connection)
             cli_info('  -> attempt #%i...' % attempts)
             if is_running:
                 failed = False
                 break
             else:
-                time.sleep(environment.DATASTORE_RETRY_TIME)
+                time.sleep(cli_environment.DATASTORE_RETRY_TIME)
                 attempts+= 1
         if failed:
             cli_error('Store connection timeout after %i attempts.' \

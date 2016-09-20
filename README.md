@@ -1,8 +1,8 @@
 # VA-Master
 This is the core project of VapourApps, the master which contains:
-* The dashboard
-* The REST API
-* The scheduler (spawning instances using `salt-cloud`, life-checks, key-value db)
+* Consul (monitoring the apps and KV store)
+* Salt Master (provisioning)
+* The scheduler (containing API and dashboard)
 
 ## Installing
 Requirements for installing:
@@ -10,9 +10,18 @@ Requirements for installing:
 * No servers running on tcp/80, tcp/443, tcp/8600, tcp/8500, tcp/8400, tcp/8300
 * Python 2.7 and pip
 
+**Debian dependencies:** There are some OS-level dependencies that you can install
+using the following command:
+
 ```bash
-sudo pip install .
-sudo vapourapps start 10.0.10.12 # enter the ip from which this machine can be accessed
+sudo sh -c "apt-get install -y build-essential python-dev libssl-dev libffi-dev libzmq3 libzmq-dev unzip supervisor && curl https://releases.hashicorp.com/consul/0.7.0/consul_0.7.0_linux_amd64.zip > consul.zip && unzip -d /usr/lib -o consul.zip consul"
+```
+
+**The software itself:** Install the software.
+
+```bash
+pip install vapourapps
+vapourapps init
 ```
 
 ### Development on local machine
@@ -21,14 +30,11 @@ Additional requirements for development:
 * npm (to compile dashboard JavaScript code)
 
 ```bash
-sudo pip install -e . # the additional flag allows editing Python code
-sudo vapourapps start --dev 10.0.10.12
+pip install -e .
+vapourapps init
+# If you want to debug Python, detach it from supervisor and manually run code
+sudo supervisorctl stop va_scheduler
 ```
-
-### virtualenv warning
-`sudo pip` is not functional during a virtualenv session, because it's going to use
-the system's pip executable. Instead, login as root before activating the session (`sudo -i`) and run the commands
-without the `sudo` prefix, for example: `root@deb# pip install .`
 
 ## Docs
 

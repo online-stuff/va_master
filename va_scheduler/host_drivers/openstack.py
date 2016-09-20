@@ -4,6 +4,29 @@ from tornado.httpclient import AsyncHTTPClient, HTTPRequest
 import tornado.gen
 import json
 
+PROVIDER_TEMPLATE = '''VAR_PROVIDER_NAME:
+  auth_minion: VAR_THIS_IP
+  minion:
+    master: VAR_THIS_IP
+    master_type: str
+  # The name of the configuration profile to use on said minion
+  ssh_key_name: VAR_SSH_NAME
+  ssh_key_file: VAR_SSH_FILE
+  ssh_interface: private_ips
+  driver: nova
+  user: VAR_USERNAME
+  tenant: VAR_TENANT
+  password: VAR_PASSWORD
+  identity_url: VAR_IDENTITY_URL
+  compute_region: VAR_REGION
+  networks:
+    - net-id: VAR_NETWORK_ID'''
+
+PROFILE_TEMPLATE = '''VAR_PROFILE_NAME:
+    provider: VAR_PROVIDER_NAME
+    image: VAR_IMAGE
+    size: VAR_SIZE
+    securitygroups: VAR_SEC_GROUP'''
 
 class OpenStackDriver(base.DriverBase):
     def __init__(self):
@@ -24,6 +47,13 @@ class OpenStackDriver(base.DriverBase):
             {'name': 'Pick a Network'},
             {'name': 'Security'}
         ])
+
+    @tornado.gen.coroutine
+    def get_salt_configs(self, field_values, provider_name, profile_name):
+        provider = ''
+        profile = ''
+
+        return (provider, profile)
 
     @tornado.gen.coroutine
     def get_steps(self):
@@ -49,6 +79,9 @@ class OpenStackDriver(base.DriverBase):
 
     @tornado.gen.coroutine
     def get_token(self, host, username, password, tenant):
+        host, username, password, tenant = (field_values['hostname'],
+            field_values['username'], field_values['password'],
+            field_values['tenant'])
         url = 'http://%s/v2.0/tokens' % host
         data = {
             'auth': {
@@ -119,9 +152,7 @@ class OpenStackDriver(base.DriverBase):
             ))
         elif step_index == 0:
             networks = []
-            token_data = yield self.get_token(field_values['hostname'],
-                field_values['username'], field_values['password'],
-                field_values['tenant'])
+            token_data = yield self.get_token(field_values)
             networks = yield self.get_networks(token_data)
             sec_groups = yield self.get_securitygroups(token_data, field_values['tenant'])
             services_plain = ['- %s:%s' % (x[0], x[1]) for x in token_data[1].iteritems()]
