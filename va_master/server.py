@@ -26,7 +26,7 @@ class DebugStaticHandler(tornado.web.StaticFileHandler):
         self.set_header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
 
 
-def start(config):
+def get_app(config):
     path_settings = {'path': config.server_static_path}
 
     app = tornado.web.Application([
@@ -36,5 +36,4 @@ def start(config):
     ])
     # TODO: If config.release, disable debug mode for static assets
     # Note: running the debug mode is not dangerous in production, but it's slower.
-    app.listen(config.server_port)
-    tornado.ioloop.IOLoop.current().start()
+    return app

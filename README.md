@@ -1,4 +1,4 @@
-# VA-Master
+# VA_Master
 This is the core project of VapourApps, the master which contains:
 * Consul (monitoring the apps and KV store)
 * Salt Master (provisioning)
@@ -33,7 +33,8 @@ Additional requirements for development:
 pip install -e .
 vapourapps init
 # If you want to debug Python, detach it from supervisor and manually run code
-sudo supervisorctl stop va_scheduler
+sudo supervisorctl stop va_master
+sudo virtualenv/bin/python -m va_master
 ```
 
 ## Docs

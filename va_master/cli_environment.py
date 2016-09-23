@@ -30,7 +30,7 @@ command=/usr/bin/consul agent -config-file=/etc/consul.json
 startretries=1
 
 [program:va_master]
-command=%(python_path)s -m va_scheduler'''
+command=%(python_path)s -m va_master'''
 
 def write_supervisor_conf():
     """Writes configuration file for Supervisor daemon."""

@@ -17,7 +17,7 @@ setuptools.setup(
   zip_safe=False,
   entry_points = {
     'console_scripts': [
-        'vapourapps = va_scheduler.cli:entry'
+        'vapourapps = va_master.cli:entry'
     ]
   }
 )
