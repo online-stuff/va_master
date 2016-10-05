@@ -153,6 +153,11 @@ class OpenStackDriver(base.DriverBase):
         elif step_index == 0:
             networks = []
             token_data = yield self.get_token(field_values)
+            if token_data[0] is None or token_data[1] is None:
+                raise tornado.gen.Return(StepResult(errors=[
+                    'Could not connect'
+                ], new_step_index=0, option_choices={}))
+
             networks = yield self.get_networks(token_data)
             sec_groups = yield self.get_securitygroups(token_data, field_values['tenant'])
             services_plain = ['- %s:%s' % (x[0], x[1]) for x in token_data[1].iteritems()]

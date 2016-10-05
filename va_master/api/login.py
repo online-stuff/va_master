@@ -61,6 +61,7 @@ def admin_login(handler):
         password = body['password'].decode('utf8')
     except:
         handler.json({'error': 'bad_body'}, 400)
+        raise tornado.gen.Return()
 
     try:
         admins = yield handler.datastore.get('admins')
