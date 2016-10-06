@@ -1,4 +1,4 @@
-import distutils
+import distutils.spawn
 import sys
 import os
 import stat
@@ -61,6 +61,10 @@ def write_consul_conf(ip):
 
 def reload_daemon():
     try:
+        try:
+            subprocess.check_call(['sudo', 'service', 'supervisor', 'restart'])
+        except:
+            pass # Depending on systemd, this may fail - but it's not critical.
         subprocess.check_call(['sudo', 'supervisorctl', 'reload'])
         return True
     except:
