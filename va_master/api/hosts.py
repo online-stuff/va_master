@@ -45,7 +45,10 @@ def validate_newhost_fields(handler):
         else:
             if step_index < 0 or driver_steps[step_index].validate(field_values):
                 result = yield found_driver.validate_field_values(step_index, field_values)
-                handler.json(result.serialize())
+                if type(result) == tuple: 
+                    handler.json(result)
+                else: 
+                    handler.json(result.serialize())
             else:
                 handler.json({
                     'errors': ['Some fields are not filled.'],

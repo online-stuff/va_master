@@ -3,7 +3,8 @@ import requests
 import subprocess
 import traceback
 import tornado.gen
-from . import host_drivers
+from host_drivers import openstack, aws
+
 from Crypto.PublicKey import RSA
 from concurrent.futures import ProcessPoolExecutor
 
@@ -13,6 +14,7 @@ class DeployHandler(object):
         self.datastore = datastore
         self.deploy_pool_count = deploy_pool_count
         self.pool = ProcessPoolExecutor(deploy_pool_count)
+        self.drivers = [openstack.OpenStackDriver(), aws.AWSDriver(),  ]
 
     def start(self):
         pass
@@ -35,9 +37,7 @@ class DeployHandler(object):
 
     @tornado.gen.coroutine
     def get_drivers(self):
-        raise tornado.gen.Return([
-            host_drivers.openstack.OpenStackDriver()
-        ])
+        raise tornado.gen.Return(self.drivers)
 
     @tornado.gen.coroutine
     def get_driver_by_id(self, id_):
