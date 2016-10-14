@@ -36,13 +36,25 @@ PROFILE_TEMPLATE = '''VAR_PROFILE_NAME:
     size: VAR_SIZE
     securitygroup: VAR_SEC_GROUP'''
 
+
+AWS_CONFIG_TEMPLATE = '''[profile VAR_PROVIDER_NAME]
+aws_access_key_id=VAR_APP_ID
+aws_secret_access_key=VAR_APP_KEY
+region=VAR_REGION
+output=json
+'''
+
 class AWSDriver(base.DriverBase):
-    def __init__(self):
-        self.client = AsyncHTTPClient()
-        self.profile_vars = {}
-        self.provider_vars = {}
-        self.profile = PROFILE_TEMPLATE
-        self.provider = PROVIDER_TEMPLATE
+
+    def __init__(self, key_path = '/etc/salt/', key_name = '', provider_name = 'aws_provider', profile_name = 'aws_instance', host_ip = '127.0.0.1'):
+        if not key_name: 
+            #probably use uuid
+            key_name = 'aws_key_name'
+        key_path = key_path + ('/' * (not key_path[-1] == '/')) + key_name
+        self.key_name = key_name
+
+        super(AWSDriver, self).__init__(PROVIDER_TEMPLATE, PROFILE_TEMPLATE, provider_vars = {'VAR_THIS_IP' : host_ip, 'VAR_PROVIDER_NAME' : provider_name, 'VAR_KEYNAME' : key_name, 'VAR_PRIVATE_KEY' : key_path}, profile_vars = {'VAR_PROVIDER_NAME' : provider_name, 'VAR_PROFILE_NAME' : profile_name})
+        self.aws_config = AWS_CONFIG_TEMPLATE
 
     @tornado.gen.coroutine
     def driver_id(self):
@@ -60,27 +72,19 @@ class AWSDriver(base.DriverBase):
         ])
 
     @tornado.gen.coroutine
-    def get_salt_configs(self, field_values, provider_name, profile_name):
-        self.provider_vars['VAR_PROVIDER_NAME'] = provider_name
-        self.provider_vars['VAR_KEYNAME'] = 'some_generated_keyname'
-        self.provider_vars['VAR_PRIVATE_KEY'] = '/path/to/some/key'
-        self.provider_vars['VAR_THIS_IP'] = '192.168.80.39' #Should get from the cli command
-
-        self.profile_vars['VAR_PROFILE_NAME'] = profile_name
-        self.profile_vars['VAR_PROVIDER_NAME'] = provider_name
-
-
-        for var_name in self.profile_vars: 
-            self.profile = self.profile.replace(var_name, self.profile_vars[var_name])
+    def get_salt_configs(self):
+        yield super(AWSDriver, self).get_salt_configs()
         for var_name in self.provider_vars: 
-            self.provider = self.provider.replace(var_name, self.provider_vars[var_name])
+            self.aws_config = self.aws_config.replace(var_name, self.provider_vars[var_name])
 
         with open('/tmp/provider', 'w') as f: 
-            f.write(self.provider)
+            f.write(self.provider_template)
         with open('/tmp/profile', 'w') as f: 
-            f.write(self.profile)
+            f.write(self.profile_template)
+        with open('/tmp/aws_config', 'w') as f: 
+            f.write(self.aws_config)
 
-        raise tornado.gen.Return((self.provider, self.profile))
+        raise tornado.gen.Return((self.provider_template, self.profile_template))
 
     @tornado.gen.coroutine
     def get_steps(self):
@@ -88,9 +92,9 @@ class AWSDriver(base.DriverBase):
         host_info.add_str_field('app_id', 'Application ID')
         host_info.add_str_field('app_key', 'Application Key')
 
-        net_sec = Step('Network & security group')
+        net_sec = Step('Region & security group')
         net_sec.add_description_field('netsec_desc', 'Current connection info')
-#        net_sec.add_options_field('network', 'Pick network')
+        net_sec.add_options_field('region', 'Region')
         net_sec.add_options_field('sec_group', 'Pick security group')
 
         imagesize = Step('Image & size')
@@ -110,11 +114,15 @@ class AWSDriver(base.DriverBase):
             self.provider_vars['VAR_APP_KEY'] = field_values['app_key']
 
             security_groups = ['list', 'of', 'security', 'groups']
+            regions = ['ap-northeast-1', 'ap-southeast-1', 'ap-southeast-2', 'eu-west-1', 'sa-east-1', 'us-east-1', 'us-west-1', 'us-west-2']
 
-            raise tornado.gen.Return(StepResult(errors=[], new_step_index=1, option_choices={                    'sec_group' : security_groups
+
+            raise tornado.gen.Return(StepResult(errors=[], new_step_index=1, option_choices={                    'sec_group' : security_groups, 
+                    'region' : regions,
             }))
         elif step_index == 1:
             self.profile_vars['VAR_SEC_GROUP'] = field_values['sec_group']
+            self.provider_vars['VAR_REGION'] = field_values['region']
             raise tornado.gen.Return(StepResult(
                 errors=[], new_step_index=2, option_choices={
                     'image': ['img-1', 'img-2'],
@@ -125,7 +133,7 @@ class AWSDriver(base.DriverBase):
             self.profile_vars['VAR_IMAGE'] = field_values['image']
             self.profile_vars['VAR_SIZE'] = field_values['size']
 
-            configs = yield self.get_salt_configs([], 'provider', 'profile')
+            configs = yield self.get_salt_configs()
             raise tornado.gen.Return(configs)
 #            yield hosts.create_host(some_args)
 

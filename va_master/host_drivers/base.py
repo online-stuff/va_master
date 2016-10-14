@@ -1,5 +1,6 @@
 import abc
 import tornado.gen
+from tornado.httpclient import AsyncHTTPClient, HTTPRequest
 
 class Step(object):
     def __init__(self, name):
@@ -43,8 +44,16 @@ class StepResult(object):
 class DriverBase(object):
     __metaclass__ = abc.ABCMeta
     @abc.abstractmethod
-    @tornado.gen.coroutine
-    def __init__(self): pass
+    def __init__(self, provider_template, profile_template, provider_vars, profile_vars):
+        self.provider_template = provider_template
+        self.profile_template = profile_template
+        self.profile_vars = profile_vars
+        self.provider_vars = provider_vars
+        self.client = AsyncHTTPClient()
+
+#        raise tornado.gen.Return(None)
+
+
 
     @abc.abstractmethod
     @tornado.gen.coroutine
@@ -69,6 +78,9 @@ class DriverBase(object):
         pass
 
     @tornado.gen.coroutine
-    @abc.abstractmethod
-    def get_salt_configs(self, field_values):
-        pass
+#    @abc.abstractmethod
+    def get_salt_configs(self):
+        for var_name in self.profile_vars: 
+            self.profile_template = self.profile_template.replace(var_name, self.profile_vars[var_name])
+        for var_name in self.provider_vars: 
+            self.provider_template = self.provider_template.replace(var_name, self.provider_vars[var_name])
