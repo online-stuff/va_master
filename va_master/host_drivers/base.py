@@ -7,6 +7,9 @@ class Step(object):
         self.name = name
         self.fields = []
 
+    def add_field(self, id_, name, type, blank = False): 
+        self.fields.append({'type': type, 'id': id_, 'name': name, 'blank' : blank})
+
     def add_str_field(self, id_, name):
         self.fields.append({'type': 'str', 'id': id_, 'name': name})
 
@@ -24,7 +27,7 @@ class Step(object):
                 if field['id'] not in field_values:
                     no_error = False
                 else:
-                    if len(field_values[field['id']]) < 1:
+                    if len(field_values[field['id']]) < 1 and not field.get('blank'):
                         no_error = False
         return no_error
 
