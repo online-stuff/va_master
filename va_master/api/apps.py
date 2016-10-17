@@ -1,2 +1,2 @@
-def launch_app(self):
+def initialize(handler):
     pass

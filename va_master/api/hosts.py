@@ -1,16 +1,22 @@
 from .login import auth_only
-import tornado.gen
+from tornado.gen import coroutine, Return
 import json
 
+def initialize(handler):
+    handler.add_get_endpoint('hosts', list_hosts)
+    handler.add_get_endpoint('drivers', list_drivers)
+    handler.add_post_endpoint('hosts/new/validate_fields', validate_newhost_fields)
+
 @auth_only
-@tornado.gen.coroutine
+@coroutine
 def list_hosts(handler):
     hosts = yield handler.config.deploy_handler.list_hosts()
     handler.json({'hosts': hosts})
 
 @auth_only
-@tornado.gen.coroutine
+@coroutine
 def list_drivers(handler):
+    """GET /api/drivers"""
     drivers = yield handler.config.deploy_handler.get_drivers()
     out = {'drivers': []}
     for driver in drivers:
@@ -23,7 +29,7 @@ def list_drivers(handler):
     handler.json(out)
 
 @auth_only
-@tornado.gen.coroutine
+@coroutine
 def validate_newhost_fields(handler):
     ok = True
     try:
@@ -33,7 +39,7 @@ def validate_newhost_fields(handler):
         step_index = int(body['step_index'])
     except:
         handler.json({'error': 'bad_body'}, 400)
-        raise tornado.gen.Return(None)
+        raise Return(None)
 
     found_driver = yield handler.config.deploy_handler.get_driver_by_id(driver_id)
     if found_driver is None:
@@ -55,7 +61,7 @@ def validate_newhost_fields(handler):
 
 
 @auth_only
-@tornado.gen.coroutine
+@coroutine
 def create_host(handler):
     try:
         body = json.loads(handler.request.body)

@@ -1,7 +1,8 @@
-import tornado.gen
+from tornado.gen import coroutine, Return
 
-@tornado.gen.coroutine
+def initialize(handler):
+    handler.add_get_endpoint('status', status)
+
+@coroutine
 def status(handler):
-    handler.json({'e': True})
-    raise tornado.gen.Return()
-    handler.json({'a': 5})
+    handler.json({'status': 'It works!'})

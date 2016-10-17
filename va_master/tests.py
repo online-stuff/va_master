@@ -1,51 +1,59 @@
-from . import server, config
 from tornado.testing import AsyncHTTPTestCase, AsyncTestCase, gen_test
 from tornado.ioloop import PeriodicCallback, IOLoop
-from tornado.gen import sleep
-import tornado.gen
+from tornado.gen import sleep, coroutine, Return
 import json
 import logging
 
-from . import datastore
+from . import datastore, server, config
+from .api import login
+
 class TestDataStore(datastore.DataStore):
     def __init__(self):
         self.memory = {}
 
-    @tornado.gen.coroutine
+    @coroutine
     def check_connection(self):
-        logging.info('CHECK CONNECTION => True')
-        raise tornado.gen.Return(True)
+        raise Return(True)
 
-    @tornado.gen.coroutine
+    @coroutine
     def insert(self, doc_id, document):
-        logging.info('INSERT %s %s' % (doc_id, repr(document)))
         self.memory[doc_id] = document
-        raise tornado.gen.Return(True)
+        raise Return(True)
 
-    @tornado.gen.coroutine
+    @coroutine
     def update(self, doc_id, document):
         yield self.insert(doc_id, document)
 
-    @tornado.gen.coroutine
+    @coroutine
     def get(self, doc_id):
-        logging.info('GET %s' % doc_id)
         doc = self.memory.get(doc_id, None)
         if doc is None:
             raise datastore.KeyNotFound(doc_id)
         else:
-            raise tornado.gen.Return(doc)
+            raise Return(doc)
 
-    @tornado.gen.coroutine
+    @coroutine
     def delete(self, doc_id):
         logging.info('DELETE %s' % (doc_id))
         del self.memory[doc_id]
-        raise tornado.gen.Return(True)
+        raise Return(True)
 
-class TestApp(AsyncHTTPTestCase):
+class BaseTest(AsyncHTTPTestCase):
     def get_app(self):
         self.test_config = config.Config(datastore=TestDataStore())
         return server.get_app(self.test_config)
+    
+    @coroutine
+    def fetch(self, url, *args, **kwargs):
+        raise Return(yield self.http_client.fetch(self.get_url(url), *args, **kwargs))
 
+    @coroutine
+    def get_token():
+        TEST_USER = 'some_admin'
+        TEST_PASS = 'some_pass'
+        
+        
+class TestApp(AsyncHTTPTestCase):
     def test_no_body(self):
         resp = self.fetch('/api/login', method='POST', body='')
         self.assertEqual(resp.code, 400)

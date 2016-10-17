@@ -2,26 +2,35 @@ import json
 import requests
 import subprocess
 import traceback
-import tornado.gen
+from tornado.gen import coroutine, Return
 from . import host_drivers
 from Crypto.PublicKey import RSA
 from concurrent.futures import ProcessPoolExecutor
 
 
 class DeployHandler(object):
-    def __init__(self, datastore, deploy_pool_count):
+    """A `DeployHandler` manages all app deployments and host operations."""
+    
+    def __init__(self):
+        self.datastore = None
+        self.proc_count = -1
+        self.pool = None
+
+    def set_datastore(self, datastore):
         self.datastore = datastore
-        self.deploy_pool_count = deploy_pool_count
-        self.pool = ProcessPoolExecutor(deploy_pool_count)
+
+    def set_proc_count(self, proc_count):
+        self.proc_count = proc_count
+        self.pool = ProcessPoolExecutor(proc_count)
 
     def start(self):
         pass
 
-    @tornado.gen.coroutine
+    @coroutine
     def create_ssh_keypair(self):
         pass
 
-    @tornado.gen.coroutine
+    @coroutine
     def get_ssh_keypair(self):
         try:
             keydata = self.datastore.get('ssh_keypair')
@@ -29,34 +38,34 @@ class DeployHandler(object):
             # create new
             data = yield self.create_ssh_keypair()
             yield self.datastore.insert('ssh_keypair', data)
-            raise tornado.gen.Return(data)
+            raise Return(data)
         raise tornado.gen.Return({'public': keydata['public'],
             'private': keydata['private']})
 
-    @tornado.gen.coroutine
+    @coroutine
     def get_drivers(self):
-        raise tornado.gen.Return([
+        raise Return([
             host_drivers.openstack.OpenStackDriver()
         ])
 
-    @tornado.gen.coroutine
+    @coroutine
     def get_driver_by_id(self, id_):
         drivers = yield self.get_drivers()
         for driver in drivers:
             driver_id = yield driver.driver_id()
             if driver_id == id_:
-                raise tornado.gen.Return(driver)
+                raise Return(driver)
         raise tornado.gen.Return(None)
 
-    @tornado.gen.coroutine
+    @coroutine
     def list_hosts(self):
         try:
             hosts = yield self.datastore.get('hosts')
         except self.datastore.KeyNotFound:
             hosts = []
-        raise tornado.gen.Return(hosts)
+        raise Return(hosts)
 
-    @tornado.gen.coroutine
+    @coroutine
     def create_host(self, host_name, driver_id, field_values): # name, driver_name, salt_provider, salt_profile):
         try:
             new_hosts = yield self.datastore.get('hosts')

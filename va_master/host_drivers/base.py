@@ -1,5 +1,5 @@
 import abc
-import tornado.gen
+from tornado.gen import coroutine, Return
 
 class Step(object):
     def __init__(self, name):
@@ -43,32 +43,32 @@ class StepResult(object):
 class DriverBase(object):
     __metaclass__ = abc.ABCMeta
     @abc.abstractmethod
-    @tornado.gen.coroutine
+    @coroutine
     def __init__(self): pass
 
     @abc.abstractmethod
-    @tornado.gen.coroutine
+    @coroutine
     def driver_id(self):
         """Returns a unique ID for this driver."""
         pass
 
     @abc.abstractmethod
-    @tornado.gen.coroutine
+    @coroutine
     def friendly_name(self):
         """"Returns the friendly name of this driver."""
         pass
 
-    @tornado.gen.coroutine
+    @coroutine
     @abc.abstractmethod
     def get_steps(self):
         pass
 
-    @tornado.gen.coroutine
+    @coroutine
     @abc.abstractmethod
     def validate_field_values(self, step_index, field_values):
         pass
 
-    @tornado.gen.coroutine
+    @coroutine
     @abc.abstractmethod
     def get_salt_configs(self, field_values):
         pass
