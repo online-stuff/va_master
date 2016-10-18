@@ -31,11 +31,19 @@ def validate_newhost_fields(handler):
         driver_id = str(body['driver_id'])
         field_values = dict(body['field_values'])
         step_index = int(body['step_index'])
-    except:
-        handler.json({'error': 'bad_body'}, 400)
+        with open('/tmp/ninodebugapi', 'a+') as f: 
+           f.write('In step index ' + str(step_index) + '\n')
+
+    except Exception as e:
+        handler.json({'error': 'bad_body', 'msg' : e}, 400)
+        with open('/tmp/ninodebugapi', 'a+') as f: 
+           f.write('Error ' + str(e) + '\n')
         raise tornado.gen.Return(None)
 
     found_driver = yield handler.config.deploy_handler.get_driver_by_id(driver_id)
+
+
+
     if found_driver is None:
         handler.json({'error': 'bad_driver'}, 400)
     else:
@@ -45,10 +53,7 @@ def validate_newhost_fields(handler):
         else:
             if step_index < 0 or driver_steps[step_index].validate(field_values):
                 result = yield found_driver.validate_field_values(step_index, field_values)
-                if type(result) == tuple: 
-                    handler.json(result)
-                else: 
-                    handler.json(result.serialize())
+	        handler.json(result.serialize())
             else:
                 handler.json({
                     'errors': ['Some fields are not filled.'],

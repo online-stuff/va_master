@@ -15,7 +15,7 @@ def bootstrap():
     from tornado.ioloop import PeriodicCallback, IOLoop
     ioloop = IOLoop.instance()
 
-    cb = PeriodicCallback(say_hello, 10000, ioloop)
+    cb = PeriodicCallback(say_hello, 60000, ioloop)
     cb.start()
 
     ioloop.start()
