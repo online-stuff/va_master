@@ -24,7 +24,7 @@ PROVIDER_TEMPLATE = '''VAR_PROVIDER_NAME:
 
   # The name of the configuration profile to use on said minion
   #ubuntu if deploying on ubuntu
-  ssh_username: ec2-user
+  ssh_username: ubuntu
 
 #  These are optional
   location: VAR_REGION
@@ -34,7 +34,7 @@ PROVIDER_TEMPLATE = '''VAR_PROVIDER_NAME:
 
 PROFILE_TEMPLATE = '''VAR_PROFILE_NAME:
     provider: VAR_PROVIDER_NAME
-    ssh_interface: private_ips
+    ssh_interface: public_ips 
     image: VAR_IMAGE
     size: VAR_SIZE
     securitygroup: VAR_SEC_GROUP'''
@@ -151,16 +151,22 @@ class AWSDriver(base.DriverBase):
 
 
             passphrase = 'some_generated_pass'
-            cmd = ['ssh-keygen', '-f', self.key_path, '-t', 'rsa', '-b', '4096', '-P', passphrase]
+            cmd_new_key = ['ssh-keygen', '-f', self.key_path, '-t', 'rsa', '-b', '4096', '-P', passphrase]
 
-            cmd_aws = ['aws', 'ec2', 'import-key-pair', '--key-name', self.key_name, '--public-key-material',  'file://' + self.key_path + '.pub', '--profile', 'aws_provider']
+            cmd_aws_import  = ['aws', 'ec2', 'import-key-pair', '--key-name', self.key_name, '--public-key-material',  'file://' + self.key_path + '.pub', '--profile', 'aws_provider']
+
+#            cmd_eval_agent = ['eval', "`ssh-agent`"]
+
+            cmd_add_ssh = ['ssh-add', self.key_path]
 
             cmd_new_instance = ['salt-cloud', '--profile=' + self.profile_name, self.profile_name + '_instance']
-            with open('/tmp/cmd_line', 'w') as f: 
-                f.write(str(subprocess.list2cmdline(cmd_aws)))
-                f.write(str(subprocess.list2cmdline(cmd)))
-            subprocess.call(cmd)
-            subprocess.call(cmd_aws)
+#            with open('/tmp/cmd_line', 'w') as f: 
+#                f.write(str(subprocess.list2cmdline(cmd_aws)))
+#                f.write(str(subprocess.list2cmdline(cmd)))
+            subprocess.call(cmd_new_key)
+            subprocess.call(cmd_aws_import)
+#            subprocess.call(cmd_eval_agent)
+            subprocess.call(cmd_add_ssh)
             subprocess.call(cmd_new_instance)
 
 
