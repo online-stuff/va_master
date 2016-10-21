@@ -182,7 +182,7 @@ class OpenStackDriver(base.DriverBase):
             self.provider_vars['VAR_USERNAME'] = field_values['username']
             self.provider_vars['VAR_TENANT'] = field_values['tenant']
             self.provider_vars['VAR_PASSWORD'] = field_values['password']
-            self.provider_vars['VAR_IDENTITY_URL'] ='http://' + field_values['hostname'] + '/v2.0/tokens'
+            self.provider_vars['VAR_IDENTITY_URL'] ='http://' + field_values['hostname'] + '/v2.0'
             self.provider_vars['VAR_REGION'] = field_values['region']
 
 
