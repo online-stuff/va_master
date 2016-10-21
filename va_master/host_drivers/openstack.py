@@ -30,7 +30,7 @@ PROFILE_TEMPLATE = '''VAR_PROFILE_NAME:
     securitygroups: VAR_SEC_GROUP'''
 
 class OpenStackDriver(base.DriverBase):
-    def __init__(self, provider_name = 'openstack_provider', profile_name = 'openstack_profile', host_ip = '192.168.80.39', key_name = 'some_key_name', key_path = '/root/openstack_key'):
+    def __init__(self, provider_name = 'openstack_provider', profile_name = 'openstack_profile', host_ip = '192.168.80.39', key_name = '', key_path = '/root/openstack_key'):
 
         if not key_name: 
             #probably use uuid instead
@@ -39,10 +39,21 @@ class OpenStackDriver(base.DriverBase):
         self.key_path = key_path + ('/' * (not key_path[-1] == '/')) + key_name
         self.key_name = key_name
 
-        provider_vars = {'VAR_THIS_IP' : host_ip, 'VAR_PROVIDER_NAME' : provider_name, 'VAR_KEYNAME' : key_name}
+        print 'Path is : ', self.key_path, ' key name is : ', self.key_name
+
+        provider_vars = {'VAR_THIS_IP' : host_ip, 'VAR_PROVIDER_NAME' : provider_name, 'VAR_SSH_NAME' : key_name, 'VAR_SSH_FILE' : self.key_path + '.pem'}
         profile_vars = {'VAR_PROVIDER_NAME' : provider_name, 'VAR_PROFILE_NAME' : profile_name}
         self.regions = ['RegionOne', ]
         super(OpenStackDriver, self).__init__(PROVIDER_TEMPLATE, PROFILE_TEMPLATE, provider_vars = provider_vars, profile_vars = profile_vars)
+
+
+    def cmd_with_environ_vars(self, cmd):
+        cmd = ['OS_USERNAME=' + self.provider_vars['VAR_USERNAME'],
+                'OS_PROJECT_NAME=' + self.provider_vars['VAR_TENANT'], 
+                'OS_AUTH_URL=%s' % (self.provider_vars['VAR_IDENTITY_URL'].split('/tokens')[0]), 
+                'OS_PASSWORD=' + self.provider_vars['VAR_PASSWORD']] + cmd 
+        return cmd
+
 
     @tornado.gen.coroutine
     def driver_id(self):
@@ -64,9 +75,9 @@ class OpenStackDriver(base.DriverBase):
     def get_salt_configs(self):
         yield super(OpenStackDriver, self).get_salt_configs()
         
-        with open('/tmp/test_openstack_provider', 'w') as f: 
+        with open('/etc/salt/cloud.providers.d/test_openstack_provider.conf', 'w') as f: 
             f.write(self.provider_template)
-        with open('/tmp/test_openstack_profile', 'w') as f: 
+        with open('/etc/salt/cloud.profiles.d/test_openstack_profile.conf', 'w') as f: 
             f.write(self.profile_template)
         #tornado.gen.Return (self.provider_template, self.profile_template)
 
@@ -198,21 +209,28 @@ class OpenStackDriver(base.DriverBase):
                 }
             ))
         elif step_index == 2:
+            cmd_images = ['nova', 'image-list']
+            cmd_sizes = ['nova', 'flavor-list']
+
+            images = subprocess.check_output(cmd_images)
+            sizes = subprocess.check_output(cmd_sizes)
+
+            images = [x.split('|')[2].strip() for x in images.split('\n')[3:-2]]            
+            sizes = [x.split('|')[2].strip() for x in sizes.split('\n')[3:-2]]
+ 
             raise tornado.gen.Return(StepResult(
                 errors=[], new_step_index=3, option_choices={
-                    'image': ['img-1', 'img-2'],
-                    'size': ['va-small', 'va-med']
+                    'image': images,
+                    'size': sizes,
                 }
             ))
         else:
             self.profile_vars['VAR_IMAGE'] = field_values['image']
             self.profile_vars['VAR_SIZE'] = field_values['size']
             
-            cmd_keypair = ['OS_USERNAME=' + self.provider_vars['VAR_USERNAME'],
-                'OS_PROJECT_NAME=' + self.provider_vars['VAR_TENANT'], 
-                'OS_AUTH_URL=%s' % (self.provider_vars['VAR_IDENTITY_URL'].split('/tokens')[0]), 
-                'OS_PASSWORD=' + self.provider_vars['VAR_PASSWORD'], 
-                'nova', 'keypair-add', self.key_name, '>', self.key_path + '.pem']
+            cmd_keypair = ['nova', 'keypair-add', self.key_name, '>', self.key_path + '.pem']
+            with open('/tmp/keypair_test', 'w') as f: 
+                f.write(subprocess.list2cmdline(cmd_keypair))
 
             subprocess.call(cmd_keypair)
             yield self.get_salt_configs()
