@@ -17,7 +17,8 @@ setuptools.setup(
   zip_safe=False,
   entry_points = {
     'console_scripts': [
-        'vapourapps = va_master.cli:entry'
+        'vapourapps = va_master.cli:entry',
+        'vapourapps-test = va_master.tests:run_tests'
     ]
   }
 )

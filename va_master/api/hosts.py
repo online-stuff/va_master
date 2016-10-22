@@ -48,16 +48,16 @@ def validate_newhost_fields(handler):
         driver_steps = yield found_driver.get_steps()
         if step_index >= len(driver_steps):
             handler.json({'error': 'bad_step'}, 400)
+            raise Return()
+        if step_index < 0 or driver_steps[step_index].validate(field_values):
+            result = yield found_driver.validate_field_values(step_index, field_values)
+            handler.json(result.serialize())
         else:
-            if step_index < 0 or driver_steps[step_index].validate(field_values):
-                result = yield found_driver.validate_field_values(step_index, field_values)
-                handler.json(result.serialize())
-            else:
-                handler.json({
-                    'errors': ['Some fields are not filled.'],
-                    'new_step_index': step_index,
-                    'option_choices': None
-                })
+            handler.json({
+                'errors': ['Some fields are not filled.'],
+                'new_step_index': step_index,
+                'option_choices': None
+            })
 
 
 @auth_only

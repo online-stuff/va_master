@@ -5,6 +5,9 @@ from . import deploy_handler
 from . import datastore
 from .host_drivers import openstack
 
+# This config module cares about internal code injection
+# For user config, use cli.py or cli_environment.py
+
 def get_server_static():
     # get the server assets static path
     return pkg_resources.resource_filename('va_dashboard', 'static')
@@ -27,7 +30,7 @@ class Config(object):
         self.server_port = 80
         self.server_static_path = get_server_static()
         self.deploy_proc_count = 3
-        # Now dynamically inject any kwargs
+        # Dynamically inject any kwargs
         for kw in kwargs:
             setattr(self, kw, kwargs[kw])
         

@@ -64,12 +64,16 @@ def create_admin(datastore, username, password):
         new_admins = yield datastore.get('admins')
     except datastore.KeyNotFound:
         yield datastore.insert('admins', [])
-        new_admins = []
-    new_admins.append({
+        new_admins = {}
+    
+    if new_admins.get(username, None):
+        raise ValueError('Username already exists.')
+    
+    new_admins[username] = {
         'username': username,
         'password_hash': crypt(password),
         'timestamp_created': long(time.time())
-    })
+    }
     yield datastore.insert('admins', new_admins)
     token = yield get_or_create_token(datastore, username)
     raise Return(token)
@@ -96,13 +100,8 @@ def admin_login(handler):
         handler.json({'error': 'no_admins'}, 401)
         raise Return()
 
-    account_info = None
-    for admin in admins:
-        if admin['username'] == username:
-            account_info = admin
-            break
-    invalid_acc_hash = crypt('__invalidpassword__')
-    if not account_info:
+    account_info = admins.get(username, None)
+    if account_info is None:
         # Prevent timing attacks
         account_info = {
             'password_hash': invalid_acc_hash,
