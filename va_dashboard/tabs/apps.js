@@ -38,10 +38,10 @@ var Apps = React.createClass({
                 <h1>Launch new app</h1>
                 <form onSubmit={this.onSubmit} className='form-horizontal'>
                     <div className='form-group'>
-                    <select>
+                    <select ref='hostname'>
                         {host_rows}
                     </select> <br/>
-                    <select>
+                    <select ref = 'state'>
                         <option>samba.sls</option>
                     </select>
                     <input placeholder='Instance name' ref='name'/> <br/>
@@ -66,7 +66,7 @@ var Apps = React.createClass({
                 clearInterval(interval);
             }
         }, 10000);
-        var data = {name: this.refs.name.value};
+        var data = {minion_name: this.refs.name.value, hostname: this.refs.hostname.value, state: this.refs.state.value};
         Network.post('/api/apps', this.props.auth.token, data).done(function(data) {
             me.setState({status: 'launched'});
         });

@@ -77,8 +77,8 @@ class OpenStackDriver(base.DriverBase):
         with open(profile_conf, 'w') as f: 
             f.write(self.profile_template)
 
-        self.field_values['provider_conf'] = provider_conf
-        self.field_values['profile_conf'] = profile_conf
+        self.field_values['provider_conf'] = self.provider_vars['VAR_PROVIDER_NAME'] 
+        self.field_values['profile_conf'] = self.profile_vars['VAR_PROFILE_NAME']
 
     @tornado.gen.coroutine
     def get_steps(self):
