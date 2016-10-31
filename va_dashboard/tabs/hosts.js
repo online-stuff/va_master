@@ -10,7 +10,7 @@ var Hosts = React.createClass({
     componentDidMount: function () {
         var me = this;
         Network.get('/api/hosts', this.props.auth.token).done(function (data) {
-            //me.setState({hosts: data.hosts});
+            me.setState({hosts: data.hosts});
         });
     },
     render: function() {

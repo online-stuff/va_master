@@ -4,8 +4,16 @@ var Network = require('../network');
 
 var Apps = React.createClass({
     getInitialState: function () {
-        return {status: 'none', progress: 0};
+        return {status: 'none', progress: 0, hosts: []};
     },
+
+    componentDidMount: function () {
+        var me = this;
+        Network.get('/api/hosts', this.props.auth.token).done(function (data) {
+            me.setState({hosts: data.hosts});
+        });
+    },
+
     render: function () {
         var statusColor, statusDisplay, statusMessage;
 
@@ -20,12 +28,18 @@ var Apps = React.createClass({
         }else {
             statusDisplay = 'none';
         }
+
+        var host_rows = this.state.hosts.map(function(host) {
+            return <option key = {host.name}>{host.name}</option>
+        });
+
         return (
             <div>
                 <h1>Launch new app</h1>
                 <form onSubmit={this.onSubmit} className='form-horizontal'>
                     <div className='form-group'>
                     <select>
+                        {host_rows}
                     </select> <br/>
                     <select>
                         <option>samba.sls</option>

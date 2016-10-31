@@ -46,15 +46,14 @@ class StepResult(object):
 
 class DriverBase(object):
     __metaclass__ = abc.ABCMeta
+
     @abc.abstractmethod
-    def __init__(self, provider_template, profile_template, provider_vars, profile_vars):
+    def  __init__(self, provider_template, profile_template, provider_vars, profile_vars):
         self.provider_template = provider_template
         self.profile_template = profile_template
-        self.profile_vars = profile_vars
         self.provider_vars = provider_vars
+        self.profile_vars = profile_vars
         self.client = AsyncHTTPClient()
-
-#        raise tornado.gen.Return(None)
 
 
 

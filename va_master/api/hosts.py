@@ -53,6 +53,8 @@ def validate_newhost_fields(handler):
         else:
             if step_index < 0 or driver_steps[step_index].validate(field_values):
                 result = yield found_driver.validate_field_values(step_index, field_values)
+                if result.new_step_index == -1:
+                    handler.config.deploy_handler.create_host(found_driver)
 	        handler.json(result.serialize())
             else:
                 handler.json({

@@ -66,7 +66,7 @@ class AWSDriver(base.DriverBase):
         provider_vars = {'VAR_THIS_IP' : host_ip, 'VAR_PROVIDER_NAME' : provider_name, 'VAR_KEYNAME' : key_name, 'VAR_PRIVATE_KEY' : self.key_path}
 
         profile_vars = {'VAR_PROVIDER_NAME' : provider_name, 'VAR_PROFILE_NAME' : profile_name}
-        super(AWSDriver, self).__init__(PROVIDER_TEMPLATE, PROFILE_TEMPLATE, provider_vars = provider_vars, profile_vars = profile_vars)
+        super(AWSDriver, self).__init__(PROVIDER_TEMPLATE, PROFILE_TEMPLATE, provider_vars, profile_vars)
         self.aws_config = AWS_CONFIG_TEMPLATE
 
     @tornado.gen.coroutine
