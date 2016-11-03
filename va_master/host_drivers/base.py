@@ -54,7 +54,7 @@ class DriverBase(object):
         self.provider_vars = provider_vars
         self.profile_vars = profile_vars
         self.client = AsyncHTTPClient()
-
+        self.libcloud_driver = None
 
 
     @abc.abstractmethod
@@ -81,8 +81,19 @@ class DriverBase(object):
 
     @tornado.gen.coroutine
 #    @abc.abstractmethod
-    def get_salt_configs(self):
-        for var_name in self.profile_vars: 
-            self.profile_template = self.profile_template.replace(var_name, self.profile_vars[var_name])
-        for var_name in self.provider_vars: 
-            self.provider_template = self.provider_template.replace(var_name, self.provider_vars[var_name])
+    def get_salt_configs(self, skip_provider = False, skip_profile = False):
+        if not skip_profile: 
+            for var_name in self.profile_vars: 
+                self.profile_template = self.profile_template.replace(var_name, self.profile_vars[var_name])
+ 
+        if not skip_provider: 
+            for var_name in self.provider_vars: 
+                self.provider_template = self.provider_template.replace(var_name, self.provider_vars[var_name])
+
+    def write_configs(self, skip_provider=False, skip_profile=False):
+        if not skip_provider: 
+            with open('/etc/salt/cloud.providers.d/' + self.provider_name + '.conf') as f: 
+                f.write(self.provider_template)
+        if not skip_profile: 
+             with open('/etc/salt/cloud.profiles.d/' + self.profile_name + '.conf') as f: 
+                f.write(self.profile_template)

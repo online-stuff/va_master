@@ -3,7 +3,7 @@ import requests
 import subprocess
 import traceback
 import tornado.gen
-from host_drivers import openstack, aws
+from host_drivers import openstack, aws, vcloud
 
 from Crypto.PublicKey import RSA
 from concurrent.futures import ProcessPoolExecutor
@@ -15,7 +15,7 @@ class DeployHandler(object):
 #        self.datastore.insert('hosts', [])
         self.deploy_pool_count = deploy_pool_count
         self.pool = ProcessPoolExecutor(deploy_pool_count)
-        self.drivers = [openstack.OpenStackDriver(), aws.AWSDriver(),  ]
+        self.drivers = [openstack.OpenStackDriver(), aws.AWSDriver(), vcloud.VCloudDriver(), ]
 
 
     def start(self):

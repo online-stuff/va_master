@@ -5,6 +5,12 @@ import tornado.gen
 import json
 import subprocess
 
+
+from libcloud.compute.types import Provider
+from libcloud.compute.providers import get_driver
+
+from salt.cloud.clouds import nova
+
 PROVIDER_TEMPLATE = '''VAR_PROVIDER_NAME:
   auth_minion: VAR_THIS_IP
   minion:
@@ -66,19 +72,14 @@ class OpenStackDriver(base.DriverBase):
         ])
 
     @tornado.gen.coroutine
-    def get_salt_configs(self):
-        yield super(OpenStackDriver, self).get_salt_configs()
+    def get_salt_configs(self, skip_provider = False, skip_profile = False):
+        yield super(OpenStackDriver, self).get_salt_configs(skip_provider, skip_profile)
         
-        provider_conf = '/etc/salt/cloud.providers.d/' + self.provider_vars['VAR_PROVIDER_NAME']
-        profile_conf = '/etc/salt/cloud.profiles.d/' + self.profile_vars['VAR_PROFILE_NAME']
-
-        with open(provider_conf, 'w') as f: 
-            f.write(self.provider_template)
-        with open(profile_conf, 'w') as f: 
-            f.write(self.profile_template)
-
         self.field_values['provider_conf'] = self.provider_vars['VAR_PROVIDER_NAME'] 
         self.field_values['profile_conf'] = self.profile_vars['VAR_PROFILE_NAME']
+
+    def write_salt_configs(self, skip_provider = False, skip_profile = False):
+        super(OpenStackDriver, self).get_salt_configs(skip_provider, skip_profile)
 
     @tornado.gen.coroutine
     def get_steps(self):
@@ -135,39 +136,23 @@ class OpenStackDriver(base.DriverBase):
                 services[serv['type']] = endpoint['publicURL']
         raise tornado.gen.Return((token, services))
 
-    @tornado.gen.coroutine
-    def get_networks(self, token_data):
-        url = token_data[1]['network']
 
-        req = HTTPRequest('%s/v2.0/networks' % url, 'GET', headers={
+    @tornado.gen.coroutine
+    def get_openstack_value(self, token_data, token_value, url_endpoint):
+        url = token_data[1][token_value]
+        req = HTTPRequest('%s/%s' % (url, url_endpoint), 'GET', headers={
             'X-Auth-Token': token_data[0],
             'Accept': 'application/json'
         })
         try:
             resp = yield self.client.fetch(req)
         except:
+            print ('Exception!')
             import traceback; traceback.print_exc()
             raise tornado.gen.Return([])
-        body = json.loads(resp.body)
-        networks = ['%s | %s' % (x['name'], x['id']) for x in body['networks']]
-        raise tornado.gen.Return(networks)
 
-    @tornado.gen.coroutine
-    def get_securitygroups(self, token_data, tenant):
-        url = token_data[1]['compute']
-        req = HTTPRequest('%s/os-security-groups' % (url), 'GET', headers={
-            'X-Auth-Token': token_data[0],
-            'Accept': 'application/json'
-        })
-        try:
-            resp = yield self.client.fetch(req)
-        except:
-            import traceback; traceback.print_exc()
-            raise tornado.gen.Return([])
-        body = json.loads(resp.body)
-        secgroups = body['security_groups']
-        secgroups = ['%s | %s' % (x['name'], x['id']) for x in secgroups]
-        raise tornado.gen.Return(secgroups)
+        result = json.loads(resp.body)
+        raise tornado.gen.Return(result)
 
     @tornado.gen.coroutine
     def validate_field_values(self, step_index, field_values):
@@ -177,21 +162,30 @@ class OpenStackDriver(base.DriverBase):
             ))
 
         elif step_index == 0:
+            os_base_url = 'http://' + field_values['host_ip'] + '/v2.0'
+
             self.field_values['hostname'] = field_values['hostname']
             self.provider_vars['VAR_USERNAME'] = field_values['username']
             self.provider_vars['VAR_TENANT'] = field_values['tenant']
             self.provider_vars['VAR_PASSWORD'] = field_values['password']
-            self.provider_vars['VAR_IDENTITY_URL'] ='http://' + field_values['host_ip'] + '/v2.0'
+            self.provider_vars['VAR_IDENTITY_URL'] = os_base_url
             self.provider_vars['VAR_REGION'] = field_values['region']
 
 
             networks = []
-            token_data = yield self.get_token(field_values)
-            networks = yield self.get_networks(token_data)
-            sec_groups = yield self.get_securitygroups(token_data, field_values['tenant'])
-            services_plain = ['- %s:%s' % (x[0], x[1]) for x in token_data[1].iteritems()]
+            self.token_data = yield self.get_token(field_values)
+
+            networks = yield self.get_openstack_value(self.token_data, 'network', 'v2.0/networks')
+            networks = ['%s | %s' % (x['name'], x['id']) for x in networks['networks']]
+
+            sec_groups = yield self.get_openstack_value(self.token_data, 'compute', 'os-security-groups')
+
+            sec_groups = ['%s | %s' % (x['name'], x['id']) for x in sec_groups['security_groups']]
+            services_plain = ['- %s:%s' % (x[0], x[1]) for x in self.token_data[1].iteritems()]
             services_plain = '; '.join(services_plain)
-            desc = 'Token: %s Services: %s' % (token_data[0], services_plain)
+            desc = 'Token: %s Services: %s' % (self.token_data[0], services_plain)
+
+
             raise tornado.gen.Return(StepResult(errors=[], new_step_index=1,
                 option_choices={
                     'network': networks,
@@ -203,14 +197,15 @@ class OpenStackDriver(base.DriverBase):
             self.provider_vars['VAR_NETWORK_ID'] = field_values['network'].split('|')[1]
             self.profile_vars['VAR_SEC_GROUP'] = field_values['sec_group'].split('|')[1]
 
-            cmd_images = ['nova', 'image-list']
-            cmd_sizes = ['nova', 'flavor-list']
+            images = yield self.get_openstack_value(self.token_data, 'image', 'v2.0/images')
+            images = images['images']
+            images = ['|'.join([x['id'], x['name']]) for x in images]
 
-            images = subprocess.check_output(cmd_images)
-            sizes = subprocess.check_output(cmd_sizes)
+            sizes = yield self.get_openstack_value(self.token_data, 'compute', 'flavors')
+            sizes = sizes['flavors']
+            sizes = ['|'.join([x['id'], x['name']]) for x in sizes]
 
-            images = [x.split('|')[2].strip() for x in images.split('\n')[3:-2]]            
-            sizes = [x.split('|')[2].strip() for x in sizes.split('\n')[3:-2]]
+
  
             raise tornado.gen.Return(StepResult(
                 errors=[], new_step_index=2, option_choices={
@@ -223,6 +218,7 @@ class OpenStackDriver(base.DriverBase):
             self.profile_vars['VAR_SIZE'] = field_values['size']
  
             yield self.get_salt_configs()
+            yield self.write_configs()
 
             raise tornado.gen.Return(StepResult(
                 errors=[], new_step_index=-1, option_choices={}
