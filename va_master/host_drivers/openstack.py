@@ -217,8 +217,14 @@ class OpenStackDriver(base.DriverBase):
             self.profile_vars['VAR_IMAGE'] = field_values['image']
             self.profile_vars['VAR_SIZE'] = field_values['size']
  
-            yield self.get_salt_configs()
-            yield self.write_configs()
+            try:
+                yield self.get_salt_configs()
+                yield self.write_configs()
+            except:
+                print ('Exception!')
+                import traceback; traceback.print_exc()
+                raise tornado.gen.Return([])
+
 
             raise tornado.gen.Return(StepResult(
                 errors=[], new_step_index=-1, option_choices={}

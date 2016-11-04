@@ -90,10 +90,11 @@ class DriverBase(object):
             for var_name in self.provider_vars: 
                 self.provider_template = self.provider_template.replace(var_name, self.provider_vars[var_name])
 
+    @tornado.gen.coroutine
     def write_configs(self, skip_provider=False, skip_profile=False):
         if not skip_provider: 
-            with open('/etc/salt/cloud.providers.d/' + self.provider_name + '.conf') as f: 
+            with open('/etc/salt/cloud.providers.d/' + self.provider_vars['VAR_PROVIDER_NAME'] + '.conf', 'w') as f: 
                 f.write(self.provider_template)
         if not skip_profile: 
-             with open('/etc/salt/cloud.profiles.d/' + self.profile_name + '.conf') as f: 
+             with open('/etc/salt/cloud.profiles.d/' + self.profile_vars['VAR_PROFILE_NAME'] + '.conf', 'w') as f: 
                 f.write(self.profile_template)
