@@ -41,8 +41,8 @@ var Apps = React.createClass({
                     <select ref='hostname'>
                         {host_rows}
                     </select> <br/>
-                    <select ref = 'state'>
-                        <option>samba.sls</option>
+                    <select ref = 'role'>
+                        <option>directory</option>
                     </select>
                     <input placeholder='Instance name' ref='name'/> <br/>
                     <button>Launch</button>
@@ -66,7 +66,7 @@ var Apps = React.createClass({
                 clearInterval(interval);
             }
         }, 10000);
-        var data = {minion_name: this.refs.name.value, hostname: this.refs.hostname.value, state: this.refs.state.value};
+        var data = {minion_name: this.refs.name.value, hostname: this.refs.hostname.value, role: this.refs.role.value};
         Network.post('/api/apps', this.props.auth.token, data).done(function(data) {
             me.setState({status: 'launched'});
         });

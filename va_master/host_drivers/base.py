@@ -81,10 +81,11 @@ class DriverBase(object):
 
     @tornado.gen.coroutine
 #    @abc.abstractmethod
-    def get_salt_configs(self, skip_provider = False, skip_profile = False):
+    def get_salt_configs(self, skip_provider = False, skip_profile = False, base_profile = False):
         if not skip_profile: 
             for var_name in self.profile_vars: 
-                self.profile_template = self.profile_template.replace(var_name, self.profile_vars[var_name])
+                if not (base_profile and var_name == 'VAR_PROFILE_NAME') : 
+                    self.profile_template = self.profile_template.replace(var_name, self.profile_vars[var_name])
  
         if not skip_provider: 
             for var_name in self.provider_vars: 
@@ -95,6 +96,8 @@ class DriverBase(object):
         if not skip_provider: 
             with open('/etc/salt/cloud.providers.d/' + self.provider_vars['VAR_PROVIDER_NAME'] + '.conf', 'w') as f: 
                 f.write(self.provider_template)
-        if not skip_profile: 
-             with open('/etc/salt/cloud.profiles.d/' + self.profile_vars['VAR_PROFILE_NAME'] + '.conf', 'w') as f: 
+        if not skip_profile:
+             profile_conf_dir =  '/etc/salt/cloud.profiles.d/' + self.profile_vars['VAR_PROFILE_NAME'] + '.conf'
+             self.field_values['profile_conf_dir'] = profile_conf_dir
+             with open(profile_conf_dir, 'w') as f: 
                 f.write(self.profile_template)

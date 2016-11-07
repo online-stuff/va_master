@@ -33,7 +33,11 @@ PROFILE_TEMPLATE = '''VAR_PROFILE_NAME:
     provider: VAR_PROVIDER_NAME
     image: VAR_IMAGE
     size: VAR_SIZE
-    securitygroups: VAR_SEC_GROUP'''
+    securitygroups: VAR_SEC_GROUP
+    minion:
+        grains:
+            role: VAR_ROLE
+'''
 
 class OpenStackDriver(base.DriverBase):
     def __init__(self, provider_name = 'openstack_provider', profile_name = 'openstack_profile', host_ip = '192.168.80.39', key_name = '', key_path = '/root/openstack_key'):
@@ -180,7 +184,7 @@ class OpenStackDriver(base.DriverBase):
 
             sec_groups = yield self.get_openstack_value(self.token_data, 'compute', 'os-security-groups')
 
-            sec_groups = ['%s | %s' % (x['name'], x['id']) for x in sec_groups['security_groups']]
+            self.field_values['sec_groups'] = sec_groups = ['%s | %s' % (x['name'], x['id']) for x in sec_groups['security_groups']]
             services_plain = ['- %s:%s' % (x[0], x[1]) for x in self.token_data[1].iteritems()]
             services_plain = '; '.join(services_plain)
             desc = 'Token: %s Services: %s' % (self.token_data[0], services_plain)
@@ -199,11 +203,11 @@ class OpenStackDriver(base.DriverBase):
 
             images = yield self.get_openstack_value(self.token_data, 'image', 'v2.0/images')
             images = images['images']
-            images = ['|'.join([x['id'], x['name']]) for x in images]
+            self.field_values['images'] = images = [x['name'] for x in images]
 
             sizes = yield self.get_openstack_value(self.token_data, 'compute', 'flavors')
             sizes = sizes['flavors']
-            sizes = ['|'.join([x['id'], x['name']]) for x in sizes]
+            self.field_values['sizes'] = sizes = [x['name'] for x in sizes]
 
 
  
@@ -218,7 +222,7 @@ class OpenStackDriver(base.DriverBase):
             self.profile_vars['VAR_SIZE'] = field_values['size']
  
             try:
-                yield self.get_salt_configs()
+                yield self.get_salt_configs(base_profile = True)
                 yield self.write_configs()
             except:
                 print ('Exception!')

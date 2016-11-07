@@ -89,6 +89,7 @@ class VCloudDriver(base.DriverBase):
             self.provider_vars['VAR_URL'] =field_values['host_url']
 
             yield self.get_salt_configs()
+            yield self.write_configs()
 
             raise tornado.gen.Return(StepResult(
                 errors=[], new_step_index=-1, option_choices={}
