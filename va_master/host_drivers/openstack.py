@@ -5,7 +5,6 @@ import tornado.gen
 import json
 import subprocess
 
-
 from libcloud.compute.types import Provider
 from libcloud.compute.providers import get_driver
 
@@ -40,24 +39,17 @@ PROFILE_TEMPLATE = '''VAR_PROFILE_NAME:
 '''
 
 class OpenStackDriver(base.DriverBase):
-    def __init__(self, provider_name = 'openstack_provider', profile_name = 'openstack_profile', host_ip = '192.168.80.39', key_name = '', key_path = '/root/openstack_key'):
-
-        self.field_values = {
-                'driver_name' : 'openstack',
+    def __init__(self, provider_name = 'openstack_provider', profile_name = 'openstack_profile', host_ip = '192.168.80.39'):
+        kwargs = {
+            'driver_name' : 'openstack', 
+            'provider_template' : PROVIDER_TEMPLATE, 
+            'profile_template' : PROFILE_TEMPLATE, 
+            'provider_name' : provider_name, 
+            'profile_name' : profile_name, 
+            'host_ip' : host_ip
             }
-           
-
-        if not key_name: 
-            #probably use uuid instead
-            key_name = 'openstack_key_name'
-
-        self.key_path = key_path + ('/' * (not key_path[-1] == '/')) + key_name
-        self.key_name = key_name
-
-        provider_vars = {'VAR_THIS_IP' : host_ip, 'VAR_PROVIDER_NAME' : provider_name, 'VAR_SSH_NAME' : key_name, 'VAR_SSH_FILE' : self.key_path + '.pem'}
-        profile_vars = {'VAR_PROVIDER_NAME' : provider_name, 'VAR_PROFILE_NAME' : profile_name}
         self.regions = ['RegionOne', ]
-        super(OpenStackDriver, self).__init__(PROVIDER_TEMPLATE, PROFILE_TEMPLATE, provider_vars, profile_vars)
+        super(OpenStackDriver, self).__init__(**kwargs) 
 
     @tornado.gen.coroutine
     def driver_id(self):
@@ -67,45 +59,17 @@ class OpenStackDriver(base.DriverBase):
     def friendly_name(self):
         raise tornado.gen.Return('OpenStack')
 
-    @tornado.gen.coroutine
-    def new_host_step_descriptions(self):
-        raise tornado.gen.Return([
-            {'name': 'Host info'},
-            {'name': 'Pick a Network'},
-            {'name': 'Security'}
-        ])
-
-    @tornado.gen.coroutine
-    def get_salt_configs(self, skip_provider = False, skip_profile = False):
-        yield super(OpenStackDriver, self).get_salt_configs(skip_provider, skip_profile)
-        
-        self.field_values['provider_conf'] = self.provider_vars['VAR_PROVIDER_NAME'] 
-        self.field_values['profile_conf'] = self.profile_vars['VAR_PROFILE_NAME']
-
-    def write_salt_configs(self, skip_provider = False, skip_profile = False):
-        super(OpenStackDriver, self).get_salt_configs(skip_provider, skip_profile)
 
     @tornado.gen.coroutine
     def get_steps(self):
-        host_info = Step('Host info')
-        host_info.add_field('hostname', 'Name for the host', type = 'str')
-        host_info.add_field('host_ip', 'Keystone host_ip:port (xx.xx.xxx.xx:35357)', type = 'str')
-        host_info.add_field('username', 'Username', type = 'str')
-        host_info.add_field('password', 'Password', type = 'str')
-        host_info.add_field('tenant', 'Tenant', type = 'str')
-        host_info.add_field('region', 'Region', type = 'options')
-
-
-        net_sec = Step('Network & security group')
-        net_sec.add_description_field('netsec_desc', 'Current connection info')
-        net_sec.add_field('network', 'Pick network', type = 'options')
-        net_sec.add_field('sec_group', 'Pick security group', type = 'options')
-
-
-        imagesize = Step('Image & size')
-        imagesize.add_field('image', 'Image', type = 'options')
-        imagesize.add_field('size', 'Size', type = 'options')
-        raise tornado.gen.Return([host_info, net_sec, imagesize])
+        steps = yield super(OpenStackDriver, self).get_steps()
+        steps[0].add_fields([
+            ('host_ip', 'Keystone host_ip:port (xx.xx.xxx.xx:35357)', 'str'),
+            ('tenant', 'Tenant', 'str'),
+            ('region', 'Region', 'options'),
+        ])
+        self.steps = steps
+        raise tornado.gen.Return(steps)
 
     @tornado.gen.coroutine
     def get_token(self, field_values):
@@ -158,79 +122,60 @@ class OpenStackDriver(base.DriverBase):
         result = json.loads(resp.body)
         raise tornado.gen.Return(result)
 
+
+    @tornado.gen.coroutine
+    def get_networks(self):
+        networks = yield self.get_openstack_value(self.token_data, 'network', 'v2.0/networks')
+        networks = ['%s | %s' % (x['name'], x['id']) for x in networks['networks']]
+        raise tornado.gen.Return(networks)
+
+    @tornado.gen.coroutine
+    def get_sec_groups(self):
+       	sec_groups = yield self.get_openstack_value(self.token_data, 'compute', 'os-security-groups')
+	sec_groups = ['%s | %s' % (x['name'], x['id']) for x in sec_groups['security_groups']]
+        print(sec_groups)
+	raise tornado.gen.Return(sec_groups)
+
+    @tornado.gen.coroutine
+    def get_images(self):
+        images = yield self.get_openstack_value(self.token_data, 'image', 'v2.0/images')
+        images = [x['name'] for x in images['images']]
+        raise tornado.gen.Return(images)
+
+    @tornado.gen.coroutine
+    def get_sizes(self):
+        sizes = yield self.get_openstack_value(self.token_data, 'compute', 'flavors')
+        sizes = [x['name'] for x in sizes['flavors']]
+        raise tornado.gen.Return(sizes)
+
+
+
+
     @tornado.gen.coroutine
     def validate_field_values(self, step_index, field_values):
         if step_index < 0:
-            raise tornado.gen.Return(StepResult(
-                errors=[], new_step_index=0, option_choices={'region' : self.regions,}
-            ))
-
+	    raise tornado.gen.Return(StepResult(
+		errors=[], new_step_index=0, option_choices={'region' : self.regions,}
+	    ))
         elif step_index == 0:
-            os_base_url = 'http://' + field_values['host_ip'] + '/v2.0'
+	    self.token_data = yield self.get_token(field_values)
 
-            self.field_values['hostname'] = field_values['hostname']
-            self.provider_vars['VAR_USERNAME'] = field_values['username']
-            self.provider_vars['VAR_TENANT'] = field_values['tenant']
-            self.provider_vars['VAR_PASSWORD'] = field_values['password']
-            self.provider_vars['VAR_IDENTITY_URL'] = os_base_url
-            self.provider_vars['VAR_REGION'] = field_values['region']
+	    field_values['networks'] = yield self.get_networks() 
+            field_values['sec_groups'] = yield self.get_sec_groups()
+	    self.field_values['images'] = yield self.get_images()
+	    self.field_values['sizes']= yield self.get_sizes()
 
+	    os_base_url = 'http://' + field_values['host_ip'] + '/v2.0'
 
-            networks = []
-            self.token_data = yield self.get_token(field_values)
+	    self.provider_vars['VAR_TENANT'] = field_values['tenant']
+	    self.provider_vars['VAR_IDENTITY_URL'] = os_base_url
+	    self.provider_vars['VAR_REGION'] = field_values['region']
 
-            networks = yield self.get_openstack_value(self.token_data, 'network', 'v2.0/networks')
-            networks = ['%s | %s' % (x['name'], x['id']) for x in networks['networks']]
+        elif step_index == 1: 
+            field_values['images'] = self.field_values['images']
+            field_values['sizes'] = self.field_values['sizes']
 
-            sec_groups = yield self.get_openstack_value(self.token_data, 'compute', 'os-security-groups')
-
-            self.field_values['sec_groups'] = sec_groups = ['%s | %s' % (x['name'], x['id']) for x in sec_groups['security_groups']]
-            services_plain = ['- %s:%s' % (x[0], x[1]) for x in self.token_data[1].iteritems()]
-            services_plain = '; '.join(services_plain)
-            desc = 'Token: %s Services: %s' % (self.token_data[0], services_plain)
-
-
-            raise tornado.gen.Return(StepResult(errors=[], new_step_index=1,
-                option_choices={
-                    'network': networks,
-                    'sec_group': sec_groups,
-                    'netsec_desc': desc
-                }
-            ))
-        elif step_index == 1:
-            self.provider_vars['VAR_NETWORK_ID'] = field_values['network'].split('|')[1]
-            self.profile_vars['VAR_SEC_GROUP'] = field_values['sec_group'].split('|')[1]
-
-            images = yield self.get_openstack_value(self.token_data, 'image', 'v2.0/images')
-            images = images['images']
-            self.field_values['images'] = images = [x['name'] for x in images]
-
-            sizes = yield self.get_openstack_value(self.token_data, 'compute', 'flavors')
-            sizes = sizes['flavors']
-            self.field_values['sizes'] = sizes = [x['name'] for x in sizes]
-
-
- 
-            raise tornado.gen.Return(StepResult(
-                errors=[], new_step_index=2, option_choices={
-                    'image': images,
-                    'size': sizes,
-                }
-            ))
-        else:
-            self.profile_vars['VAR_IMAGE'] = field_values['image']
-            self.profile_vars['VAR_SIZE'] = field_values['size']
- 
-            try:
-                yield self.get_salt_configs(base_profile = True)
-                yield self.write_configs()
-            except:
-                print ('Exception!')
-                import traceback; traceback.print_exc()
-                raise tornado.gen.Return([])
-
-
-            raise tornado.gen.Return(StepResult(
-                errors=[], new_step_index=-1, option_choices={}
-            ))
-
+       	step_kwargs = yield super(OpenStackDriver, self).validate_field_values(step_index, field_values)
+        print ('Yielding ', step_kwargs)
+        raise tornado.gen.Return(StepResult(**step_kwargs))
+       

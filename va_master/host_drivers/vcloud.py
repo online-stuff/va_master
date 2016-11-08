@@ -17,23 +17,18 @@ PROFILE_TEMPLATE = '''VAR_PROFILE_NAME:
 '''
 
 class VCloudDriver(base.DriverBase):
-    def __init__(self, provider_name = 'vcloud_provider', profile_name = 'vcloud_profile', host_ip = '192.168.80.39', key_name = '', key_path = '/root/openstack_key'):
+    def __init__(self, provider_name = 'vcloud_provider', profile_name = 'vcloud_profile', host_ip = '192.168.80.39'):
 
-        self.field_values = {
-                'driver_name' : 'openstack',
-            }
-           
+        kwargs = {
+            'driver_name' : 'vsphere', 
+            'provider_template' : PROVIDER_TEMPLATE, 
+            'profile_template' : PROFILE_TEMPLATE, 
+            'provider_name' : provider_name, 
+            'profile_name' : profile_name, 
+            'host_ip' : host_ip
+        }
 
-        if not key_name: 
-            #probably use uuid instead
-            key_name = 'openstack_key_name'
-
-        self.key_path = key_path + ('/' * (not key_path[-1] == '/')) + key_name
-        self.key_name = key_name
-
-        provider_vars = {'VAR_PROVIDER_NAME' : provider_name, 'VAR_SSH_NAME' : key_name, 'VAR_SSH_FILE' : self.key_path + '.pem'}
-        profile_vars = {'VAR_PROVIDER_NAME' : provider_name, 'VAR_PROFILE_NAME' : profile_name}
-        super(VCloudDriver, self).__init__(PROVIDER_TEMPLATE, PROFILE_TEMPLATE, provider_vars, profile_vars)
+        super(VCloudDriver, self).__init__(**kwargs)
 
     @tornado.gen.coroutine
     def driver_id(self):

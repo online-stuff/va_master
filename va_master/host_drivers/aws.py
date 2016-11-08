@@ -49,13 +49,15 @@ output=json
 
 class AWSDriver(base.DriverBase):
 
-    def __init__(self, key_path = '/etc/salt/', key_name = '', provider_name = 'aws_provider', profile_name = 'aws_instance', host_ip = '192.168.80.39'):
-        if not key_name: 
-            #probably use uuid instead
-            key_name = 'aws_key_name'
-        self.key_path = key_path + ('/' * (not key_path[-1] == '/')) + key_name
-        self.key_name = key_name
-
+    def __init__(self, provider_name = 'aws_provider', profile_name = 'aws_profile', host_ip = '192.168.80.39'):
+        kwargs = {
+            'driver_name' : 'aws', 
+            'provider_template' : PROVIDER_TEMPLATE, 
+            'profile_template' : PROFILE_TEMPLATE, 
+            'provider_name' : provider_name, 
+            'profile_name' : profile_name, 
+            'host_ip' : host_ip
+        }
         self.datastore = datastore.ConsulStore()
         self.datastore.insert('sec_groups', ['default'])
 
@@ -63,10 +65,7 @@ class AWSDriver(base.DriverBase):
         self.size_options = ['t1.micro', ]
         self.regions = ['ap-northeast-1', 'ap-southeast-1', 'ap-southeast-2', 'eu-west-1', 'sa-east-1', 'us-east-1', 'us-west-1', 'us-west-2']
 
-        provider_vars = {'VAR_THIS_IP' : host_ip, 'VAR_PROVIDER_NAME' : provider_name, 'VAR_KEYNAME' : key_name, 'VAR_PRIVATE_KEY' : self.key_path}
-
-        profile_vars = {'VAR_PROVIDER_NAME' : provider_name, 'VAR_PROFILE_NAME' : profile_name}
-        super(AWSDriver, self).__init__(PROVIDER_TEMPLATE, PROFILE_TEMPLATE, provider_vars, profile_vars)
+        super(AWSDriver, self).__init__(**kwargs)
         self.aws_config = AWS_CONFIG_TEMPLATE
 
     @tornado.gen.coroutine

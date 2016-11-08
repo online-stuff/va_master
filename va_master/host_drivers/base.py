@@ -10,6 +10,10 @@ class Step(object):
     def add_field(self, id_, name, type, blank = False): 
         self.fields.append({'type': type, 'id': id_, 'name': name, 'blank' : blank})
 
+    def add_fields(self, list_of_fields):
+        for field in list_of_fields: 
+            self.add_field(field[0], field[1], field[2])
+
     def add_str_field(self, id_, name):
         self.fields.append({'type': 'str', 'id': id_, 'name': name})
 
@@ -48,13 +52,22 @@ class DriverBase(object):
     __metaclass__ = abc.ABCMeta
 
     @abc.abstractmethod
-    def  __init__(self, provider_template, profile_template, provider_vars, profile_vars):
+    def  __init__(self, driver_name,  provider_template, profile_template, provider_name, profile_name, host_ip, key_name = 'openstack_key_name', key_path = '/root/openstack_key', ):
+
+        self.field_values = {
+                'driver_name' : '',
+            }
+           
+
+        self.key_path = key_path + ('/' * (not key_path[-1] == '/')) + key_name
+        self.key_name = key_name
+
+        self.provider_vars = {'VAR_THIS_IP' : host_ip, 'VAR_PROVIDER_NAME' : provider_name, 'VAR_SSH_NAME' : key_name, 'VAR_SSH_FILE' : self.key_path + '.pem'}
+        self.profile_vars = {'VAR_PROVIDER_NAME' : provider_name, 'VAR_PROFILE_NAME' : profile_name}
+
         self.provider_template = provider_template
         self.profile_template = profile_template
-        self.provider_vars = provider_vars
-        self.profile_vars = profile_vars
         self.client = AsyncHTTPClient()
-        self.libcloud_driver = None
 
 
     @abc.abstractmethod
@@ -71,23 +84,28 @@ class DriverBase(object):
 
     @tornado.gen.coroutine
     @abc.abstractmethod
-    def get_steps(self):
-        pass
-
-    @tornado.gen.coroutine
-    @abc.abstractmethod
     def validate_field_values(self, step_index, field_values):
         pass
 
+
     @tornado.gen.coroutine
-#    @abc.abstractmethod
+    def new_host_step_descriptions(self):
+        raise tornado.gen.Return([
+            {'name': 'Host info'},
+            {'name': 'Pick a Network'},
+            {'name': 'Security'}
+        ])
+
+    @tornado.gen.coroutine
     def get_salt_configs(self, skip_provider = False, skip_profile = False, base_profile = False):
         if not skip_profile: 
+            self.field_values['profile_conf'] = self.profile_vars['VAR_PROFILE_NAME']
             for var_name in self.profile_vars: 
                 if not (base_profile and var_name == 'VAR_PROFILE_NAME') : 
                     self.profile_template = self.profile_template.replace(var_name, self.profile_vars[var_name])
  
         if not skip_provider: 
+            self.field_values['provider_conf'] = self.provider_vars['VAR_PROVIDER_NAME'] 
             for var_name in self.provider_vars: 
                 self.provider_template = self.provider_template.replace(var_name, self.provider_vars[var_name])
 
@@ -101,3 +119,81 @@ class DriverBase(object):
              self.field_values['profile_conf_dir'] = profile_conf_dir
              with open(profile_conf_dir, 'w') as f: 
                 f.write(self.profile_template)
+
+
+    @tornado.gen.coroutine
+    def new_host_step_descriptions(self):
+        raise tornado.gen.Return([
+            {'name': 'Host info'},
+            {'name': 'Pick a Network'},
+            {'name': 'Security'}
+        ])
+
+
+
+    @tornado.gen.coroutine
+    def get_steps(self):
+        host_info = Step('Host info')
+        host_info.add_fields([
+            ('hostname', 'Name for the host', 'str'),
+            ('username', 'Username', 'str'),
+            ('password', 'Password', 'str'),
+        ])
+
+
+        net_sec = Step('Network & security group')
+        net_sec.add_fields([
+            ('netsec_desc', 'Current connection info', 'description'),
+            ('network', 'Pick network', 'options'),
+            ('sec_group', 'Pick security group', 'options'),
+        ])
+
+
+        imagesize = Step('Image & size')
+        imagesize.add_fields([
+            ('image', 'Image', 'options'),
+            ('size', 'Size', 'options'),
+        ])
+
+        self.steps = [host_info, net_sec, imagesize]
+        raise tornado.gen.Return(self.steps)
+
+    @tornado.gen.coroutine
+    def validate_field_values(self, step_index, field_values):
+        if step_index < 0:
+            raise tornado.gen.Return(StepResult(
+                errors=[], new_step_index=0, option_choices={}
+            ))
+
+        elif step_index == 0:
+            self.field_values['hostname'] = field_values['hostname']
+            self.provider_vars['VAR_USERNAME'] = field_values['username']
+            self.provider_vars['VAR_PASSWORD'] = field_values['password']
+
+            raise tornado.gen.Return({'errors':[], 'new_step_index':1,
+                'option_choices':{
+                    'network': field_values['networks'],
+                    'sec_group': field_values['sec_groups'],
+                }
+            })
+
+        elif step_index == 1:
+            self.provider_vars['VAR_NETWORK_ID'] = field_values['network'].split('|')[1]
+            self.profile_vars['VAR_SEC_GROUP'] = field_values['sec_group'].split('|')[1]
+
+            raise tornado.gen.Return({
+                'errors':[], 'new_step_index':2, 'option_choices':{
+                    'image': field_values['images'],
+                    'size': field_values['sizes'],
+                }
+            })
+        else: 
+            self.profile_vars['VAR_IMAGE'] = field_values['image']
+            self.profile_vars['VAR_SIZE'] = field_values['size']
+
+            yield self.get_salt_configs(base_profile = True)
+            yield self.write_configs()	
+
+            raise tornado.gen.Return({
+                'errors' : [], 'new_step_index' : -1, 'option_choices':{}
+            })

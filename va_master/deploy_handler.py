@@ -15,8 +15,7 @@ class DeployHandler(object):
 #        self.datastore.insert('hosts', [])
         self.deploy_pool_count = deploy_pool_count
         self.pool = ProcessPoolExecutor(deploy_pool_count)
-        self.drivers = [openstack.OpenStackDriver(), aws.AWSDriver(), vcloud.VCloudDriver(), ]
-
+        self.drivers = [openstack.OpenStackDriver() ]
 
     def start(self):
         pass
