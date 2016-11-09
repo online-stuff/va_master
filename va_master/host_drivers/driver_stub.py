@@ -38,17 +38,17 @@ PROFILE_TEMPLATE = '''VAR_PROFILE_NAME:
             role: VAR_ROLE
 '''
 
-class OpenStackDriver(base.DriverBase):
+class Driver(base.DriverBase):
     def __init__(self, provider_name = '_provider', profile_name = '_profile', host_ip = '192.168.80.39'):
         kwargs = {
-            'driver_name' : 'openstack', 
+            'driver_name' : 'driver', 
             'provider_template' : PROVIDER_TEMPLATE, 
             'profile_template' : PROFILE_TEMPLATE, 
             'provider_name' : provider_name, 
             'profile_name' : profile_name, 
             'host_ip' : host_ip
             }
-        super(OpenStackDriver, self).__init__(**kwargs) 
+        super(Driver, self).__init__(**kwargs) 
 
     @tornado.gen.coroutine
     def driver_id(self):
@@ -61,10 +61,29 @@ class OpenStackDriver(base.DriverBase):
 
     @tornado.gen.coroutine
     def get_steps(self):
-        steps = yield super(OpenStackDriver, self).get_steps()
+        steps = yield super(Driver, self).get_steps()
         self.steps = steps
         raise tornado.gen.Return(steps)
 
+    @tornado.gen.coroutine
+    def get_networks(self):
+        networks = ['list', 'of', 'networks']
+        raise tornado.gen.Return(networks)
+
+    @tornado.gen.coroutine
+    def get_sec_groups(self):
+        sec_groups = ['list', 'of', 'security', 'groups']
+        raise tornado.gen.Return(sec_groups)
+
+    @tornado.gen.coroutine
+    def get_images(self):
+        images = ['list', 'of', 'images']
+        raise tornado.gen.Return(images)
+
+    @tornado.gen.coroutine
+    def get_sizes(self):
+        sizes = ['list', 'of', 'sizes']
+        raise tornado.gen.Return(sizes)
 
     @tornado.gen.coroutine
     def validate_field_values(self, step_index, field_values):
@@ -76,11 +95,11 @@ class OpenStackDriver(base.DriverBase):
 	    self.token_data = yield self.get_token(field_values)
 
 	    self.field_values['networks'] = yield self.get_networks() 
-            self.field_values['sec_groups'] = yield self.get_sec_groups()
+        self.field_values['sec_groups'] = yield self.get_sec_groups()
 	    self.field_values['images'] = yield self.get_images()
 	    self.field_values['sizes']= yield self.get_sizes()
 
 
-       	step_kwargs = yield super(OpenStackDriver, self).validate_field_values(step_index, field_values)
+       	step_kwargs = yield super(Driver, self).validate_field_values(step_index, field_values)
         raise tornado.gen.Return(StepResult(**step_kwargs))
        

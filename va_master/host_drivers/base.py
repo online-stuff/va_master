@@ -160,6 +160,7 @@ class DriverBase(object):
 
     @tornado.gen.coroutine
     def validate_field_values(self, step_index, field_values):
+        print ('validating ', step_index)
         if step_index < 0:
             raise tornado.gen.Return(StepResult(
                 errors=[], new_step_index=0, option_choices={}
@@ -170,6 +171,7 @@ class DriverBase(object):
             self.provider_vars['VAR_USERNAME'] = field_values['username']
             self.provider_vars['VAR_PASSWORD'] = field_values['password']
 
+            print ('Options are : ', self.field_values['networks'])
             raise tornado.gen.Return({'errors':[], 'new_step_index':1,
                 'option_choices':{
                     'network': self.field_values['networks'],
@@ -178,8 +180,13 @@ class DriverBase(object):
             })
 
         elif step_index == 1:
-            self.provider_vars['VAR_NETWORK_ID'] = field_values['network'].split('|')[1]
-            self.profile_vars['VAR_SEC_GROUP'] = field_values['sec_group'].split('|')[1]
+            print ('Printing images')
+            print (self.field_values['images'])
+            print (field_values)
+
+            self.provider_vars['VAR_NETWORK_ID'] = field_values['network']
+            self.profile_vars['VAR_SEC_GROUP'] = field_values['sec_group']
+
 
             raise tornado.gen.Return({
                 'errors':[], 'new_step_index':2, 'option_choices':{
