@@ -172,8 +172,8 @@ class DriverBase(object):
 
             raise tornado.gen.Return({'errors':[], 'new_step_index':1,
                 'option_choices':{
-                    'network': field_values['networks'],
-                    'sec_group': field_values['sec_groups'],
+                    'network': self.field_values['networks'],
+                    'sec_group': self.field_values['sec_groups'],
                 }
             })
 
@@ -183,8 +183,8 @@ class DriverBase(object):
 
             raise tornado.gen.Return({
                 'errors':[], 'new_step_index':2, 'option_choices':{
-                    'image': field_values['images'],
-                    'size': field_values['sizes'],
+                    'image': self.field_values['images'],
+                    'size': self.field_values['sizes'],
                 }
             })
         else: 

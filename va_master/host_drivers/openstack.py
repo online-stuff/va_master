@@ -133,7 +133,6 @@ class OpenStackDriver(base.DriverBase):
     def get_sec_groups(self):
        	sec_groups = yield self.get_openstack_value(self.token_data, 'compute', 'os-security-groups')
 	sec_groups = ['%s | %s' % (x['name'], x['id']) for x in sec_groups['security_groups']]
-        print(sec_groups)
 	raise tornado.gen.Return(sec_groups)
 
     @tornado.gen.coroutine
@@ -160,8 +159,8 @@ class OpenStackDriver(base.DriverBase):
         elif step_index == 0:
 	    self.token_data = yield self.get_token(field_values)
 
-	    field_values['networks'] = yield self.get_networks() 
-            field_values['sec_groups'] = yield self.get_sec_groups()
+	    self.field_values['networks'] = yield self.get_networks() 
+            self.field_values['sec_groups'] = yield self.get_sec_groups()
 	    self.field_values['images'] = yield self.get_images()
 	    self.field_values['sizes']= yield self.get_sizes()
 
@@ -171,11 +170,6 @@ class OpenStackDriver(base.DriverBase):
 	    self.provider_vars['VAR_IDENTITY_URL'] = os_base_url
 	    self.provider_vars['VAR_REGION'] = field_values['region']
 
-        elif step_index == 1: 
-            field_values['images'] = self.field_values['images']
-            field_values['sizes'] = self.field_values['sizes']
-
        	step_kwargs = yield super(OpenStackDriver, self).validate_field_values(step_index, field_values)
-        print ('Yielding ', step_kwargs)
         raise tornado.gen.Return(StepResult(**step_kwargs))
        
