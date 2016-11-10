@@ -1,6 +1,6 @@
 from abc import ABCMeta, abstractmethod
 from tornado.httpclient import AsyncHTTPClient, HTTPRequest
-from tornado.gen import coroutine, Return
+import tornado.gen
 import tornado.ioloop
 import json
 import base64
@@ -13,8 +13,8 @@ class KeyNotFound(IOError):
 
 class StoreError(Exception):
     def __init__(self, exc):
-        """Args:
-            exc (Exception): The internal exception that happened during Store transaction
+        """Parameters:
+          exc - The internal exception that happened during Store transaction
         """
         super(Exception, self).__init__(repr(exc))
         self.exc = exc
@@ -28,23 +28,23 @@ class DataStore(object):
     StoreError = StoreError
 
     @abstractmethod
-    @coroutine
+    @tornado.gen.coroutine
     def check_connection(self): pass
 
     @abstractmethod
-    @coroutine
+    @tornado.gen.coroutine
     def insert(self, doc_id, document): pass
 
     @abstractmethod
-    @coroutine
+    @tornado.gen.coroutine
     def update(self, doc_id, document): pass
 
     @abstractmethod
-    @coroutine
+    @tornado.gen.coroutine
     def get(self, doc_id): pass
 
     @abstractmethod
-    @coroutine
+    @tornado.gen.coroutine
     def delete(self, doc_id): pass
 
 class ConsulStore(DataStore):
@@ -54,15 +54,15 @@ class ConsulStore(DataStore):
         self.path = path
         self.client = AsyncHTTPClient()
 
-    @coroutine
+    @tornado.gen.coroutine
     def check_connection(self):
         try:
             result = yield self.client.fetch('%s/v1/status/leader' % self.path)
         except:
-            raise Return(False)
-        raise Return(result.code == 200 and result.body != '""')
+            raise tornado.gen.Return(False)
+        raise tornado.gen.Return(result.code == 200 and result.body != '""')
 
-    @coroutine
+    @tornado.gen.coroutine
     def insert(self, doc_id, document):
         document_json = json.dumps(document)
         req = HTTPRequest('%s/v1/kv/%s' % (self.path, doc_id), method='PUT',
@@ -72,14 +72,14 @@ class ConsulStore(DataStore):
         except Exception as e:
             raise StoreError(e)
 
-    @coroutine
+    @tornado.gen.coroutine
     def update(self, doc_id, document):
         try:
             yield self.insert(doc_id, document)
         except Exception as e:
             raise StoreError(e)
 
-    @coroutine
+    @tornado.gen.coroutine
     def get(self, doc_id):
         is_ok = False
         try:
@@ -95,9 +95,9 @@ class ConsulStore(DataStore):
         except Exception as e:
             raise StoreError(e)
         if is_ok:
-            raise Return(resp)
+            raise tornado.gen.Return(resp)
 
-    @coroutine
+    @tornado.gen.coroutine
     def delete(self, doc_id):
         try:
             req = HTTPRequest('%s/v1/kv/%s' % (self.path, doc_id), method='DELETE')

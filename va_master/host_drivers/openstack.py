@@ -40,21 +40,16 @@ PROFILE_TEMPLATE = '''VAR_PROFILE_NAME:
 
 class OpenStackDriver(base.DriverBase):
     def __init__(self, provider_name = 'openstack_provider', profile_name = 'openstack_profile', host_ip = '192.168.80.39'):
-        try: 
-            print 'Initializing openstack'
-            kwargs = {
-                'driver_name' : 'openstack', 
-                'provider_template' : PROVIDER_TEMPLATE, 
-                'profile_template' : PROFILE_TEMPLATE, 
-                'provider_name' : provider_name, 
-                'profile_name' : profile_name, 
-                'host_ip' : host_ip
-                }
-            self.regions = ['RegionOne', ]
-            super(OpenStackDriver, self).__init__(**kwargs) 
-        except: 
-            import traceback
-            traceback.print_exc()
+        kwargs = {
+            'driver_name' : 'openstack', 
+            'provider_template' : PROVIDER_TEMPLATE, 
+            'profile_template' : PROFILE_TEMPLATE, 
+            'provider_name' : provider_name, 
+            'profile_name' : profile_name, 
+            'host_ip' : host_ip
+            }
+        self.regions = ['RegionOne', ]
+        super(OpenStackDriver, self).__init__(**kwargs) 
 
     @tornado.gen.coroutine
     def driver_id(self):

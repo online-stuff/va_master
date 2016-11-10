@@ -1,4 +1,4 @@
-from tornado.gen import coroutine, Return
+import tornado.gen
 import time
 import json
 import uuid
@@ -8,10 +8,7 @@ from pbkdf2 import crypt
 # TODO: Check if the implementation of the `pbkdf2` lib is credible,
 # and if the library is maintained and audited. May switch to bcrypt.
 
-def initialize(handler):
-    handler.add_post_endpoint('login', admin_login)
-
-@coroutine
+@tornado.gen.coroutine
 def get_or_create_token(datastore, username):
     found = False
     try:
@@ -24,26 +21,25 @@ def get_or_create_token(datastore, username):
         }
         yield datastore.insert('tokens/by_username/%s' % username, doc)
         yield datastore.insert('tokens/by_token/%s' % doc['token'], doc)
-        raise Return(doc['token'])
+        raise tornado.gen.Return(doc['token'])
     finally:
         if found:
-            raise Return(token_doc['token'])
+            raise tornado.gen.Return(token_doc['token'])
 
-@coroutine
+@tornado.gen.coroutine
 def is_token_valid(datastore, token):
     valid = True
     try:
         res = yield datastore.get('tokens/by_token/%s' % token)
     except datastore.KeyNotFound:
-        raise Return(False)
+        raise tornado.gen.Return(False)
 
     valid = (res['username'] != '__invalid__')
-    raise Return(valid)
+    raise tornado.gen.Return(valid)
 
 
 def auth_only(coroutine):
-    """A decorator for auth only handlers."""
-    @coroutine
+    @tornado.gen.coroutine
     @functools.wraps(coroutine)
     def func(handler):
         token = handler.request.headers.get('Authorization', '')
@@ -55,35 +51,8 @@ def auth_only(coroutine):
             yield coroutine(handler)
     return func
 
-@coroutine
-def create_admin(datastore, username, password):
-    """Creates an admin on a datastore."""
-    if len(username) < 1 or len(password) < 1:
-        raise ValueError('Username and password must not be empty.')
-    try:
-        new_admins = yield datastore.get('admins')
-    except datastore.KeyNotFound:
-        yield datastore.insert('admins', [])
-        new_admins = {}
-    
-    if new_admins.get(username, None):
-        raise ValueError('Username already exists.')
-    
-    new_admins[username] = {
-        'username': username,
-        'password_hash': crypt(password),
-        'timestamp_created': long(time.time())
-    }
-    yield datastore.insert('admins', new_admins)
-    token = yield get_or_create_token(datastore, username)
-    raise Return(token)
-
-@coroutine
+@tornado.gen.coroutine
 def admin_login(handler):
-    """POST /api/login
-    Body: {"username": '', "password": ''}
-    Response: {"token": ''}
-    """
     body = None
 
     try:
@@ -92,16 +61,21 @@ def admin_login(handler):
         password = body['password'].decode('utf8')
     except:
         handler.json({'error': 'bad_body'}, 400)
-        raise Return()
 
     try:
         admins = yield handler.datastore.get('admins')
     except handler.datastore.KeyNotFound:
         handler.json({'error': 'no_admins'}, 401)
-        raise Return()
+        # TODO: handle this gracefully?
+        raise tornado.gen.Return()
 
-    account_info = admins.get(username, None)
-    if account_info is None:
+    account_info = None
+    for admin in admins:
+        if admin['username'] == username:
+            account_info = admin
+            break
+    invalid_acc_hash = crypt('__invalidpassword__')
+    if not account_info:
         # Prevent timing attacks
         account_info = {
             'password_hash': invalid_acc_hash,
@@ -115,6 +89,24 @@ def admin_login(handler):
     else:
         handler.json({'error': 'invalid_password'}, 401)
 
-@coroutine
+@tornado.gen.coroutine
+def create_admin(datastore, username, password):
+    if len(username) < 1 or len(password) < 1:
+        raise ValueError('Username and password must not be empty.')
+    try:
+        new_admins = yield datastore.get('admins')
+    except datastore.KeyNotFound:
+        yield datastore.insert('admins', [])
+        new_admins = []
+    new_admins.append({
+        'username': username,
+        'password_hash': crypt(password),
+        'timestamp_created': long(time.time())
+    })
+    yield datastore.insert('admins', new_admins)
+    token = yield get_or_create_token(datastore, username)
+    raise tornado.gen.Return(token)
+
+@tornado.gen.coroutine
 def ldap_login(handler):
     pass

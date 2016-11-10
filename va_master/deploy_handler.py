@@ -15,11 +15,7 @@ class DeployHandler(object):
 #        self.datastore.insert('hosts', [])
         self.deploy_pool_count = deploy_pool_count
         self.pool = ProcessPoolExecutor(deploy_pool_count)
-        try: 
-            self.drivers = [openstack.OpenStackDriver(), libvirt_driver.LibVirtDriver(), ]
-        except: 
-            import traceback
-            traceback.print_exc()
+        self.drivers = [openstack.OpenStackDriver(), libvirt_driver.LibVirtDriver(), ]
 
     def start(self):
         pass
