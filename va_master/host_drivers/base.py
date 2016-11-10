@@ -1,5 +1,4 @@
 import abc
-from tornado.gen import coroutine, Return
 import tornado.gen
 from tornado.httpclient import AsyncHTTPClient, HTTPRequest
 
@@ -72,18 +71,18 @@ class DriverBase(object):
 
 
     @abc.abstractmethod
-    @coroutine
+    @tornado.gen.coroutine
     def driver_id(self):
         """Returns a unique ID for this driver."""
         pass
 
     @abc.abstractmethod
-    @coroutine
+    @tornado.gen.coroutine
     def friendly_name(self):
         """"Returns the friendly name of this driver."""
         pass
 
-    @coroutine
+    @tornado.gen.coroutine
     @abc.abstractmethod
     def validate_field_values(self, step_index, field_values):
         pass
