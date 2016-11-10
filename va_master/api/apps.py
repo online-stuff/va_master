@@ -25,6 +25,8 @@ def launch_app(handler):
     hosts = yield store.get('hosts')
     required_host = [host for host in hosts if host['hostname'] == data['hostname']][0]
     driver = yield deploy_handler.get_driver_by_id(required_host['driver_name'])
+    print ('Driver is : ', driver, ' with id : ', required_host['driver_name'])
+    tornado.gen.Return(None)
 
     try: 
         profile_dir = required_host['profile_conf_dir']

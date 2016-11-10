@@ -31,21 +31,38 @@ def validate_newhost_fields(handler):
         driver_id = str(body['driver_id'])
         field_values = dict(body['field_values'])
         step_index = int(body['step_index'])
-    except:
-        handler.json({'error': 'bad_body'}, 400)
+
+    except Exception as e:
+        handler.json({'error': 'bad_body', 'msg' : e}, 400)
         raise tornado.gen.Return(None)
 
     found_driver = yield handler.config.deploy_handler.get_driver_by_id(driver_id)
+
     if found_driver is None:
         handler.json({'error': 'bad_driver'}, 400)
     else:
-        driver_steps = yield found_driver.get_steps()
+        try:
+            driver_steps = yield found_driver.get_steps()
+            print ('Steps are : ', driver_steps[step_index].fields)
+            print ('In api validating ', step_index)
+
+        except: 
+            import traceback
+            traceback.print_exc()
         if step_index >= len(driver_steps):
             handler.json({'error': 'bad_step'}, 400)
         else:
             if step_index < 0 or driver_steps[step_index].validate(field_values):
-                result = yield found_driver.validate_field_values(step_index, field_values)
-                handler.json(result.serialize())
+                try:
+                    result = yield found_driver.validate_field_values(step_index, field_values)
+                    print ('Got ', result.serialize())
+                    if result.new_step_index == -1:
+                        handler.config.deploy_handler.create_host(found_driver)
+                    handler.json(result.serialize())
+                    print ('Page served')
+                except: 
+                    import traceback
+                    traceback.print_exc()
             else:
                 handler.json({
                     'errors': ['Some fields are not filled.'],

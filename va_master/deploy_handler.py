@@ -12,7 +12,7 @@ from concurrent.futures import ProcessPoolExecutor
 class DeployHandler(object):
     def __init__(self, datastore, deploy_pool_count):
         self.datastore = datastore
-#        self.datastore.insert('hosts', [])
+        self.datastore.insert('hosts', [])
         self.deploy_pool_count = deploy_pool_count
         self.pool = ProcessPoolExecutor(deploy_pool_count)
         self.drivers = [openstack.OpenStackDriver(), libvirt_driver.LibVirtDriver(), ]
@@ -64,5 +64,9 @@ class DeployHandler(object):
             new_hosts = yield self.datastore.get('hosts')
         except self.datastore.KeyNotFound:
             new_hosts = []
+        print ('Old hosts are : ', new_hosts)
+        print ('Field values are : ', driver.field_values)
         new_hosts.append(driver.field_values)
+        print ('New hosts are : ', new_hosts)
         yield self.datastore.insert('hosts', new_hosts)
+

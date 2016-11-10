@@ -6,6 +6,7 @@ import json
 @tornado.gen.coroutine
 def list_hosts(handler):
     hosts = yield handler.config.deploy_handler.list_hosts()
+    print ('Hosts are : ', hosts)
     handler.json({'hosts': hosts})
 
 @auth_only
@@ -43,9 +44,6 @@ def validate_newhost_fields(handler):
     else:
         try:
             driver_steps = yield found_driver.get_steps()
-            print ('Steps are : ', driver_steps[step_index].fields)
-            print ('In api validating ', step_index)
-
         except: 
             import traceback
             traceback.print_exc()
@@ -55,11 +53,10 @@ def validate_newhost_fields(handler):
             if step_index < 0 or driver_steps[step_index].validate(field_values):
                 try:
                     result = yield found_driver.validate_field_values(step_index, field_values)
-                    print ('Got ', result.serialize())
                     if result.new_step_index == -1:
+                        print ('Adding new host')
                         handler.config.deploy_handler.create_host(found_driver)
                     handler.json(result.serialize())
-                    print ('Page served')
                 except: 
                     import traceback
                     traceback.print_exc()
