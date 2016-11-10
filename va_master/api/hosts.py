@@ -10,7 +10,13 @@ def initialize(handler):
 @auth_only
 @coroutine
 def list_hosts(handler):
-    hosts = yield handler.config.deploy_handler.list_hosts()
+    try:
+        print ('Handler is : ', handler)
+        hosts = yield handler.config.deploy_handler.list_hosts()
+    except: 
+        import traceback
+        traceback.print_exc()
+    print ('hosts are : ', hosts)
     handler.json({'hosts': hosts})
 
 @auth_only
