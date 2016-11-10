@@ -12,7 +12,8 @@ setuptools.setup(
     'salt',
     'apache-libcloud',
     'python-novaclient',
-    'pbkdf2'
+    'pbkdf2', 
+    'pyVmomi', #for vmware
   ],
   zip_safe=False,
   entry_points = {

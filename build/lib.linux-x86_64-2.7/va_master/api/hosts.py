@@ -1,22 +1,16 @@
 from .login import auth_only
-from tornado.gen import coroutine, Return
+import tornado.gen
 import json
 
-def initialize(handler):
-    handler.add_get_endpoint('hosts', list_hosts)
-    handler.add_get_endpoint('drivers', list_drivers)
-    handler.add_post_endpoint('hosts/new/validate_fields', validate_newhost_fields)
-
 @auth_only
-@coroutine
+@tornado.gen.coroutine
 def list_hosts(handler):
     hosts = yield handler.config.deploy_handler.list_hosts()
     handler.json({'hosts': hosts})
 
 @auth_only
-@coroutine
+@tornado.gen.coroutine
 def list_drivers(handler):
-    """GET /api/drivers"""
     drivers = yield handler.config.deploy_handler.get_drivers()
     out = {'drivers': []}
     for driver in drivers:
@@ -29,7 +23,7 @@ def list_drivers(handler):
     handler.json(out)
 
 @auth_only
-@coroutine
+@tornado.gen.coroutine
 def validate_newhost_fields(handler):
     ok = True
     try:
@@ -37,42 +31,21 @@ def validate_newhost_fields(handler):
         driver_id = str(body['driver_id'])
         field_values = dict(body['field_values'])
         step_index = int(body['step_index'])
-
-    except Exception as e:
-        handler.json({'error': 'bad_body', 'msg' : e}, 400)
+    except:
+        handler.json({'error': 'bad_body'}, 400)
         raise tornado.gen.Return(None)
 
     found_driver = yield handler.config.deploy_handler.get_driver_by_id(driver_id)
-
     if found_driver is None:
         handler.json({'error': 'bad_driver'}, 400)
     else:
-        try:
-            driver_steps = yield found_driver.get_steps()
-            print ('Steps are : ', driver_steps[step_index].fields)
-            print ('In api validating ', step_index)
-
-        except: 
-            import traceback
-            traceback.print_exc()
+        driver_steps = yield found_driver.get_steps()
         if step_index >= len(driver_steps):
             handler.json({'error': 'bad_step'}, 400)
-            raise Return()
-        if step_index < 0 or driver_steps[step_index].validate(field_values):
-            result = yield found_driver.validate_field_values(step_index, field_values)
-            handler.json(result.serialize())
         else:
             if step_index < 0 or driver_steps[step_index].validate(field_values):
-                try:
-                    result = yield found_driver.validate_field_values(step_index, field_values)
-                    print ('Got ', result.serialize())
-                    if result.new_step_index == -1:
-                        handler.config.deploy_handler.create_host(found_driver)
-                    handler.json(result.serialize())
-                    print ('Page served')
-                except: 
-                    import traceback
-                    traceback.print_exc()
+                result = yield found_driver.validate_field_values(step_index, field_values)
+                handler.json(result.serialize())
             else:
                 handler.json({
                     'errors': ['Some fields are not filled.'],
@@ -82,7 +55,7 @@ def validate_newhost_fields(handler):
 
 
 @auth_only
-@coroutine
+@tornado.gen.coroutine
 def create_host(handler):
     try:
         body = json.loads(handler.request.body)
