@@ -182,7 +182,7 @@ class DriverBase(object):
         elif step_index == 1:
             print ('Printing images')
             print (self.field_values['images'])
-            print (field_values)
+            print ('Field values are : ', field_values)
 
             self.provider_vars['VAR_NETWORK_ID'] = field_values['network']
             self.profile_vars['VAR_SEC_GROUP'] = field_values['sec_group']

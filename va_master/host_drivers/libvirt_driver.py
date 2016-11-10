@@ -62,8 +62,8 @@ class LibVirtDriver(base.DriverBase):
             ('host_ip', 'Host ip', 'str'),
             ('host_protocol', 'Protocol; use qemu with Cert or qemu+tcp for no auth', 'options'),
         ])
-        steps[2].fields[1]['name'] = 'Storage type'
-        self.steps = steps
+        del steps[1].fields[2]
+#        self.steps = steps
 
         raise tornado.gen.Return(steps)
 
@@ -75,7 +75,7 @@ class LibVirtDriver(base.DriverBase):
 
     @tornado.gen.coroutine
     def get_sec_groups(self):
-        sec_groups = None
+        sec_groups = []
         raise tornado.gen.Return(sec_groups)
 
     @tornado.gen.coroutine
@@ -115,14 +115,10 @@ class LibVirtDriver(base.DriverBase):
             self.field_values['images'] = yield self.get_images()
             self.field_values['sizes']= yield self.get_sizes()
 
-        try: 
-           	step_kwargs = yield super(LibVirtDriver, self).validate_field_values(step_index, field_values)
-        except tornado.gen.Return: 
-            raise
-        except: 
-            import traceback
-            traceback.print_exc()
-            print ('kwargs : ', step_kwargs)
+        if step_index == 1:
+            field_values['sec_group'] = None
+
+        step_kwargs = yield super(LibVirtDriver, self).validate_field_values(step_index, field_values)
         raise tornado.gen.Return(StepResult(**step_kwargs))
       
 

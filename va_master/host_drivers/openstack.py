@@ -160,16 +160,16 @@ class OpenStackDriver(base.DriverBase):
 	    self.token_data = yield self.get_token(field_values)
 
 	    self.field_values['networks'] = yield self.get_networks() 
-            self.field_values['sec_groups'] = yield self.get_sec_groups()
-	    self.field_values['images'] = yield self.get_images()
-	    self.field_values['sizes']= yield self.get_sizes()
+        self.field_values['sec_groups'] = yield self.get_sec_groups()
+        self.field_values['images'] = yield self.get_images()
+        self.field_values['sizes']= yield self.get_sizes()
 
-	    os_base_url = 'http://' + field_values['host_ip'] + '/v2.0'
+        os_base_url = 'http://' + field_values['host_ip'] + '/v2.0'
 
-	    self.provider_vars['VAR_TENANT'] = field_values['tenant']
-	    self.provider_vars['VAR_IDENTITY_URL'] = os_base_url
-	    self.provider_vars['VAR_REGION'] = field_values['region']
+        self.provider_vars['VAR_TENANT'] = field_values['tenant']
+        self.provider_vars['VAR_IDENTITY_URL'] = os_base_url
+        self.provider_vars['VAR_REGION'] = field_values['region']
 
-       	step_kwargs = yield super(OpenStackDriver, self).validate_field_values(step_index, field_values)
+        step_kwargs = yield super(OpenStackDriver, self).validate_field_values(step_index, field_values)
         raise tornado.gen.Return(StepResult(**step_kwargs))
        
