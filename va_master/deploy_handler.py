@@ -18,7 +18,7 @@ class DeployHandler(object):
         self.proc_count = -1
         self.pool = None
 
-    def set_datastore(self, datastore):
+    def set_datastore(self, datastore, deploy_pool_count):
         self.datastore = datastore
 #        self.datastore.insert('hosts', [])
         self.deploy_pool_count = deploy_pool_count

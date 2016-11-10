@@ -1,7 +1,7 @@
 from . import base
 from .base import Step, StepResult
 from tornado.httpclient import AsyncHTTPClient, HTTPRequest
-from tornado.gen import coroutine, Return
+import tornado.gen
 import json
 import subprocess
 
@@ -51,15 +51,15 @@ class OpenStackDriver(base.DriverBase):
         self.regions = ['RegionOne', ]
         super(OpenStackDriver, self).__init__(**kwargs) 
 
-    @coroutine
+    @tornado.gen.coroutine
     def driver_id(self):
         raise Return('openstack')
 
-    @coroutine
+    @tornado.gen.coroutine
     def friendly_name(self):
         raise Return('OpenStack')
 
-    @coroutine
+    @tornado.gen.coroutine
     def get_steps(self):
         steps = yield super(OpenStackDriver, self).get_steps()
         steps[0].add_fields([
@@ -70,7 +70,7 @@ class OpenStackDriver(base.DriverBase):
         self.steps = steps
         raise tornado.gen.Return(steps)
 
-    @coroutine
+    @tornado.gen.coroutine
     def get_token(self, field_values):
         host, username, password, tenant = (field_values['host_ip'],
             field_values['username'], field_values['password'],
@@ -145,7 +145,7 @@ class OpenStackDriver(base.DriverBase):
 
 
 
-    @coroutine
+    @tornado.gen.coroutine
     def validate_field_values(self, step_index, field_values):
         if step_index < 0:
     	    raise tornado.gen.Return(StepResult(

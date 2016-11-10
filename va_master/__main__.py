@@ -11,10 +11,6 @@ def bootstrap():
     app.listen(my_config.server_port)
     from tornado.ioloop import PeriodicCallback, IOLoop
     ioloop = IOLoop.instance()
-
-    cb = PeriodicCallback(say_hello, 60000, ioloop)
-    cb.start()
-
     ioloop.start()
 
 if __name__ == '__main__':

@@ -29,13 +29,13 @@ class Config(object):
         self.logger.addHandler(ch)
         self.server_port = 80
         self.server_static_path = get_server_static()
-        self.deploy_proc_count = 3
+        self.deploy_pool_count = 3
         # Dynamically inject any kwargs
         for kw in kwargs:
             setattr(self, kw, kwargs[kw])
         
-        self.deploy_handler.set_datastore(self.datastore)
-        self.deploy_handler.set_proc_count(self.deploy_proc_count)
+        self.deploy_handler.set_datastore(self.datastore, self.deploy_pool_count)
+#        self.deploy_handler.set_proc_count(self.deploy_proc_count)
 
     def pretty_version(self):
         return '.'.join([str(x) for x in self.version])
