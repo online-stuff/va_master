@@ -101,7 +101,7 @@ class DriverBase(object):
         if not skip_profile: 
             self.field_values['profile_conf'] = self.profile_vars['VAR_PROFILE_NAME']
             for var_name in self.profile_vars: 
-                if not (base_profile and var_name == 'VAR_PROFILE_NAME') : 
+                if not (base_profile and var_name == 'VAR_PROFILE_NAME') and self.profile_vars[var_name]: 
                     self.profile_template = self.profile_template.replace(var_name, self.profile_vars[var_name])
  
         if not skip_provider: 

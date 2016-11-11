@@ -17,10 +17,7 @@ PROVIDER_TEMPLATE = '''VAR_PROVIDER_NAME:
   ssh_interface: private_ips
   driver: nova
   user: VAR_USERNAME
-  tenant: VAR_TENANT
   password: VAR_PASSWORD
-  identity_url: VAR_IDENTITY_URL
-  compute_region: VAR_REGION
   networks:
     - net-id: VAR_NETWORK_ID'''
 
@@ -28,7 +25,6 @@ PROFILE_TEMPLATE = '''VAR_PROFILE_NAME:
     provider: VAR_PROVIDER_NAME
     image: VAR_IMAGE
     size: VAR_SIZE
-    securitygroups: VAR_SEC_GROUP
     minion:
         grains:
             role: VAR_ROLE
