@@ -14,8 +14,8 @@ Requirements:
 using the following command:
 
 ```bash
-sudo apt-get update && sudo apt-get install -y build-essential python-dev libssl-dev libffi-dev libzmq-dev unzip supervisor python-pip curl
-sudo curl https://releases.hashicorp.com/consul/0.7.0/consul_0.7.0_linux_amd64.zip > consul.zip && sudo unzip -d /usr/bin -o consul.zip consul"
+sudo apt-get update && sudo apt-get install -y build-essential python-dev libssl-dev libffi-dev libzmq-dev unzip supervisor curl
+sudo easy_install pip
 ```
 For 32bit server:
 ```bash
