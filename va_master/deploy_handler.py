@@ -1,4 +1,4 @@
-import json
+import json, glob, yaml
 import requests
 import subprocess
 import traceback
@@ -68,7 +68,31 @@ class DeployHandler(object):
         new_hosts.append(driver.field_values)
         yield self.datastore.insert('hosts', new_hosts)
 
+    @tornado.gen.coroutine
+    def get_states_data(self):
+        states_data = {}
+        subdirs = glob.glob('/srv/salt/*')
+        for state in subdirs:
+            try: 
+                with open(state + '/appinfo.json') as f: 
+                    states_data[state] = json.loads(f.read())
+            except IOError as e: 
+                print (state, ' does not have an appinfo file, skipping. ')
+        raise tornado.gen.Return(states_data)
 
+    @tornado.gen.coroutine
+    def get_states(self):
+        try: 
+            states_data = yield self.datastore.get('states')
+        except self.datastore.KeyNotFound:
+            states_data = yield self.get_states_data()
+            yield self.datastore.insert('states', states_data)
+        except: 
+            import traceback
+            traceback.print_exc()
+        print (states_data)
+        raise tornado.gen.Return(states_data)
+    
     @tornado.gen.coroutine
     def generate_top_sls(self):
         states = yield self.datastore.get('states')

@@ -25,18 +25,14 @@ class ApiHandler(tornado.web.RequestHandler):
             yield hosts.list_drivers(self)
         elif path == 'hosts':
             yield hosts.list_hosts(self)
+        elif path == 'states': 
+            yield apps.get_states(self)
         else:
             self.json({'error': 'not_found'}, 404)
 
     @tornado.gen.coroutine
     def post(self, path):
-
-        print ('Setting own data')
-
         self.data = json.loads(self.request.body)
-
-        print ('Data and handler are set. ')
-
         if path == 'login':
             yield login.admin_login(self)
         elif path == 'hosts/new/validate_fields':

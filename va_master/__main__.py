@@ -1,3 +1,6 @@
+import cli
+import sys
+
 def bootstrap():
     """Starts the master with all its components, and provides the configuration
     data to all the components."""
@@ -21,4 +24,7 @@ def bootstrap():
     ioloop.start()
 
 if __name__ == '__main__':
-    bootstrap()
+    if 'start' in sys.argv: 
+        bootstrap()
+    else: 
+        cli.entry()

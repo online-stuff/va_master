@@ -1,5 +1,5 @@
-from . import config, cli_environment
-from .api import login
+import config, cli_environment
+from api import login
 from datetime import datetime
 import tornado.ioloop
 import yaml, json, glob
@@ -41,17 +41,6 @@ def cli_error(msg):
         'nocolor': '\033[0m',
         'msg': msg
     })
-
-def get_states_data():
-    states_data = {}
-    subdirs = glob.glob('/srv/salt/*')
-    for state in subdirs:
-        try: 
-            with open(state + '/appinfo.json') as f: 
-                states_data[state] = json.loads(f.read())
-        except IOError as e: 
-            print state, ' does not have an appinfo file, skipping. ' 
-    return states_data 
 
 
 def handle_init(args):
@@ -123,8 +112,6 @@ def handle_init(args):
                 store, values['admin_user'], values['admin_pass'])
             run_sync(create_admin)
             store.insert('master_ip', values['ip'])
-            state_data = get_states_data()
-            store.insert('states', state_data)
             cli_success('Created first account. Setup is finished.')
 
 def handle_jsbuild(args):
@@ -169,3 +156,6 @@ def entry():
     }
     # Call the proper handler based on the subparser argument
     handlers[args.sub](args)
+
+if __name__ == '__main__': 
+    entry()

@@ -7,11 +7,11 @@ import requests
 
 @tornado.gen.coroutine
 def manage_states(handler, action = 'append'):
-    yield current_states = deploy_handler.datastore.get('states')
+    current_states = yield deploy_handler.datastore.get('states')
     new_state = {
         'name' : data['state_name'],
+        'version' : data['version'],
         'description' : data['description'], 
-        'version' : 'data['version'],
         'icon' : data['icon'], 
         'dependency' : data['dependency'], 
         'path' : data['path'],
@@ -22,8 +22,13 @@ def manage_states(handler, action = 'append'):
 
 
 @tornado.gen.coroutine
-def get_states_data(handler):
-    states_data = yield deploy_handler.datastore.get('states')
+def get_states(handler):
+    print ('Getting states')
+    try: 
+        states_data = yield handler.config.deploy_handler.get_states()
+    except: 
+        import traceback
+        traceback.print_exc()
     raise tornado.gen.Return(states_data)
 
 @tornado.gen.coroutine
