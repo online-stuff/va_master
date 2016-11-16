@@ -12,10 +12,11 @@ from concurrent.futures import ProcessPoolExecutor
 class DeployHandler(object):
     def __init__(self, datastore, deploy_pool_count):
         self.datastore = datastore
-#        self.datastore.insert('hosts', [])
+        hosts_ip = self.datastore.get('ip_adress')
+        self.datastore.insert('hosts', [])
         self.deploy_pool_count = deploy_pool_count
         self.pool = ProcessPoolExecutor(deploy_pool_count)
-        self.drivers = [openstack.OpenStackDriver(), libvirt_driver.LibVirtDriver(), ]
+        self.drivers = [openstack.OpenStackDriver(host_ip = hosts_ip), libvirt_driver.LibVirtDriver(host_ip = hosts_ip), ]
 
     def start(self):
         pass
@@ -66,3 +67,17 @@ class DeployHandler(object):
             new_hosts = []
         new_hosts.append(driver.field_values)
         yield self.datastore.insert('hosts', new_hosts)
+
+
+    @tornado.gen.coroutine
+    def generate_top_sls(self):
+        states = yield self.datastore.get('states')
+        with open('/srv/salt/top.sls.base') as f: 
+            current_top_sls = f.read()
+
+        for state in states:
+            current_top_sls += "\n'role:' + state + ':\n    - match: grain\n"
+
+        with open('/srv/salt/top.sls') as f:
+            f.write(current_top_sls)
+

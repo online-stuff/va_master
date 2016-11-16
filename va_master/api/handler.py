@@ -8,6 +8,8 @@ class ApiHandler(tornado.web.RequestHandler):
     def initialize(self, config):
         self.config = config
         self.datastore = config.datastore
+        self.data = {}
+        self.deploy_handler = None
 
     def json(self, obj, status=200):
         self.set_header('Content-Type', 'application/json')
@@ -28,6 +30,13 @@ class ApiHandler(tornado.web.RequestHandler):
 
     @tornado.gen.coroutine
     def post(self, path):
+
+        print ('Setting own data')
+
+        self.data = json.loads(self.request.body)
+
+        print ('Data and handler are set. ')
+
         if path == 'login':
             yield login.admin_login(self)
         elif path == 'hosts/new/validate_fields':

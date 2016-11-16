@@ -181,3 +181,29 @@ class OpenStackDriver(base.DriverBase):
             traceback.print_exc()
         raise tornado.gen.Return(StepResult(**step_kwargs))
        
+      
+    @tornado.gen.coroutine
+    def create_minion(self, host, data):
+        profile_dir = host['profile_conf_dir']
+        profile_template = ''
+
+        with open(profile_dir) as f: 
+            profile_template = f.read()
+
+
+        self.profile_vars['VAR_ROLE'] = data['role']
+        new_profile = data['minion_name'] + '-profile'
+        self.profile_vars['VAR_PROFILE_NAME'] = new_profile
+        self.profile_template = profile_template
+
+        yield self.get_salt_configs(skip_provider = True)
+        yield self.write_configs(skip_provider = True)
+
+        #probably use salt.cloud somehow, but the documentation is terrible. 
+        new_minion_cmd = ['salt-cloud', '-p', new_profile, data['minion_name']]
+        minion_apply_state = ['salt', data['minion_name'], 'state.highstate']
+
+        subprocess.call(new_minion_cmd)
+        subprocess.call(minion_apply_state)
+
+

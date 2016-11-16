@@ -126,13 +126,13 @@ class OpenStackDriver(base.DriverBase):
     @tornado.gen.coroutine
     def get_networks(self):
         networks = yield self.get_openstack_value(self.token_data, 'network', 'v2.0/networks')
-        networks = ['%s | %s' % (x['name'], x['id']) for x in networks['networks']]
+        networks = ['|'.join([x['name'], x['id']]) for x in networks['networks']]
         raise tornado.gen.Return(networks)
 
     @tornado.gen.coroutine
     def get_sec_groups(self):
        	sec_groups = yield self.get_openstack_value(self.token_data, 'compute', 'os-security-groups')
-	sec_groups = ['%s | %s' % (x['name'], x['id']) for x in sec_groups['security_groups']]
+	sec_groups = ['|'.join([x['name'], x['id']]) for x in sec_groups['security_groups']]
 	raise tornado.gen.Return(sec_groups)
 
     @tornado.gen.coroutine
@@ -153,23 +153,31 @@ class OpenStackDriver(base.DriverBase):
     @tornado.gen.coroutine
     def validate_field_values(self, step_index, field_values):
         if step_index < 0:
-	    raise tornado.gen.Return(StepResult(
-		errors=[], new_step_index=0, option_choices={'region' : self.regions,}
-	    ))
+    	    raise tornado.gen.Return(StepResult(
+        		errors=[], new_step_index=0, option_choices={'region' : self.regions,}
+    	    ))
         elif step_index == 0:
-	    self.token_data = yield self.get_token(field_values)
+    	    self.token_data = yield self.get_token(field_values)
+    
+    	    self.field_values['networks'] = yield self.get_networks() 
+            self.field_values['sec_groups'] = yield self.get_sec_groups()
+            self.field_values['images'] = yield self.get_images()
+            self.field_values['sizes']= yield self.get_sizes()
 
-	    self.field_values['networks'] = yield self.get_networks() 
-        self.field_values['sec_groups'] = yield self.get_sec_groups()
-        self.field_values['images'] = yield self.get_images()
-        self.field_values['sizes']= yield self.get_sizes()
+            os_base_url = 'http://' + field_values['host_ip'] + '/v2.0'
 
-        os_base_url = 'http://' + field_values['host_ip'] + '/v2.0'
+            self.provider_vars['VAR_TENANT'] = field_values['tenant']
+            self.provider_vars['VAR_IDENTITY_URL'] = os_base_url
+            self.provider_vars['VAR_REGION'] = field_values['region']
 
-        self.provider_vars['VAR_TENANT'] = field_values['tenant']
-        self.provider_vars['VAR_IDENTITY_URL'] = os_base_url
-        self.provider_vars['VAR_REGION'] = field_values['region']
+        elif step_index == 1: 
+            for field in ['network', 'sec_group']: 
+                field_values[field] = field_values[field].split('|')[1]
 
-        step_kwargs = yield super(OpenStackDriver, self).validate_field_values(step_index, field_values)
+        try: 
+            step_kwargs = yield super(OpenStackDriver, self).validate_field_values(step_index, field_values)
+        except: 
+            import traceback
+            traceback.print_exc()
         raise tornado.gen.Return(StepResult(**step_kwargs))
        

@@ -2,33 +2,14 @@ from . import base
 from .base import Step, StepResult
 from tornado.httpclient import AsyncHTTPClient, HTTPRequest
 import tornado.gen
-import json
+import json, yaml
 import subprocess
 import libvirt
+import os
 
-PROVIDER_TEMPLATE = '''VAR_PROVIDER_NAME:
-  auth_minion: VAR_THIS_IP
-  minion:
-    master: VAR_THIS_IP
-    master_type: str
-  # The name of the configuration profile to use on said minion
-  ssh_key_name: VAR_SSH_NAME
-  ssh_key_file: VAR_SSH_FILE
-  ssh_interface: private_ips
-  driver: nova
-  user: VAR_USERNAME
-  password: VAR_PASSWORD
-  networks:
-    - net-id: VAR_NETWORK_ID'''
+PROVIDER_TEMPLATE = ''
 
-PROFILE_TEMPLATE = '''VAR_PROFILE_NAME:
-    provider: VAR_PROVIDER_NAME
-    image: VAR_IMAGE
-    size: VAR_SIZE
-    minion:
-        grains:
-            role: VAR_ROLE
-'''
+PROFILE_TEMPLATE = ''
 
 class LibVirtDriver(base.DriverBase):
     def __init__(self, provider_name = 'libvirt_provider', profile_name = 'libvirt_profile', host_ip = '192.168.80.39'):
@@ -77,8 +58,9 @@ class LibVirtDriver(base.DriverBase):
     @tornado.gen.coroutine
     def get_images(self):
         try: 
-            images = self.conn.listAllDomains()
-            images = [x.name() for x in images]
+            images = ['xenial-server-cloudimg-amd64-disk1.img',]
+#            images = self.conn.listAllDomains()
+#            images = [x.name() for x in images]
         except: 
             import traceback
             traceback.print_exc()
@@ -100,6 +82,7 @@ class LibVirtDriver(base.DriverBase):
     	    ))
         elif step_index == 0:
             host_url = field_values['host_protocol'] + '://' + field_values['host_ip'] + '/system'
+            self.field_values['host_ip'] = field_values['host_ip'] 
             try: 
                 self.conn = libvirt.open(host_url)
             except: 
@@ -111,10 +94,55 @@ class LibVirtDriver(base.DriverBase):
             self.field_values['images'] = yield self.get_images()
             self.field_values['sizes']= yield self.get_sizes()
 
-        if step_index == 1:
+        elif step_index == 1:
             field_values['sec_group'] = None
 
         step_kwargs = yield super(LibVirtDriver, self).validate_field_values(step_index, field_values)
+        
         raise tornado.gen.Return(StepResult(**step_kwargs))
       
+    @tornado.gen.coroutine
+    def create_minion(self, host, data):
+        self.profile_vars['VAR_ROLE'] = data['role']
+
+
+        config_dir = '/etc/salt/libvirt_configs/' + data['minion_name']
+        instance_dir = config_dir + '/some_date_i_guess/'
+        print 'Config will be : ', config_dir, ' instance dir is : ', instance_dir
+#        os.mkdir(config_dir)
+#        os.mkdir(instance_dir)
+
+#        with open(instance_dir + 'meta_data.json', 'w') as f: 
+#            f.write(json.dumps({'uuid' : data['fqdn']})
+
+        users_dict = {
+            'fqdn' : data['fqdn'],
+            'users' : [
+                {
+                   'name' : {
+                        'root' : {
+                            'ssh-authorized-keys' : [
+                                'ssh-rsa',
+                            ]
+                        }
+                    }
+                }
+            ]
+        }
+
+        print (yaml.dump(users_dict))
+        tornado.gen.Return(None)
+#        with open(instance_dir + 'user_data') as f: 
+#            f.write(yaml.dump(users_dict))
+
+        #probably use salt.cloud somehow, but the documentation is terrible. 
+        print (self.field_values, ' are values')
+        arguments = [data['image'], data['fqdn'], config_dir, data['host_ip']]
+        new_minion_cmd = ['./virt-boot'] + arguments
+        print ('New minion: ', subprocess.list2cmdline(new_minion_cmd))
+        minion_apply_state = ['salt', data['minion_name'], 'state.highstate']
+
+#        subprocess.call(new_minion_cmd)
+#        subprocess.call(minion_apply_state)
+
 

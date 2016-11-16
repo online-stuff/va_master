@@ -6,7 +6,6 @@ import json
 @tornado.gen.coroutine
 def list_hosts(handler):
     hosts = yield handler.config.deploy_handler.list_hosts()
-    print ('Hosts are : ', hosts)
     handler.json({'hosts': hosts})
 
 @auth_only

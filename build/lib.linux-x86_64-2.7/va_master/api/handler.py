@@ -28,6 +28,10 @@ class ApiHandler(tornado.web.RequestHandler):
 
     @tornado.gen.coroutine
     def post(self, path):
+
+        data = json.loads(self.request.body)
+        deploy_handler = self.config.deploy_handler
+
         if path == 'login':
             yield login.admin_login(self)
         elif path == 'hosts/new/validate_fields':

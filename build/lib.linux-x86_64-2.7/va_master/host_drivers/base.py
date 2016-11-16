@@ -55,7 +55,7 @@ class DriverBase(object):
     def  __init__(self, driver_name,  provider_template, profile_template, provider_name, profile_name, host_ip, key_name = 'openstack_key_name', key_path = '/root/openstack_key', ):
 
         self.field_values = {
-                'driver_name' : '',
+                'driver_name' : driver_name,
             }
            
 
@@ -101,7 +101,7 @@ class DriverBase(object):
         if not skip_profile: 
             self.field_values['profile_conf'] = self.profile_vars['VAR_PROFILE_NAME']
             for var_name in self.profile_vars: 
-                if not (base_profile and var_name == 'VAR_PROFILE_NAME') : 
+                if not (base_profile and var_name == 'VAR_PROFILE_NAME') and self.profile_vars[var_name]: 
                     self.profile_template = self.profile_template.replace(var_name, self.profile_vars[var_name])
  
         if not skip_provider: 
@@ -160,7 +160,6 @@ class DriverBase(object):
 
     @tornado.gen.coroutine
     def validate_field_values(self, step_index, field_values):
-        print ('validating ', step_index)
         if step_index < 0:
             raise tornado.gen.Return(StepResult(
                 errors=[], new_step_index=0, option_choices={}
@@ -171,7 +170,6 @@ class DriverBase(object):
             self.provider_vars['VAR_USERNAME'] = field_values['username']
             self.provider_vars['VAR_PASSWORD'] = field_values['password']
 
-            print ('Options are : ', self.field_values['networks'])
             raise tornado.gen.Return({'errors':[], 'new_step_index':1,
                 'option_choices':{
                     'network': self.field_values['networks'],
@@ -180,10 +178,6 @@ class DriverBase(object):
             })
 
         elif step_index == 1:
-            print ('Printing images')
-            print (self.field_values['images'])
-            print ('Field values are : ', field_values)
-
             self.provider_vars['VAR_NETWORK_ID'] = field_values['network']
             self.profile_vars['VAR_SEC_GROUP'] = field_values['sec_group']
 
@@ -204,3 +198,34 @@ class DriverBase(object):
             raise tornado.gen.Return({
                 'errors' : [], 'new_step_index' : -1, 'option_choices':{}
             })
+
+    @tornado.gen.coroutine
+    def create_minion(self, host):
+        profile_dir = host['profile_conf_dir']
+        profile_template = ''
+
+        with open(profile_dir) as f: 
+            profile_template = f.read()
+
+
+        self.profile_vars['VAR_ROLE'] = data['role']
+        new_profile = data['minion_name'] + '-profile'
+        self.profile_vars['VAR_PROFILE_NAME'] = new_profile
+        self.profile_template = profile_template
+
+        yield self.get_salt_configs(skip_provider = True)
+        yield self.write_configs(skip_provider = True)
+
+        #probably use salt.cloud somehow, but the documentation is terrible. 
+        new_minion_cmd = ['salt-cloud', '-p', new_profile, data['minion_name']]
+        minion_apply_state = ['salt', data['minion_name'], 'state.highstate']
+
+        subprocess.call(new_minion_cmd)
+
+    #    state_file = yield get_state(state)
+    #    with open('/srv/salt' + links_to_states[state], 'w') as f: 
+    #        f.write(state_file)
+
+        subprocess.call(minion_apply_state)
+
+

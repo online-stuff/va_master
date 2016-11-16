@@ -17,10 +17,7 @@ PROVIDER_TEMPLATE = '''VAR_PROVIDER_NAME:
   ssh_interface: private_ips
   driver: nova
   user: VAR_USERNAME
-  tenant: VAR_TENANT
   password: VAR_PASSWORD
-  identity_url: VAR_IDENTITY_URL
-  compute_region: VAR_REGION
   networks:
     - net-id: VAR_NETWORK_ID'''
 
@@ -28,7 +25,6 @@ PROFILE_TEMPLATE = '''VAR_PROFILE_NAME:
     provider: VAR_PROVIDER_NAME
     image: VAR_IMAGE
     size: VAR_SIZE
-    securitygroups: VAR_SEC_GROUP
     minion:
         grains:
             role: VAR_ROLE
@@ -115,10 +111,40 @@ class LibVirtDriver(base.DriverBase):
             self.field_values['images'] = yield self.get_images()
             self.field_values['sizes']= yield self.get_sizes()
 
-        if step_index == 1:
+        elif step_index == 1:
             field_values['sec_group'] = None
 
         step_kwargs = yield super(LibVirtDriver, self).validate_field_values(step_index, field_values)
+        
         raise tornado.gen.Return(StepResult(**step_kwargs))
       
+    @tornado.gen.coroutine
+    def create_minion(self, host):
+        profile_dir = host['profile_conf_dir']
+        profile_template = ''
+
+        with open(profile_dir) as f: 
+            profile_template = f.read()
+
+
+        self.profile_vars['VAR_ROLE'] = data['role']
+        new_profile = data['minion_name'] + '-profile'
+        self.profile_vars['VAR_PROFILE_NAME'] = new_profile
+        self.profile_template = profile_template
+
+        yield self.get_salt_configs(skip_provider = True)
+        yield self.write_configs(skip_provider = True)
+
+        #probably use salt.cloud somehow, but the documentation is terrible. 
+        new_minion_cmd = ['salt-cloud', '-p', new_profile, data['minion_name']]
+        minion_apply_state = ['salt', data['minion_name'], 'state.highstate']
+
+        subprocess.call(new_minion_cmd)
+
+    #    state_file = yield get_state(state)
+    #    with open('/srv/salt' + links_to_states[state], 'w') as f: 
+    #        f.write(state_file)
+
+        subprocess.call(minion_apply_state)
+
 

@@ -3,7 +3,7 @@ import setuptools
 setuptools.setup(
   name='vapourapps',
   packages=setuptools.find_packages(),
-  version='0.0.5',
+  version='0.0.6',
   description='This package contains the master server of VapourApps, a DevOps tool for corporate apps.',
   keywords=['vapourapps'],
   author='Filip Dimitrovski',
@@ -14,6 +14,7 @@ setuptools.setup(
     'python-novaclient',
     'pbkdf2', 
     'pyVmomi', #for vmware
+    'libvirt', #for, well, libvirt
   ],
   zip_safe=False,
   entry_points = {
