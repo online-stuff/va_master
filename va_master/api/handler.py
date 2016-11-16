@@ -32,12 +32,21 @@ class ApiHandler(tornado.web.RequestHandler):
 
     @tornado.gen.coroutine
     def post(self, path):
-        self.data = json.loads(self.request.body)
-        if path == 'login':
-            yield login.admin_login(self)
-        elif path == 'hosts/new/validate_fields':
-            yield hosts.validate_newhost_fields(self)
-        elif path == 'apps':
-            yield apps.launch_app(self)
-        else:
-            self.json({'error': 'not_found'}, 404)
+        try:
+            print (self.request.body)
+            self.data = json.loads(self.request.body)
+
+            if path == 'login':
+                yield login.admin_login(self)
+            elif path == 'hosts/new/validate_fields':
+                yield hosts.validate_newhost_fields(self)
+            elif path == 'apps':
+                yield apps.launch_app(self)
+            elif path == 'state/add': 
+
+                yield apps.manage_states(self)
+            else:
+                self.json({'error': 'not_found'}, 404)
+        except: 
+            import traceback
+            traceback.print_exc()

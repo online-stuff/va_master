@@ -70,12 +70,12 @@ class DeployHandler(object):
 
     @tornado.gen.coroutine
     def get_states_data(self):
-        states_data = {}
+        states_data = []
         subdirs = glob.glob('/srv/salt/*')
         for state in subdirs:
             try: 
                 with open(state + '/appinfo.json') as f: 
-                    states_data[state] = json.loads(f.read())
+                    states_data.append(json.loads(f.read()))
             except IOError as e: 
                 print (state, ' does not have an appinfo file, skipping. ')
         raise tornado.gen.Return(states_data)
@@ -83,6 +83,7 @@ class DeployHandler(object):
     @tornado.gen.coroutine
     def get_states(self):
         try: 
+#            yield self.datastore.delete('states')
             states_data = yield self.datastore.get('states')
         except self.datastore.KeyNotFound:
             states_data = yield self.get_states_data()
@@ -90,7 +91,6 @@ class DeployHandler(object):
         except: 
             import traceback
             traceback.print_exc()
-        print (states_data)
         raise tornado.gen.Return(states_data)
     
     @tornado.gen.coroutine
@@ -100,8 +100,8 @@ class DeployHandler(object):
             current_top_sls = f.read()
 
         for state in states:
-            current_top_sls += "\n'role:' + state + ':\n    - match: grain\n"
+            current_top_sls += "\n  'role:'" + state['name'] + ":\n    - match: grain\n"
 
-        with open('/srv/salt/top.sls') as f:
+        with open('/srv/salt/top.sls.tmp', 'w') as f:
             f.write(current_top_sls)
 

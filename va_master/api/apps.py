@@ -7,29 +7,30 @@ import requests
 
 @tornado.gen.coroutine
 def manage_states(handler, action = 'append'):
-    current_states = yield deploy_handler.datastore.get('states')
-    new_state = {
-        'name' : data['state_name'],
-        'version' : data['version'],
-        'description' : data['description'], 
-        'icon' : data['icon'], 
-        'dependency' : data['dependency'], 
-        'path' : data['path'],
-    }
-    getattr(current_states, action)(new_state)
-    yield deploy_handler.datastore.insert('states', current_states)
-    yield handler.deploy_handler.generate_top_sls()
+    try:
+        deploy_handler = handler.config.deploy_handler
+        current_states = yield deploy_handler.datastore.get('states')
+        data = handler.data
+        new_state = {
+            'name' : data['name'],
+            'version' : data['version'],
+            'description' : data['description'], 
+            'icon' : data['icon'], 
+            'dependency' : data['dependency'], 
+            'path' : data['path'],
+        }
+        getattr(current_states, action)(new_state)
+        yield deploy_handler.datastore.insert('states', current_states)
+        yield deploy_handler.generate_top_sls()
+    except: 
+        import traceback
+        traceback.print_exc()
 
 
 @tornado.gen.coroutine
 def get_states(handler):
-    print ('Getting states')
-    try: 
-        states_data = yield handler.config.deploy_handler.get_states()
-    except: 
-        import traceback
-        traceback.print_exc()
-    raise tornado.gen.Return(states_data)
+    states_data = yield handler.config.deploy_handler.get_states()
+    handler.json(states_data)
 
 @tornado.gen.coroutine
 def create_new_state(handler):
