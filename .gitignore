@@ -8,3 +8,5 @@ pip-log.txt
 ami_images
 aws_images
 openstack_env_vars.sh
+dist/
+build/
