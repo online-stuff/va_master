@@ -78,6 +78,10 @@ class DeployHandler(object):
                     states_data.append(json.loads(f.read()))
             except IOError as e: 
                 print (state, ' does not have an appinfo file, skipping. ')
+            except: 
+                import traceback
+                traceback.print_exc()
+        print ('States data is : ', states_data)
         raise tornado.gen.Return(states_data)
 
     @tornado.gen.coroutine
@@ -97,11 +101,13 @@ class DeployHandler(object):
     def generate_top_sls(self):
         states = yield self.datastore.get('states')
         with open('/srv/salt/top.sls.base') as f: 
-            current_top_sls = f.read()
+            current_top_sls = yaml.load(f.read())
 
         for state in states:
-            current_top_sls += "\n  'role:'" + state['name'] + ":\n    - match: grain\n"
+            print (state)
+            current_top_sls['base']['role:' + state['name']] = [{'match' : 'grain'}] + state['substates']
 
+        print (current_top_sls)
         with open('/srv/salt/top.sls.tmp', 'w') as f:
-            f.write(current_top_sls)
+            f.write(yaml.safe_dump(current_top_sls))
 

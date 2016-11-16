@@ -18,6 +18,7 @@ def manage_states(handler, action = 'append'):
             'icon' : data['icon'], 
             'dependency' : data['dependency'], 
             'path' : data['path'],
+            'substates' : data['substates']
         }
         getattr(current_states, action)(new_state)
         yield deploy_handler.datastore.insert('states', current_states)
