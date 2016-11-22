@@ -43,7 +43,7 @@ def create_new_state(handler):
     #unzip(file_archive)
     manage_states(handler, 'append')
         
-@auth_only
+#@auth_only
 @tornado.gen.coroutine
 def launch_app(handler):
     try: 
@@ -55,10 +55,10 @@ def launch_app(handler):
         hosts = yield store.get('hosts')
         required_host = [host for host in hosts if host['hostname'] == data['hostname']][0]
 
-        data = {'role' : 'directory', 'minion_name' : 'nino_minion', 'fqdn' : 'nekoj.domen', 'image' : 'xenial-server-cloudimg-amd64-disk1.img', 'hostname' : data['hostname'], 'host_ip' : required_host['host_ip']}
+#        data = {'role' : 'directory', 'minion_name' : 'nino_minion', 'fqdn' : 'nekoj.domen', 'image' : 'xenial-server-cloudimg-amd64-disk1.img', 'hostname' : data['hostname'], 'host_ip' : required_host['host_ip']}
 
         driver = yield deploy_handler.get_driver_by_id(required_host['driver_name'])
-        yield driver.create_minion( host, data)
+        yield driver.create_minion(host, data)
     except: 
         import traceback
         traceback.print_exc()

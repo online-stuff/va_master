@@ -5,14 +5,28 @@ import tornado.gen
 import json, yaml
 import subprocess
 import libvirt
+import uuid
 import os
-
+from xml.etree import ElementTree as ET
 PROVIDER_TEMPLATE = ''
 
-PROFILE_TEMPLATE = ''
+PROFILE_TEMPLATE = """<volume>
+  <name>nino.img</name>
+  <target>
+    <path>/var/lib/virt/images/sparse.img</path>
+    <permissions>
+      <owner>107</owner>
+      <group>107</group>
+      <mode>0744</mode>
+      <label>virt_image_t</label>
+    </permissions>
+  </target>
+</volume>"""
+
+PROFILE_TEMPLATE = ""
 
 class LibVirtDriver(base.DriverBase):
-    def __init__(self, provider_name = 'libvirt_provider', profile_name = 'libvirt_profile', host_ip = '192.168.80.39'):
+    def __init__(self, provider_name = 'libvirt_provider', profile_name = 'libvirt_profile', host_ip = '192.168.80.39', path_to_images = '/etc/libvirt/qemu/'):
         kwargs = {
             'driver_name' : 'libvirt', 
             'provider_template' : PROVIDER_TEMPLATE, 
@@ -21,6 +35,7 @@ class LibVirtDriver(base.DriverBase):
             'profile_name' : profile_name, 
             'host_ip' : host_ip
             }
+        self.path_to_images = path_to_images
         super(LibVirtDriver, self).__init__(**kwargs) 
 
     @tornado.gen.coroutine
@@ -58,9 +73,9 @@ class LibVirtDriver(base.DriverBase):
     @tornado.gen.coroutine
     def get_images(self):
         try: 
-            images = ['xenial-server-cloudimg-amd64-disk1.img',]
-#            images = self.conn.listAllDomains()
-#            images = [x.name() for x in images]
+            images = self.conn.listAllDomains()
+            images = [x.name() for x in images]
+#            images = ['xenial-server-cloudimg-amd64-disk1.img',]
         except: 
             import traceback
             traceback.print_exc()
@@ -74,7 +89,6 @@ class LibVirtDriver(base.DriverBase):
 
     @tornado.gen.coroutine
     def validate_field_values(self, step_index, field_values):
-        print ('in libvirt ', step_index)
         if step_index < 0:
             protocols = ['qemu', 'qemu+tcp', 'qemu+tls']
     	    raise tornado.gen.Return(StepResult(
@@ -85,14 +99,15 @@ class LibVirtDriver(base.DriverBase):
             self.field_values['host_ip'] = field_values['host_ip'] 
             try: 
                 self.conn = libvirt.open(host_url)
+                self.field_values['host_protocol'] = field_values['host_protocol']
             except: 
                 import traceback
                 traceback.print_exc()
 
             self.field_values['networks'] = yield self.get_networks() 
-            self.field_values['sec_groups'] = yield self.get_sec_groups()
             self.field_values['images'] = yield self.get_images()
             self.field_values['sizes']= yield self.get_sizes()
+            self.field_values['sec_groups'] = []
 
         elif step_index == 1:
             field_values['sec_group'] = None
@@ -100,49 +115,35 @@ class LibVirtDriver(base.DriverBase):
         step_kwargs = yield super(LibVirtDriver, self).validate_field_values(step_index, field_values)
         
         raise tornado.gen.Return(StepResult(**step_kwargs))
-      
+
+
+
     @tornado.gen.coroutine
     def create_minion(self, host, data):
-        self.profile_vars['VAR_ROLE'] = data['role']
+        host_url = host['host_protocol'] + '://' + host['host_ip'] + '/system'
+        conn = libvirt.open(host_url)
 
+        old_vol = [x for x in conn.listAllDomains() if x.name() == data['image']][0]
+        
+        tree = ET.fromstring(old_vol.XMLDesc())
+        tree.find('name').text = data['minion_name']
+        tree.find('uuid').text = str(uuid.uuid4())
+        tree.find('currentMemory').text = data['minion_memory']
+        domain_disk = [x for x in tree.find('devices').findall('disk') if x.get('device') == 'disk'][0]
+        domain_disk.find('source').attrib['file'] = data['minion_image_path']
+       
+        new_xml = ET.tostring(tree)
+        try: 
+            new_vol = conn.defineXML(new_xml)
+            print ('Creating: ', new_vol.create())
+            print ('Starting: ', new_vol.start())
+        except: 
+            import traceback
+            traceback.print_exc()
 
-        config_dir = '/etc/salt/libvirt_configs/' + data['minion_name']
-        instance_dir = config_dir + '/some_date_i_guess/'
-        print 'Config will be : ', config_dir, ' instance dir is : ', instance_dir
-#        os.mkdir(config_dir)
-#        os.mkdir(instance_dir)
+        print (new_xml)
+        
+        
 
-#        with open(instance_dir + 'meta_data.json', 'w') as f: 
-#            f.write(json.dumps({'uuid' : data['fqdn']})
-
-        users_dict = {
-            'fqdn' : data['fqdn'],
-            'users' : [
-                {
-                   'name' : {
-                        'root' : {
-                            'ssh-authorized-keys' : [
-                                'ssh-rsa',
-                            ]
-                        }
-                    }
-                }
-            ]
-        }
-
-        print (yaml.dump(users_dict))
-        tornado.gen.Return(None)
-#        with open(instance_dir + 'user_data') as f: 
-#            f.write(yaml.dump(users_dict))
-
-        #probably use salt.cloud somehow, but the documentation is terrible. 
-        print (self.field_values, ' are values')
-        arguments = [data['image'], data['fqdn'], config_dir, data['host_ip']]
-        new_minion_cmd = ['./virt-boot'] + arguments
-        print ('New minion: ', subprocess.list2cmdline(new_minion_cmd))
-        minion_apply_state = ['salt', data['minion_name'], 'state.highstate']
-
-#        subprocess.call(new_minion_cmd)
-#        subprocess.call(minion_apply_state)
 
 

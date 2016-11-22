@@ -65,8 +65,12 @@ class DeployHandler(object):
             new_hosts = yield self.datastore.get('hosts')
         except self.datastore.KeyNotFound:
             new_hosts = []
-        new_hosts.append(driver.field_values)
-        yield self.datastore.insert('hosts', new_hosts)
+        try: 
+            new_hosts.append(driver.field_values)
+            yield self.datastore.insert('hosts', new_hosts)
+        except: 
+            import traceback
+            traceback.print_exc()
 
     @tornado.gen.coroutine
     def get_states_data(self):
@@ -104,10 +108,8 @@ class DeployHandler(object):
             current_top_sls = yaml.load(f.read())
 
         for state in states:
-            print (state)
             current_top_sls['base']['role:' + state['name']] = [{'match' : 'grain'}] + state['substates']
 
-        print (current_top_sls)
         with open('/srv/salt/top.sls.tmp', 'w') as f:
             f.write(yaml.safe_dump(current_top_sls))
 
