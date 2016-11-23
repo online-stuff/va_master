@@ -131,12 +131,30 @@ class LibVirtDriver(base.DriverBase):
         tree.find('currentMemory').text = data['minion_memory']
         domain_disk = [x for x in tree.find('devices').findall('disk') if x.get('device') == 'disk'][0]
         domain_disk.find('source').attrib['file'] = data['minion_image_path']
-       
+
+        old_interface = tree.find('devices').find('interface')
+        tree.find('devices').remove(old_interface)
+
+        new_interface = ET.Element('interface')
+        new_interface.attrib['type'] = 'network'
+
+        network = ET.SubElement(new_interface, 'source')
+        network.attrib = {'network' : 'default'}
+        
+        mac = ET.SubElement(new_interface, 'mac')
+        mac.attrib = {'address' : '52:54:00:9c:94:3b'}
+    
+        model = ET.SubElement(new_interface, 'model')
+        model.attrib = {'type' : 'virtio'}
+
+        tree.find('devices').append(new_interface)
+
         new_xml = ET.tostring(tree)
         try: 
+            pass
             new_vol = conn.defineXML(new_xml)
             print ('Creating: ', new_vol.create())
-            print ('Starting: ', new_vol.start())
+#            print ('Starting: ', new_vol.start())
         except: 
             import traceback
             traceback.print_exc()
