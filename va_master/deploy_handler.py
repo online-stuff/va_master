@@ -21,7 +21,7 @@ class DeployHandler(object):
         hosts_ip = run_sync(store_ip)
 
 #        self.datastore.insert('hosts', []
-)
+
         self.deploy_pool_count = deploy_pool_count
         self.pool = ProcessPoolExecutor(deploy_pool_count)
         self.drivers = [openstack.OpenStackDriver(host_ip = hosts_ip), libvirt_driver.LibVirtDriver(host_ip = hosts_ip), ]
