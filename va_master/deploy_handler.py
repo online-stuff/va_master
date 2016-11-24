@@ -2,8 +2,11 @@ import json, glob, yaml
 import requests
 import subprocess
 import traceback
+import functools
+import tornado
 import tornado.gen
 from host_drivers import openstack, aws, vcloud, libvirt_driver
+
 
 from Crypto.PublicKey import RSA
 from concurrent.futures import ProcessPoolExecutor
@@ -12,8 +15,13 @@ from concurrent.futures import ProcessPoolExecutor
 class DeployHandler(object):
     def __init__(self, datastore, deploy_pool_count):
         self.datastore = datastore
-        hosts_ip = self.datastore.get('ip_adress')
-#        self.datastore.insert('hosts', [])
+
+        store_ip = functools.partial(datastore.get, 'master_ip')
+        run_sync = tornado.ioloop.IOLoop.instance().run_sync
+        hosts_ip = run_sync(store_ip)
+
+#        self.datastore.insert('hosts', []
+)
         self.deploy_pool_count = deploy_pool_count
         self.pool = ProcessPoolExecutor(deploy_pool_count)
         self.drivers = [openstack.OpenStackDriver(host_ip = hosts_ip), libvirt_driver.LibVirtDriver(host_ip = hosts_ip), ]

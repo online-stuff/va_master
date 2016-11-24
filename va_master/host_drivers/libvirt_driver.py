@@ -128,7 +128,11 @@ class LibVirtDriver(base.DriverBase):
         tree = ET.fromstring(old_vol.XMLDesc())
         tree.find('name').text = data['minion_name']
         tree.find('uuid').text = str(uuid.uuid4())
-        tree.find('currentMemory').text = data['minion_memory']
+
+        #TODO get all attributes for which we want the user to have control. 
+        #Or maybe we just copy the image and be done with it. 
+#        tree.find('currentMemory').text = data['minion_memory']
+
         domain_disk = [x for x in tree.find('devices').findall('disk') if x.get('device') == 'disk'][0]
         domain_disk.find('source').attrib['file'] = data['minion_image_path']
 
@@ -141,9 +145,6 @@ class LibVirtDriver(base.DriverBase):
         network = ET.SubElement(new_interface, 'source')
         network.attrib = {'network' : 'default'}
         
-        mac = ET.SubElement(new_interface, 'mac')
-        mac.attrib = {'address' : '52:54:00:9c:94:3b'}
-    
         model = ET.SubElement(new_interface, 'model')
         model.attrib = {'type' : 'virtio'}
 
@@ -159,9 +160,39 @@ class LibVirtDriver(base.DriverBase):
             import traceback
             traceback.print_exc()
 
-        print (new_xml)
+        yield self.create_config_drive(host, data)
         
-        
+
+    def create_config_drive(self, host, data):
+        self.profile_vars['VAR_ROLE'] = data['role']
+
+
+        config_dir = '/etc/salt/libvirt_configs/' + data['minion_name']
+        instance_dir = config_dir + '/some_date_i_guess/'
+        print 'Config will be : ', config_dir, ' instance dir is : ', instance_dir
+        os.mkdir(config_dir)
+        os.mkdir(instance_dir)
+
+        with open(instance_dir + 'meta_data.json', 'w') as f: 
+            f.write(json.dumps({'uuid' : data['fqdn']}))
+
+        users_dict = {
+            'fqdn' : data['fqdn'],
+            'users' : [
+                {
+                   'name' : {
+                        'root' : {
+                            'ssh-authorized-keys' : [
+                                'ssh-rsa',
+                            ]
+                        }
+                    }
+                }
+            ]
+        }
+
+        print (yaml.dump(users_dict))
+        raise tornado.gen.Return(None)
 
 
 

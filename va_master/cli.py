@@ -110,8 +110,11 @@ def handle_init(args):
             # We have a connection, create an admin account
             create_admin = functools.partial(login.create_admin,
                 store, values['admin_user'], values['admin_pass'])
+            store_ip = functools.partial(store.insert, 'master_ip', values['ip'])
+
             run_sync(create_admin)
-            store.insert('master_ip', values['ip'])
+            run_sync(store_ip)
+#            store.insert('master_ip', values['ip'])
             cli_success('Created first account. Setup is finished.')
 
 def handle_jsbuild(args):
