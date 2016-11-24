@@ -14,7 +14,7 @@ Requirements:
 using the following command:
 
 ```bash
-sudo apt-get update && sudo apt-get install -y build-essential python-dev libssl-dev libffi-dev libzmq-dev unzip supervisor curl python-libvirt npm
+sudo apt-get update && sudo apt-get install -y build-essential python-dev libssl-dev libffi-dev libzmq-dev unzip supervisor curl python-libvirt npm xorriso
 sudo easy_install pip
 ```
 For 32bit server:
