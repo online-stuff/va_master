@@ -111,10 +111,13 @@ def handle_init(args):
             create_admin = functools.partial(login.create_admin,
                 store, values['admin_user'], values['admin_pass'])
             store_ip = functools.partial(store.insert, 'master_ip', values['ip'])
+            #TODO get flavours from github or something
+            libvirt_flavours = {'va-small' : {'vol_capacity' : 5, 'memory' : 2**20, 'max_memory' : 2**20, 'num_cpus' : 1}}
+            store_flavours = functools.partial(store.insert, 'libvirt_flavours', libvirt_flavours)
 
             run_sync(create_admin)
             run_sync(store_ip)
-#            store.insert('master_ip', values['ip'])
+            run_sync(store_flavours)
             cli_success('Created first account. Setup is finished.')
 
 def handle_jsbuild(args):

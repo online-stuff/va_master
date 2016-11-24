@@ -53,12 +53,12 @@ def launch_app(handler):
 
 
         hosts = yield store.get('hosts')
+        print (data['hostname'])
         required_host = [host for host in hosts if host['hostname'] == data['hostname']][0]
 
-#        data = {'role' : 'directory', 'minion_name' : 'nino_minion', 'fqdn' : 'nekoj.domen', 'image' : 'xenial-server-cloudimg-amd64-disk1.img', 'hostname' : data['hostname'], 'host_ip' : required_host['host_ip']}
-
+        print 'Host is : ', required_host
         driver = yield deploy_handler.get_driver_by_id(required_host['driver_name'])
-        yield driver.create_minion(host, data)
+        yield driver.create_minion(required_host, data)
     except: 
         import traceback
         traceback.print_exc()
