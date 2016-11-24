@@ -26,7 +26,7 @@ PROFILE_TEMPLATE = """<volume>
 PROFILE_TEMPLATE = ""
 
 class LibVirtDriver(base.DriverBase):
-    def __init__(self, flavours, provider_name = 'libvirt_provider', profile_name = 'libvirt_profile', host_ip = '192.168.80.39', path_to_images = '/etc/libvirt/qemu/', config_path = '/etc/salt/libvirt_configs/'):
+    def __init__(self, flavours, salt_master_fqdn, provider_name = 'libvirt_provider', profile_name = 'libvirt_profile', host_ip = '192.168.80.39', path_to_images = '/etc/libvirt/qemu/', config_path = '/etc/salt/libvirt_configs/'):
         kwargs = {
             'driver_name' : 'libvirt', 
             'provider_template' : PROVIDER_TEMPLATE, 
@@ -39,6 +39,7 @@ class LibVirtDriver(base.DriverBase):
         self.config_path = config_path 
         self.path_to_images = path_to_images
         self.flavours = flavours
+        self.salt_master_fqdn = salt_master_fqdn
 
         super(LibVirtDriver, self).__init__(**kwargs) 
 
@@ -132,7 +133,6 @@ class LibVirtDriver(base.DriverBase):
         new_vol = yield self.create_libvirt_volume(conn, data)
         config_drive = yield self.create_config_drive(host, data)
         iso_image = yield self.create_iso_image(data['minion_name'], config_drive)
-        yield self.create_salt_key(data['minion_name'])
 
         old_vol = [x for x in conn.listAllDomains() if x.name() == data['image']][0]     
         new_xml = yield self.create_domain_xml(old_vol.XMLDesc(), data['minion_name'], iso_image)
@@ -168,8 +168,8 @@ class LibVirtDriver(base.DriverBase):
     def create_iso_image(self, vol_name, config_drive):
         print ('Trying to create iso. ')
         try: 
-            iso_path = config_drive + vol_name + '.iso'
-            iso_command = ['xorrisofs', '-J', '-r', '-V', 'config_drive', '-o', iso_path, config_drive]
+            iso_path = self.config_path + vol_name + '.iso'
+            iso_command = ['xorrisofs', '-J', '-r', '-V', 'config_drive', '-o', iso_path, self.config_path]
             subprocess.call(iso_command)
             print ('Created iso at : ', iso_path)
         except: 
@@ -180,9 +180,9 @@ class LibVirtDriver(base.DriverBase):
 
 
     @tornado.gen.coroutine
-    def create_salt_key(self, minion_name):
+    def create_salt_key(self, minion_name, config_dir):
         print 'Creating salt key'
-        salt_command = ['salt-key', '--gen-keys=' + minion_name]
+        salt_command = ['salt-key', '--gen-keys=' + minion_name, '--gen-keys-dir', config_dir]
         result = subprocess.call(salt_command)
         print ('Created with result ', result)
         raise tornado.gen.Return(None)
@@ -213,27 +213,43 @@ class LibVirtDriver(base.DriverBase):
         os.mkdir(config_dir)
         os.mkdir(instance_dir)
 
+        yield self.create_salt_key(data['minion_name'], config_dir)
+
+        pub_key = ''
+        with open(config_dir + '/' +  data['minion_name'] + '.pub', 'r') as f: 
+            pub_key = f.read()
+            pub_key = '\n'.join([x for x in pub_key.split('\n') if '--' not in x])
+
+
+        pri_key = ''
+        with open(config_dir + '/' +  data['minion_name'] + '.pem', 'r') as f: 
+            pri_key = f.read()
+            pri_key = '\n'.join([x for x in pri_key.split('\n') if '--' not in x])
+
         users_dict = {
-            'fqdn' : data['fqdn'],
+            'fqdn' : data['instance_fqdn'], 
             'users' : [
-                {
-                   'name' : {
-                        'root' : {
-                            'ssh-authorized-keys' : [
-                                'ssh-rsa',
-                            ]
-                        }
-                    }
-                }
-            ]
+            {
+                'name' : 'root', 
+                'ssh-authorized-keys': [
+                    'ssh-key'
+                ]
+            }], 
+            'salt-minion' : {
+                'conf' : {
+                    'master' : self.salt_master_fqdn
+                }, 
+                'public_key' : pub_key,
+                'private_key' : pri_key,
+            }
         }
 
+
         with open(instance_dir + 'meta_data.json', 'w') as f: 
-            f.write(json.dumps({'uuid' : data['fqdn']}))
+            f.write(json.dumps({'uuid' : data['instance_fqdn']}))
 
         with open(instance_dir + 'user_data', 'w') as f: 
             f.write(yaml.safe_dump(users_dict))
 
-        print ('Created config dir at : ', config_dir)
         raise tornado.gen.Return(config_dir)
 

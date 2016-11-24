@@ -30,7 +30,8 @@ class DeployHandler(object):
         self.pool = ProcessPoolExecutor(deploy_pool_count)
 
 
-        self.drivers = [openstack.OpenStackDriver(host_ip = hosts_ip), libvirt_driver.LibVirtDriver(host_ip = hosts_ip, flavours = libvirt_flavours), ]
+        #TODO get salt master fqdn from store 
+        self.drivers = [openstack.OpenStackDriver(host_ip = hosts_ip), libvirt_driver.LibVirtDriver(host_ip = hosts_ip, flavours = libvirt_flavours, salt_master_fqdn = 'nekoj_domen'), ]
 
     def start(self):
         pass
