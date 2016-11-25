@@ -49,8 +49,11 @@ def handle_init(args):
     attrs = [
         ('ip', 'Enter the IPv4 addr. of this machine'),
         ('admin_user', 'Enter username for the first admin'),
-        ('admin_pass', 'Enter password for the first admin')]
+        ('admin_pass', 'Enter password for the first admin'), 
+        ('salt_master_fqdn', 'Enter the fqdn for the salt master'),
+    ]
     values = {}
+    print dir(args)
     for attr in attrs:
         name = attr[0]
         cmdhelp = attr[1]
@@ -113,11 +116,14 @@ def handle_init(args):
             store_ip = functools.partial(store.insert, 'master_ip', values['ip'])
             #TODO get flavours from github or something
             libvirt_flavours = {'va-small' : {'vol_capacity' : 5, 'memory' : 2**20, 'max_memory' : 2**20, 'num_cpus' : 1}}
+            salt_fqdn = functools.partial(store.insert, 'salt_master_fqdn', values['salt_master_fqdn'])
             store_flavours = functools.partial(store.insert, 'libvirt_flavours', libvirt_flavours)
 
             run_sync(create_admin)
             run_sync(store_ip)
             run_sync(store_flavours)
+            run_sync(salt_fqdn)
+
             cli_success('Created first account. Setup is finished.')
 
 def handle_jsbuild(args):
@@ -143,6 +149,8 @@ def entry():
         'going to be advertised to apps')
     init_sub.add_argument('--admin-user', help='Username of the first admin')
     init_sub.add_argument('--admin-pass', help='Password of the first admin')
+    init_sub.add_argument('--salt-master-fqdn', help='Enter the fqdn for the salt master')
+
     # args.sub will equal 'start' if this subparser is used
     init_sub.set_defaults(sub='init')
 

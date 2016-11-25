@@ -130,33 +130,49 @@ class LibVirtDriver(base.DriverBase):
         conn = libvirt.open(host_url)
         flavour = self.flavours[data['size']]
 
-        new_vol = yield self.create_libvirt_volume(conn, data)
+        print ('size is : ', data['size'])
+        new_vol = yield self.create_libvirt_volume(conn, flavour['vol_capacity'], data['size'], data['minion_name'] + '-volume.qcow2')
         config_drive = yield self.create_config_drive(host, data)
-        iso_image = yield self.create_iso_image(data['minion_name'], config_drive)
+        iso_image = yield self.create_iso_image(conn, data['minion_name'], config_drive)
 
         old_vol = [x for x in conn.listAllDomains() if x.name() == data['image']][0]     
-        new_xml = yield self.create_domain_xml(old_vol.XMLDesc(), data['minion_name'], iso_image)
+        new_xml = yield self.create_domain_xml(old_vol.XMLDesc(), data['minion_name'], new_vol.name(), iso_image)
 
         try: 
-            new_vol = conn.defineXML(new_xml)
-            new_vol.setMemory = flavour['memory']
-            new_vol.setMaxMemory = flavour['max_memory']
-            new_vol.setVcpus = flavour['num_cpus']
-            print ('Creating: ', new_vol.create())
+            print ('Defining image with ', new_xml)
+            new_img = conn.defineXML(new_xml)
+            new_img.setMemory = flavour['memory']
+            new_img.setMaxMemory = flavour['max_memory']
+            new_img.setVcpus = flavour['num_cpus']
+            print ('Creating: ', new_img.create())
         except: 
             import traceback
             traceback.print_exc()
 
 
     @tornado.gen.coroutine
-    def create_domain_xml(self, old_xml, minion_name, iso_image):
+    def create_domain_xml(self, old_xml, minion_name, vol_name, iso_name):
         print ('Generating domain xml')
         tree = ET.fromstring(old_xml)
         tree.find('name').text = minion_name
         tree.find('uuid').text = str(uuid.uuid4())
 
         domain_disk = [x for x in tree.find('devices').findall('disk') if x.get('device') == 'disk'][0]
-        domain_disk.find('source').attrib['file'] = iso_image
+        domain_disk.find('source').attrib['file'] = '/var/lib/libvirt/images/' + vol_name
+        domain_disk.find('driver').attrib['type'] = 'qcow2' 
+        domain_disk.find('target').attrib['bus'] = 'virtio'
+        domain_disk.find('address').attrib = {
+            'type':'pci',
+            'domain':'0x0000',
+            'bus':'0x00',
+            'slot':'0x07',
+            'function':'0x0',
+        }
+
+
+#        domain_iso_disk = [x for x in tree.find('devices').findall('disk') if x.get('device') == 'cdrom'][0]
+#        domain_iso_disk.find('source').attrib['file'] = '/var/lib/libvirt/images/' + iso_name
+
 
         mac = tree.find('devices').find('interface').find('mac')
         tree.find('devices').find('interface').remove(mac)
@@ -165,18 +181,28 @@ class LibVirtDriver(base.DriverBase):
 
 
     @tornado.gen.coroutine
-    def create_iso_image(self, vol_name, config_drive):
+    def create_iso_image(self, conn, vol_name, config_drive):
         print ('Trying to create iso. ')
         try: 
-            iso_path = self.config_path + vol_name + '.iso'
+            iso_path = '/var/lib/libvirt/images/' + vol_name + '.iso'
             iso_command = ['xorrisofs', '-J', '-r', '-V', 'config_drive', '-o', iso_path, self.config_path]
             subprocess.call(iso_command)
-            print ('Created iso at : ', iso_path)
+            print ('Created iso at : ', iso_path, '. Now creating dummy volume to upload. ')
+            iso_volume = yield self.create_libvirt_volume(conn, 1, 'va-small', vol_name + '-iso-vol')
+            with open(iso_path, 'r') as f:
+                #Libvirt documentation is terrible and I don't really know how this works. 
+                def handler(stream, data, file_):
+                    return file_.read(data) 
+                st = conn.newStream(0)
+#                iso_volume.upload(st, int(os.stat(iso_path).st_size), 0, 0)
+                iso_volume.upload(st, 0, 0, 0)
+                st.sendAll(handler, f)
+
         except: 
             import traceback
             traceback.print_exc()
         print ('Created at : ', iso_path)
-        raise tornado.gen.Return(iso_path)
+        raise tornado.gen.Return(vol_name + '.iso')
 
 
     @tornado.gen.coroutine
@@ -189,15 +215,13 @@ class LibVirtDriver(base.DriverBase):
  
 
     @tornado.gen.coroutine
-    def create_libvirt_volume(self, conn, data):
-        flavour = self.flavours[data['size']]
-
+    def create_libvirt_volume(self, conn, vol_capacity, flavour, vol_name):
         storage = [s for s in conn.listAllStoragePools() if s.name() == 'default'][0] #Maybe work with storage pools better? 
-        old_vol = storage.storageVolLookupByName(data['size'])
+        old_vol = storage.storageVolLookupByName(flavour)
         new_vol = ET.fromstring(old_vol.XMLDesc())
 
-        new_vol.find('name').text = data['minion_name'] + '-volume'
-        new_vol.find('capacity').text = str(flavour['vol_capacity'])
+        new_vol.find('name').text = vol_name 
+        new_vol.find('capacity').text = str(vol_capacity)
         
         new_vol = storage.createXML(ET.tostring(new_vol))
         print ('Created new vol with xml: ', new_vol.XMLDesc())

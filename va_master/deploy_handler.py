@@ -20,9 +20,12 @@ class DeployHandler(object):
 
         store_ip = functools.partial(datastore.get, 'master_ip')
         libvirt_flavours = functools.partial(datastore.get, 'libvirt_flavours')
+        salt_master_fqdn = functools.partial(datastore.get, 'salt_master_fqdn')
+
 
         hosts_ip = run_sync(store_ip)
         libvirt_flavours = run_sync(libvirt_flavours)
+        salt_master_fqdn = run_sync(salt_master_fqdn)
 
 #        self.datastore.insert('hosts', []
 
@@ -31,7 +34,7 @@ class DeployHandler(object):
 
 
         #TODO get salt master fqdn from store 
-        self.drivers = [openstack.OpenStackDriver(host_ip = hosts_ip), libvirt_driver.LibVirtDriver(host_ip = hosts_ip, flavours = libvirt_flavours, salt_master_fqdn = 'nekoj_domen'), ]
+        self.drivers = [openstack.OpenStackDriver(host_ip = hosts_ip), libvirt_driver.LibVirtDriver(host_ip = hosts_ip, flavours = libvirt_flavours, salt_master_fqdn = 'salt_master_fqdn'), ]
 
     def start(self):
         pass
