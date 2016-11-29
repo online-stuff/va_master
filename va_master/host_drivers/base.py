@@ -1,4 +1,4 @@
-import abc
+import abc, subprocess
 import tornado.gen
 from tornado.httpclient import AsyncHTTPClient, HTTPRequest
 
@@ -52,7 +52,7 @@ class DriverBase(object):
     __metaclass__ = abc.ABCMeta
 
     @abc.abstractmethod
-    def  __init__(self, driver_name,  provider_template, profile_template, provider_name, profile_name, host_ip, key_name = 'openstack_key_name', key_path = '/root/openstack_key', ):
+    def  __init__(self, driver_name,  provider_template, profile_template, provider_name, profile_name, host_ip, key_name = 'va_master_key_name', key_path = '/root/va_master_key'):
 
         self.field_values = {
                 'driver_name' : driver_name,
@@ -160,6 +160,7 @@ class DriverBase(object):
 
         self.steps = [host_info, net_sec, imagesize]
         raise tornado.gen.Return(self.steps)
+
 
     @tornado.gen.coroutine
     def validate_field_values(self, step_index, field_values):

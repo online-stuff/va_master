@@ -16,15 +16,25 @@ class DeployHandler(object):
     def __init__(self, datastore, deploy_pool_count):
         self.datastore = datastore
 
-        store_ip = functools.partial(datastore.get, 'master_ip')
         run_sync = tornado.ioloop.IOLoop.instance().run_sync
-        hosts_ip = run_sync(store_ip)
 
-#        self.datastore.insert('hosts', []
+        store_ip = functools.partial(datastore.get, 'master_ip')
+        libvirt_flavours = functools.partial(datastore.get, 'libvirt_flavours')
+        salt_master_fqdn = functools.partial(datastore.get, 'salt_master_fqdn')
+
+
+        hosts_ip = run_sync(store_ip)
+        libvirt_flavours = run_sync(libvirt_flavours)
+        salt_master_fqdn = run_sync(salt_master_fqdn)
+
+#        self.datastore.insert('hosts', [])
 
         self.deploy_pool_count = deploy_pool_count
         self.pool = ProcessPoolExecutor(deploy_pool_count)
-        self.drivers = [openstack.OpenStackDriver(host_ip = hosts_ip), libvirt_driver.LibVirtDriver(host_ip = hosts_ip), ]
+
+
+        #TODO get salt master fqdn from store 
+        self.drivers = [openstack.OpenStackDriver(host_ip = hosts_ip, key_name = 'va_master_key_name', key_path = '/root/va_master_key'), libvirt_driver.LibVirtDriver(host_ip = hosts_ip, flavours = libvirt_flavours, salt_master_fqdn = 'salt_master_fqdn', key_name = 'va_master_key_name', key_path = '/root/va_master_key'), ]
 
     def start(self):
         pass
