@@ -15,10 +15,10 @@ var Hosts = React.createClass({
     },
     render: function() {
         var host_rows = this.state.hosts.map(function(host) {
-            return <tr key={host.name}>
-                <td>{host.name}</td>
-                <td>{host.driver}</td>
-                <td>{host.is_deletable ? 'Delete' : '(this host)'}</td>
+            return <tr key={host.hostname}>
+                <td>{host.hostname}</td>
+                <td>{host.driver_name}</td>
+                <td>Delete</td>
             </tr>
         });
         var NewHostFormRedux = connect(function(state){
