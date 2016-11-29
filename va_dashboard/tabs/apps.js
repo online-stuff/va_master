@@ -4,14 +4,36 @@ var Network = require('../network');
 
 var Apps = React.createClass({
     getInitialState: function () {
-        return {status: 'none', progress: 0, hosts: []};
+        return {status: 'none', progress: 0, hosts: [], states: [], sizes: [], networks: []};
     },
 
     componentDidMount: function () {
         var me = this;
         Network.get('/api/hosts', this.props.auth.token).done(function (data) {
             me.setState({hosts: data.hosts});
+            if(data.hosts.length > 0){
+                me.setState({sizes: data.hosts[0].sizes});
+                me.setState({networks: data.hosts[0].networks});
+            }
         });
+        Network.get('/api/states', this.props.auth.token).done(function (data) {
+            me.setState({states: data});
+        });
+    },
+
+    onChange: function(e) {
+        value = e.target.value;
+        console.log(value);
+        for(i=0; i < this.state.hosts.length; i++){
+            var host = this.state.hosts[i];
+            if(host.hostname === value){
+                this.setState({sizes: host.sizes});
+                this.setState({networks: host.networks});
+                console.log(host.sizes);
+                console.log(host.networks);
+                break;
+            }
+        }
     },
 
     render: function () {
@@ -29,8 +51,20 @@ var Apps = React.createClass({
             statusDisplay = 'none';
         }
 
-        var host_rows = this.state.hosts.map(function(host) {
-            return <option key = {host.name}>{host.name}</option>
+        var host_rows = this.state.hosts.map(function(host, i) {
+            return <option key = {i}>{host.hostname}</option>
+        });
+
+        var state_rows = this.state.states.map(function(state) {
+            return <option key = {state.Name}>{state.Name}</option>
+        });
+
+        var sizes_rows = this.state.sizes.map(function(size) {
+            return <option key = {size}>{size}</option>
+        });
+
+        var network_rows = this.state.networks.map(function(network) {
+            return <option key = {network}>{network}</option>
         });
 
         return (
@@ -38,13 +72,25 @@ var Apps = React.createClass({
                 <h1>Launch new app</h1>
                 <form onSubmit={this.onSubmit} className='form-horizontal'>
                     <div className='form-group'>
-                    <select ref='hostname'>
+                    Host: <select ref='hostname' onChange={this.onChange}>
                         {host_rows}
                     </select> <br/>
                     <select ref = 'role'>
-                        <option>directory</option>
+                        {state_rows}
                     </select>
                     <input placeholder='Instance name' ref='name'/> <br/>
+                    Flavors: <select ref = 'flavor'>
+                        {sizes_rows}
+                    </select><br/>
+                    Storage disk: <select ref = 'storage'>
+                        <option>0</option>
+                        <option>1</option>
+                        <option>2</option>
+                        <option>3</option>
+                    </select><br/>
+                    Networks: <select ref = 'network'>
+                        {network_rows}
+                    </select><br/>
                     <button>Launch</button>
                     <div style={{width: '100%', padding: 10, borderRadius: 5, background: statusColor, display: statusDisplay}}>
                         {statusMessage}
