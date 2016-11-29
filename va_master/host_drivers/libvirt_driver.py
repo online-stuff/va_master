@@ -26,7 +26,7 @@ PROFILE_TEMPLATE = """<volume>
 PROFILE_TEMPLATE = ""
 
 class LibVirtDriver(base.DriverBase):
-    def __init__(self, flavours, salt_master_fqdn, provider_name = 'libvirt_provider', profile_name = 'libvirt_profile', host_ip = '192.168.80.39', path_to_images = '/etc/libvirt/qemu/', config_path = '/etc/salt/libvirt_configs/'):
+    def __init__(self, flavours, salt_master_fqdn, provider_name = 'libvirt_provider', profile_name = 'libvirt_profile', host_ip = '192.168.80.39', path_to_images = '/etc/libvirt/qemu/', config_path = '/etc/salt/libvirt_configs/', key_name = 'va_master_key_name', key_path = '/root/va_master_key'):
         kwargs = {
             'driver_name' : 'libvirt', 
             'provider_template' : PROVIDER_TEMPLATE, 
@@ -139,12 +139,11 @@ class LibVirtDriver(base.DriverBase):
         new_xml = yield self.create_domain_xml(old_vol.XMLDesc(), data['minion_name'], new_vol.name(), iso_image)
 
         try: 
-            print ('Defining image with ', new_xml)
             new_img = conn.defineXML(new_xml)
             new_img.setMemory = flavour['memory']
             new_img.setMaxMemory = flavour['max_memory']
             new_img.setVcpus = flavour['num_cpus']
-            print ('Creating: ', new_img.create())
+            new_img.create()
         except: 
             import traceback
             traceback.print_exc()
@@ -224,31 +223,40 @@ class LibVirtDriver(base.DriverBase):
         new_vol.find('capacity').text = str(vol_capacity)
         
         new_vol = storage.createXML(ET.tostring(new_vol))
-        print ('Created new vol with xml: ', new_vol.XMLDesc())
         raise tornado.gen.Return(new_vol)
        
 
     @tornado.gen.coroutine
     def create_config_drive(self, host, data):
         print ('Creating config. ')
-        config_dir = self.config_path + data['minion_name']
-        instance_dir = config_dir + '/some_date_i_guess/'
+        minion_dir = self.config_path + data['minion_name']
+        config_dir = minion_dir + '/config_drive/openstack'
+        instance_dir = config_dir + '/2012-08-10/'
 
-        os.mkdir(config_dir)
-        os.mkdir(instance_dir)
+        os.makedirs(config_dir)
+        os.makedirs(instance_dir)
 
-        yield self.create_salt_key(data['minion_name'], config_dir)
+        yield self.create_salt_key(data['minion_name'], minion_dir)
 
         pub_key = ''
-        with open(config_dir + '/' +  data['minion_name'] + '.pub', 'r') as f: 
+        pub_key_path = minion_dir + '/' +  data['minion_name']
+        with open(pub_key_path + '.pub', 'r') as f: 
             pub_key = f.read()
-            pub_key = '\n'.join([x for x in pub_key.split('\n') if '--' not in x])
+            pub_key = '\n'.join([x for x in pub_key.split('\n') if '--' not in x and len(x) > 2])
+            pub_key_cp_cmd = ['cp',pub_key_path + '.pub', '/etc/salt/pki/minion/' + data['minion_name']]
+            subprocess.call(pub_key_cp_cmd)
 
 
         pri_key = ''
-        with open(config_dir + '/' +  data['minion_name'] + '.pem', 'r') as f: 
+        with open(minion_dir + '/' +  data['minion_name'] + '.pem', 'r') as f: 
             pri_key = f.read()
-            pri_key = '\n'.join([x for x in pri_key.split('\n') if '--' not in x])
+            pri_key = '\n'.join([x for x in pri_key.split('\n') if '--' not in x and len(x) > 2])
+
+
+        auth_key = ''
+        with open('/root/openstack_key/openstack_key_name.pem') as f: 
+            auth_key = f.read()
+            auth_key = '\n'.join([x for x in pri_key.split('\n') if '--' not in x and len(x) > 2])
 
         users_dict = {
             'fqdn' : data['instance_fqdn'], 
@@ -256,7 +264,7 @@ class LibVirtDriver(base.DriverBase):
             {
                 'name' : 'root', 
                 'ssh-authorized-keys': [
-                    'ssh-key'
+                    auth_key
                 ]
             }], 
             'salt-minion' : {
@@ -274,6 +282,8 @@ class LibVirtDriver(base.DriverBase):
 
         with open(instance_dir + 'user_data', 'w') as f: 
             f.write(yaml.safe_dump(users_dict))
+
+        os.symlink(instance_dir, config_dir + '/latest')
 
         raise tornado.gen.Return(config_dir)
 
