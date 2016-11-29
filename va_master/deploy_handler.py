@@ -125,8 +125,12 @@ class DeployHandler(object):
             current_top_sls = yaml.load(f.read())
 
         for state in states:
+            print ('Adding state : ', state['name'])
             current_top_sls['base']['role:' + state['name']] = [{'match' : 'grain'}] + state['substates']
-
-        with open('/srv/salt/top.sls.tmp', 'w') as f:
-            f.write(yaml.safe_dump(current_top_sls))
+        try: 
+            with open('/srv/salt/top.sls.tmp', 'w') as f:
+                f.write(yaml.safe_dump(current_top_sls))
+        except: 
+            import traceback
+            traceback.print_exc()
 
