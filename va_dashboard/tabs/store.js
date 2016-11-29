@@ -1,89 +1,118 @@
 var React = require('react');
+var Bootstrap = require('react-bootstrap');
 var connect = require('react-redux').connect;
 var Network = require('../network');
+var ReactDOM = require('react-dom');
 
 var Store = React.createClass({
     getInitialState: function () {
-        return {status: 'none', progress: 0, hosts: []};
+        return {states: []};
+    },
+
+    getCurrentStates: function () {
+        var me = this;
+        Network.get('/api/states', this.props.auth.token).done(function (data) {
+            me.setState({states: data});
+        });
     },
 
     componentDidMount: function () {
-        var me = this;
-        Network.get('/api/states', this.props.auth.token).done(function (data) {
-            me.setState({states: data.states});
-        });
+        this.getCurrentStates();
     },
 
     render: function () {
-        var statusColor, statusDisplay, statusMessage;
-
-        if(this.state.status == 'launching'){
-            statusColor = 'yellow';
-            statusDisplay = 'block';
-            statusMessage = 'Launching... ' + this.state.progress + '%';
-        }else if(this.state.status == 'launched'){
-            statusColor = 'green';
-            statusDisplay = 'block';
-            statusMessage = 'Launched successfully!';
-        }else {
-            statusDisplay = 'none';
-        }
-
-        var host_rows = this.state.hosts.map(function(host) {
-            return <option key = {host.name}>{host.name}</option>
-        });
-
         var states_rows = this.state.states.map(function(state) {
             return (
-                <div id = {state.name}>
-                    State name: {state.name}
-                    Description: {state.description}
-                </div>                    
+                <tr key={state.Name}>
+                    <td>{state.Name}</td>
+                    <td>{state.Description}</td>
+                </tr>
             )
         });
 
+        var NewStateFormRedux = connect(function(state){
+            return {auth: state.auth};
+        })(NewStateForm);
+
         return (
             <div>
-                <h1>Manage states and minions</h1>
-                <form onSubmit={this.onSubmit} className='form-horizontal'>
-                    <div className='form-group'>
-                    <select ref='hostname'>
-                        {host_rows}
-                    </select> <br/>
-                    <select ref = 'role'>
-                        <option>directory</option>
-                    </select>
-                    <input placeholder='Instance name' ref='name'/> <br/>
-                    <button>Launch</button>
-                    <div style={{width: '100%', padding: 10, borderRadius: 5, background: statusColor, display: statusDisplay}}>
-                        {statusMessage}
-                    </div>
-                    </div>
+                <NewStateFormRedux getStates = {this.getCurrentStates} />
+                <Bootstrap.PageHeader>Current states</Bootstrap.PageHeader>
+                <Bootstrap.Table striped bordered hover>
+                    <thead>
+                        <tr>
+                        <td>State name</td>
+                        <td>Description</td>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {states_rows}
+                    </tbody>
+                </Bootstrap.Table>
+            </div>
+        );
+    }
+});
+
+var NewStateForm = React.createClass({
+    render: function () {
+        return (
+            <div>
+                <Bootstrap.PageHeader>Add new state</Bootstrap.PageHeader>
+                <form onSubmit={this.onSubmit}>
+                    <Bootstrap.FormGroup>
+                        <Bootstrap.ControlLabel >State name</Bootstrap.ControlLabel>
+                        <Bootstrap.FormControl type='text' ref="name" />
+                    </Bootstrap.FormGroup>
+                    <Bootstrap.FormGroup>
+                        <Bootstrap.ControlLabel >Version</Bootstrap.ControlLabel>
+                        <Bootstrap.FormControl type='text' ref="version" />
+                    </Bootstrap.FormGroup>
+                    <Bootstrap.FormGroup>
+                        <Bootstrap.ControlLabel >Description</Bootstrap.ControlLabel>
+                        <Bootstrap.FormControl type='text' ref="description" />
+                    </Bootstrap.FormGroup>
+                    <Bootstrap.FormGroup>
+                        <Bootstrap.ControlLabel >Icon</Bootstrap.ControlLabel>
+                        <Bootstrap.FormControl type='text' ref="icon" />
+                    </Bootstrap.FormGroup>
+                    <Bootstrap.FormGroup>
+                        <Bootstrap.ControlLabel >Dependecy</Bootstrap.ControlLabel>
+                        <Bootstrap.FormControl type='text' ref="dependency" />
+                    </Bootstrap.FormGroup>
+                    <Bootstrap.FormGroup>
+                        <Bootstrap.ControlLabel >Path</Bootstrap.ControlLabel>
+                        <Bootstrap.FormControl type='text' ref="path" />
+                    </Bootstrap.FormGroup>
+                    <Bootstrap.ButtonGroup>
+                        <Bootstrap.Button type="submit" bsStyle='primary'>
+                            Create
+                        </Bootstrap.Button>
+                    </Bootstrap.ButtonGroup>
                 </form>
             </div>
         );
+
     },
     onSubmit: function(e) {
         e.preventDefault();
+        var data = {
+            name: ReactDOM.findDOMNode(this.refs.name).value,
+            version: ReactDOM.findDOMNode(this.refs.version).value,
+            description: ReactDOM.findDOMNode(this.refs.description).value,
+            icon: ReactDOM.findDOMNode(this.refs.icon).value,
+            dependency: ReactDOM.findDOMNode(this.refs.dependency).value,
+            path: ReactDOM.findDOMNode(this.refs.path).value
+        };
         var me = this;
-        this.setState({status: 'launching', progress: 0});
-        interval = setInterval(function(){
-            if(me.state.status == 'launching' && me.state.progress <= 80){
-                var newProgress = me.state.progress + 10;
-                me.setState({progress: newProgress})
-            }else{
-                clearInterval(interval);
-            }
-        }, 10000);
-        var data = {minion_name: this.refs.name.value, hostname: this.refs.hostname.value, role: this.refs.role.value};
-        Network.post('/api/apps', this.props.auth.token, data).done(function(data) {
-            me.setState({status: 'launched'});
+        Network.post('/api/state/add', this.props.auth.token, data).done(function(data) {
+            me.props.getStates();
         });
     }
 });
 
-Apps = connect(function(state){
+Store = connect(function(state){
     return {auth: state.auth};
-})(Apps);
+})(Store);
 
-module.exports = Apps;
+module.exports = Store;

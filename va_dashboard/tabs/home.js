@@ -49,6 +49,10 @@ var Home = React.createClass({
                     <Router.Link to='apps' activeClassName='active'>
                     <Bootstrap.Glyphicon glyph='th' /> Apps</Router.Link>
                     </li>
+                    <li>
+                    <Router.Link to='store' activeClassName='active'>
+                    <Bootstrap.Glyphicon glyph='cloud' /> Store</Router.Link>
+                    </li>
                 </ul>
             </div>
             <div className='main-content'>
