@@ -51,7 +51,7 @@ var Home = React.createClass({
                     </li>
                     <li>
                     <Router.Link to='store' activeClassName='active'>
-                    <Bootstrap.Glyphicon glyph='th' /> Store</Router.Link>
+                    <Bootstrap.Glyphicon glyph='cloud' /> Store</Router.Link>
                     </li>
                 </ul>
             </div>
