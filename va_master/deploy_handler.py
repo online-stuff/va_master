@@ -72,7 +72,6 @@ class DeployHandler(object):
     def list_hosts(self):
         try:
             hosts = yield self.datastore.get('hosts')
-            hosts = [{'name' : host['hostname'], 'driver' : host['driver_name'], 'is_deletable' : True} for host in hosts]
         except self.datastore.KeyNotFound:
             hosts = []
         raise tornado.gen.Return(hosts)
