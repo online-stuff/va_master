@@ -113,6 +113,8 @@ def handle_init(args):
             # We have a connection, create an admin account
             create_admin = functools.partial(login.create_admin,
                 store, values['admin_user'], values['admin_pass'])
+
+            #Store some stuff in datastore
             store_ip = functools.partial(store.insert, 'master_ip', values['ip'])
             #TODO get flavours from github or something
             libvirt_flavours = {'va-small' : {'vol_capacity' : 5, 'memory' : 2**20, 'max_memory' : 2**20, 'num_cpus' : 1}}
@@ -123,6 +125,15 @@ def handle_init(args):
             run_sync(store_ip)
             run_sync(store_flavours)
             run_sync(salt_fqdn)
+
+
+            #Generate an ssh-key
+            os.mkdir('/root/va_master_key')
+            ssh_cmd = ['ssh-keygen', '-t', 'rsa', '-f', '/root/va_master_key/va_master_key_name', '-N', '""']
+
+            #TODO a keypair
+
+            subprocess.call(ssh_cmd)
 
             cli_success('Created first account. Setup is finished.')
 
