@@ -100,6 +100,7 @@ class DeployHandler(object):
             except IOError as e: 
                 print (state, ' does not have an appinfo file, skipping. ')
             except: 
+                print ('error with ', state)
                 import traceback
                 traceback.print_exc()
         print ('States data is : ', states_data)
@@ -108,7 +109,7 @@ class DeployHandler(object):
     @tornado.gen.coroutine
     def get_states(self):
         try: 
-#            yield self.datastore.delete('states')
+            yield self.datastore.delete('states')
             states_data = yield self.datastore.get('states')
         except self.datastore.KeyNotFound:
             states_data = yield self.get_states_data()
@@ -125,8 +126,12 @@ class DeployHandler(object):
             current_top_sls = yaml.load(f.read())
 
         for state in states:
+            print ('Adding state : ', state['name'])
             current_top_sls['base']['role:' + state['name']] = [{'match' : 'grain'}] + state['substates']
-
-        with open('/srv/salt/top.sls.tmp', 'w') as f:
-            f.write(yaml.safe_dump(current_top_sls))
+        try: 
+            with open('/srv/salt/top.sls.tmp', 'w') as f:
+                f.write(yaml.safe_dump(current_top_sls))
+        except: 
+            import traceback
+            traceback.print_exc()
 

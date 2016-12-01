@@ -113,9 +113,11 @@ def handle_init(args):
             # We have a connection, create an admin account
             create_admin = functools.partial(login.create_admin,
                 store, values['admin_user'], values['admin_pass'])
+
+            #Store some stuff in datastore
             store_ip = functools.partial(store.insert, 'master_ip', values['ip'])
             #TODO get flavours from github or something
-            libvirt_flavours = {'va-small' : {'vol_capacity' : 5, 'memory' : 2**20, 'max_memory' : 2**20, 'num_cpus' : 1}}
+            libvirt_flavours = {'va-small' : {'vol_capacity' : 5, 'memory' : 2**20, 'max_memory' : 2**20, 'num_cpus' : 1}, 'debian' : {'vol_capacity' : 5, 'memory' : 2**20, 'max_memory' : 2**20, 'num_cpus' : 1}}
             salt_fqdn = functools.partial(store.insert, 'salt_master_fqdn', values['salt_master_fqdn'])
             store_flavours = functools.partial(store.insert, 'libvirt_flavours', libvirt_flavours)
 
@@ -123,6 +125,18 @@ def handle_init(args):
             run_sync(store_ip)
             run_sync(store_flavours)
             run_sync(salt_fqdn)
+
+
+            #Generate an ssh-key
+            try: 
+                os.mkdir('/root/va_master_key')
+                ssh_cmd = ['ssh-keygen', '-t', 'rsa', '-f', '/root/va_master_key/va_master_key_name', '-N', '""']
+
+                subprocess.call(ssh_cmd)
+            except: 
+                import traceback
+                print ('Could not generate a key. Probably already exists. ')
+                traceback.print_exc()
 
             cli_success('Created first account. Setup is finished.')
 

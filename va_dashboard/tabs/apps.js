@@ -30,7 +30,7 @@ var Apps = React.createClass({
         }
 
         var host_rows = this.state.hosts.map(function(host) {
-            return <option key = {host.name}>{host.name}</option>
+            return <option key = {host.hostname}>{host.hostname}</option>
         });
 
         return (

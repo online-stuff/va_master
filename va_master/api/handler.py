@@ -33,7 +33,6 @@ class ApiHandler(tornado.web.RequestHandler):
     @tornado.gen.coroutine
     def post(self, path):
         try:
-            print (self.request.body)
             self.data = json.loads(self.request.body)
 
             if path == 'login':
