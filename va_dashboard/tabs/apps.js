@@ -23,14 +23,11 @@ var Apps = React.createClass({
 
     onChange: function(e) {
         value = e.target.value;
-        console.log(value);
         for(i=0; i < this.state.hosts.length; i++){
             var host = this.state.hosts[i];
             if(host.hostname === value){
                 this.setState({sizes: host.sizes});
                 this.setState({networks: host.networks});
-                console.log(host.sizes);
-                console.log(host.networks);
                 break;
             }
         }
@@ -56,7 +53,7 @@ var Apps = React.createClass({
         });
 
         var state_rows = this.state.states.map(function(state) {
-            return <option key = {state.Name}>{state.Name}</option>
+            return <option key = {state.name}>{state.name}</option>
         });
 
         var sizes_rows = this.state.sizes.map(function(size) {
