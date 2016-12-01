@@ -23,9 +23,9 @@ var Store = React.createClass({
     render: function () {
         var states_rows = this.state.states.map(function(state) {
             return (
-                <tr key={state.Name}>
-                    <td>{state.Name}</td>
-                    <td>{state.Description}</td>
+                <tr key={state.name}>
+                    <td>{state.name}</td>
+                    <td>{state.description}</td>
                 </tr>
             )
         });
@@ -84,6 +84,10 @@ var NewStateForm = React.createClass({
                         <Bootstrap.ControlLabel >Path</Bootstrap.ControlLabel>
                         <Bootstrap.FormControl type='text' ref="path" />
                     </Bootstrap.FormGroup>
+                    <Bootstrap.FormGroup>
+                        <Bootstrap.ControlLabel >Substates</Bootstrap.ControlLabel>
+                        <Bootstrap.FormControl type='text' ref="substates" />
+                    </Bootstrap.FormGroup>
                     <Bootstrap.ButtonGroup>
                         <Bootstrap.Button type="submit" bsStyle='primary'>
                             Create
@@ -96,13 +100,17 @@ var NewStateForm = React.createClass({
     },
     onSubmit: function(e) {
         e.preventDefault();
+        var str = ReactDOM.findDOMNode(this.refs.substates).value.trim();
+        str = str.split(/[\s,]+/).join();
+        var substates = str.split(",");
         var data = {
             name: ReactDOM.findDOMNode(this.refs.name).value,
             version: ReactDOM.findDOMNode(this.refs.version).value,
             description: ReactDOM.findDOMNode(this.refs.description).value,
             icon: ReactDOM.findDOMNode(this.refs.icon).value,
             dependency: ReactDOM.findDOMNode(this.refs.dependency).value,
-            path: ReactDOM.findDOMNode(this.refs.path).value
+            path: ReactDOM.findDOMNode(this.refs.path).value,
+            substates: substates
         };
         var me = this;
         Network.post('/api/state/add', this.props.auth.token, data).done(function(data) {
