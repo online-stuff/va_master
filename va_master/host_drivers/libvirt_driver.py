@@ -180,13 +180,14 @@ class LibVirtDriver(base.DriverBase):
 
     @tornado.gen.coroutine
     def create_iso_image(self, conn, vol_name, config_drive):
-        print ('Trying to create iso. ')
+        print ('Trying to create iso from dir: ', config_drive)
+
         try: 
             iso_path = '/var/lib/libvirt/images/' + vol_name + '.iso'
-            iso_command = ['xorrisofs', '-J', '-r', '-V', 'config_drive', '-o', iso_path, self.config_path]
+            iso_command = ['xorrisofs', '-J', '-r', '-V', 'config_drive', '-o', iso_path, config_drive]
             subprocess.call(iso_command)
             print ('Created iso at : ', iso_path, '. Now creating dummy volume to upload. ')
-            iso_volume = yield self.create_libvirt_volume(conn, 1, 'va-small', vol_name + '-iso-vol')
+            iso_volume = yield self.create_libvirt_volume(conn, 1, 'va-small', vol_name + '-iso-vol', resize = False)
             with open(iso_path, 'r') as f:
                 #Libvirt documentation is terrible and I don't really know how this works. 
                 def handler(stream, data, file_):
@@ -213,7 +214,7 @@ class LibVirtDriver(base.DriverBase):
  
 
     @tornado.gen.coroutine
-    def create_libvirt_volume(self, conn, vol_capacity, flavour, vol_name):
+    def create_libvirt_volume(self, conn, vol_capacity, flavour, vol_name, resize = True):
         storage = [s for s in conn.listAllStoragePools() if s.name() == 'default'][0] #Maybe work with storage pools better? 
         old_vol = storage.storageVolLookupByName(flavour)
         new_vol = ET.fromstring(old_vol.XMLDesc())
@@ -222,7 +223,8 @@ class LibVirtDriver(base.DriverBase):
         new_vol.find('capacity').text = str(vol_capacity)
         
         new_vol = storage.createXMLFrom(ET.tostring(new_vol), old_vol)
-        new_vol.resize(vol_capacity * (2**30))
+        if resize: 
+            new_vol.resize(vol_capacity * (2**30))
         raise tornado.gen.Return(new_vol)
        
 
@@ -230,8 +232,8 @@ class LibVirtDriver(base.DriverBase):
     def create_config_drive(self, host, data):
         print ('Creating config. ')
         minion_dir = self.config_path + data['minion_name']
-        config_dir = minion_dir + '/config_drive/openstack'
-        instance_dir = config_dir + '/2012-08-10/'
+        config_dir = minion_dir + '/config_drive'
+        instance_dir = config_dir + '/openstack/2012-08-10'
 
         os.makedirs(config_dir)
         os.makedirs(instance_dir)
@@ -277,13 +279,13 @@ class LibVirtDriver(base.DriverBase):
         }
 
 
-        with open(instance_dir + 'meta_data.json', 'w') as f: 
+        with open(instance_dir + '/meta_data.json', 'w') as f: 
             f.write(json.dumps({'uuid' : data['instance_fqdn']}))
 
-        with open(instance_dir + 'user_data', 'w') as f: 
+        with open(instance_dir + '/user_data', 'w') as f: 
             f.write(yaml.safe_dump(users_dict))
 
-        os.symlink(instance_dir, config_dir + '/latest')
+        os.symlink(instance_dir, config_dir + '/openstack/latest')
 
         raise tornado.gen.Return(config_dir)
 
