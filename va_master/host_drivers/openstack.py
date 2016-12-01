@@ -62,6 +62,13 @@ class OpenStackDriver(base.DriverBase):
 
 
     @tornado.gen.coroutine
+    def export_env_variables(self):
+        os.environ['OS_USERNAME'] = self.provider_vars['VAR_USERNAME']
+        os.environ['OS_PROJECT_NAME'] = self.provider_vars['VAR_TENANT']
+        os.environ['OS_AUTH_URL'] = self.provider_vars['VAR_IDENTITY_URL']
+        os.environ['PASSWORD'] = self.provider_vars['VAR_PASSWORD']
+       
+    @tornado.gen.coroutine
     def get_steps(self):
         steps = yield super(OpenStackDriver, self).get_steps()
         steps[0].add_fields([
@@ -185,28 +192,10 @@ class OpenStackDriver(base.DriverBase):
       
     @tornado.gen.coroutine
     def create_minion(self, host, data):
-        profile_dir = host['profile_conf_dir']
-        profile_template = ''
-
-        with open(profile_dir) as f: 
-            profile_template = f.read()
-
-
-        self.profile_vars['VAR_ROLE'] = data['role']
-        new_profile = data['minion_name'] + '-profile'
-        self.profile_vars['VAR_PROFILE_NAME'] = new_profile
-        self.profile_template = profile_template
-
-        yield self.get_salt_configs(skip_provider = True)
-        yield self.write_configs(skip_provider = True)
-
-        #probably use salt.cloud somehow, but the documentation is terrible. 
-        new_minion_cmd = ['salt-cloud', '-p', new_profile, data['minion_name']]
-        minion_apply_state = ['salt', data['minion_name'], 'state.highstate']
-
-        print ('Creating new minion. ')
-        subprocess.call(new_minion_cmd)
-        print ('Created, applying state. ')
-        subprocess.call(minion_apply_state)
-
+        try: 
+            yield self.export_env_variables()
+            yield super(self, OpenStackDriver).create_minion(host, data)
+        except: 
+            import traceback
+            traceback.print_exc()
 

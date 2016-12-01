@@ -168,9 +168,8 @@ class LibVirtDriver(base.DriverBase):
             'function':'0x0',
         }
 
-
-#        domain_iso_disk = [x for x in tree.find('devices').findall('disk') if x.get('device') == 'cdrom'][0]
-#        domain_iso_disk.find('source').attrib['file'] = '/var/lib/libvirt/images/' + iso_name
+        domain_iso_disk = [x for x in tree.find('devices').findall('disk') if x.get('device') == 'cdrom'][0]
+        domain_iso_disk.find('source').attrib['file'] = '/var/lib/libvirt/images/' + iso_name 
 
 
         mac = tree.find('devices').find('interface').find('mac')
@@ -219,10 +218,11 @@ class LibVirtDriver(base.DriverBase):
         old_vol = storage.storageVolLookupByName(flavour)
         new_vol = ET.fromstring(old_vol.XMLDesc())
 
-        new_vol.find('name').text = vol_name 
+        new_vol.find('name').text = vol_name
         new_vol.find('capacity').text = str(vol_capacity)
         
-        new_vol = storage.createXML(ET.tostring(new_vol))
+        new_vol = storage.createXMLFrom(ET.tostring(new_vol), old_vol)
+        new_vol.resize(vol_capacity * (2**30))
         raise tornado.gen.Return(new_vol)
        
 

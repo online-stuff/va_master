@@ -203,6 +203,7 @@ class DriverBase(object):
                 'errors' : [], 'new_step_index' : -1, 'option_choices':{}
             })
 
+
     @tornado.gen.coroutine
     def create_minion(self, host, data):
         profile_dir = host['profile_conf_dir']
@@ -224,12 +225,9 @@ class DriverBase(object):
         new_minion_cmd = ['salt-cloud', '-p', new_profile, data['minion_name']]
         minion_apply_state = ['salt', data['minion_name'], 'state.highstate']
 
+        print ('Creating new minion. ')
         subprocess.call(new_minion_cmd)
-
-    #    state_file = yield get_state(state)
-    #    with open('/srv/salt' + links_to_states[state], 'w') as f: 
-    #        f.write(state_file)
-
+        print ('Created, applying state. ')
         subprocess.call(minion_apply_state)
 
 
