@@ -43,6 +43,7 @@ Requirements:
 
 ```bash
 git clone https://github.com/VapourApps/va_master.git
+cd va_master
 pip install -e .
 vapourapps init
 # Build dashboard JavaScript
