@@ -14,7 +14,7 @@ setuptools.setup(
     'python-novaclient',
     'pbkdf2', 
     'pyVmomi', #for vmware
-    'libvirt', #for, well, libvirt
+    'libvirt-python', #for, well, libvirt
   ],
   zip_safe=False,
   entry_points = {
