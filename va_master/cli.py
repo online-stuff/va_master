@@ -53,7 +53,6 @@ def handle_init(args):
         ('salt_master_fqdn', 'Enter the fqdn for the salt master'),
     ]
     values = {}
-    print dir(args)
     for attr in attrs:
         name = attr[0]
         cmdhelp = attr[1]

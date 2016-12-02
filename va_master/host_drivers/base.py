@@ -109,7 +109,6 @@ class DriverBase(object):
         if not skip_provider: 
             self.field_values['provider_conf'] = self.provider_vars['VAR_PROVIDER_NAME'] 
             for var_name in self.provider_vars: 
-                print (var_name, self.provider_vars[var_name])
                 self.provider_template = self.provider_template.replace(var_name, self.provider_vars[var_name])
 
     @tornado.gen.coroutine
@@ -184,8 +183,6 @@ class DriverBase(object):
         elif step_index == 1:
             self.provider_vars['VAR_NETWORK_ID'] = field_values['network']
             self.profile_vars['VAR_SEC_GROUP'] = field_values['sec_group']
-
-
             raise tornado.gen.Return({
                 'errors':[], 'new_step_index':2, 'option_choices':{
                     'image': self.field_values['images'],

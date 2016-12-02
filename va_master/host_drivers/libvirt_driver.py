@@ -12,7 +12,7 @@ from xml.etree import ElementTree as ET
 
 #This is a dictionary which I used to parse with yaml to write a config drive. We ended up using a template instead, but we might need this sometime. 
 users_dict = {
-    'fqdn' : 'some.fqdn'
+    'fqdn' : 'some.fqdn',
     'users' : [
     {
         'name' : 'root', 
@@ -24,7 +24,7 @@ users_dict = {
         'conf' : {
             'master' : '192.168.80.39'
         }, 
-        'public_key' : 'some_public_key'
+        'public_key' : 'some_public_key',
         'private_key' : 'some_private_key',
     }
 }
@@ -73,6 +73,7 @@ class LibVirtDriver(base.DriverBase):
             'host_ip' : host_ip
             }
 
+        self.conn = None
         self.config_path = config_path 
         self.path_to_images = path_to_images
         self.flavours = flavours
@@ -141,7 +142,7 @@ class LibVirtDriver(base.DriverBase):
 
             self.field_values['networks'] = yield self.get_networks() 
             self.field_values['images'] = yield self.get_images()
-            self.field_values['sizes']= self.flavours() 
+            self.field_values['sizes']= self.flavours.keys()
             self.field_values['sec_groups'] = []
 
         elif step_index == 1:

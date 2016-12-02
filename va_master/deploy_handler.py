@@ -103,13 +103,12 @@ class DeployHandler(object):
                 print ('error with ', state)
                 import traceback
                 traceback.print_exc()
-        print ('States data is : ', states_data)
         raise tornado.gen.Return(states_data)
 
     @tornado.gen.coroutine
     def get_states(self):
         try: 
-            yield self.datastore.delete('states')
+#            yield self.datastore.delete('states')
             states_data = yield self.datastore.get('states')
         except self.datastore.KeyNotFound:
             states_data = yield self.get_states_data()
