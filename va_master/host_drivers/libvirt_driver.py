@@ -8,6 +8,27 @@ import libvirt
 import uuid
 import os
 from xml.etree import ElementTree as ET
+
+
+#This is a dictionary which I used to parse with yaml to write a config drive. We ended up using a template instead, but we might need this sometime. 
+users_dict = {
+    'fqdn' : 'some.fqdn'
+    'users' : [
+    {
+        'name' : 'root', 
+        'ssh-authorized-keys': [
+            'some_rsa_key'
+        ]
+    }], 
+    'salt-minion' : {
+        'conf' : {
+            'master' : '192.168.80.39'
+        }, 
+        'public_key' : 'some_public_key'
+        'private_key' : 'some_private_key',
+    }
+}
+
 PROVIDER_TEMPLATE = ''
 
 PROFILE_TEMPLATE = """<volume>
@@ -25,6 +46,22 @@ PROFILE_TEMPLATE = """<volume>
 
 PROFILE_TEMPLATE = ""
 
+CONFIG_DRIVE = """#cloud-config
+fqdn: VAR_INSTANCE_FQDN
+users:
+  - name: root
+    ssh-authorized-keys:
+      - VAR_SSH_AUTH
+salt_minion:
+  conf:
+    master: VAR_MASTER_FQDN
+  public_key: |
+VAR_PUBLIC_KEY
+  private_key: |
+VAR_PRIVATE_KEY
+"""
+
+
 class LibVirtDriver(base.DriverBase):
     def __init__(self, flavours, salt_master_fqdn, provider_name = 'libvirt_provider', profile_name = 'libvirt_profile', host_ip = '192.168.80.39', path_to_images = '/etc/libvirt/qemu/', config_path = '/etc/salt/libvirt_configs/', key_name = 'va_master_key_name', key_path = '/root/va_master_key'):
         kwargs = {
@@ -40,7 +77,7 @@ class LibVirtDriver(base.DriverBase):
         self.path_to_images = path_to_images
         self.flavours = flavours
         self.salt_master_fqdn = salt_master_fqdn
-
+        self.config_drive = CONFIG_DRIVE
         super(LibVirtDriver, self).__init__(**kwargs) 
 
     @tornado.gen.coroutine
@@ -80,17 +117,10 @@ class LibVirtDriver(base.DriverBase):
         try: 
             images = self.conn.listAllDomains()
             images = [x.name() for x in images]
-#            images = ['xenial-server-cloudimg-amd64-disk1.img',]
         except: 
             import traceback
             traceback.print_exc()
         raise tornado.gen.Return(images)
-
-    @tornado.gen.coroutine
-    def get_sizes(self):
-        sizes = self.conn.listAllStoragePools()
-        sizes = [x.name() for x in sizes]
-        raise tornado.gen.Return(sizes)
 
     @tornado.gen.coroutine
     def validate_field_values(self, step_index, field_values):
@@ -111,7 +141,7 @@ class LibVirtDriver(base.DriverBase):
 
             self.field_values['networks'] = yield self.get_networks() 
             self.field_values['images'] = yield self.get_images()
-            self.field_values['sizes']= yield self.get_sizes()
+            self.field_values['sizes']= self.flavours() 
             self.field_values['sec_groups'] = []
 
         elif step_index == 1:
@@ -131,8 +161,8 @@ class LibVirtDriver(base.DriverBase):
         flavour = self.flavours[data['size']]
 
         print ('size is : ', data['size'])
-        new_vol = yield self.create_libvirt_volume(conn, flavour['vol_capacity'], data['size'], data['minion_name'] + '-volume.qcow2')
         config_drive = yield self.create_config_drive(host, data)
+        new_vol = yield self.create_libvirt_volume(conn, flavour['vol_capacity'], data['size'], data['minion_name'] + '-volume.qcow2')
         iso_image = yield self.create_iso_image(conn, data['minion_name'], config_drive)
 
         old_vol = [x for x in conn.listAllDomains() if x.name() == data['image']][0]     
@@ -193,7 +223,6 @@ class LibVirtDriver(base.DriverBase):
                 def handler(stream, data, file_):
                     return file_.read(data) 
                 st = conn.newStream(0)
-#                iso_volume.upload(st, int(os.stat(iso_path).st_size), 0, 0)
                 iso_volume.upload(st, 0, 0, 0)
                 st.sendAll(handler, f)
 
@@ -244,46 +273,33 @@ class LibVirtDriver(base.DriverBase):
         pub_key_path = minion_dir + '/' +  data['minion_name']
         with open(pub_key_path + '.pub', 'r') as f: 
             pub_key = f.read()
-            pub_key = '\n'.join([x for x in pub_key.split('\n') if '--' not in x and len(x) > 2])
             pub_key_cp_cmd = ['cp',pub_key_path + '.pub', '/etc/salt/pki/minion/' + data['minion_name']]
             subprocess.call(pub_key_cp_cmd)
-
 
         pri_key = ''
         with open(minion_dir + '/' +  data['minion_name'] + '.pem', 'r') as f: 
             pri_key = f.read()
-            pri_key = '\n'.join([x for x in pri_key.split('\n') if '--' not in x and len(x) > 2])
-
 
         auth_key = ''
-        with open('/root/openstack_key/openstack_key_name.pem') as f: 
+        with open('/root/.ssh/id_rsa.pub') as f: 
             auth_key = f.read()
-            auth_key = '\n'.join([x for x in pri_key.split('\n') if '--' not in x and len(x) > 2])
 
-        users_dict = {
-            'fqdn' : data['instance_fqdn'], 
-            'users' : [
-            {
-                'name' : 'root', 
-                'ssh-authorized-keys': [
-                    auth_key
-                ]
-            }], 
-            'salt-minion' : {
-                'conf' : {
-                    'master' : self.salt_master_fqdn
-                }, 
-                'public_key' : pub_key,
-                'private_key' : pri_key,
-            }
+        config_dict = {
+            'VAR_SSH_AUTH' : auth_key, 
+            'VAR_PUBLIC_KEY' : '\n'.join([' ' * 4 + line for line in pub_key.split('\n')]),
+            'VAR_PRIVATE_KEY' : '\n'.join([' ' * 4 + line for line in pri_key.split('\n')]),
+            'VAR_INSTANCE_FQDN' : data['instance_fqdn'],
+            'VAR_MASTER_FQDN' : '192.168.80.39'
         }
 
+        for key in config_dict: 
+            self.config_drive = self.config_drive.replace(key, config_dict[key])
 
         with open(instance_dir + '/meta_data.json', 'w') as f: 
             f.write(json.dumps({'uuid' : data['instance_fqdn']}))
 
         with open(instance_dir + '/user_data', 'w') as f: 
-            f.write(yaml.safe_dump(users_dict))
+            f.write(self.config_drive)
 
         os.symlink(instance_dir, config_dir + '/openstack/latest')
 

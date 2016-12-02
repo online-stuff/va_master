@@ -3,7 +3,7 @@ import setuptools
 setuptools.setup(
   name='vapourapps',
   packages=setuptools.find_packages(),
-  version='0.0.7',
+  version='0.0.8',
   description='This package contains the master server of VapourApps, a DevOps tool for corporate apps.',
   keywords=['vapourapps'],
   author='Filip Dimitrovski',
