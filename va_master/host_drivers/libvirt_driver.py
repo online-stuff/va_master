@@ -48,6 +48,71 @@ VAR_PUBLIC_KEY
 VAR_PRIVATE_KEY
 """
 
+DOMAIN_XML = """<domain type='kvm'>
+  <name>va-master.local</name>
+  <memory unit='KiB'>1048576</memory>
+  <currentMemory unit='KiB'>1048576</currentMemory>
+  <vcpu placement='static'>1</vcpu>
+  <os>
+    <type arch='x86_64' machine='pc'>hvm</type>
+    <boot dev='hd'/>
+  </os>
+  <cpu mode='host-model'>
+    <model fallback='allow'/>
+  </cpu>
+  <devices>
+<!--    <emulator>/usr/sbin/qemu-system-x86_64</emulator> -->
+    <disk type='file' device='disk'>
+      <driver name='qemu' type='qcow2'/>
+      <source file='/var/lib/libvirt/images/va-master.local.qcow2'/>
+      <target dev='vda' bus='virtio'/>
+    </disk>
+    <disk type='file' device='cdrom'>
+      <driver name='qemu' type='raw'/>
+      <source file='/var/lib/libvirt/images/va-master.local-config.iso'/>
+      <target dev='hda' bus='ide'/>
+      <readonly/>
+    </disk>
+    <interface type='network'>
+      <source network='default'/>
+      <model type='virtio'/>
+      <address type='pci' domain='0x0000' bus='0x00' slot='0x03' function='0x0'/>
+    </interface>
+<!--    <interface type='direct'>
+      <source dev='HOSTNETWORKINTERFACE' mode='bridge'/> 
+      <model type='virtio'/>
+      <address type='pci' domain='0x0000' bus='0x00' slot='0x09' function='0x0'/>
+    </interface> -->
+    <serial type='pty'>
+      <target port='0'/>
+    </serial>
+    <console type='pty'>
+      <target type='serial' port='0'/>
+    </console>
+    <input type='mouse' bus='ps2'/>
+    <input type='keyboard' bus='ps2'/>
+    <graphics type='vnc' port='-1' autoport='yes'>
+      <listen type='address'/>
+    </graphics>
+    <sound model='ich6'>
+      <address type='pci' domain='0x0000' bus='0x00' slot='0x04' function='0x0'/>
+    </sound>
+    <video>
+     <model type='qxl' ram='65536' vram='65536' vgamem='16384' heads='1' primary='yes'/>
+     <address type='pci' domain='0x0000' bus='0x00' slot='0x02' function='0x0'/>
+    </video>
+    <redirdev bus='usb' type='spicevmc'>
+      <address type='usb' bus='0' port='1'/>
+    </redirdev>
+    <redirdev bus='usb' type='spicevmc'>
+      <address type='usb' bus='0' port='2'/>
+    </redirdev>
+    <memballoon model='virtio'>
+      <address type='pci' domain='0x0000' bus='0x00' slot='0x07' function='0x0'/>
+    </memballoon>
+  </devices>
+</domain>"""
+
 
 class LibVirtDriver(base.DriverBase):
     def __init__(self, flavours, salt_master_fqdn, provider_name = 'libvirt_provider', profile_name = 'libvirt_profile', host_ip = '192.168.80.39', path_to_images = '/etc/libvirt/qemu/', config_path = '/etc/salt/libvirt_configs/', key_name = 'va_master_key_name', key_path = '/root/va_master_key'):
@@ -103,7 +168,8 @@ class LibVirtDriver(base.DriverBase):
     @tornado.gen.coroutine
     def get_images(self):
         try: 
-            images = self.conn.listAllDomains()
+            images = [x for x in self.conn.listAllStoragePools() if x.name() == 'default'][0]
+            images = images.listAllVolumes()
             images = [x.name() for x in images]
         except: 
             import traceback
@@ -146,16 +212,19 @@ class LibVirtDriver(base.DriverBase):
     def create_minion(self, host, data):
         host_url = host['host_protocol'] + '://' + host['host_ip'] + '/system'
         conn = libvirt.open(host_url)
+        storage = [x for x in conn.listAllStoragePools() if x.name() == 'default'][0]
         flavour = self.flavours[data['size']]
 
         print ('size is : ', data['size'])
         config_drive = yield self.create_config_drive(host, data)
-        new_vol = yield self.create_libvirt_volume(conn, flavour['vol_capacity'], data['size'], data['minion_name'] + '-volume.qcow2')
-        iso_image = yield self.create_iso_image(conn, data['minion_name'], config_drive)
 
-        old_vol = [x for x in conn.listAllDomains() if x.name() == data['image']][0]     
-        new_xml = yield self.create_domain_xml(old_vol.XMLDesc(), data['minion_name'], new_vol.name(), iso_image)
+        old_vol = [x for x in storage.listAllVolumes() if x.name() == data['image']][0]     
+        print (storage.listAllVolumes(), ' is where we look for : ', data['image'])
+        new_vol = yield self.create_libvirt_volume(conn, flavour['vol_capacity'], old_vol, data['minion_name'] + '-volume.qcow2')
+        iso_image = yield self.create_iso_image(conn, data['minion_name'], config_drive, old_vol)
 
+        new_xml = yield self.create_domain_xml(data['minion_name'], new_vol.name(), iso_image)
+        print ('Trying to create with : ', new_xml)
         try: 
             new_img = conn.defineXML(new_xml)
             new_img.setMemory = flavour['memory']
@@ -168,36 +237,38 @@ class LibVirtDriver(base.DriverBase):
 
 
     @tornado.gen.coroutine
-    def create_domain_xml(self, old_xml, minion_name, vol_name, iso_name):
+    def create_domain_xml(self, minion_name, vol_name, iso_name):
+        old_xml = DOMAIN_XML
+
         print ('Generating domain xml')
         tree = ET.fromstring(old_xml)
         tree.find('name').text = minion_name
-        tree.find('uuid').text = str(uuid.uuid4())
+#        tree.find('uuid').text = str(uuid.uuid4())
 
         domain_disk = [x for x in tree.find('devices').findall('disk') if x.get('device') == 'disk'][0]
         domain_disk.find('source').attrib['file'] = '/var/lib/libvirt/images/' + vol_name
-        domain_disk.find('driver').attrib['type'] = 'qcow2' 
-        domain_disk.find('target').attrib['bus'] = 'virtio'
-        domain_disk.find('address').attrib = {
-            'type':'pci',
-            'domain':'0x0000',
-            'bus':'0x00',
-            'slot':'0x07',
-            'function':'0x0',
-        }
+#        domain_disk.find('driver').attrib['type'] = 'qcow2' 
+#        domain_disk.find('target').attrib['bus'] = 'virtio'
+#        domain_disk.find('address').attrib = {
+#            'type':'pci',
+#            'domain':'0x0000',
+#            'bus':'0x00',
+#            'slot':'0x07',
+#            'function':'0x0',
+#        }
 
         domain_iso_disk = [x for x in tree.find('devices').findall('disk') if x.get('device') == 'cdrom'][0]
         domain_iso_disk.find('source').attrib['file'] = '/var/lib/libvirt/images/' + iso_name 
 
 
         mac = tree.find('devices').find('interface').find('mac')
-        tree.find('devices').find('interface').remove(mac)
+#        tree.find('devices').find('interface').remove(mac)
         print ('Success!')
         raise tornado.gen.Return(ET.tostring(tree))
 
 
     @tornado.gen.coroutine
-    def create_iso_image(self, conn, vol_name, config_drive):
+    def create_iso_image(self, conn, vol_name, config_drive, base_volume):
         print ('Trying to create iso from dir: ', config_drive)
 
         try: 
@@ -205,13 +276,14 @@ class LibVirtDriver(base.DriverBase):
             iso_command = ['xorrisofs', '-J', '-r', '-V', 'config_drive', '-o', iso_path, config_drive]
             subprocess.call(iso_command)
             print ('Created iso at : ', iso_path, '. Now creating dummy volume to upload. ')
-            iso_volume = yield self.create_libvirt_volume(conn, 1, 'va-small', vol_name + '-iso-vol', resize = False)
+            
+            iso_volume = yield self.create_libvirt_volume(conn, 1, base_volume, vol_name + '.iso', resize = False)
             with open(iso_path, 'r') as f:
                 #Libvirt documentation is terrible and I don't really know how this works. 
                 def handler(stream, data, file_):
                     return file_.read(data) 
                 st = conn.newStream(0)
-                iso_volume.upload(st, 0, 0, 0)
+                print ('Uploading: ', iso_volume.upload(st, 0, 0, 0))
                 st.sendAll(handler, f)
 
         except: 
@@ -231,10 +303,11 @@ class LibVirtDriver(base.DriverBase):
  
 
     @tornado.gen.coroutine
-    def create_libvirt_volume(self, conn, vol_capacity, flavour, vol_name, resize = True):
+    def create_libvirt_volume(self, conn, vol_capacity, old_vol, vol_name, resize = True):
         storage = [s for s in conn.listAllStoragePools() if s.name() == 'default'][0] #Maybe work with storage pools better? 
-        old_vol = storage.storageVolLookupByName(flavour)
         new_vol = ET.fromstring(old_vol.XMLDesc())
+
+        print ('Creating volume ', vol_name)
 
         new_vol.find('name').text = vol_name
         new_vol.find('capacity').text = str(vol_capacity)
