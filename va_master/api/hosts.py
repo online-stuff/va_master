@@ -2,9 +2,10 @@ from .login import auth_only
 import tornado.gen
 import json
 
-#@auth_only
+@auth_only
 @tornado.gen.coroutine
 def list_hosts(handler):
+    print ('Trying to list hosts. ')
     hosts = yield handler.config.deploy_handler.list_hosts()
     handler.json({'hosts': hosts})
 

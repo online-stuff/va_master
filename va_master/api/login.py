@@ -9,28 +9,28 @@ from pbkdf2 import crypt
 # and if the library is maintained and audited. May switch to bcrypt.
 
 @tornado.gen.coroutine
-def get_or_create_token(datastore, username):
+def get_or_create_token(datastore, username, user_type = 'admin'):
     found = False
     try:
-        token_doc = yield datastore.get('tokens/by_username/%s' % username)
+        token_doc = yield datastore.get('tokens/%s/by_username/%s' % (user_type, username))
         found = True
     except datastore.KeyNotFound:
         doc = {
             'token': uuid.uuid4().hex,
             'username': username
         }
-        yield datastore.insert('tokens/by_username/%s' % username, doc)
-        yield datastore.insert('tokens/by_token/%s' % doc['token'], doc)
+        yield datastore.insert('tokens/%s/by_username/%s' % (user_type, username), doc)
+        yield datastore.insert('tokens/%s/by_token/%s' % (user_type, doc['token']), doc)
         raise tornado.gen.Return(doc['token'])
     finally:
         if found:
             raise tornado.gen.Return(token_doc['token'])
 
 @tornado.gen.coroutine
-def is_token_valid(datastore, token):
+def is_token_valid(datastore, token, user_type = 'admin'):
     valid = True
     try:
-        res = yield datastore.get('tokens/by_token/%s' % token)
+        res = yield datastore.get('tokens/%s/by_token/%s' % (user_type, token))
     except datastore.KeyNotFound:
         raise tornado.gen.Return(False)
 
@@ -38,18 +38,21 @@ def is_token_valid(datastore, token):
     raise tornado.gen.Return(valid)
 
 
-def auth_only(coroutine):
-    @tornado.gen.coroutine
-    @functools.wraps(coroutine)
-    def func(handler):
-        token = handler.request.headers.get('Authorization', '')
-        token = token.replace('Token ', '')
-        is_valid = yield is_token_valid(handler.datastore, token)
-        if not is_valid:
-            handler.json({'error': 'bad_token'}, 401)
-        else:
-            yield coroutine(handler)
-    return func
+def auth_only(*args, **kwargs):
+    user_allowed = kwargs.get('user_allowed', False)
+    def auth_only_real(coroutine):
+        @tornado.gen.coroutine
+        @functools.wraps(coroutine)
+        def func(handler):
+            token = handler.request.headers.get('Authorization', '')
+            token = token.replace('Token ', '')
+            is_valid = yield is_token_valid(handler.datastore, token)
+            if not is_valid:
+                handler.json({'error': 'bad_token'}, 401)
+            else:
+                yield coroutine(handler)
+        return func
+    return auth_only_real(*args)
 
 @tornado.gen.coroutine
 def admin_login(handler):
@@ -84,7 +87,7 @@ def admin_login(handler):
         }
     pw_hash = account_info['password_hash']
     if crypt(password, pw_hash) == pw_hash:
-        token = yield get_or_create_token(handler.datastore, username)
+        token = yield get_or_create_token(handler.datastore, username, user_type = 'admin')
         handler.json({'token': token})
     else:
         handler.json({'error': 'invalid_password'}, 401)
@@ -104,7 +107,7 @@ def create_admin(datastore, username, password):
         'timestamp_created': long(time.time())
     })
     yield datastore.insert('admins', new_admins)
-    token = yield get_or_create_token(datastore, username)
+    token = yield get_or_create_token(datastore, username, user_type = 'admin')
     raise tornado.gen.Return(token)
 
 @tornado.gen.coroutine

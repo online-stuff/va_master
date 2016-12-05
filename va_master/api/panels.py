@@ -7,7 +7,7 @@ def panel_cmd(minion, action):
     cl = salt.client.LocalClient()
     return cl.cmd(minion, action)
 
-def panel_action(data)
+def panel_action(data):
     minion = handler.data['minion_name']
     action = handler.data['action']
     return panel_cmd(minion, action)
