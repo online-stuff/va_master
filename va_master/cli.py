@@ -129,7 +129,7 @@ def handle_init(args):
             #Generate an ssh-key
             try: 
                 os.mkdir('/root/va_master_key')
-                ssh_cmd = ['ssh-keygen', '-t', 'rsa', '-f', '/root/va_master_key/va_master_key_name', '-N', '""']
+                ssh_cmd = ['ssh-keygen', '-t', 'rsa', '-f', '/root/va_master_key/va_master_key_name', '-N', '']
 
                 subprocess.call(ssh_cmd)
             except: 

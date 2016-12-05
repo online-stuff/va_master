@@ -31,20 +31,7 @@ users_dict = {
 
 PROVIDER_TEMPLATE = ''
 
-PROFILE_TEMPLATE = """<volume>
-  <name>nino.img</name>
-  <target>
-    <path>/var/lib/virt/images/sparse.img</path>
-    <permissions>
-      <owner>107</owner>
-      <group>107</group>
-      <mode>0744</mode>
-      <label>virt_image_t</label>
-    </permissions>
-  </target>
-</volume>"""
-
-PROFILE_TEMPLATE = ""
+PROFILE_TEMPLATE = ''
 
 CONFIG_DRIVE = """#cloud-config
 fqdn: VAR_INSTANCE_FQDN

@@ -1,7 +1,7 @@
 import tornado.web
 import tornado.gen
 from tornado.httpclient import AsyncHTTPClient, HTTPRequest
-from . import status, login, hosts, apps
+from . import status, login, hosts, apps, panels
 import json
 
 class ApiHandler(tornado.web.RequestHandler):
@@ -42,7 +42,6 @@ class ApiHandler(tornado.web.RequestHandler):
             elif path == 'apps':
                 yield apps.launch_app(self)
             elif path == 'state/add': 
-
                 yield apps.manage_states(self)
             else:
                 self.json({'error': 'not_found'}, 404)
