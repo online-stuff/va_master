@@ -33,11 +33,11 @@ class ApiHandler(tornado.web.RequestHandler):
     @tornado.gen.coroutine
     def post(self, path):
         try:
-            print ('Request is : ', self.request.body)
             self.data = json.loads(self.request.body)
 
+            print (self.data, ' is data')
             if path == 'login':
-                yield login.admin_login(self)
+                yield login.user_login(self)
             elif path == 'hosts/new/validate_fields':
                 yield hosts.validate_newhost_fields(self)
             elif path == 'apps':

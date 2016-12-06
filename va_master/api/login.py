@@ -3,6 +3,7 @@ import time
 import json
 import uuid
 import functools
+import salt
 from pbkdf2 import crypt
 
 # TODO: Check if the implementation of the `pbkdf2` lib is credible,
@@ -47,7 +48,7 @@ def is_token_valid(datastore, token, user_type = 'admin'):
     valid = (res['username'] != '__invalid__')
     raise tornado.gen.Return(valid)
 
-
+#So far, one kwarg is used: user_allowed. 
 def auth_only(*args, **kwargs):
     user_allowed = kwargs.get('user_allowed', False)
     def auth_only_real(coroutine):
@@ -64,8 +65,28 @@ def auth_only(*args, **kwargs):
         return func
     return auth_only_real(*args)
 
+
 @tornado.gen.coroutine
-def admin_login(handler):
+def create_admin(datastore, username, password):
+    if len(username) < 1 or len(password) < 1:
+        raise ValueError('Username and password must not be empty.')
+    try:
+        new_admins = yield datastore.get('admins')
+    except datastore.KeyNotFound:
+        yield datastore.insert('admins', [])
+        new_admins = []
+    new_admins.append({
+        'username': username,
+        'password_hash': crypt(password),
+        'timestamp_created': long(time.time())
+    })
+    yield datastore.insert('admins', new_admins)
+    token = yield get_or_create_token(datastore, username, user_type = 'admin')
+    raise tornado.gen.Return(token)
+
+
+@tornado.gen.coroutine
+def user_login(handler):
     body = None
 
     try:
@@ -74,6 +95,10 @@ def admin_login(handler):
         password = body['password'].decode('utf8')
     except:
         handler.json({'error': 'bad_body'}, 400)
+
+    if '@' in username: 
+        yield ldap_login(handler)
+        raise tornado.gen.Return()
 
     try:
         admins = yield handler.datastore.get('admins')
@@ -102,24 +127,23 @@ def admin_login(handler):
     else:
         handler.json({'error': 'invalid_password'}, 401)
 
-@tornado.gen.coroutine
-def create_admin(datastore, username, password):
-    if len(username) < 1 or len(password) < 1:
-        raise ValueError('Username and password must not be empty.')
-    try:
-        new_admins = yield datastore.get('admins')
-    except datastore.KeyNotFound:
-        yield datastore.insert('admins', [])
-        new_admins = []
-    new_admins.append({
-        'username': username,
-        'password_hash': crypt(password),
-        'timestamp_created': long(time.time())
-    })
-    yield datastore.insert('admins', new_admins)
-    token = yield get_or_create_token(datastore, username, user_type = 'admin')
-    raise tornado.gen.Return(token)
 
 @tornado.gen.coroutine
 def ldap_login(handler):
-    pass
+    body = json.loads(handler.request.body)
+    username = body['username'].decode('utf8')
+    password = body['password'].decode('utf8')
+
+    username, directory_name = username.split('@')
+    cl = salt.client.LocalClient()
+    result = cl.cmd(directory_name, 'samba.user_auth', [username, password])['nino_dir'] #TODO write user_auth
+    print ('Result is : ', result)
+    
+    if result['success']: 
+        token = yield get_or_create_token(handler.datastore, username, user_type = result['user_type'])
+        handler.json({'token' : token})
+    else: 
+        handler.json({'error' : 'Invalid login: ' + result}, 401)
+
+
+

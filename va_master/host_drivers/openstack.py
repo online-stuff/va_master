@@ -4,6 +4,7 @@ from tornado.httpclient import AsyncHTTPClient, HTTPRequest
 import tornado.gen
 import json
 import subprocess
+import os
 
 from libcloud.compute.types import Provider
 from libcloud.compute.providers import get_driver
@@ -63,7 +64,7 @@ class OpenStackDriver(base.DriverBase):
 
 
     @tornado.gen.coroutine
-    def export_env_variables(self):
+    def export_env_variables(self, username, tenant, url, password):
         os.environ['OS_USERNAME'] = self.provider_vars['VAR_USERNAME']
         os.environ['OS_PROJECT_NAME'] = self.provider_vars['VAR_TENANT']
         os.environ['OS_AUTH_URL'] = self.provider_vars['VAR_IDENTITY_URL']
@@ -193,9 +194,10 @@ class OpenStackDriver(base.DriverBase):
       
     @tornado.gen.coroutine
     def create_minion(self, host, data):
-        try: 
-            yield self.export_env_variables()
-            yield super(self, OpenStackDriver).create_minion(host, data)
+        try:
+
+#            yield self.export_env_variables(, host[')
+            yield super(OpenStackDriver, self).create_minion(host, data)
         except: 
             import traceback
             traceback.print_exc()

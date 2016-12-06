@@ -211,7 +211,7 @@ class DriverBase(object):
 
 
         self.profile_vars['VAR_ROLE'] = data['role']
-        new_profile = data['minion_name'] + '-profile'
+        new_profile = data['instance_name'] + '-profile'
         self.profile_vars['VAR_PROFILE_NAME'] = new_profile
         self.profile_template = profile_template
 
@@ -219,8 +219,8 @@ class DriverBase(object):
         yield self.write_configs(skip_provider = True)
 
         #probably use salt.cloud somehow, but the documentation is terrible. 
-        new_minion_cmd = ['salt-cloud', '-p', new_profile, data['minion_name']]
-        minion_apply_state = ['salt', data['minion_name'], 'state.highstate']
+        new_minion_cmd = ['salt-cloud', '-p', new_profile, data['instance_name']]
+        minion_apply_state = ['salt', data['instance_name'], 'state.highstate']
 
         print ('Creating new minion. ')
         subprocess.call(new_minion_cmd)
