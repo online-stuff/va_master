@@ -137,7 +137,6 @@ def ldap_login(handler):
     username, directory_name = username.split('@')
     cl = salt.client.LocalClient()
     result = cl.cmd(directory_name, 'samba.user_auth', [username, password])['nino_dir'] #TODO write user_auth
-    print ('Result is : ', result)
     
     if result['success']: 
         token = yield get_or_create_token(handler.datastore, username, user_type = result['user_type'])
