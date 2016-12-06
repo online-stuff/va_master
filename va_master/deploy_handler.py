@@ -34,7 +34,7 @@ class DeployHandler(object):
 
 
         #TODO get salt master fqdn from store 
-        self.drivers = [openstack.OpenStackDriver(host_ip = hosts_ip, key_name = 'va_master_key_name', key_path = '/root/va_master_key'), libvirt_driver.LibVirtDriver(host_ip = hosts_ip, flavours = libvirt_flavours, salt_master_fqdn = 'salt_master_fqdn', key_name = 'va_master_key_name', key_path = '/root/va_master_key'), ]
+        self.drivers = [openstack.OpenStackDriver(host_ip = hosts_ip, key_name = 'va_master_key_name', key_path = '/root/va_master_key'), libvirt_driver.LibVirtDriver(host_ip = hosts_ip, flavours = libvirt_flavours, salt_master_fqdn = salt_master_fqdn, key_name = 'va_master_key', key_path = '/root/va_master_key'), ]
 
     def start(self):
         pass

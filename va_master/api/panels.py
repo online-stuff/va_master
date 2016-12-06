@@ -2,6 +2,7 @@ import json
 
 import salt.client
 
+import login
 
 def panel_cmd(minion, action):
     cl = salt.client.LocalClient()
@@ -14,9 +15,16 @@ def panel_action(data):
 
 def get_panels(handler):
     user = handler.data['user']
-    user_group = panel_cmd('va-directory', user)
+    user_group = login.get_user_type(user)
     panels = handler.config.deploy_handler.datastore.get('panels')['user_group']
     return panels
+
+def get_panel_for_user(handler):
+    user = handler.data['user']
+    panel = handler.data['panel']
+    user_panels = get_panels(handler)
+    if panel in user_panels: 
+        return get_panel(handler)
 
 def get_panel(handler):
     handler.data['action'] = 'get_panel'

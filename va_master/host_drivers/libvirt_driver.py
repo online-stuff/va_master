@@ -115,16 +115,17 @@ DOMAIN_XML = """<domain type='kvm'>
 
 
 class LibVirtDriver(base.DriverBase):
-    def __init__(self, flavours, salt_master_fqdn, provider_name = 'libvirt_provider', profile_name = 'libvirt_profile', host_ip = '192.168.80.39', path_to_images = '/etc/libvirt/qemu/', config_path = '/etc/salt/libvirt_configs/', key_name = 'va_master_key_name', key_path = '/root/va_master_key'):
+    def __init__(self, flavours, salt_master_fqdn, provider_name = 'libvirt_provider', profile_name = 'libvirt_profile', host_ip = '192.168.80.39', path_to_images = '/etc/libvirt/qemu/', config_path = '/etc/salt/libvirt_configs/', key_name = 'va_master_key', key_path = '/root/va_master_key'):
         kwargs = {
             'driver_name' : 'libvirt', 
             'provider_template' : PROVIDER_TEMPLATE, 
             'profile_template' : PROFILE_TEMPLATE, 
             'provider_name' : provider_name, 
             'profile_name' : profile_name, 
-            'host_ip' : host_ip
+            'host_ip' : host_ip,
+            'key_name' : key_name, 
+            'key_path' : key_path,
             }
-
         self.conn = None
         self.config_path = config_path 
         self.path_to_images = path_to_images
@@ -132,6 +133,7 @@ class LibVirtDriver(base.DriverBase):
         self.salt_master_fqdn = salt_master_fqdn
         self.config_drive = CONFIG_DRIVE
         super(LibVirtDriver, self).__init__(**kwargs) 
+
 
     @tornado.gen.coroutine
     def driver_id(self):
@@ -210,21 +212,19 @@ class LibVirtDriver(base.DriverBase):
 
     @tornado.gen.coroutine
     def create_minion(self, host, data):
+        print ('Creating minion. ')
         host_url = host['host_protocol'] + '://' + host['host_ip'] + '/system'
         conn = libvirt.open(host_url)
         storage = [x for x in conn.listAllStoragePools() if x.name() == 'default'][0]
         flavour = self.flavours[data['size']]
 
-        print ('size is : ', data['size'])
         config_drive = yield self.create_config_drive(host, data)
 
         old_vol = [x for x in storage.listAllVolumes() if x.name() == data['image']][0]     
-        print (storage.listAllVolumes(), ' is where we look for : ', data['image'])
-        new_vol = yield self.create_libvirt_volume(conn, flavour['vol_capacity'], old_vol, data['minion_name'] + '-volume.qcow2')
-        iso_image = yield self.create_iso_image(conn, data['minion_name'], config_drive, old_vol)
+        new_vol = yield self.create_libvirt_volume(conn, flavour['vol_capacity'], old_vol, data['instance_name'] + '-volume.qcow2')
+        iso_image = yield self.create_iso_image(conn, data['instance_name'], config_drive, old_vol)
 
-        new_xml = yield self.create_domain_xml(data['minion_name'], new_vol.name(), iso_image)
-        print ('Trying to create with : ', new_xml)
+        new_xml = yield self.create_domain_xml(data['instance_name'], new_vol.name(), iso_image)
         try: 
             new_img = conn.defineXML(new_xml)
             new_img.setMemory = flavour['memory']
@@ -237,12 +237,12 @@ class LibVirtDriver(base.DriverBase):
 
 
     @tornado.gen.coroutine
-    def create_domain_xml(self, minion_name, vol_name, iso_name):
+    def create_domain_xml(self, instance_name, vol_name, iso_name):
         old_xml = DOMAIN_XML
 
         print ('Generating domain xml')
         tree = ET.fromstring(old_xml)
-        tree.find('name').text = minion_name
+        tree.find('name').text = instance_name
 #        tree.find('uuid').text = str(uuid.uuid4())
 
         domain_disk = [x for x in tree.find('devices').findall('disk') if x.get('device') == 'disk'][0]
@@ -275,7 +275,6 @@ class LibVirtDriver(base.DriverBase):
             iso_path = '/var/lib/libvirt/images/' + vol_name + '.iso'
             iso_command = ['xorrisofs', '-J', '-r', '-V', 'config_drive', '-o', iso_path, config_drive]
             subprocess.call(iso_command)
-            print ('Created iso at : ', iso_path, '. Now creating dummy volume to upload. ')
             
             iso_volume = yield self.create_libvirt_volume(conn, 1, base_volume, vol_name + '.iso', resize = False)
             with open(iso_path, 'r') as f:
@@ -283,7 +282,6 @@ class LibVirtDriver(base.DriverBase):
                 def handler(stream, data, file_):
                     return file_.read(data) 
                 st = conn.newStream(0)
-                print ('Uploading: ', iso_volume.upload(st, 0, 0, 0))
                 st.sendAll(handler, f)
 
         except: 
@@ -294,9 +292,9 @@ class LibVirtDriver(base.DriverBase):
 
 
     @tornado.gen.coroutine
-    def create_salt_key(self, minion_name, config_dir):
+    def create_salt_key(self, instance_name, config_dir):
         print 'Creating salt key'
-        salt_command = ['salt-key', '--gen-keys=' + minion_name, '--gen-keys-dir', config_dir]
+        salt_command = ['salt-key', '--gen-keys=' + instance_name, '--gen-keys-dir', config_dir]
         result = subprocess.call(salt_command)
         print ('Created with result ', result)
         raise tornado.gen.Return(None)
@@ -321,43 +319,44 @@ class LibVirtDriver(base.DriverBase):
     @tornado.gen.coroutine
     def create_config_drive(self, host, data):
         print ('Creating config. ')
-        minion_dir = self.config_path + data['minion_name']
+        minion_dir = self.config_path + data['instance_name']
         config_dir = minion_dir + '/config_drive'
         instance_dir = config_dir + '/openstack/2012-08-10'
 
         os.makedirs(config_dir)
         os.makedirs(instance_dir)
 
-        yield self.create_salt_key(data['minion_name'], minion_dir)
+        yield self.create_salt_key(data['instance_name'], minion_dir)
 
         pub_key = ''
-        pub_key_path = minion_dir + '/' +  data['minion_name']
+        pub_key_path = minion_dir + '/' +  data['instance_name']
         with open(pub_key_path + '.pub', 'r') as f: 
             pub_key = f.read()
-            pub_key_cp_cmd = ['cp',pub_key_path + '.pub', '/etc/salt/pki/minion/' + data['minion_name']]
+            pub_key_cp_cmd = ['cp',pub_key_path + '.pub', '/etc/salt/pki/minion/' + data['instance_name']]
             subprocess.call(pub_key_cp_cmd)
 
         pri_key = ''
-        with open(minion_dir + '/' +  data['minion_name'] + '.pem', 'r') as f: 
+        with open(minion_dir + '/' +  data['instance_name'] + '.pem', 'r') as f: 
             pri_key = f.read()
 
         auth_key = ''
-        with open('/root/.ssh/id_rsa.pub') as f: 
+        with open(self.key_path + '.pub') as f: 
             auth_key = f.read()
+
 
         config_dict = {
             'VAR_SSH_AUTH' : auth_key, 
             'VAR_PUBLIC_KEY' : '\n'.join([' ' * 4 + line for line in pub_key.split('\n')]),
             'VAR_PRIVATE_KEY' : '\n'.join([' ' * 4 + line for line in pri_key.split('\n')]),
-            'VAR_INSTANCE_FQDN' : data['instance_fqdn'],
-            'VAR_MASTER_FQDN' : '192.168.80.39'
+            'VAR_INSTANCE_FQDN' : data['instance_name'],
+            'VAR_MASTER_FQDN' : self.salt_master_fqdn 
         }
 
         for key in config_dict: 
             self.config_drive = self.config_drive.replace(key, config_dict[key])
 
         with open(instance_dir + '/meta_data.json', 'w') as f: 
-            f.write(json.dumps({'uuid' : data['instance_fqdn']}))
+            f.write(json.dumps({'uuid' : data['instance_name']}))
 
         with open(instance_dir + '/user_data', 'w') as f: 
             f.write(self.config_drive)
