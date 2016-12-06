@@ -52,7 +52,7 @@ class DriverBase(object):
     __metaclass__ = abc.ABCMeta
 
     @abc.abstractmethod
-    def  __init__(self, driver_name,  provider_template, profile_template, provider_name, profile_name, host_ip, key_name = 'va_master_key_name', key_path = '/root/va_master_key'):
+    def  __init__(self, driver_name,  provider_template, profile_template, provider_name, profile_name, host_ip, key_name, key_path):
 
         self.field_values = {
                 'driver_name' : driver_name,

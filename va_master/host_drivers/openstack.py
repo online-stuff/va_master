@@ -39,15 +39,16 @@ PROFILE_TEMPLATE = '''VAR_PROFILE_NAME:
 '''
 
 class OpenStackDriver(base.DriverBase):
-    def __init__(self, provider_name = 'openstack_provider', profile_name = 'openstack_profile', host_ip = '192.168.80.39', key_name = 'va_master_key_name', key_path = '/root/va_master_key'):
-        print ('IP IS : ', host_ip)
+    def __init__(self, provider_name = 'openstack_provider', profile_name = 'openstack_profile', host_ip = '192.168.80.39', key_name = 'va_master_key', key_path = '/root/va_master_key'):
         kwargs = {
             'driver_name' : 'openstack', 
             'provider_template' : PROVIDER_TEMPLATE, 
             'profile_template' : PROFILE_TEMPLATE, 
             'provider_name' : provider_name, 
             'profile_name' : profile_name, 
-            'host_ip' : host_ip
+            'host_ip' : host_ip,
+            'key_name' : key_name, 
+            'key_path' : key_path
             }
         self.regions = ['RegionOne', ]
         super(OpenStackDriver, self).__init__(**kwargs) 

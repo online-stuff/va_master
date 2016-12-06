@@ -2,7 +2,7 @@ from .login import auth_only
 import tornado.gen
 import json
 
-@auth_only
+#@auth_only
 @tornado.gen.coroutine
 def list_hosts(handler):
     print ('Trying to list hosts. ')
