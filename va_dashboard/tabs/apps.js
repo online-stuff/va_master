@@ -114,10 +114,9 @@ var Apps = React.createClass({
             }
         }, 10000);
         var data = {instance_name: this.refs.name.value, hostname: this.refs.hostname.value, role: this.refs.role.value, size: this.refs.flavor.value, image: this.refs.image.value};
-        console.log(data);
-        // Network.post('/api/apps', this.props.auth.token, data).done(function(data) {
-        //     me.setState({status: 'launched'});
-        // });
+        Network.post('/api/apps', this.props.auth.token, data).done(function(data) {
+            me.setState({status: 'launched'});
+        });
     }
 });
 
