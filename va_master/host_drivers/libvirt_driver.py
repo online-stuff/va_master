@@ -212,6 +212,7 @@ class LibVirtDriver(base.DriverBase):
 
     @tornado.gen.coroutine
     def create_minion(self, host, data):
+        print ('Creating minion. ')
         host_url = host['host_protocol'] + '://' + host['host_ip'] + '/system'
         conn = libvirt.open(host_url)
         storage = [x for x in conn.listAllStoragePools() if x.name() == 'default'][0]
