@@ -19,25 +19,32 @@ class ApiHandler(tornado.web.RequestHandler):
 
     @tornado.gen.coroutine
     def get(self, path):
-        if path == 'status':
-            yield status.status(self)
-        elif path == 'drivers':
-            yield hosts.list_drivers(self)
-        elif path == 'hosts':
-            yield hosts.list_hosts(self)
-        elif path == 'states': 
-            yield apps.get_states(self)
-        else:
-            self.json({'error': 'not_found'}, 404)
+        self.data = self.request.query_arguments
+        try:
+            if path == 'status':
+                yield status.status(self)
+            elif path == 'drivers':
+                yield hosts.list_drivers(self)
+            elif path == 'hosts':
+                yield hosts.list_hosts(self)
+            elif path == 'states': 
+                yield apps.get_states(self)
+            elif path == 'panel_action': 
+                yield panels.panel_action(self)
+            else:
+                self.json({'error': 'not_found'}, 404)
+        except: 
+            import traceback
+            traceback.print_exc()
 
     @tornado.gen.coroutine
     def post(self, path):
         try:
-            print ('Request is : ', self.request.body)
             self.data = json.loads(self.request.body)
 
+            print (self.data, ' is data')
             if path == 'login':
-                yield login.admin_login(self)
+                yield login.user_login(self)
             elif path == 'hosts/new/validate_fields':
                 yield hosts.validate_newhost_fields(self)
             elif path == 'apps':

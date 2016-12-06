@@ -115,20 +115,28 @@ def handle_init(args):
 
             #Store some stuff in datastore
             store_ip = functools.partial(store.insert, 'master_ip', values['ip'])
+
             #TODO get flavours from github or something
             libvirt_flavours = {'va-small' : {'vol_capacity' : 5, 'memory' : 2**20, 'max_memory' : 2**20, 'num_cpus' : 1}, 'debian' : {'vol_capacity' : 5, 'memory' : 2**20, 'max_memory' : 2**20, 'num_cpus' : 1}}
+            available_panels = {'user' : ['directory', 'overview'], 'admin' : ['overview', 'hosts', 'apps', 'store', 'directory']}
+
             salt_fqdn = functools.partial(store.insert, 'salt_master_fqdn', values['salt_master_fqdn'])
             store_flavours = functools.partial(store.insert, 'libvirt_flavours', libvirt_flavours)
+            store_available_panels = functools.partial(store.insert, 'panel_types', available_panels)
 
             run_sync(create_admin)
             run_sync(store_ip)
             run_sync(store_flavours)
             run_sync(salt_fqdn)
-
+            run_sync(store_available_panels)
 
             #Generate an ssh-key
             try: 
-                os.mkdir('/root/va_master_key')
+                try: 
+                    os.mkdir('/root/va_master_key')
+                except: 
+                    pass
+
                 ssh_cmd = ['ssh-keygen', '-t', 'rsa', '-f', '/root/va_master_key/va_master_key_name', '-N', '']
 
                 subprocess.call(ssh_cmd)
