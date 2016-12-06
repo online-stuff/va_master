@@ -4,7 +4,7 @@ var Network = require('../network');
 
 var Apps = React.createClass({
     getInitialState: function () {
-        return {status: 'none', progress: 0, hosts: [], states: [], sizes: [], networks: []};
+        return {status: 'none', progress: 0, hosts: [], states: [], sizes: [], networks: [], images: []};
     },
 
     componentDidMount: function () {
@@ -14,6 +14,7 @@ var Apps = React.createClass({
             if(data.hosts.length > 0){
                 me.setState({sizes: data.hosts[0].sizes});
                 me.setState({networks: data.hosts[0].networks});
+                me.setState({images: data.hosts[0].images});
             }
         });
         Network.get('/api/states', this.props.auth.token).done(function (data) {
@@ -28,6 +29,7 @@ var Apps = React.createClass({
             if(host.hostname === value){
                 this.setState({sizes: host.sizes});
                 this.setState({networks: host.networks});
+                this.setState({images: host.images});
                 break;
             }
         }
@@ -56,6 +58,10 @@ var Apps = React.createClass({
             return <option key = {state.name}>{state.name}</option>
         });
 
+        var img_rows = this.state.images.map(function(img) {
+            return <option key = {img}>{img}</option>
+        });
+
         var sizes_rows = this.state.sizes.map(function(size) {
             return <option key = {size}>{size}</option>
         });
@@ -76,15 +82,13 @@ var Apps = React.createClass({
                         {state_rows}
                     </select>
                     <input placeholder='Instance name' ref='name'/> <br/>
+                    Image: <select ref = 'image'>
+                        {img_rows}
+                    </select><br/>
                     Flavors: <select ref = 'flavor'>
                         {sizes_rows}
                     </select><br/>
-                    Storage disk: <select ref = 'storage'>
-                        <option>0</option>
-                        <option>1</option>
-                        <option>2</option>
-                        <option>3</option>
-                    </select><br/>
+                    Storage disk: <input ref='storage'/> <br/>
                     Networks: <select ref = 'network'>
                         {network_rows}
                     </select><br/>
@@ -109,10 +113,11 @@ var Apps = React.createClass({
                 clearInterval(interval);
             }
         }, 10000);
-        var data = {minion_name: this.refs.name.value, hostname: this.refs.hostname.value, role: this.refs.role.value};
-        Network.post('/api/apps', this.props.auth.token, data).done(function(data) {
-            me.setState({status: 'launched'});
-        });
+        var data = {instance_name: this.refs.name.value, hostname: this.refs.hostname.value, role: this.refs.role.value, size: this.refs.flavor.value, image: this.refs.image.value};
+        console.log(data);
+        // Network.post('/api/apps', this.props.auth.token, data).done(function(data) {
+        //     me.setState({status: 'launched'});
+        // });
     }
 });
 
