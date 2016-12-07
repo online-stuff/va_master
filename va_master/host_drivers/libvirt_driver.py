@@ -262,7 +262,7 @@ class LibVirtDriver(base.DriverBase):
         conn = libvirt.open(host_url)
         storage = [x for x in conn.listAllStoragePools() if x.name() == 'default'][0]
         flavour = self.flavours[data['size']]
-        storage_storage = data.get('storage_disk', 0)
+        storage_disk = data.get('storage_disk', 0)
 
         config_drive = yield self.create_config_drive(host, data)
 

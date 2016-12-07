@@ -6,6 +6,8 @@ import login
 
 from login import auth_only
 
+
+
 @tornado.gen.coroutine
 def panel_action_execute(handler):
     cl = salt.client.LocalClient()

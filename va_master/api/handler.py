@@ -4,6 +4,31 @@ from tornado.httpclient import AsyncHTTPClient, HTTPRequest
 from . import status, login, hosts, apps, panels
 import json
 
+
+paths = {
+    'get' : {
+        'status' : status.status, 
+
+        'drivers' : hosts.list_drivers, 
+        'hosts' : hosts.list_hosts, 
+
+        'apps' : apps.get_states, 
+
+        'panel_action' : panels.panel_action, 
+    },
+
+    'post' : {
+        'login' : login.user_login, 
+        
+        'hosts/new/validate_fields' : hosts.validate_newhost_fields, 
+        'hosts/info' : hosts.get_host_info, 
+
+        'apps' : apps.launch_app, 
+        'state/add' : apps.manage_states,
+    }
+
+}
+
 class ApiHandler(tornado.web.RequestHandler):
     def initialize(self, config):
         self.config = config
@@ -21,43 +46,17 @@ class ApiHandler(tornado.web.RequestHandler):
     def get(self, path):
         self.data = self.request.query_arguments
         try:
-            if path == 'status':
-                yield status.status(self)
-            elif path == 'drivers':
-                yield hosts.list_drivers(self)
-            elif path == 'hosts':
-                yield hosts.list_hosts(self)
-            elif path == 'states': 
-                yield apps.get_states(self)
-            elif path == 'panel_action': 
-                yield panels.panel_action(self)
-            else:
-                self.json({'error': 'not_found'}, 404)
+            yield paths['get'][path](self)
         except: 
             import traceback
             traceback.print_exc()
 
     @tornado.gen.coroutine
     def post(self, path):
+        self.data = json.loads(self.request.body)
+        print ('Request : ', self.request.body)
         try:
-            print ('Body is : ', self.request.body)
-            self.data = json.loads(self.request.body)
-
-            print (self.data, ' is data')
-            if path == 'login':
-                yield login.user_login(self)
-
-            elif path == 'hosts/new/validate_fields':
-                yield hosts.validate_newhost_fields(self)
-            elif path == 'hosts/info':
-                yield hosts.get_host_info(self)
-
-            elif path == 'apps':
-                yield apps.launch_app(self)
-            elif path == 'state/add': 
-                yield apps.manage_states(self)
-            else:
-                self.json({'error': 'not_found'}, 404)
+            yield paths['post'][path](self)
         except: 
             import traceback
             traceback.print_exc()
