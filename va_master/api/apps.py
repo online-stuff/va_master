@@ -4,7 +4,6 @@ import json
 import subprocess
 import requests
 
-
 @tornado.gen.coroutine
 def manage_states(handler, action = 'append'):
     try:
@@ -33,6 +32,7 @@ def get_states(handler):
     states_data = yield handler.config.deploy_handler.get_states()
     handler.json(states_data)
 
+
 @tornado.gen.coroutine
 def create_new_state(handler):
     files_archive = handler.data['files_archive']
@@ -42,6 +42,7 @@ def create_new_state(handler):
         f.write(files_archive)
     #unzip(file_archive)
     manage_states(handler, 'append')
+
         
 #@auth_only
 @tornado.gen.coroutine
@@ -63,4 +64,6 @@ def launch_app(handler):
     except: 
         import traceback
         traceback.print_exc()
+
+
 

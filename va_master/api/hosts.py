@@ -2,7 +2,7 @@ from .login import auth_only
 import tornado.gen
 import json
 
-#@auth_only
+@auth_only
 @tornado.gen.coroutine
 def list_hosts(handler):
     print ('Trying to list hosts. ')
@@ -80,3 +80,22 @@ def create_host(handler):
         handler.json({'error' 'bad_body'}, 400)
     else:
         handler.config.deploy_handler.create_host(host_name, driver, field_values)
+
+
+@tornado.gen.coroutine
+def get_host_info(handler):
+    try:
+        print ('Getting host data. ') 
+        data = handler.data
+        deploy_handler = handler.config.deploy_handler
+        store = deploy_handler.datastore
+
+
+        hosts = yield store.get('hosts')
+        required_host = [host for host in hosts if host['hostname'] == data['hostname']][0]
+
+        driver = yield deploy_handler.get_driver_by_id(required_host['driver_name'])
+        yield driver.get_host_data(required_host)
+    except: 
+        import traceback
+        traceback.print_exc()

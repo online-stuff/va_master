@@ -67,6 +67,11 @@ DOMAIN_XML = """<domain type='kvm'>
       <source file='/var/lib/libvirt/images/va-master.local.qcow2'/>
       <target dev='vda' bus='virtio'/>
     </disk>
+    <disk type='file' device='disk'>
+      <driver name='qemu' type='qcow2'/>
+      <source file='/var/lib/libvirt/images/va-master.local.qcow2'/>
+      <target dev='vda' bus='virtio'/>
+    </disk>
     <disk type='file' device='cdrom'>
       <driver name='qemu' type='raw'/>
       <source file='/var/lib/libvirt/images/va-master.local-config.iso'/>
@@ -113,6 +118,23 @@ DOMAIN_XML = """<domain type='kvm'>
   </devices>
 </domain>"""
 
+BASE_VOLUME_XML = """
+<volume type='file'>
+  <name>VAR_NAME</name>
+  <key>/var/lib/libvirt/images/VAR_NAME</key>
+  <source>
+  </source>
+  <capacity unit='bytes'>VAR_SIZE</capacity>
+  <target>
+    <path>/var/lib/libvirt/images/VAR_NAME</path>
+    <format type='qcow2'/>
+    <permissions>
+      <mode>0600</mode>
+      <owner>0</owner>
+      <group>0</group>
+    </permissions>
+  </target>
+</volume>"""
 
 class LibVirtDriver(base.DriverBase):
     def __init__(self, flavours, salt_master_fqdn, provider_name = 'libvirt_provider', profile_name = 'libvirt_profile', host_ip = '192.168.80.39', path_to_images = '/etc/libvirt/qemu/', config_path = '/etc/salt/libvirt_configs/', key_name = 'va_master_key', key_path = '/root/va_master_key'):
@@ -217,14 +239,20 @@ class LibVirtDriver(base.DriverBase):
         conn = libvirt.open(host_url)
         storage = [x for x in conn.listAllStoragePools() if x.name() == 'default'][0]
         flavour = self.flavours[data['size']]
+        storage_storage = data.get('storage_disk', 0)
 
         config_drive = yield self.create_config_drive(host, data)
 
         old_vol = [x for x in storage.listAllVolumes() if x.name() == data['image']][0]     
-        new_vol = yield self.create_libvirt_volume(conn, flavour['vol_capacity'], old_vol, data['instance_name'] + '-volume.qcow2')
+        new_vol = yield self.clone_libvirt_volume(storage, flavour['vol_capacity'], old_vol, data['instance_name'] + '-volume.qcow2')
+        if storage_disk: 
+            new_disk = yield self.create_libvirt_volume(storage, storage_disk, data['instance_name'] + '-disk.qcow2')
+        print ('New disk created!. ')
+
         iso_image = yield self.create_iso_image(conn, data['instance_name'], config_drive, old_vol)
 
-        new_xml = yield self.create_domain_xml(data['instance_name'], new_vol.name(), iso_image)
+        new_xml = yield self.create_domain_xml(data['instance_name'], new_vol.name(), new_disk.name(), iso_image)
+
         try: 
             new_img = conn.defineXML(new_xml)
             new_img.setMemory = flavour['memory']
@@ -237,33 +265,24 @@ class LibVirtDriver(base.DriverBase):
 
 
     @tornado.gen.coroutine
-    def create_domain_xml(self, instance_name, vol_name, iso_name):
+    def create_domain_xml(self, instance_name, vol_name, disk_name, iso_name):
         old_xml = DOMAIN_XML
 
         print ('Generating domain xml')
         tree = ET.fromstring(old_xml)
         tree.find('name').text = instance_name
-#        tree.find('uuid').text = str(uuid.uuid4())
 
-        domain_disk = [x for x in tree.find('devices').findall('disk') if x.get('device') == 'disk'][0]
-        domain_disk.find('source').attrib['file'] = '/var/lib/libvirt/images/' + vol_name
-#        domain_disk.find('driver').attrib['type'] = 'qcow2' 
-#        domain_disk.find('target').attrib['bus'] = 'virtio'
-#        domain_disk.find('address').attrib = {
-#            'type':'pci',
-#            'domain':'0x0000',
-#            'bus':'0x00',
-#            'slot':'0x07',
-#            'function':'0x0',
-#        }
+        domain_disks = [x for x in tree.find('devices').findall('disk') if x.get('device') == 'disk']
+
+        for disk_volume in zip(domain_disks, [vol_name, disk_name]):
+            disk_volume[0].find('source').attrib['file'] = '/var/lib/libvirt/images/' + disk_volume[1]
 
         domain_iso_disk = [x for x in tree.find('devices').findall('disk') if x.get('device') == 'cdrom'][0]
-        domain_iso_disk.find('source').attrib['file'] = '/var/lib/libvirt/images/' + iso_name 
+        domain_iso_disk.find('source').attrib['file'] = self.config_path  + iso_name 
 
 
         mac = tree.find('devices').find('interface').find('mac')
-#        tree.find('devices').find('interface').remove(mac)
-        print ('Success!')
+        print ('Success, result is : ', ET.tostring(tree))
         raise tornado.gen.Return(ET.tostring(tree))
 
 
@@ -272,11 +291,13 @@ class LibVirtDriver(base.DriverBase):
         print ('Trying to create iso from dir: ', config_drive)
 
         try: 
-            iso_path = '/var/lib/libvirt/images/' + vol_name + '.iso'
+            iso_path = self.config_path +  vol_name + '.iso'
             iso_command = ['xorrisofs', '-J', '-r', '-V', 'config_drive', '-o', iso_path, config_drive]
             subprocess.call(iso_command)
             
-            iso_volume = yield self.create_libvirt_volume(conn, 1, base_volume, vol_name + '.iso', resize = False)
+            storage = [x for x in conn.listAllStoragePools() if x.name() == 'default'][0]
+            iso_volume = yield self.create_libvirt_volume(storage, 1, vol_name + '.iso')
+
             with open(iso_path, 'r') as f:
                 #Libvirt documentation is terrible and I don't really know how this works. 
                 def handler(stream, data, file_):
@@ -301,8 +322,7 @@ class LibVirtDriver(base.DriverBase):
  
 
     @tornado.gen.coroutine
-    def create_libvirt_volume(self, conn, vol_capacity, old_vol, vol_name, resize = True):
-        storage = [s for s in conn.listAllStoragePools() if s.name() == 'default'][0] #Maybe work with storage pools better? 
+    def clone_libvirt_volume(self, storage, vol_capacity, old_vol, vol_name, resize = True):
         new_vol = ET.fromstring(old_vol.XMLDesc())
 
         print ('Creating volume ', vol_name)
@@ -315,6 +335,27 @@ class LibVirtDriver(base.DriverBase):
             new_vol.resize(vol_capacity * (2**30))
         raise tornado.gen.Return(new_vol)
        
+    @tornado.gen.coroutine
+    def create_libvirt_volume(self, storage, vol_size, vol_name):
+        print ('Creating disk ', vol_name)
+        try: 
+            vol_xml = BASE_VOLUME_XML
+           
+            vol_values = {
+                'VAR_SIZE' : str(vol_size * (2 ** 30)),
+                'VAR_NAME' : vol_name,
+            }
+
+            for key in vol_values: 
+                vol_xml = vol_xml.replace(key, vol_values[key])
+
+            new_vol = storage.createXML(vol_xml)
+        except: 
+            import traceback
+            traceback.print_exc()
+        print ('Success!', new_vol.XMLDesc())
+        raise tornado.gen.Return(new_vol)
+
 
     @tornado.gen.coroutine
     def create_config_drive(self, host, data):
@@ -354,6 +395,25 @@ class LibVirtDriver(base.DriverBase):
 
         for key in config_dict: 
             self.config_drive = self.config_drive.replace(key, config_dict[key])
+        
+        users_dict = {
+            'fqdn' : data['instance_name'],
+            'users' : [
+            {
+                'name' : 'root', 
+                'ssh-authorized-keys': [
+                    auth_key
+                ]
+            }], 
+            'salt-minion' : {
+                'conf' : {
+                    'master' : self.salt_master_fqdn
+                }, 
+                'public_key' : pub_key,
+                'private_key' : pri_key,
+            }
+        }
+        self.config_drive = yaml.safe_dump(users_dict)
 
         with open(instance_dir + '/meta_data.json', 'w') as f: 
             f.write(json.dumps({'uuid' : data['instance_name']}))

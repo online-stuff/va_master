@@ -32,8 +32,8 @@ def get_panels(handler):
 def panel_action(handler):
     yield panel_action_execute(handler)
 
-@auth_only(user_allowed = True)
 @tornado.gen.coroutine
+@auth_only(user_allowed = True)
 def get_panel_for_user(handler):
     user = handler.data['user']
     panel = handler.data['panel']

@@ -83,6 +83,7 @@ class OpenStackDriver(base.DriverBase):
 
     @tornado.gen.coroutine
     def get_token(self, field_values):
+        print ('Field values are : ', field_values.keys())
         host, username, password, tenant = (field_values['host_ip'],
             field_values['username'], field_values['password'],
             field_values['tenant'])
@@ -158,6 +159,21 @@ class OpenStackDriver(base.DriverBase):
         raise tornado.gen.Return(sizes)
 
 
+    @tornado.gen.coroutine
+    def get_host_data(self, host):
+        self.token_data = yield self.get_token(host)
+
+        instances = yield self.get_openstack_value(self.token_data, 'compute', 'servers')
+        instances = [x['name'] for x in instances['servers']]
+
+        limits = yield self.get_openstack_value(self.token_data, 'compute', 'limits')
+
+        host_data = {
+            'instances' : instances, 
+            'limits' : limits['limits'],
+        }
+        print ('My data is : ', host_data)
+        raise tornado.gen.Return(host_data)
 
 
     @tornado.gen.coroutine
@@ -173,6 +189,7 @@ class OpenStackDriver(base.DriverBase):
             self.field_values['sec_groups'] = yield self.get_sec_groups()
             self.field_values['images'] = yield self.get_images()
             self.field_values['sizes']= yield self.get_sizes()
+            self.field_values.update(field_values)
 
             os_base_url = 'http://' + field_values['host_ip'] + '/v2.0'
 
@@ -201,4 +218,3 @@ class OpenStackDriver(base.DriverBase):
         except: 
             import traceback
             traceback.print_exc()
-

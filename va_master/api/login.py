@@ -51,9 +51,10 @@ def is_token_valid(datastore, token, user_type = 'admin'):
 #So far, one kwarg is used: user_allowed. 
 def auth_only(*args, **kwargs):
     user_allowed = kwargs.get('user_allowed', False)
-    def auth_only_real(coroutine):
+
+    def auth_only_real(routine):
         @tornado.gen.coroutine
-        @functools.wraps(coroutine)
+        @functools.wraps(routine)
         def func(handler):
             token = handler.request.headers.get('Authorization', '')
             token = token.replace('Token ', '')
@@ -61,9 +62,14 @@ def auth_only(*args, **kwargs):
             if not is_valid:
                 handler.json({'error': 'bad_token'}, 401)
             else:
-                yield coroutine(handler)
+                yield routine(handler)
         return func
-    return auth_only_real(*args)
+
+    #Decorators are trippy with arguments. If no kwargs are set, you return the real auth function, otherwise, you call it and return the resulting function. 
+    if any(args): 
+        return auth_only_real(*args)
+    else: 
+        return auth_only_real
 
 
 @tornado.gen.coroutine
