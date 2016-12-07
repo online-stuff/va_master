@@ -200,6 +200,29 @@ class LibVirtDriver(base.DriverBase):
             traceback.print_exc()
         raise tornado.gen.Return(images)
 
+
+    @tornado.gen.coroutine
+    def get_host_data(self, host):
+        host_url = host['host_protocol'] + '://' + host['host_ip'] + '/system'
+        conn = libvirt.open(host_url)
+        storage = [x for x in conn.listAllStoragePools() if x.name() == 'default'][0]
+        
+        info = conn.getInfo()
+        host_info = {
+            'instances' : conn.listDefinedDomains(),
+            'limits' : {'absolute' : {
+                'maxTotalCores' : conn.getMaxVcpus(None),
+                'totalRamUsed' : info[1], 
+                'totalCoresUsed' : info[2], 
+                'totalInstancesUsed' : len(conn.listDefinedDomains()),
+                'maxTotalInstances' : 'n/a'
+            }}
+        }
+        print ('My info is : ', host_info)
+
+        raise tornado.gen.Return(host_info)
+
+
     @tornado.gen.coroutine
     def validate_field_values(self, step_index, field_values):
         if step_index < 0:
