@@ -51,7 +51,7 @@ cd va_dashboard
 npm install --no-bin-links && node build.js
 # Detach it from supervisor and manually run code
 sudo supervisorctl stop va_master
-sudo virtualenv/bin/python -m va_master
+sudo virtualenv/bin/python -m va_master start
 ```
 
 ## Docs
