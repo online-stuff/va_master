@@ -232,17 +232,9 @@ class DriverBase(object):
         new_minion_cmd = ['salt-cloud', '-p', new_profile, data['instance_name']]
         minion_apply_state = ['salt', data['instance_name'], 'state.highstate']
 
-        print ('Creating new minion. ')
         new_minion_values = subprocess.call(new_minion_cmd)
-        print ('New values are : ', new_minion_values)
-        print ('Created, applying state. ')
         new_minion_state_values = subprocess.call(minion_apply_state)
-        print ('State values are : ', new_minion_state_values)
 
-        mine_cmd = ['salt-call', 'mine.get', data['instance_name'], 'inventory', '--output', 'json']
-        minion_info = subprocess.check_output(mine_cmd)
-        minion_info = json.loads(minion_info)['local']
-
-        raise tornado.gen.Return(minion_info)
+        raise tornado.gen.Return(True)
 
 
