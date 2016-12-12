@@ -13,8 +13,11 @@ paths = {
         'hosts' : hosts.list_hosts, 
         
         'states' : apps.get_states, 
+        'states/reset' : apps.reset_states, 
+
 
         'panels' : panels.get_panels, 
+        'panels/get_panel' : panels.get_panel_for_user, 
     },
 
     'post' : {

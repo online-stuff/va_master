@@ -104,10 +104,10 @@ class DeployHandler(object):
                 traceback.print_exc()
         raise tornado.gen.Return(states_data)
 
+
     @tornado.gen.coroutine
     def get_states(self):
         try: 
-#            yield self.datastore.delete('states')
             states_data = yield self.datastore.get('states')
         except self.datastore.KeyNotFound:
             states_data = yield self.get_states_data()
@@ -117,6 +117,18 @@ class DeployHandler(object):
             traceback.print_exc()
         raise tornado.gen.Return(states_data)
     
+
+    @tornado.gen.coroutine
+    def reset_states(self):
+        try: 
+            yield self.datastore.delete('states')
+            states_data = yield self.get_states_data()
+            yield self.datastore.insert('states', states_data)
+        except: 
+            import traceback
+            traceback.print_exc()
+
+
     @tornado.gen.coroutine
     def generate_top_sls(self):
         states = yield self.datastore.get('states')
