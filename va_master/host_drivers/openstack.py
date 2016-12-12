@@ -161,9 +161,12 @@ class OpenStackDriver(base.DriverBase):
 
     @tornado.gen.coroutine
     def get_host_data(self, host):
+        print ('host is : ', host)
         self.token_data = yield self.get_token(host)
 
         instances = yield self.get_openstack_value(self.token_data, 'compute', 'servers')
+        print ('Instances ', instances )
+        instances = [x['name'] for x in instances['servers']]
 
         limits = yield self.get_openstack_value(self.token_data, 'compute', 'limits')
 

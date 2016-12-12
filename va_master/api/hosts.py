@@ -16,6 +16,13 @@ def reset_hosts(handler):
     yield handler.config.deploy_handler.datastore.insert('hosts', [])
 
 
+@tornado.gen.coroutine
+def delete_host(handler):
+    host = handler.data['hostname']
+    hosts = yield handler.config.deploy_handler.datastore.get('hosts')
+    hosts = [x for x in hosts if not x['hostname'] == host]
+    yield handler.config.deploy_handler.datastore.insert('hosts', hosts)
+
 @auth_only
 @tornado.gen.coroutine
 def list_drivers(handler):

@@ -171,7 +171,8 @@ class DriverBase(object):
             ))
 
         elif step_index == 0:
-            self.field_values['hostname'] = field_values['hostname']
+            self.field_values.update(field_values)
+
             self.provider_vars['VAR_USERNAME'] = field_values['username']
             self.provider_vars['VAR_PASSWORD'] = field_values['password']
 
