@@ -228,17 +228,17 @@ class DriverBase(object):
         yield self.write_configs(skip_provider = True)
 
         #probably use salt.cloud somehow, but the documentation is terrible. 
-        new_minion_cmd = ['salt-cloud', '-p', new_profile, data['instance_name'], '--output', 'json']
-        minion_apply_state = ['salt', data['instance_name'], 'state.highstate', '--output', 'json']
+        new_minion_cmd = ['salt-cloud', '-p', new_profile, data['instance_name']]
+        minion_apply_state = ['salt', data['instance_name'], 'state.highstate']
 
         print ('Creating new minion. ')
-        new_minion_values = subprocess.check_output(new_minion_cmd)
+        new_minion_values = subprocess.call(new_minion_cmd)
         print ('New values are : ', new_minion_values)
         print ('Created, applying state. ')
-        new_minion_state_values = subprocess.check_output(minion_apply_state)
+        new_minion_state_values = subprocess.call(minion_apply_state)
         print ('State values are : ', new_minion_state_values)
 
-        mine_cmd = ['salt-call', 'mine.get', minion_name, 'inventory', '--output', 'json']
+        mine_cmd = ['salt-call', 'mine.get', data['instance_name'], 'inventory', '--output', 'json']
         minion_info = subprocess.check_output(mine_cmd)
         minion_info = json.loads(minion_info)['local']
 

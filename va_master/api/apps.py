@@ -66,6 +66,9 @@ def launch_app(handler):
         driver = yield deploy_handler.get_driver_by_id(required_host['driver_name'])
         minion_info = yield driver.create_minion(required_host, data)
         required_host['instances'].append(minion_info)
+        print ('Required host is now : ', required_host)
+
+        print ('All hosts : ', hosts)
         yield store.insert('hosts', hosts)
     except: 
         import traceback
