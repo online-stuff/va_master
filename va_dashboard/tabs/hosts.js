@@ -7,32 +7,46 @@ var Hosts = React.createClass({
     getInitialState: function () {
         return {hosts: []};
     },
-    componentDidMount: function () {
+    getCurrentHosts: function () {
         var me = this;
         Network.get('/api/hosts', this.props.auth.token).done(function (data) {
             me.setState({hosts: data.hosts});
         });
     },
+    componentDidMount: function () {
+        this.getCurrentHosts();
+    },
+    deleteHost: function (e){
+        console.log(e.target.value);
+    },
     render: function() {
         var host_rows = this.state.hosts.map(function(host) {
             return <tr key={host.hostname}>
                 <td>{host.hostname}</td>
+                <td></td>
+                <td></td>
                 <td>{host.driver_name}</td>
-                <td>Delete</td>
+                <td></td>
+                <td><Bootstrap.Button type="button" bsStyle='primary' onClick={this.deleteHost} value={host.hostname}>
+                    Delete
+                </Bootstrap.Button></td>
             </tr>
-        });
+        }.bind(this));
         var NewHostFormRedux = connect(function(state){
             return {auth: state.auth};
         })(NewHostForm);
 
         return (<div>
-            <NewHostFormRedux />
+            <NewHostFormRedux changeHosts = {this.getCurrentHosts} />
             <Bootstrap.PageHeader>Current hosts <small>All specified hosts</small></Bootstrap.PageHeader>
             <Bootstrap.Table striped bordered hover>
                 <thead>
                     <tr>
                     <td>Host name</td>
+                    <td>IP</td>
+                    <td>Instances</td>
                     <td>Driver</td>
+                    <td>Status</td>
                     <td>Actions</td>
                     </tr>
                 </thead>
@@ -225,7 +239,13 @@ var NewHostForm = React.createClass({
                 for(var id in d.option_choices){
                     mergeChoices[id] = d.option_choices[id];
                 }
-                me.setState({stepIndex: d.new_step_index, optionChoices: mergeChoices, errors: d.errors, isLoading: false});
+                if(d.new_step_index == -1 && d.errors.length == 0){
+                    setTimeout(function(){
+                         me.props.changeHosts();
+                    }, 2000);
+                }else{
+                    me.setState({stepIndex: d.new_step_index, optionChoices: mergeChoices, errors: d.errors, isLoading: false});
+                }
             });
             //var data = {driver_id: this.state.currentDriver.id, current_index: this.state.stepIndex,
             //}
@@ -234,7 +254,10 @@ var NewHostForm = React.createClass({
     onSubmit: function(e) {
         e.preventDefault();
         var data = {name: this.refs.hostname.value, driver: this.state.currentDriver};
-        Network.post('/api/hosts', this.props.auth.token, data);
+        var me = this;
+        Network.post('/api/hosts', this.props.auth.token, data).done(function(data) {
+            me.props.changeHosts();
+        });
     }
 });
 

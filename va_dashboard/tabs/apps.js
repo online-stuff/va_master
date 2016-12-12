@@ -1,6 +1,7 @@
 var React = require('react');
 var connect = require('react-redux').connect;
 var Network = require('../network');
+var Bootstrap = require('react-bootstrap');
 
 var Apps = React.createClass({
     getInitialState: function () {
@@ -73,31 +74,74 @@ var Apps = React.createClass({
         return (
             <div>
                 <h1>Launch new app</h1>
-                <form onSubmit={this.onSubmit} className='form-horizontal'>
-                    <div className='form-group'>
-                    Host: <select ref='hostname' onChange={this.onChange}>
-                        {host_rows}
-                    </select> <br/>
-                    <select ref = 'role'>
-                        {state_rows}
-                    </select>
-                    <input placeholder='Instance name' ref='name'/> <br/>
-                    Image: <select ref = 'image'>
-                        {img_rows}
-                    </select><br/>
-                    Flavors: <select ref = 'flavor'>
-                        {sizes_rows}
-                    </select><br/>
-                    Storage disk: <input ref='storage'/> <br/>
-                    Networks: <select ref = 'network'>
-                        {network_rows}
-                    </select><br/>
-                    <button>Launch</button>
+                <Bootstrap.Form onSubmit={this.onSubmit} horizontal className="forma">
+                    <Bootstrap.FormGroup>
+                        <Bootstrap.Col componentClass={Bootstrap.ControlLabel} sm={2}>
+                            Host
+                        </Bootstrap.Col>
+                        <Bootstrap.Col sm={10}>
+                            <Bootstrap.FormControl componentClass="select" ref='hostname' onChange={this.onChange}>
+                                {host_rows}
+                            </Bootstrap.FormControl>
+                        </Bootstrap.Col>
+                    </Bootstrap.FormGroup>
+                    <Bootstrap.FormGroup>
+                        <Bootstrap.Col sm={4}>
+                            <Bootstrap.FormControl componentClass="select" ref='role'>
+                                {state_rows}
+                            </Bootstrap.FormControl>
+                        </Bootstrap.Col>
+                        <Bootstrap.Col sm={8}>
+                            <Bootstrap.FormControl type="text" ref='name' placeholder='Instance name' />
+                        </Bootstrap.Col>
+                    </Bootstrap.FormGroup>
+                    <Bootstrap.FormGroup>
+                        <Bootstrap.Col componentClass={Bootstrap.ControlLabel} sm={2}>
+                            Image
+                        </Bootstrap.Col>
+                        <Bootstrap.Col sm={10}>
+                            <Bootstrap.FormControl componentClass="select" ref='image'>
+                                {img_rows}
+                            </Bootstrap.FormControl>
+                        </Bootstrap.Col>
+                    </Bootstrap.FormGroup>
+                    <Bootstrap.FormGroup>
+                        <Bootstrap.Col componentClass={Bootstrap.ControlLabel} sm={2}>
+                            Flavors
+                        </Bootstrap.Col>
+                        <Bootstrap.Col sm={10}>
+                            <Bootstrap.FormControl componentClass="select" ref='flavor'>
+                                {sizes_rows}
+                            </Bootstrap.FormControl>
+                        </Bootstrap.Col>
+                    </Bootstrap.FormGroup>
+                    <Bootstrap.FormGroup>
+                        <Bootstrap.Col componentClass={Bootstrap.ControlLabel} sm={2}>
+                            Storage disk
+                        </Bootstrap.Col>
+                        <Bootstrap.Col sm={10}>
+                            <Bootstrap.FormControl type="text" ref='storage' />
+                        </Bootstrap.Col>
+                    </Bootstrap.FormGroup>
+                    <Bootstrap.FormGroup>
+                        <Bootstrap.Col componentClass={Bootstrap.ControlLabel} sm={2}>
+                            Networks
+                        </Bootstrap.Col>
+                        <Bootstrap.Col sm={10}>
+                            <Bootstrap.FormControl componentClass="select" ref='network'>
+                                {network_rows}
+                            </Bootstrap.FormControl>
+                        </Bootstrap.Col>
+                    </Bootstrap.FormGroup>
+                    <Bootstrap.ButtonGroup>
+                        <Bootstrap.Button type="submit" bsStyle='primary'>
+                            Launch
+                        </Bootstrap.Button>
+                    </Bootstrap.ButtonGroup>
                     <div style={{width: '100%', padding: 10, borderRadius: 5, background: statusColor, display: statusDisplay}}>
                         {statusMessage}
                     </div>
-                    </div>
-                </form>
+                </Bootstrap.Form>
             </div>
         );
     },
@@ -113,8 +157,7 @@ var Apps = React.createClass({
                 clearInterval(interval);
             }
         }, 10000);
-        var data = {instance_name: this.refs.name.value, hostname: this.refs.hostname.value, role: this.refs.role.value, size: this.refs.flavor.value, image: this.refs.image.value};
-        console.log(data);
+        var data = {instance_name: this.refs.name.value, hostname: this.refs.hostname.value, role: this.refs.role.value, size: this.refs.flavor.value, image: this.refs.image.value, storage: this.refs.storage.value, network: this.refs.network.value};
         Network.post('/api/apps', this.props.auth.token, data).done(function(data) {
             me.setState({status: 'launched'});
         });
