@@ -22,12 +22,15 @@ def panel_action_execute(handler):
     result = cl.cmd(minion, state['module'] + '.' + action)
     raise tornado.gen.Return(json.dumps(result))
 
+@auth_only(user_allowed = True)
 @tornado.gen.coroutine
 def get_panels(handler):
-    user = handler.data['user']
-    user_group = login.get_user_type(user)
-    panels = handler.config.deploy_handler.datastore.get('panel_types')['user_group']
-    raise tornado.gen.Return(panels)
+    user_group = yield login.get_user_type(handler)
+
+    panels = yield handler.config.deploy_handler.datastore.get('panel_types')
+    panels = panels[user_group]
+
+    handler.json(json.dumps(panels))
 
 @auth_only
 @tornado.gen.coroutine

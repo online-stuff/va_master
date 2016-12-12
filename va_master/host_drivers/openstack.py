@@ -164,7 +164,6 @@ class OpenStackDriver(base.DriverBase):
         self.token_data = yield self.get_token(host)
 
         instances = yield self.get_openstack_value(self.token_data, 'compute', 'servers')
-        instances = [x['name'] for x in instances['servers']]
 
         limits = yield self.get_openstack_value(self.token_data, 'compute', 'limits')
 

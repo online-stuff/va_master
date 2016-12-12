@@ -31,8 +31,9 @@ def get_or_create_token(datastore, username, user_type = 'admin'):
 @tornado.gen.coroutine
 def get_user_type(handler):
     token = handler.request.headers.get('Authorization', '')
-    token = token.replace('Token ', '')
 
+    token = token.replace('Token ', '')
+    
     for type in ['user', 'admin']: # add other types as necessary, maybe from datastore. 
         if is_token_valid(handler.datastore, token, type): 
             raise tornado.gen.Return(type)
@@ -41,7 +42,9 @@ def get_user_type(handler):
 @tornado.gen.coroutine
 def is_token_valid(datastore, token, user_type = 'admin'):
     valid = True
+    print ('Token is : ', token)
     try:
+        temp_res = yield datastore.get('tokens/%s' % (user_type))
         res = yield datastore.get('tokens/%s/by_token/%s' % (user_type, token))
     except datastore.KeyNotFound:
         raise tornado.gen.Return(False)
@@ -59,8 +62,11 @@ def auth_only(*args, **kwargs):
         def func(handler):
             token = handler.request.headers.get('Authorization', '')
             token = token.replace('Token ', '')
-            is_valid = yield is_token_valid(handler.datastore, token)
-            if not is_valid:
+
+            user_type = yield get_user_type(handler)
+
+            #user_type is None if the token is invalid
+            if not user_type or (user_type == 'user' and not user_allowed): 
                 handler.json({'error': 'bad_token'}, 401)
             else:
                 yield routine(handler)

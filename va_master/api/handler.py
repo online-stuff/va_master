@@ -11,10 +11,10 @@ paths = {
 
         'drivers' : hosts.list_drivers, 
         'hosts' : hosts.list_hosts, 
+        
+        'states' : apps.get_states, 
 
-        'apps' : apps.get_states, 
-
-        'panel_action' : panels.panel_action, 
+        'panels' : panels.get_panels, 
     },
 
     'post' : {
@@ -25,6 +25,8 @@ paths = {
 
         'apps' : apps.launch_app, 
         'state/add' : apps.manage_states,
+
+        'panel_action' : panels.panel_action, 
     }
 
 }
@@ -45,7 +47,9 @@ class ApiHandler(tornado.web.RequestHandler):
     @tornado.gen.coroutine
     def get(self, path):
         self.data = self.request.query_arguments
+        print ('Trying to get : ', path)
         try:
+            print ('Calling : ', paths['get'][path])
             yield paths['get'][path](self)
         except: 
             import traceback
