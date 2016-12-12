@@ -56,6 +56,8 @@ class DriverBase(object):
 
         self.field_values = {
                 'driver_name' : driver_name,
+                'instances' : [],
+                'defaults' : {},
             }
            
 
@@ -183,6 +185,10 @@ class DriverBase(object):
         elif step_index == 1:
             self.provider_vars['VAR_NETWORK_ID'] = field_values['network']
             self.profile_vars['VAR_SEC_GROUP'] = field_values['sec_group']
+
+            self.field_values['defaults']['network'] = field_values['network']
+            self.field_values['defaults']['sec_group'] = field_values['sec_group']
+
             raise tornado.gen.Return({
                 'errors':[], 'new_step_index':2, 'option_choices':{
                     'image': self.field_values['images'],
@@ -192,6 +198,9 @@ class DriverBase(object):
         else: 
             self.profile_vars['VAR_IMAGE'] = field_values['image']
             self.profile_vars['VAR_SIZE'] = field_values['size']
+
+            self.field_values['defaults']['image'] = field_values['image']
+            self.field_values['defaults']['size'] = field_values['size']
 
             yield self.get_salt_configs(base_profile = True)
             yield self.write_configs()	
@@ -219,12 +228,20 @@ class DriverBase(object):
         yield self.write_configs(skip_provider = True)
 
         #probably use salt.cloud somehow, but the documentation is terrible. 
-        new_minion_cmd = ['salt-cloud', '-p', new_profile, data['instance_name']]
-        minion_apply_state = ['salt', data['instance_name'], 'state.highstate']
+        new_minion_cmd = ['salt-cloud', '-p', new_profile, data['instance_name'], '--output', 'json']
+        minion_apply_state = ['salt', data['instance_name'], 'state.highstate', '--output', 'json']
 
         print ('Creating new minion. ')
-        subprocess.call(new_minion_cmd)
+        new_minion_values = subprocess.check_output(new_minion_cmd)
+        print ('New values are : ', new_minion_values)
         print ('Created, applying state. ')
-        subprocess.call(minion_apply_state)
+        new_minion_state_values = subprocess.check_output(minion_apply_state)
+        print ('State values are : ', new_minion_state_values)
+
+        mine_cmd = ['salt-call', 'mine.get', minion_name, 'inventory', '--output', 'json']
+        minion_info = subprocess.check_output(mine_cmd)
+        minion_info = json.loads(minion_info)['local']
+
+        raise tornado.gen.Return(minion_info)
 
 

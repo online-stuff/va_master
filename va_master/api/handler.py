@@ -11,6 +11,7 @@ paths = {
 
         'drivers' : hosts.list_drivers, 
         'hosts' : hosts.list_hosts, 
+        'hosts/reset' : hosts.reset_hosts, 
         
         'states' : apps.get_states, 
         'states/reset' : apps.reset_states, 

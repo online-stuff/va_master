@@ -7,12 +7,20 @@ import panels
 @tornado.gen.coroutine
 def list_hosts(handler):
     hosts = yield handler.config.deploy_handler.list_hosts()
+    print ('Hosts are : ', hosts)
     handler.json({'hosts': hosts})
+
+
+@tornado.gen.coroutine
+def reset_hosts(handler):
+    yield handler.config.deploy_handler.datastore.insert('hosts', [])
+
 
 @auth_only
 @tornado.gen.coroutine
 def list_drivers(handler):
     drivers = yield handler.config.deploy_handler.get_drivers()
+    print ('Drivers : ', drivers)
     out = {'drivers': []}
     for driver in drivers:
         driver_id = yield driver.driver_id()

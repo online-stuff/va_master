@@ -35,16 +35,15 @@ def get_user_type(handler):
     token = token.replace('Token ', '')
     
     for type in ['user', 'admin']: # add other types as necessary, maybe from datastore. 
-        if is_token_valid(handler.datastore, token, type): 
+        token_valid = yield is_token_valid(handler.datastore, token, type)
+        if token_valid: 
             raise tornado.gen.Return(type)
     raise tornado.gen.Return(None)
 
 @tornado.gen.coroutine
 def is_token_valid(datastore, token, user_type = 'admin'):
     valid = True
-    print ('Token is : ', token)
     try:
-        temp_res = yield datastore.get('tokens/%s' % (user_type))
         res = yield datastore.get('tokens/%s/by_token/%s' % (user_type, token))
     except datastore.KeyNotFound:
         raise tornado.gen.Return(False)

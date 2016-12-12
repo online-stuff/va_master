@@ -27,8 +27,6 @@ class DeployHandler(object):
         libvirt_flavours = run_sync(libvirt_flavours)
         salt_master_fqdn = run_sync(salt_master_fqdn)
 
-#        self.datastore.insert('hosts', [])
-
         self.deploy_pool_count = deploy_pool_count
         self.pool = ProcessPoolExecutor(deploy_pool_count)
 

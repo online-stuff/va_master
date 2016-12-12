@@ -188,8 +188,6 @@ class OpenStackDriver(base.DriverBase):
             self.field_values['sec_groups'] = yield self.get_sec_groups()
             self.field_values['images'] = yield self.get_images()
             self.field_values['sizes']= yield self.get_sizes()
-            self.field_values.update(field_values)
-
             os_base_url = 'http://' + field_values['host_ip'] + '/v2.0'
 
             self.provider_vars['VAR_TENANT'] = field_values['tenant']
