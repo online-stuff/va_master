@@ -1,11 +1,11 @@
 from .login import auth_only
 import tornado.gen
 import json
+import panels
 
-@auth_only
+@auth_only(user_allowed = True)
 @tornado.gen.coroutine
 def list_hosts(handler):
-    print ('Trying to list hosts. ')
     hosts = yield handler.config.deploy_handler.list_hosts()
     handler.json({'hosts': hosts})
 
@@ -95,7 +95,8 @@ def get_host_info(handler):
         required_host = [host for host in hosts if host['hostname'] == data['hostname']][0]
 
         driver = yield deploy_handler.get_driver_by_id(required_host['driver_name'])
-        yield driver.get_host_data(required_host)
+        info = yield driver.get_host_data(required_host)
+        handler.json(json.dumps(info))
     except: 
         import traceback
         traceback.print_exc()

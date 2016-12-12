@@ -4,6 +4,8 @@ import json
 import subprocess
 import requests
 
+
+
 @tornado.gen.coroutine
 def manage_states(handler, action = 'append'):
     try:
@@ -26,12 +28,15 @@ def manage_states(handler, action = 'append'):
         import traceback
         traceback.print_exc()
 
-
 @tornado.gen.coroutine
 def get_states(handler):
     states_data = yield handler.config.deploy_handler.get_states()
     handler.json(states_data)
 
+
+@tornado.gen.coroutine
+def reset_states(handler):
+    yield handler.config.deploy_handler.reset_states()
 
 @tornado.gen.coroutine
 def create_new_state(handler):

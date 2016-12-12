@@ -90,8 +90,10 @@ def handle_init(args):
             sys.exit(1)
 
         from .api import login
-        from . import datastore
-        store = datastore.ConsulStore()
+        cli_config = config.Config()
+
+#        from . import datastore
+        store = cli_config.datastore
         run_sync = tornado.ioloop.IOLoop.instance().run_sync
         attempts, failed = 1, True
         cli_info('Waiting for the key value store to come alive...')
@@ -113,6 +115,9 @@ def handle_init(args):
             create_admin = functools.partial(login.create_admin,
                 store, values['admin_user'], values['admin_pass'])
 
+            states_data = run_sync(functools.partial(cli_config.deploy_handler.get_states_data))
+            store_states = functools.partial(store.insert, 'states', states_data)
+
             #Store some stuff in datastore
             store_ip = functools.partial(store.insert, 'master_ip', values['ip'])
 
@@ -127,6 +132,7 @@ def handle_init(args):
             run_sync(create_admin)
             run_sync(store_ip)
             run_sync(store_flavours)
+            run_sync(store_states)
             run_sync(salt_fqdn)
             run_sync(store_available_panels)
 
