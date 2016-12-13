@@ -12,7 +12,6 @@ paths = {
         'drivers' : hosts.list_drivers, 
         'hosts' : hosts.list_hosts, 
         'hosts/reset' : hosts.reset_hosts, 
-        'hosts/delete' : hosts.delete_host, 
         
         'states' : apps.get_states, 
         'states/reset' : apps.reset_states, 
@@ -27,6 +26,7 @@ paths = {
         
         'hosts/new/validate_fields' : hosts.validate_newhost_fields, 
         'hosts/info' : hosts.get_host_info, 
+        'hosts/delete' : hosts.delete_host, 
 
         'apps' : apps.launch_app, 
         'state/add' : apps.manage_states,
@@ -64,5 +64,5 @@ class ApiHandler(tornado.web.RequestHandler):
 
     @tornado.gen.coroutine
     def post(self, path):
-        yield self.exec_method('post', path, self.request.body)
+        yield self.exec_method('post', path, json.loads(self.request.body))
 
