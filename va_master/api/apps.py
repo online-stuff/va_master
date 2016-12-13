@@ -48,6 +48,16 @@ def create_new_state(handler):
     #unzip(file_archive)
     manage_states(handler, 'append')
 
+
+@tornado.gen.coroutine
+def get_app_info(handler)
+    instance_name = handler.data['instance_name']
+    
+    instance_info_cmd = ['salt-call', instance_name, 'mine.get', 'inventory', '--output', 'json']
+    instance_info = json.loads(subprocess.check_output(instance_info_cmd))
+
+    raise tornado.gen.Return(get_app_info)
+
         
 #@auth_only
 @tornado.gen.coroutine
@@ -63,15 +73,15 @@ def launch_app(handler):
         print (data['hostname'])
         required_host = [host for host in hosts if host['hostname'] == data['hostname']][0]
 
-        print 'Host is : ', required_host
         driver = yield deploy_handler.get_driver_by_id(required_host['driver_name'])
-        minion_info = yield driver.create_minion(required_host, data)
-        if minion_info: 
-            required_host['instances'].append(data['instance_name'])
-            print ('Required host is now : ', required_host)
+        yield driver.create_minion(required_host, data)
+        minion_info = yield get_app_info(handler)
 
-            print ('All hosts : ', hosts)
-            yield store.insert('hosts', hosts)
+        panels = yield store.get('panels')
+        panels.append({'name' : data['instance_name'], 'role' : data['role'], 'user_allowed' : data.get('user_allowed', False)})
+
+        required_host['instances'].append(data['instance_name'])
+        yield store.insert('hosts', hosts)
     except: 
         import traceback
         traceback.print_exc()

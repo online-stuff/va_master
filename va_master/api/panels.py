@@ -15,22 +15,21 @@ def list_panels(handler):
 
     raise tornado.gen.Return(panels)
 
-
-
 @tornado.gen.coroutine
 def panel_action_execute(handler):
     cl = salt.client.LocalClient()
 
-    minion = handler.data['minion_name'][0]
-    state = handler.data['state'][0]
+    print ('Handler data is : ', handler.data)
+
+    instance = handler.data['instance_name'][0]
+    state = handler.data['role'][0]
     action = handler.data['action'][0]
 
     states = yield handler.config.deploy_handler.datastore.get('states')
     state = [x for x in states if x['name'] == state][0]
 
-    result = cl.cmd(minion, state['module'] + '.' + action)
+    result = cl.cmd(instance, state['module'] + '.' + action)
     raise tornado.gen.Return(json.dumps(result))
-
 
 @auth_only(user_allowed = True)
 @tornado.gen.coroutine
@@ -43,21 +42,25 @@ def get_panels(handler):
 def panel_action(handler):
     yield panel_action_execute(handler)
 
-@tornado.gen.coroutine
 @auth_only(user_allowed = True)
+@tornado.gen.coroutine
 def get_panel_for_user(handler):
     panel = handler.data['panel']
     user_panels = yield list_panels(handler)
+    print ('User panels : ', user_panels)
 
     if panel in user_panels: 
-        panel = panel_action_execute(handler)
+        print ('Panel is found. ')
         handler.data['action'] = 'get_panel'
+        try: 
+            panel = yield panel_action_execute(handler)
+        except: 
+            import traceback
+            traceback.print_exc()
 
-        panel_json = panel_action(handler)
-
-        handler.json(panel_json)
-#        raise tornado.gen.Return(panel)
-    handler.json({'error' : 'Cannot get panel. '}, 401)
+        print ('My panel is : ', panel)
+        raise tornado.gen.Return(panel)
+    raise tornado.gen.Return({'error' : 'Cannot get panel. '})
 
 def get_panel(handler):
     raise tornado.gen.Return(panel_json)
