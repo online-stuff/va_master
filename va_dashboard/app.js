@@ -61,7 +61,6 @@ var Overview = require('./tabs/overview');
 var Hosts = require('./tabs/hosts');
 var Apps = require('./tabs/apps');
 var Store = require('./tabs/store');
-var Panel = require('./tabs/panel');
 
 var Login = require('./login');
 var App = React.createClass({
@@ -73,7 +72,6 @@ var App = React.createClass({
                 <Router.Route path='/hosts' component={Hosts} />
                 <Router.Route path='/apps' component={Apps} />
                 <Router.Route path='/store' component={Store} />
-                <Router.Route path='/panel' component={Panel} />
             </Router.Route>
             <Router.Route path='/login' component={Login} />
         </Router.Router>
