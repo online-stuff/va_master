@@ -6,23 +6,23 @@ The va_master API is responsible for the communication between the dashboard and
 
 This is the base of the API. It contains the endpoint paths and imports all the other modules, using their methods to provide said communication. 
 
-    api/handler.py
-    ```
-        paths = {
-            'get' : {
-                'status' : status.status, 
+api/handler.py
+```
+    paths = {
+        'get' : {
+            'status' : status.status, 
 
-                'drivers' : hosts.list_drivers, 
-                ...
-            },
+            'drivers' : hosts.list_drivers, 
+            ...
+        },
 
-            'post' : {
-                'login' : login.user_login, 
-                ...
-            }
-
+        'post' : {
+            'login' : login.user_login, 
+            ...
         }
-    ```
+
+    }
+```
 
 The keys in this dictionary are the endpoint paths. For instance, for 'status', the url will be ```some.ip.v4.adress/api/status```. When that url is accessed, the API will call the status() method from the status module. 
 
