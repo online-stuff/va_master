@@ -3,6 +3,7 @@ var Bootstrap = require('react-bootstrap');
 var connect = require('react-redux').connect;
 var Network = require('../network');
 var ReactDOM = require('react-dom');
+var Router = require('react-router');
 
 var Store = React.createClass({
     getInitialState: function () {
@@ -20,15 +21,25 @@ var Store = React.createClass({
         this.getCurrentStates();
     },
 
+    launchApp: function (e){
+        console.log(e.target.value);
+        this.props.dispatch({type: 'LAUNCH', select: e.target.value});
+        Router.hashHistory.push('/apps');
+    },
+
     render: function () {
         var states_rows = this.state.states.map(function(state) {
             return (
-                <tr key={state.name}>
-                    <td>{state.name}</td>
-                    <td>{state.description}</td>
-                </tr>
+                <Bootstrap.Col xs={12} sm={6} md={3} key={state.name} className="tile">
+                    <div className="title">{state.name}</div>
+                    <div>Version: {state.version}</div>
+                    <div className="description">{state.description}</div>
+                    <Bootstrap.Button bsStyle='primary' onClick={this.launchApp} value={state.name}>
+                        Launch
+                    </Bootstrap.Button>
+                </Bootstrap.Col>
             )
-        });
+        }.bind(this));
 
         var NewStateFormRedux = connect(function(state){
             return {auth: state.auth};
@@ -36,19 +47,13 @@ var Store = React.createClass({
 
         return (
             <div>
-                <NewStateFormRedux getStates = {this.getCurrentStates} />
                 <Bootstrap.PageHeader>Current states</Bootstrap.PageHeader>
-                <Bootstrap.Table striped bordered hover>
-                    <thead>
-                        <tr>
-                        <td>State name</td>
-                        <td>Description</td>
-                        </tr>
-                    </thead>
-                    <tbody>
+                <div className="container-fluid">
+                    <Bootstrap.Row>
                         {states_rows}
-                    </tbody>
-                </Bootstrap.Table>
+                    </Bootstrap.Row>
+                </div>
+                <NewStateFormRedux getStates = {this.getCurrentStates} />
             </div>
         );
     }
@@ -88,6 +93,10 @@ var NewStateForm = React.createClass({
                         <Bootstrap.ControlLabel >Substates</Bootstrap.ControlLabel>
                         <Bootstrap.FormControl type='text' ref="substates" />
                     </Bootstrap.FormGroup>
+                    <Bootstrap.FormGroup>
+                        <Bootstrap.ControlLabel >File</Bootstrap.ControlLabel>
+                        <Bootstrap.FormControl type='file' ref="file" />
+                    </Bootstrap.FormGroup>
                     <Bootstrap.ButtonGroup>
                         <Bootstrap.Button type="submit" bsStyle='primary'>
                             Create
@@ -120,7 +129,7 @@ var NewStateForm = React.createClass({
 });
 
 Store = connect(function(state){
-    return {auth: state.auth};
+    return {auth: state.auth, apps: state.apps};
 })(Store);
 
 module.exports = Store;
