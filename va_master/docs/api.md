@@ -7,7 +7,7 @@ The va_master API is responsible for the communication between the dashboard and
 This is the base of the API. It contains the endpoint paths and imports all the other modules, using their methods to provide said communication. 
 
 api/handler.py
-```
+    
     paths = {
         'get' : {
             'status' : status.status, 
@@ -26,15 +26,15 @@ api/handler.py
 
 The keys in this dictionary are the endpoint paths. For instance, for 'status', the url will be ```some.ip.v4.adress/api/status```. When that url is accessed, the API will call the status() method from the status module. 
 
-    api/handler.py
-    ```
+api/handler.py
+    
         @tornado.gen.coroutine
         def exec_method(self, method, path, data):
             self.data = data
             try:
                 yield paths[method][path](self)
             ...
-    ```
+    
 
 Before calling the method, the handler sets its own data attribute, which contains the request body, if it's a POST request, or the query arguments if it's a GET request. The handler also contains the deploy handler, giving it access to the datastore. 
 
@@ -49,8 +49,8 @@ The API is reponsible for going through a few steps to gather this information, 
 
 Another function where the API works with the driver is the ```get_host_info()``` method, which is again, dependent on the type of host, and should be overriden when writing new drivers. This method should return a JSON file that looks like this: 
 
-    host_drivers/libvirt_driver.py
-    ```...
+host_drivers/libvirt_driver.py
+    ...
         host_info = {
             'instances' : conn.listDefinedDomains(),
             'limits' : {'absolute' : {
@@ -61,7 +61,7 @@ Another function where the API works with the driver is the ```get_host_info()``
                 'maxTotalInstances' : 'n/a'
             }}
         }
-    ```
+    
 
 <h3>Apps</h3>
 
