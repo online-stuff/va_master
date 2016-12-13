@@ -17,7 +17,10 @@ var Hosts = React.createClass({
         this.getCurrentHosts();
     },
     deleteHost: function (e){
-        console.log(e.target.value);
+        var data = {"hostname": e.target.value};
+        Network.post('/api/hosts/delete', this.props.auth.token, data).done(function(data) {
+            this.getCurrentHosts();
+        }.bind(this));
     },
     render: function() {
         var host_rows = this.state.hosts.map(function(host) {
