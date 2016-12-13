@@ -26,7 +26,6 @@ def delete_host(handler):
 @tornado.gen.coroutine
 def list_drivers(handler):
     drivers = yield handler.config.deploy_handler.get_drivers()
-    print ('Drivers : ', drivers)
     out = {'drivers': []}
     for driver in drivers:
         driver_id = yield driver.driver_id()
