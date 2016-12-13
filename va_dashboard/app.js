@@ -46,7 +46,7 @@ function apps(state, action){
     if(action.type == 'LAUNCH'){
         newState.select = action.select;
     }
-    if(action.type == 'RESET'){
+    if(action.type == 'RESET_APP'){
         newState.select = "";
     }
 

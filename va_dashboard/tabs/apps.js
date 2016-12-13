@@ -34,6 +34,10 @@ var Appp = React.createClass({
         });
     },
 
+    componentWillUnmount: function () {
+        this.props.dispatch({type: 'RESET_APP'});
+    },
+
     onChange: function(e) {
         value = e.target.value;
         var data = {hostname: e.target.value};
