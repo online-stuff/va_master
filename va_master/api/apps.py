@@ -50,7 +50,7 @@ def create_new_state(handler):
 
 
 @tornado.gen.coroutine
-def get_app_info(handler)
+def get_app_info(handler):
     instance_name = handler.data['instance_name']
     
     instance_info_cmd = ['salt-call', instance_name, 'mine.get', 'inventory', '--output', 'json']
@@ -77,8 +77,12 @@ def launch_app(handler):
         yield driver.create_minion(required_host, data)
         minion_info = yield get_app_info(handler)
 
+        states = yield store.get('states')
+        state = [x for x in states if x['name'] == data['role']][0]
+
+
         panels = yield store.get('panels')
-        panels.append({'name' : data['instance_name'], 'role' : data['role'], 'user_allowed' : data.get('user_allowed', False)})
+        panels.append({'name' : data['instance_name'], 'role' : data['role'], 'user_allowed' : state.get('user_allowed', False)})
 
         required_host['instances'].append(data['instance_name'])
         yield store.insert('hosts', hosts)

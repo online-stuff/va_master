@@ -215,8 +215,6 @@ class OpenStackDriver(base.DriverBase):
     @tornado.gen.coroutine
     def create_minion(self, host, data):
         try:
-
-#            yield self.export_env_variables(, host[')
             yield super(OpenStackDriver, self).create_minion(host, data)
         except: 
             import traceback

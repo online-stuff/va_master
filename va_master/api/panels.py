@@ -10,8 +10,9 @@ from login import auth_only
 def list_panels(handler): 
     user_group = yield login.get_user_type(handler)
 
-    panels = yield handler.config.deploy_handler.datastore.get('panel_types')
-    panels = panels[user_group]
+    panels = yield handler.config.deploy_handler.datastore.get('panels')
+    if user_group == 'user': 
+        panels = [x for x in panels if x['user_allowed']]
 
     raise tornado.gen.Return(panels)
 
@@ -31,16 +32,19 @@ def panel_action_execute(handler):
     result = cl.cmd(instance, state['module'] + '.' + action)
     raise tornado.gen.Return(json.dumps(result))
 
+
+@auth_only
+@tornado.gen.coroutine
+def panel_action(handler):
+    yield panel_action_execute(handler)
+
+
 @auth_only(user_allowed = True)
 @tornado.gen.coroutine
 def get_panels(handler):
     panels = list_panels(handler)
     handler.json(json.dumps(panels))
 
-@auth_only
-@tornado.gen.coroutine
-def panel_action(handler):
-    yield panel_action_execute(handler)
 
 @auth_only(user_allowed = True)
 @tornado.gen.coroutine
@@ -62,5 +66,4 @@ def get_panel_for_user(handler):
         raise tornado.gen.Return(panel)
     raise tornado.gen.Return({'error' : 'Cannot get panel. '})
 
-def get_panel(handler):
-    raise tornado.gen.Return(panel_json)
+

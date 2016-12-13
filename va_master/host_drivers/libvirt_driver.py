@@ -218,7 +218,6 @@ class LibVirtDriver(base.DriverBase):
                 'maxTotalInstances' : 'n/a'
             }}
         }
-        print ('My info is : ', host_info)
 
         raise tornado.gen.Return(host_info)
 

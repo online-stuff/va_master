@@ -50,22 +50,19 @@ class ApiHandler(tornado.web.RequestHandler):
         self.finish()
 
     @tornado.gen.coroutine
-    def get(self, path):
-        self.data = self.request.query_arguments
-        print ('Trying to get : ', path)
+    def exec_method(self, method, path, data):
+        self.data = data
         try:
-            print ('Calling : ', paths['get'][path])
-            yield paths['get'][path](self)
+            yield paths[method][path](self)
         except: 
             import traceback
             traceback.print_exc()
 
     @tornado.gen.coroutine
+    def get(self, path):
+        yield self.exec_method('get', path, self.request.query_arguments)
+
+    @tornado.gen.coroutine
     def post(self, path):
-        self.data = json.loads(self.request.body)
-        print ('Request : ', self.request.body)
-        try:
-            yield paths['post'][path](self)
-        except: 
-            import traceback
-            traceback.print_exc()
+        yield self.exec_method('post', path, self.request.body)
+
