@@ -26,8 +26,8 @@ var Hosts = React.createClass({
         var host_rows = this.state.hosts.map(function(host) {
             return <tr key={host.hostname}>
                 <td>{host.hostname}</td>
-                <td></td>
-                <td></td>
+                <td>{host.host_ip}</td>
+                <td>{host.instances.length}</td>
                 <td>{host.driver_name}</td>
                 <td></td>
                 <td><Bootstrap.Button type="button" bsStyle='primary' onClick={this.deleteHost} value={host.hostname}>
