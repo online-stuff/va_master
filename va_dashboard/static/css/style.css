@@ -119,5 +119,30 @@ ul.left-menu a.active{
 }
 
 .forma{
-    width: 60%;
+    width: 50%;
+    display: inline-block;
+}
+
+.tile{
+    border-radius: 15px;
+    border: 1px solid black;
+    text-align: center;
+    min-height: 160px;
+}
+
+.title{
+    font-weight: bold;
+    font-size: 16px;
+    padding: 5px;
+}
+
+.description {
+    height: 60px;
+    overflow: auto;
+}
+
+.stats{
+    display: inline-block;
+    margin-left: 20px;
+    vertical-align: top;
 }

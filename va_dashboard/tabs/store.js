@@ -22,7 +22,6 @@ var Store = React.createClass({
     },
 
     launchApp: function (e){
-        console.log(e.target.value);
         this.props.dispatch({type: 'LAUNCH', select: e.target.value});
         Router.hashHistory.push('/apps');
     },
