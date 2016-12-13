@@ -111,7 +111,7 @@ def get_host_info(handler):
         info = yield driver.get_host_data(required_host)
 
         required_host['instances'] = info['instances']
-        yield store.insert('hosts')
+        yield store.insert('hosts', hosts)
 
         handler.json(info)
     except: 
