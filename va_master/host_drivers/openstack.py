@@ -168,10 +168,21 @@ class OpenStackDriver(base.DriverBase):
             instances = [x['name'] for x in instances['servers']]
 
             limits = yield self.get_openstack_value(self.token_data, 'compute', 'limits')
+            tenants = yield self.get_openstack_value(self.token_data, 'identity', 'tenants')
+            tenant = [x for x in tenants['tenants'] if x['name'] == host['tenant']][0]
+
+            tenant_usage = yield self.get_openstack_value(self.token_data, 'compute', 'os-simple-tenant-usage')
+#            tenant_usage = json.loads(tenant_usage)
+
+
+            tenant_id = tenant['id']
+            tenant_usage = [x for x in tenant_usage['tenant_usages'] if x['tenant_id'] == tenant_id][0]
+            print ('My usage is : ', tenant_usage)
 
             host_data = {
                 'instances' : instances, 
                 'limits' : limits['limits'],
+                'host_usage' : tenant_usage
             }
         except:
             import traceback
