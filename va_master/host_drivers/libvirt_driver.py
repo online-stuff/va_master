@@ -207,10 +207,21 @@ class LibVirtDriver(base.DriverBase):
         conn = libvirt.open(host_url)
         storage = [x for x in conn.listAllStoragePools() if x.name() == 'default'][0]
         
+        instances = conn.listAllDomains()
+        instances = [
+            {
+                'hostname' : x.name(), 
+                'ipv4' : 'n/a', 
+                'local_gb' : (x.info()[1] + 0.0) / 2**30, 
+                'memory_mb' : (x.info()[2] + 0.0) / 2**20, 
+                'status' : x.info()[0]
+            } for x in instances]
+
+
         info = conn.getInfo()
         storage_info = storage.info()
         host_info = {
-            'instances' : conn.listDefinedDomains(),
+            'instances' : instances,
             'limits' : {'absolute' : {
                 'maxTotalCores' : conn.getMaxVcpus(None),
                 'totalRamUsed' : info[1], 
@@ -219,9 +230,9 @@ class LibVirtDriver(base.DriverBase):
                 'maxTotalInstances' : 'n/a'
             }},
             'host_usage' : {
-               'total_memory_mb_usage' : storage_info[1], 
+               'total_memory_mb_usage' : (storage_info[2] + 0.0) / 2**20, 
                'total_vcpus_usage' : 0, 
-               'total_local_gb_usage' : storage_info[3],
+               'total_local_gb_usage' : (storage_info[1] + 0.0) / 2**30,
             }
         }
 
