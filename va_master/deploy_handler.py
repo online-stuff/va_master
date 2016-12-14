@@ -70,6 +70,7 @@ class DeployHandler(object):
         try:
             hosts = yield self.datastore.get('hosts')
         except self.datastore.KeyNotFound:
+            print ('No hosts found. ')
             hosts = []
         raise tornado.gen.Return(hosts)
 

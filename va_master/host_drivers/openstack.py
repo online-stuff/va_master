@@ -173,12 +173,14 @@ class OpenStackDriver(base.DriverBase):
                 'instances' : instances, 
                 'limits' : limits['limits'],
             }
-            raise tornado.gen.Return(host_data)
         except:
             import traceback
             print ('There was an error reaching host: ', host['hostname'])
             traceback.print_exc()
             raise tornado.gen.Return({})
+
+        raise tornado.gen.Return(host_data)
+
 
 
     @tornado.gen.coroutine

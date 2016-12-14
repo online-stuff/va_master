@@ -29,7 +29,7 @@ paths = {
         'hosts/delete' : hosts.delete_host, 
 
         'apps' : apps.launch_app, 
-        'state/add' : apps.manage_states,
+        'states/add' : apps.create_new_state,
 
         'panel_action' : panels.panel_action, 
     }
@@ -52,8 +52,10 @@ class ApiHandler(tornado.web.RequestHandler):
     @tornado.gen.coroutine
     def exec_method(self, method, path, data):
         self.data = data
+        #print ('Executing. ')
         try:
             yield paths[method][path](self)
+            print ('Done. ')
         except: 
             import traceback
             traceback.print_exc()
@@ -64,5 +66,20 @@ class ApiHandler(tornado.web.RequestHandler):
 
     @tornado.gen.coroutine
     def post(self, path):
-        yield self.exec_method('post', path, json.loads(self.request.body))
+        print ('Trying to post. ')
+        try: 
+#            print (self.request)
+#            print (dir(self.request))
+#            print (self.request.body)
+#            print (self.request.files)
+#            print (self.request.arguments)
+#            print (self.request.body_arguments)
+            try: 
+                data = json.loads(self.request.body)
+            except ValueError: 
+                data = {}
+            yield self.exec_method('post', path, data)
+        except: 
+            import traceback
+            traceback.print_exc()
 
