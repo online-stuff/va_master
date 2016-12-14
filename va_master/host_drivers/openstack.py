@@ -164,25 +164,51 @@ class OpenStackDriver(base.DriverBase):
         try: 
             self.token_data = yield self.get_token(host)
 
-            instances = yield self.get_openstack_value(self.token_data, 'compute', 'servers')
-            instances = [x['name'] for x in instances['servers']]
+            servers = yield self.get_openstack_value(self.token_data, 'compute', 'servers/detail')
+            servers = servers['servers']
+#            instances = [x['name'] for x in instances['servers']]
 
             limits = yield self.get_openstack_value(self.token_data, 'compute', 'limits')
             tenants = yield self.get_openstack_value(self.token_data, 'identity', 'tenants')
             tenant = [x for x in tenants['tenants'] if x['name'] == host['tenant']][0]
 
-            tenant_usage = yield self.get_openstack_value(self.token_data, 'compute', 'os-simple-tenant-usage')
-#            tenant_usage = json.loads(tenant_usage)
-
-
             tenant_id = tenant['id']
-            tenant_usage = [x for x in tenant_usage['tenant_usages'] if x['tenant_id'] == tenant_id][0]
-            print ('My usage is : ', tenant_usage)
+
+            tenant_usage = yield self.get_openstack_value(self.token_data, 'compute', 'os-simple-tenant-usage/' + tenant_id)
+
+            tenant_usage = tenant_usage['tenant_usage']
+
+            host_usage = {
+                'total_disk_usage_gb' : sum([x['local_gb'] for x in tenant_usage['server_usages']]), 
+                'current_disk_usage_mb' : sum([x['memory_mb'] for x in tenant_usage['server_usages']]), 
+                'cpus_usage' : sum([x['vcpus'] for x in tenant_usage['server_usages']])
+            }
+
+#            print ('Gonna print my servers. ')
+#            print ('Servers: ', len(servers), 'tenant : ', len(tenant_usage['server_usages']), zip(servers, tenant_usage['server_usages']))
+
+
+            instances = {}
+            for server in servers: 
+                for server_usage in tenant_usage['server_usages']: 
+                    instances
+
+            instances = [
+                {
+                    'hostname' : x['name'], 
+                    'ipv4' : x['addresses'][x['addresses'].keys()[0]], 
+                    'local_gb' : y['local_gb'], 
+                    'memory_mb' : y['memory_mb'], 
+                    'status' : x['status'] 
+                } for x in servers for y in tenant_usage['server_usages'] if x['name'] == y['name'] 
+            ]
+
+            print ('Instances : ', instances)
 
             host_data = {
-                'instances' : instances, 
+                'instances' : instances, #tenant_usage['server_usages'], 
                 'limits' : limits['limits'],
-                'host_usage' : tenant_usage
+                'host_usage' : host_usage
             }
         except:
             import traceback

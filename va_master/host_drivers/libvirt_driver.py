@@ -208,6 +208,7 @@ class LibVirtDriver(base.DriverBase):
         storage = [x for x in conn.listAllStoragePools() if x.name() == 'default'][0]
         
         info = conn.getInfo()
+        storage_info = storage.info()
         host_info = {
             'instances' : conn.listDefinedDomains(),
             'limits' : {'absolute' : {
@@ -216,7 +217,12 @@ class LibVirtDriver(base.DriverBase):
                 'totalCoresUsed' : info[2], 
                 'totalInstancesUsed' : len(conn.listDefinedDomains()),
                 'maxTotalInstances' : 'n/a'
-            }}
+            }},
+            'host_usage' : {
+               'total_memory_mb_usage' : storage_info[1], 
+               'total_vcpus_usage' : 0, 
+               'total_local_gb_usage' : storage_info[3],
+            }
         }
 
         raise tornado.gen.Return(host_info)
