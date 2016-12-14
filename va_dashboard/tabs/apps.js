@@ -12,14 +12,14 @@ var Appp = React.createClass({
         var me = this;
         Network.get('/api/hosts', this.props.auth.token).done(function (data) {
             me.setState({hosts: data.hosts});
-            var host = {hostname: data.hosts[0].hostname};
-            me.setState(host);
+            var host = data.hosts[0].hostname;
+            me.setState({hostname: host});
             if(data.hosts.length > 0){
                 me.setState({defaults: {sizes: data.hosts[0].sizes, networks: data.hosts[0].networks, images: data.hosts[0].images}});
             }
-            Network.post('/api/hosts/info', me.props.auth.token, host).done(function(data) {
+            Network.post('/api/hosts/info', me.props.auth.token, {hosts: [host]}).done(function(data) {
                 if(data){
-                    var stats = data.limits.absolute;
+                    var stats = data[0].limits.absolute;
                     me.setState({stats: {cpu: stats.totalCoresUsed, maxCpu: stats.maxTotalCores, ram: stats.totalRamUsed, instances: stats.totalInstancesUsed}});
                 }
             });
@@ -40,8 +40,7 @@ var Appp = React.createClass({
 
     onChange: function(e) {
         value = e.target.value;
-        var data = {hostname: e.target.value};
-        this.setState(data);
+        this.setState({hostname: value});
         for(i=0; i < this.state.hosts.length; i++){
             var host = this.state.hosts[i];
             if(host.name === value){
@@ -49,9 +48,9 @@ var Appp = React.createClass({
                 break;
             }
         }
-        Network.post('/api/hosts/info', this.props.auth.token, data).done(function(data) {
+        Network.post('/api/hosts/info', this.props.auth.token, {hosts: [value]}).done(function(data) {
             if(data){
-                var stats = data.limits.absolute;
+                var stats = data[0].limits.absolute;
                 this.setState({stats: {cpu: stats.totalCoresUsed, maxCpu: stats.maxTotalCores, ram: stats.totalRamUsed, instances: stats.totalInstancesUsed}});
             }
         }.bind(this));
@@ -106,7 +105,7 @@ var Appp = React.createClass({
 
         return (
             <div>
-                <div className="forma">
+                <Bootstrap.Col xs={12} sm={6} md={6}>
                     <Bootstrap.PageHeader>Launch new app</Bootstrap.PageHeader>
                     <Bootstrap.Form onSubmit={this.onSubmit} horizontal>
                         <Bootstrap.FormGroup>
@@ -176,7 +175,7 @@ var Appp = React.createClass({
                             {statusMessage}
                         </div>
                     </Bootstrap.Form>
-                </div>
+                </Bootstrap.Col>
                 <StatsRedux hostname = {this.state.hostname} stats = {this.state.stats} />
             </div>
         );
@@ -203,12 +202,12 @@ var Appp = React.createClass({
 var Stats = React.createClass({
     render: function () {
         return (
-            <div className="stats">
+            <Bootstrap.Col xs={12} sm={6} md={6}>
                 <Bootstrap.PageHeader>{this.props.hostname}</Bootstrap.PageHeader>
                 <label>CPU: </label>{this.props.stats.cpu} / {this.props.stats.maxCpu}<br/>
                 <label>RAM: </label>{this.props.stats.ram}<br/>
                 <label>INSTANCES: </label>{this.props.stats.instances}<br/>
-            </div>
+            </Bootstrap.Col>
         );
 
     }

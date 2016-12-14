@@ -118,11 +118,6 @@ ul.left-menu a.active{
     margin-bottom: 10px;
 }
 
-.forma{
-    width: 50%;
-    display: inline-block;
-}
-
 .tile{
     border-radius: 15px;
     border: 1px solid black;
@@ -139,10 +134,4 @@ ul.left-menu a.active{
 .description {
     height: 60px;
     overflow: auto;
-}
-
-.stats{
-    display: inline-block;
-    margin-left: 20px;
-    vertical-align: top;
 }
