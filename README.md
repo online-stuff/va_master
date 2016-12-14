@@ -10,13 +10,14 @@ Requirements:
 * Unbound ports: tcp/80, tcp/443, tcp/8600, tcp/8500, tcp/8400, tcp/8300
 * Python 2.7, pip, setuptools
 
-**Debian dependencies:** There are some OS-level dependencies (libssl source, supervisor daemon, build-essential compiler suite, HashiCorp Consul) that you can install
-using the following command:
+**Debian dependencies:** There are some OS-level dependencies (libssl source, supervisor daemon, build-essential compiler suite, HashiCorp Consul) that you can install, using the following command:
 
 ```bash
-sudo apt-get update && sudo apt-get install -y build-essential python-dev libssl-dev libffi-dev libzmq-dev unzip supervisor curl python-libvirt npm xorriso
+curl -sL https://deb.nodesource.com/setup_6.x | sudo -E bash -
+sudo apt-get update && sudo apt-get install -y build-essential python-dev libssl-dev libffi-dev libzmq-dev unzip supervisor curl python-libvirt nodejs xorriso
 sudo easy_install pip
 ```
+
 For 32bit server:
 ```bash
 sudo curl https://releases.hashicorp.com/consul/0.7.0/consul_0.7.0_linux_386.zip > consul.zip && sudo unzip -d /usr/bin -o consul.zip consul"
