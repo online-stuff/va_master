@@ -12,6 +12,7 @@ def manage_states(handler, action = 'append'):
         deploy_handler = handler.config.deploy_handler
         current_states = yield deploy_handler.datastore.get('states')
         data = handler.data
+
         new_state = {
             'name' : data['name'],
             'version' : data['version'],
@@ -21,6 +22,8 @@ def manage_states(handler, action = 'append'):
             'path' : data['path'],
             'substates' : data['substates']
         }
+
+        #TODO delete from /srv/salt
         getattr(current_states, action)(new_state)
         yield deploy_handler.datastore.insert('states', current_states)
         yield deploy_handler.generate_top_sls()
@@ -38,13 +41,30 @@ def get_states(handler):
 def reset_states(handler):
     yield handler.config.deploy_handler.reset_states()
 
+
 @tornado.gen.coroutine
 def create_new_state(handler):
-    files_archive = handler.data['files_archive']
+    data = handler.data
+    files_archive = data['files_archive']
+    print ('Info about state: ', new_state)
+
     #TODO maybe get it from config? 
     salt_path = '/srv/salt/'
-    with open(salt_path + handler.data['state_name']) as f:
+    tmp_archive = '/tmp/' + handler.data['state_name']
+
+    with open(tmp_archive, 'w') as f:
         f.write(files_archive)
+    
+    print ('Got archive at ', tmp_archive)
+
+    zip_ref = zipfile.ZipFile(tmp_archive)
+    zip_ref.extractall(salt_path)
+    state_data = ''
+    with open(salt_path + handler.data['state_name'] + '/appinfo.json') as f: 
+        state_data = json.loads(f.read())
+    handler.data.update(state_data)
+    zip_ref.close()
+
     #unzip(file_archive)
     manage_states(handler, 'append')
 

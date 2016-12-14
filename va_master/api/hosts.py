@@ -97,23 +97,24 @@ def create_host(handler):
 
 @tornado.gen.coroutine
 def get_host_info(handler):
-    try:
-        print ('Getting host data. ') 
-        data = handler.data
-        deploy_handler = handler.config.deploy_handler
-        store = deploy_handler.datastore
+    data = handler.data
+    deploy_handler = handler.config.deploy_handler
+    store = deploy_handler.datastore
 
+    required_hosts = data.get('hosts')
+    hosts = yield store.get('hosts')
 
-        hosts = yield store.get('hosts')
-        required_host = [host for host in hosts if host['hostname'] == data['hostname']][0]
+    if required_hosts: 
+        hosts = [host for host in hosts if host['hostname'] in required_hosts]
 
-        driver = yield deploy_handler.get_driver_by_id(required_host['driver_name'])
-        info = yield driver.get_host_data(required_host)
+    hosts_info = []
+    for host in hosts: 
+        driver = yield deploy_handler.get_driver_by_id(host['driver_name'])
 
-        required_host['instances'] = info['instances']
-        yield store.insert('hosts', hosts)
+        info = yield driver.get_host_data(host)
+        info['hostname'] = host['hostname']
 
-        handler.json(info)
-    except: 
-        import traceback
-        traceback.print_exc()
+        hosts_info.append(info)
+
+    handler.json(hosts_info)
+
