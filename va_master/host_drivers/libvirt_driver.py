@@ -200,6 +200,16 @@ class LibVirtDriver(base.DriverBase):
             traceback.print_exc()
         raise tornado.gen.Return(images)
 
+    @tornado.gen.coroutine
+    def get_host_status(self, host):
+        try:
+            host_url = host['host_protocol'] + '://' + host['host_ip'] + '/system'
+            self.conn = libvirt.open(host_url)
+        except Exception as e: 
+            raise tornado.gen.Return({'success' : False, 'message' : 'Error connecting to libvirt host. ' + e.message})
+
+        raise tornado.gen.Return({'success' : True, 'message' : ''})
+
 
     @tornado.gen.coroutine
     def get_host_data(self, host):

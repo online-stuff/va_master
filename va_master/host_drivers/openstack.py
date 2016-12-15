@@ -158,6 +158,15 @@ class OpenStackDriver(base.DriverBase):
         sizes = [x['name'] for x in sizes['flavors']]
         raise tornado.gen.Return(sizes)
 
+    @tornado.gen.coroutine
+    def get_host_status(self, host):
+        try:
+            self.token_data = yield self.get_token(host)
+        except Exception as e: 
+            raise tornado.gen.Return({'success' : False, 'message' : 'Error connecting to libvirt host. ' + e.message})
+
+        raise tornado.gen.Return({'success' : True, 'message' : ''})
+
 
     @tornado.gen.coroutine
     def get_host_data(self, host):
