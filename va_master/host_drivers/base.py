@@ -85,12 +85,6 @@ class DriverBase(object):
         pass
 
     @tornado.gen.coroutine
-    @abc.abstractmethod
-    def validate_field_values(self, step_index, field_values):
-        pass
-
-
-    @tornado.gen.coroutine
     def new_host_step_descriptions(self):
         raise tornado.gen.Return([
             {'name': 'Host info'},
