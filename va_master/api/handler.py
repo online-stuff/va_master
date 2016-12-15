@@ -29,6 +29,7 @@ paths = {
         'hosts/delete' : hosts.delete_host, 
 
         'apps' : apps.launch_app, 
+        'apps/action' : apps.perform_instance_action, 
         'states/add' : apps.create_new_state,
 
         'panel_action' : panels.panel_action, 
