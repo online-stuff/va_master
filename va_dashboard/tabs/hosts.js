@@ -24,16 +24,30 @@ var Hosts = React.createClass({
     },
     render: function() {
         var host_rows = this.state.hosts.map(function(host) {
-            return <tr key={host.hostname}>
-                <td>{host.hostname}</td>
-                <td>{host.host_ip}</td>
-                <td>{host.instances.length}</td>
-                <td>{host.driver_name}</td>
-                <td></td>
-                <td><Bootstrap.Button type="button" bsStyle='primary' onClick={this.deleteHost} value={host.hostname}>
-                    Delete
-                </Bootstrap.Button></td>
-            </tr>
+            var status = "", className = "";
+            if(host.status.success){
+                status = "Online";
+            }else{
+                popover = (
+                    <Bootstrap.Popover title="Error">
+                        {host.status.message}
+                    </Bootstrap.Popover>
+                );
+                status = (<Bootstrap.OverlayTrigger overlay={popover}><a>Offline</a></Bootstrap.OverlayTrigger>);
+                className = "danger";
+            }
+            return (
+                <tr key={host.hostname} className={className}>
+                    <td>{host.hostname}</td>
+                    <td>{host.host_ip}</td>
+                    <td>{host.instances.length}</td>
+                    <td>{host.driver_name}</td>
+                    <td>{status}</td>
+                    <td><Bootstrap.Button type="button" bsStyle='primary' onClick={this.deleteHost} value={host.hostname}>
+                        Delete
+                    </Bootstrap.Button></td>
+                </tr>
+            );
         }.bind(this));
         var NewHostFormRedux = connect(function(state){
             return {auth: state.auth};
