@@ -6,9 +6,6 @@ import json
 import subprocess
 import os
 
-from libcloud.compute.types import Provider
-from libcloud.compute.providers import get_driver
-
 from salt.cloud.clouds import nova
 
 PROVIDER_TEMPLATE = '''VAR_PROVIDER_NAME:
@@ -167,6 +164,19 @@ class OpenStackDriver(base.DriverBase):
 
         raise tornado.gen.Return({'success' : True, 'message' : ''})
 
+    @tornado.gen.coroutine
+    def instance_action(self, host, instance_name, action):
+        try: 
+            nova = client.Client('v2.0', host['username'], host['password'], host['tenant'], host['identity_url'])
+            instance = [x for x in nova.servers.list() if x.name == instance_name]
+        except Exception as e: 
+            raise tornado.gen.Return({'success' : False, 'message' : 'Could not get instance. ' + e.message})
+        try: 
+            success = getattr(instance, action)
+        except Exception as e: 
+            raise tornado.gen.Return({'success' : False, 'message' : 'Action was not performed. ' + e.message})
+
+        raise tornado.gen.Return({'success' : True, 'message' : ''})
 
     @tornado.gen.coroutine
     def get_host_data(self, host):

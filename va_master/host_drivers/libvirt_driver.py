@@ -210,6 +210,32 @@ class LibVirtDriver(base.DriverBase):
 
         raise tornado.gen.Return({'success' : True, 'message' : ''})
 
+    @tornado.gen.coroutine
+    def instance_action(self, host, instance_name, action):
+        host_url = host['host_protocol'] + '://' + host['host_ip'] + '/system'
+
+        try: 
+            conn = libvirt.open(host_url)
+            instance = conn.lookupByName(instance_name)
+        except Exception as e: 
+            raise tornado.gen.Return({'success' : False, 'message' : 'Could not connect to host. ' + e.message})
+
+        instance_action = {
+            'delete' : instance.undefine,
+            'reboot' : instance.reboot,
+            'start' : instance.start,
+            'stop' : instance.shutdown, 
+            'suspend' : instance.suspend, 
+            'resume' : instance.resume, 
+        }
+        if action not in instance_action: 
+            raise tornado.gen.Return({'success' : False, 'message' : 'Action not supported : ' +  action})
+        try: 
+            success = instance_action[action]()
+        except Exception as e: 
+            raise tornado.gen.Return({'success' : False, 'message' : 'Action was not performed. ' + e.message})
+
+        raise tornado.gen.Return({'success' : True, 'message' : ''})
 
     @tornado.gen.coroutine
     def get_host_data(self, host):
