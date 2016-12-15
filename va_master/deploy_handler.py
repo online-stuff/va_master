@@ -42,17 +42,9 @@ class DeployHandler(object):
 
     @tornado.gen.coroutine
     def get_drivers(self):
-
-        run_sync = tornado.ioloop.IOLoop.instance().run_sync
-
-        store_ip = functools.partial(datastore.get, 'master_ip')
-        libvirt_flavours = functools.partial(datastore.get, 'libvirt_flavours')
-        salt_master_fqdn = functools.partial(datastore.get, 'salt_master_fqdn')
-
-
-        hosts_ip = run_sync(store_ip)
-        libvirt_flavours = run_sync(libvirt_flavours)
-        salt_master_fqdn = run_sync(salt_master_fqdn)
+        hosts_ip = yield self.datastore.get('master_ip')
+        libvirt_flavours = yield self.datastore.get('libvirt_flavours')
+        salt_master_fqdn = yield self.datastore.get('salt_master_fqdn')
 
 
         self.drivers = [
