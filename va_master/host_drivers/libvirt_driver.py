@@ -204,7 +204,19 @@ class LibVirtDriver(base.DriverBase):
     @tornado.gen.coroutine
     def get_host_data(self, host):
         host_url = host['host_protocol'] + '://' + host['host_ip'] + '/system'
-        conn = libvirt.open(host_url)
+
+        try: 
+            conn = libvirt.open(host_url)
+        except Exception as e: 
+            host_data = {
+                'instances' : [], 
+                'limits' : {},
+                'host_usage' : {},
+                'status' : {'success' : False, 'message' : 'Could not connect to the libvirt host. ' + e}
+            }
+            raise tornado.gen.Return(host_data)
+
+
         storage = [x for x in conn.listAllStoragePools() if x.name() == 'default'][0]
         
         instances = conn.listAllDomains()
@@ -233,7 +245,9 @@ class LibVirtDriver(base.DriverBase):
                'total_memory_mb_usage' : (storage_info[2] + 0.0) / 2**20, 
                'total_vcpus_usage' : 0, 
                'total_local_gb_usage' : (storage_info[1] + 0.0) / 2**30,
-            }
+            },
+            'status' : {'success' : True, 'message': ''}
+
         }
 
         raise tornado.gen.Return(host_info)

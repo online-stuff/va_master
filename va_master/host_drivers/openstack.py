@@ -166,7 +166,6 @@ class OpenStackDriver(base.DriverBase):
 
             servers = yield self.get_openstack_value(self.token_data, 'compute', 'servers/detail')
             servers = servers['servers']
-#            instances = [x['name'] for x in instances['servers']]
 
             limits = yield self.get_openstack_value(self.token_data, 'compute', 'limits')
             tenants = yield self.get_openstack_value(self.token_data, 'identity', 'tenants')
@@ -178,44 +177,38 @@ class OpenStackDriver(base.DriverBase):
 
             tenant_usage = tenant_usage['tenant_usage']
 
-            host_usage = {
-                'total_disk_usage_gb' : sum([x['local_gb'] for x in tenant_usage['server_usages']]), 
-                'current_disk_usage_mb' : sum([x['memory_mb'] for x in tenant_usage['server_usages']]), 
-                'cpus_usage' : sum([x['vcpus'] for x in tenant_usage['server_usages']])
-            }
 
-#            print ('Gonna print my servers. ')
-#            print ('Servers: ', len(servers), 'tenant : ', len(tenant_usage['server_usages']), zip(servers, tenant_usage['server_usages']))
-
-
-            instances = {}
-            for server in servers: 
-                for server_usage in tenant_usage['server_usages']: 
-                    instances
-
-            instances = [
-                {
-                    'hostname' : x['name'], 
-                    'ipv4' : x['addresses'][x['addresses'].keys()[0]], 
-                    'local_gb' : y['local_gb'], 
-                    'memory_mb' : y['memory_mb'], 
-                    'status' : x['status'] 
-                } for x in servers for y in tenant_usage['server_usages'] if x['name'] == y['name'] 
-            ]
-
-            print ('Instances : ', instances)
-
+        except Exception as e: 
             host_data = {
-                'instances' : instances, #tenant_usage['server_usages'], 
-                'limits' : limits['limits'],
-                'host_usage' : host_usage
+                'instances' : [], 
+                'limits' : {},
+                'host_usage' : {},
+                'status' : {'success' : False, 'message' : 'Could not connect to the libvirt host. ' + e}
             }
-        except:
-            import traceback
-            print ('There was an error reaching host: ', host['hostname'])
-            traceback.print_exc()
-            raise tornado.gen.Return({})
+            raise tornado.gen.Return(host_data)
+           
+        host_usage = {
+            'total_disk_usage_gb' : sum([x['local_gb'] for x in tenant_usage['server_usages']]), 
+            'current_disk_usage_mb' : sum([x['memory_mb'] for x in tenant_usage['server_usages']]), 
+            'cpus_usage' : sum([x['vcpus'] for x in tenant_usage['server_usages']])
+        }
 
+        instances = [
+            {
+                'hostname' : x['name'], 
+                'ipv4' : x['addresses'][x['addresses'].keys()[0]], 
+                'local_gb' : y['local_gb'], 
+                'memory_mb' : y['memory_mb'], 
+                'status' : x['status'] 
+            } for x in servers for y in tenant_usage['server_usages'] if x['name'] == y['name'] 
+        ]
+
+        host_data = {
+            'instances' : instances, #tenant_usage['server_usages'], 
+            'limits' : limits['limits'],
+            'host_usage' : host_usage, 
+            'status' : {'success' : True, 'message': ''}
+        }
         raise tornado.gen.Return(host_data)
 
 
