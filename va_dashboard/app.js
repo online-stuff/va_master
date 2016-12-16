@@ -37,7 +37,23 @@ function auth(state, action){
     return newState;
 };
 
-var mainReducer = Redux.combineReducers({auth: auth});
+function apps(state, action){
+    if(typeof state === 'undefined'){
+        return {select: ""};
+    }
+
+    var newState = Object.assign({}, state);
+    if(action.type == 'LAUNCH'){
+        newState.select = action.select;
+    }
+    if(action.type == 'RESET_APP'){
+        newState.select = "";
+    }
+
+    return newState;
+};
+
+var mainReducer = Redux.combineReducers({auth: auth, apps: apps});
 var store = Redux.createStore(mainReducer);
 
 var Home = require('./tabs/home');

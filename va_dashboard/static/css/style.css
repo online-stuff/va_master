@@ -118,6 +118,20 @@ ul.left-menu a.active{
     margin-bottom: 10px;
 }
 
-.forma{
-    width: 60%;
+.tile{
+    border-radius: 15px;
+    border: 1px solid black;
+    text-align: center;
+    min-height: 160px;
+}
+
+.title{
+    font-weight: bold;
+    font-size: 16px;
+    padding: 5px;
+}
+
+.description {
+    height: 60px;
+    overflow: auto;
 }
