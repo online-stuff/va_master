@@ -41,7 +41,7 @@ class GenericDriver(base.DriverBase):
             'key_name' : key_name, 
             'key_path' : key_path
             }
-        super(Driver, self).__init__(**kwargs) 
+        super(GenericDriver, self).__init__(**kwargs) 
 
     @tornado.gen.coroutine
     def driver_id(self):
@@ -54,7 +54,7 @@ class GenericDriver(base.DriverBase):
       
     @tornado.gen.coroutine
     def get_steps(self):
-        steps = yield super(Driver, self).get_steps()
+        steps = yield super(GenericDriver, self).get_steps()
         self.steps = steps
         raise tornado.gen.Return(steps)
 
@@ -86,10 +86,10 @@ class GenericDriver(base.DriverBase):
             'delete' : 'delete_function', 
             'reboot' : 'reboot_function', 
             'start' : 'start_function', 
-            'stop' : 'stop_function, 
+            'stop' : 'stop_function', 
         }
         if action not in instance_action: 
-            raise tornado.gen.Return({'success' : False, 'message' : 'Action not supported : ', action})
+            raise tornado.gen.Return({'success' : False, 'message' : 'Action not supported : ' +  action})
 
         success = instance_action[action](instance_name)
         raise tornado.gen.Return({'success' : True, 'message' : ''})
@@ -104,7 +104,7 @@ class GenericDriver(base.DriverBase):
                     'absolute' : [
                     ]
                 }
-            }}
+            }
             #Functions that connect to host here. 
         except Exception as e: 
             host_data = {
@@ -148,13 +148,13 @@ class GenericDriver(base.DriverBase):
             self.field_values['sec_groups'] = yield self.get_sec_groups()
             self.field_values['images'] = yield self.get_images()
             self.field_values['sizes']= yield self.get_sizes()
-        step_kwargs = yield super(Driver, self).validate_field_values(step_index, field_values)
+        step_kwargs = yield super(GenericDriver, self).validate_field_values(step_index, field_values)
         raise tornado.gen.Return(StepResult(**step_kwargs))
        
       
     @tornado.gen.coroutine
     def create_minion(self, host, data):
         try:
-            yield super(Driver, self).create_minion(host, data)
+            yield super(GenericDriver, self).create_minion(host, data)
         except: 
             import traceback

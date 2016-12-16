@@ -86,10 +86,10 @@ class Driver(base.DriverBase):
             'delete' : 'delete_function', 
             'reboot' : 'reboot_function', 
             'start' : 'start_function', 
-            'stop' : 'stop_function, 
+            'stop' : 'stop_function', 
         }
         if action not in instance_action: 
-            raise tornado.gen.Return({'success' : False, 'message' : 'Action not supported : ', action})
+            raise tornado.gen.Return({'success' : False, 'message' : 'Action not supported : ' + action})
 
         success = instance_action[action](instance_name)
         raise tornado.gen.Return({'success' : True, 'message' : ''})
@@ -104,7 +104,7 @@ class Driver(base.DriverBase):
                     'absolute' : [
                     ]
                 }
-            }}
+            }
             #Functions that connect to host here. 
         except Exception as e: 
             host_data = {
