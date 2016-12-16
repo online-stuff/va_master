@@ -218,9 +218,12 @@ class OpenStackDriver(base.DriverBase):
                 'ipv4' : x['addresses'][x['addresses'].keys()[0]], 
                 'local_gb' : y['local_gb'], 
                 'memory_mb' : y['memory_mb'], 
+                'vcpus' : y['vcpus'],
                 'status' : x['status'] 
             } for x in servers for y in tenant_usage['server_usages'] if x['name'] == y['name'] 
         ]
+
+        print ('Limits are : ', limits)
 
         host_data = {
             'instances' : instances, #tenant_usage['server_usages'], 
