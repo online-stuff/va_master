@@ -5,7 +5,7 @@ import traceback
 import functools
 import tornado
 import tornado.gen
-from host_drivers import openstack, aws, vcloud, libvirt_driver
+from host_drivers import openstack, aws, vcloud, libvirt_driver, generic_driver
 
 
 from Crypto.PublicKey import RSA
@@ -18,8 +18,6 @@ class DeployHandler(object):
 
         self.deploy_pool_count = deploy_pool_count
         self.pool = ProcessPoolExecutor(deploy_pool_count)
-
-
         
     def start(self):
         pass
@@ -49,7 +47,8 @@ class DeployHandler(object):
 
         self.drivers = [
             openstack.OpenStackDriver(host_ip = hosts_ip, key_name = 'va_master_key_name', key_path = '/root/va_master_key'), 
-            libvirt_driver.LibVirtDriver(host_ip = hosts_ip, flavours = libvirt_flavours, salt_master_fqdn = salt_master_fqdn, key_name = 'va_master_key', key_path = '/root/va_master_key'), 
+            libvirt_driver.LibVirtDriver(host_ip = hosts_ip, flavours = libvirt_flavours, salt_master_fqdn = salt_master_fqdn, key_name = 'va_master_key', key_path = '/root/va_master_key'),
+            generic_driver.GenericDriver(host_ip = hosts_ip, key_name = 'va_master_key_name', key_path = '/root/va_master_key'), 
         ]
 
         raise tornado.gen.Return(self.drivers)

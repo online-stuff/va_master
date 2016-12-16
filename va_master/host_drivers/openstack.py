@@ -223,7 +223,7 @@ class OpenStackDriver(base.DriverBase):
             } for x in servers for y in tenant_usage['server_usages'] if x['name'] == y['name'] 
         ]
 
-        print ('Limits are : ', limits)
+        print ('Instances are : ', servers)
 
         host_data = {
             'instances' : instances, #tenant_usage['server_usages'], 
