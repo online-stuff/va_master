@@ -53,10 +53,8 @@ class ApiHandler(tornado.web.RequestHandler):
     @tornado.gen.coroutine
     def exec_method(self, method, path, data):
         self.data = data
-        #print ('Executing. ')
         try:
             yield paths[method][path](self)
-            print ('Done. ')
         except: 
             import traceback
             traceback.print_exc()
@@ -68,8 +66,6 @@ class ApiHandler(tornado.web.RequestHandler):
     @tornado.gen.coroutine
     def post(self, path):
         try: 
-            print ('Trying to post. ')
-            print (self.request, self.request.headers['Content-Type'])
             try: 
                 if 'json' in self.request.headers['Content-Type']: 
                     data = json.loads(self.request.body)

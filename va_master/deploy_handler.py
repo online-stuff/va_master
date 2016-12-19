@@ -15,6 +15,7 @@ from concurrent.futures import ProcessPoolExecutor
 class DeployHandler(object):
     def __init__(self, datastore, deploy_pool_count):
         self.datastore = datastore
+        self.drivers = []
 
         self.deploy_pool_count = deploy_pool_count
         self.pool = ProcessPoolExecutor(deploy_pool_count)
@@ -40,16 +41,16 @@ class DeployHandler(object):
 
     @tornado.gen.coroutine
     def get_drivers(self):
-        hosts_ip = yield self.datastore.get('master_ip')
-        libvirt_flavours = yield self.datastore.get('libvirt_flavours')
-        salt_master_fqdn = yield self.datastore.get('salt_master_fqdn')
+        if not self.drivers: 
+            hosts_ip = yield self.datastore.get('master_ip')
+            libvirt_flavours = yield self.datastore.get('libvirt_flavours')
+            salt_master_fqdn = yield self.datastore.get('salt_master_fqdn')
 
-
-        self.drivers = [
-            openstack.OpenStackDriver(host_ip = hosts_ip, key_name = 'va_master_key_name', key_path = '/root/va_master_key'), 
-            libvirt_driver.LibVirtDriver(host_ip = hosts_ip, flavours = libvirt_flavours, salt_master_fqdn = salt_master_fqdn, key_name = 'va_master_key', key_path = '/root/va_master_key'),
-            generic_driver.GenericDriver(host_ip = hosts_ip, key_name = 'va_master_key_name', key_path = '/root/va_master_key'), 
-        ]
+            self.drivers = [
+                openstack.OpenStackDriver(host_ip = hosts_ip, key_name = 'va_master_key_name', key_path = '/root/va_master_key'), 
+                libvirt_driver.LibVirtDriver(host_ip = hosts_ip, flavours = libvirt_flavours, salt_master_fqdn = salt_master_fqdn, key_name = 'va_master_key', key_path = '/root/va_master_key'),
+                generic_driver.GenericDriver(host_ip = hosts_ip, key_name = 'va_master_key_name', key_path = '/root/va_master_key'), 
+            ]
 
         raise tornado.gen.Return(self.drivers)
 

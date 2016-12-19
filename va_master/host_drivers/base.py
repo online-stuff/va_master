@@ -159,6 +159,9 @@ class DriverBase(object):
 
     @tornado.gen.coroutine
     def validate_field_values(self, step_index, field_values):
+
+        print ('My field values: ', self.field_values)
+
         if step_index < 0:
             raise tornado.gen.Return(StepResult(
                 errors=[], new_step_index=0, option_choices={}
@@ -185,6 +188,7 @@ class DriverBase(object):
 
             self.field_values['defaults']['network'] = field_values['network']
             self.field_values['defaults']['sec_group'] = field_values['sec_group']
+
 
             raise tornado.gen.Return({
                 'errors':[], 'new_step_index':2, 'option_choices':{
