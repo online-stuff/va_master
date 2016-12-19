@@ -262,7 +262,8 @@ class LibVirtDriver(base.DriverBase):
                 'ipv4' : 'n/a', 
                 'local_gb' : (x.info()[1] + 0.0) / 2**30, 
                 'memory_mb' : (x.info()[2] + 0.0) / 2**20, 
-                'status' : x.info()[0]
+                'status' : x.isActive(), 
+                'vcpus' : not (not x.isActive() or x.vcpus()), #weird workaround because if domain is not active, it throws an exception. 
             } for x in instances]
 
 

@@ -30,7 +30,7 @@ paths = {
 
         'apps' : apps.launch_app, 
         'apps/action' : apps.perform_instance_action, 
-        'states/add' : apps.create_new_state,
+        'state/add' : apps.create_new_state,
 
         'panel_action' : panels.panel_action, 
     }
@@ -68,13 +68,8 @@ class ApiHandler(tornado.web.RequestHandler):
     @tornado.gen.coroutine
     def post(self, path):
         print ('Trying to post. ')
+        print (self.request, self.request.body)
         try: 
-#            print (self.request)
-#            print (dir(self.request))
-#            print (self.request.body)
-#            print (self.request.files)
-#            print (self.request.arguments)
-#            print (self.request.body_arguments)
             try: 
                 data = json.loads(self.request.body)
             except ValueError: 

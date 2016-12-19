@@ -53,6 +53,7 @@ def reset_states(handler):
 @tornado.gen.coroutine
 def create_new_state(handler):
     data = handler.data
+    print ('Data is : ', data)
     files_archive = data['files_archive']
     print ('Info about state: ', new_state)
 
