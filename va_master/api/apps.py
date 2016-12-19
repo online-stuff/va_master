@@ -3,6 +3,7 @@ import tornado.gen
 import json
 import subprocess
 import requests
+import zipfile, tarfile
 
 @tornado.gen.coroutine
 def perform_instance_action(handler): 
@@ -52,27 +53,35 @@ def reset_states(handler):
 
 @tornado.gen.coroutine
 def create_new_state(handler):
-    data = handler.data
-    print ('Data is : ', data)
-    files_archive = data['files_archive']
-    print ('Info about state: ', new_state)
+    data = handler.data['file'][0]
+    print ('My data is : ', data)
+    files_archive = data['body']
+    state_name = data['filename']
 
     #TODO maybe get it from config? 
     salt_path = '/srv/salt/'
-    tmp_archive = '/tmp/' + handler.data['state_name']
+    tmp_archive = '/tmp/' + state_name 
 
     with open(tmp_archive, 'w') as f:
         f.write(files_archive)
     
     print ('Got archive at ', tmp_archive)
 
-    zip_ref = zipfile.ZipFile(tmp_archive)
-    zip_ref.extractall(salt_path)
+#    zip_ref = zipfile.ZipFile(tmp_archive)
+#    zip_ref.extractall(salt_path)
+
+    tar_ref = tarfile.TarFile(tmp_archive)
+    tar_ref.extractall(salt_path)
+    print ('Names are : ', tar_ref.getnames())
+
+    state_top = tar_ref.getnames()[0]
     state_data = ''
-    with open(salt_path + handler.data['state_name'] + '/appinfo.json') as f: 
+    with open(salt_path + state_top + '/appinfo.json') as f: 
         state_data = json.loads(f.read())
+
     handler.data.update(state_data)
-    zip_ref.close()
+#    zip_ref.close()
+    tar_ref.close()
 
     #unzip(file_archive)
     manage_states(handler, 'append')

@@ -67,12 +67,18 @@ class ApiHandler(tornado.web.RequestHandler):
 
     @tornado.gen.coroutine
     def post(self, path):
-        print ('Trying to post. ')
-        print (self.request, self.request.body)
         try: 
+            print ('Trying to post. ')
+            print (self.request, self.request.headers['Content-Type'])
             try: 
-                data = json.loads(self.request.body)
+                if 'json' in self.request.headers['Content-Type']: 
+                    data = json.loads(self.request.body)
+                else:
+                    data = self.request.arguments
+                    data.update(self.request.files)
             except ValueError: 
+                import traceback
+                traceback.print_exc()
                 data = {}
             yield self.exec_method('post', path, data)
         except: 
