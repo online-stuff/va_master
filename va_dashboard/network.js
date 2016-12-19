@@ -28,5 +28,20 @@ module.exports = {
         }
 
         return $.ajax(opts);
+    },
+    post_file: function(url, token, data){
+        var opts = {
+            type: 'POST',
+            url: url,
+            processData: false,
+            contentType: false,
+            data: data
+        };
+
+        if(typeof token !== 'undefined') {
+            opts.headers = {'Authorization': 'Token ' + token};
+        }
+
+        return $.ajax(opts);
     }
 };

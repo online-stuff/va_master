@@ -34,10 +34,22 @@ var Appp = React.createClass({
         for(var i = 0; i < this.state.hosts.length; i++){
             hostname = this.state.hosts[i].hostname;
             var rows = this.state.hosts[i].instances.map(function(app) {
+                ipaddr = app.ipv4;
+                if(Array.isArray(ipaddr)){
+                    if(ipaddr.length > 0){
+                        var ips = "";
+                        for(j=0; j<ipaddr.length; j++){
+                            ips += ipaddr[j].addr + ", ";
+                        }
+                        ipaddr = ips.slice(0, -2);
+                    }else{
+                        ipaddr = "";
+                    }
+                }
                 return (
                     <tr key={app.hostname}>
                         <td>{app.hostname}</td>
-                        <td>{app.ipv4}</td>
+                        <td>{ipaddr}</td>
                         <td>{app.local_gb}</td>
                         <td>{app.status}</td>
                         <td>{hostname}</td>
@@ -85,7 +97,7 @@ var Appp = React.createClass({
 
 var AppForm = React.createClass({
     getInitialState: function () {
-        return {status: 'none', progress: 0, hosts: [], states: [], hostname: "", role: "", defaults: {sizes: [], networks: [], images: []}, stats: {cpu: "", maxCpu: "", ram: "", instances: ""}, host_usage: {cpu: "", ram: "", disk: ""}};
+        return {status: 'none', progress: 0, hosts: [], states: [], hostname: "", role: "", defaults: {sizes: [], networks: [], images: []}, stats: {cpu: "", maxCpu: "", instances: ""}, host_usage: {cpu: "", ram: "", disk: ""}};
     },
 
     componentDidMount: function () {
@@ -101,15 +113,9 @@ var AppForm = React.createClass({
                 var h = me.props.hosts[0];
                 var stats = h.limits.absolute;
                 var host_usage = h.host_usage;
-                me.setState({stats: {cpu: stats.totalCoresUsed, maxCpu: stats.maxTotalCores, ram: stats.totalRamUsed, instances: stats.totalInstancesUsed}});
-                me.setState({host_usage: {cpu: host_usage.total_vcpus_usage, ram: host_usage.total_memory_mb_usage, disk: host_usage.total_local_gb_usage}});
+                me.setState({stats: {cpu: stats.totalCoresUsed, maxCpu: stats.maxTotalCores, instances: stats.totalInstancesUsed}});
+                me.setState({host_usage: {cpu: host_usage.cpus_usage, ram: stats.totalRamUsed, disk: host_usage.total_disk_usage_gb}});
             }
-            // Network.post('/api/hosts/info', me.props.auth.token, {hosts: [host]}).done(function(data) {
-            //     if(data){
-            //         var stats = data[0].limits.absolute;
-            //         me.setState({stats: {cpu: stats.totalCoresUsed, maxCpu: stats.maxTotalCores, ram: stats.totalRamUsed, instances: stats.totalInstancesUsed}});
-            //     }
-            // });
         });
         Network.get('/api/states', this.props.auth.token).done(function (data) {
             me.setState({states: data});
@@ -120,10 +126,6 @@ var AppForm = React.createClass({
             }
         });
     },
-
-    // componentWillUnmount: function () {
-    //     this.props.dispatch({type: 'RESET_APP'});
-    // },
 
     onChange: function(e) {
         value = e.target.value;
@@ -136,17 +138,11 @@ var AppForm = React.createClass({
                 break;
             }
         }
-        var h = this.props.hosts[i];
+        var h = this.props.hosts[i-1];
         var stats = h.limits.absolute;
         var host_usage = h.host_usage;
-        this.setState({stats: {cpu: stats.totalCoresUsed, maxCpu: stats.maxTotalCores, ram: stats.totalRamUsed, instances: stats.totalInstancesUsed}});
-        this.setState({host_usage: {cpu: host_usage.total_vcpus_usage, ram: host_usage.total_memory_mb_usage, disk: host_usage.total_local_gb_usage}});
-        // Network.post('/api/hosts/info', this.props.auth.token, {hosts: [value]}).done(function(data) {
-        //     if(data){
-        //         var stats = data[0].limits.absolute;
-        //         this.setState({stats: {cpu: stats.totalCoresUsed, maxCpu: stats.maxTotalCores, ram: stats.totalRamUsed, instances: stats.totalInstancesUsed}});
-        //     }
-        // }.bind(this));
+        this.setState({stats: {cpu: stats.totalCoresUsed, maxCpu: stats.maxTotalCores, instances: stats.totalInstancesUsed}});
+        this.setState({host_usage: {cpu: host_usage.cpus_usage, ram: stats.totalRamUsed, disk: host_usage.total_disk_usage_gb}});
     },
 
     onChangeRole: function(e) {

@@ -112,24 +112,17 @@ var NewStateForm = React.createClass({
         str = str.split(/[\s,]+/).join();
         var substates = str.split(",");
         var fd = new FormData();
-        // fd.append('name', ReactDOM.findDOMNode(this.refs.name).value);
-        // fd.append('version', ReactDOM.findDOMNode(this.refs.version).value);
-        // fd.append('description', ReactDOM.findDOMNode(this.refs.description).value);
-        // fd.append('icon', ReactDOM.findDOMNode(this.refs.icon).value);
-        // fd.append('dependency', ReactDOM.findDOMNode(this.refs.dependency).value);
-        // fd.append('path', ReactDOM.findDOMNode(this.refs.path).value);
-        // fd.append('substates', substates);
+        fd.append('name', ReactDOM.findDOMNode(this.refs.name).value);
+        fd.append('version', ReactDOM.findDOMNode(this.refs.version).value);
+        fd.append('description', ReactDOM.findDOMNode(this.refs.description).value);
+        fd.append('icon', ReactDOM.findDOMNode(this.refs.icon).value);
+        fd.append('dependency', ReactDOM.findDOMNode(this.refs.dependency).value);
+        fd.append('path', ReactDOM.findDOMNode(this.refs.path).value);
+        fd.append('substates', substates);
         fd.append('file', ReactDOM.findDOMNode(this.refs.file).files[0]);
-        // var me = this;
-        // Network.post('/api/state/add', this.props.auth.token, fd).done(function(data) {
-        //     me.props.getStates();
-        // });
-        $.ajax({
-            type: 'POST',
-            url: '/api/state/add',
-            processData: false,
-            contentType: false,
-            data: fd
+        var me = this;
+        Network.post_file('/api/state/add', this.props.auth.token, fd).done(function(data) {
+            me.props.getStates();
         });
     }
 });
