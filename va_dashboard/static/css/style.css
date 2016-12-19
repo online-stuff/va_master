@@ -135,3 +135,23 @@ ul.left-menu a.active{
     height: 60px;
     overflow: auto;
 }
+
+.chart{
+    display: inline-block;
+    margin-left: 20px;
+    width: 25%;
+}
+
+.appblock{
+    margin-top: 30px;
+}
+
+.container{
+    float:left;
+    width:100%;
+    margin-bottom: 20px;
+}
+
+.header{
+    margin-top: 0px;
+}

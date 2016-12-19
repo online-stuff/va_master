@@ -5,7 +5,87 @@ var Bootstrap = require('react-bootstrap');
 
 var Appp = React.createClass({
     getInitialState: function () {
-        return {status: 'none', progress: 0, hosts: [], states: [], hostname: "", role: "", defaults: {sizes: [], networks: [], images: []}, stats: {cpu: "", maxCpu: "", ram: "", instances: ""}};
+        return {hosts: []};
+    },
+
+    componentDidMount: function () {
+        var data = {hosts: []};
+        Network.post('/api/hosts/info', this.props.auth.token, data).done(function(data) {
+            this.setState({hosts: data});
+        }.bind(this));
+    },
+
+    componentWillUnmount: function () {
+        this.props.dispatch({type: 'RESET_APP'});
+    },
+
+    btn_clicked: function(hostname, host, evtKey){
+        var me = this;
+        var data = {hostname: host, instance_name: hostname, action: evtKey};
+        Network.post('/api/apps/action', this.props.auth.token, data).done(function(d) {
+            Network.post('/api/hosts/info', me.props.auth.token, {hosts: []}).done(function(data) {
+                me.setState({hosts: data});
+            });
+        });
+    },
+
+    render: function () {
+        var app_rows = [];
+        for(var i = 0; i < this.state.hosts.length; i++){
+            hostname = this.state.hosts[i].hostname;
+            var rows = this.state.hosts[i].instances.map(function(app) {
+                return (
+                    <tr key={app.hostname}>
+                        <td>{app.hostname}</td>
+                        <td>{app.ipv4}</td>
+                        <td>{app.local_gb}</td>
+                        <td>{app.status}</td>
+                        <td>{hostname}</td>
+                        <td>
+                            <Bootstrap.DropdownButton bsStyle='primary' title="Choose" onSelect = {this.btn_clicked.bind(this, app.hostname, hostname)}>
+                                <Bootstrap.MenuItem eventKey="reboot">Reboot</Bootstrap.MenuItem>
+                                <Bootstrap.MenuItem eventKey="delete">Delete</Bootstrap.MenuItem>
+                                <Bootstrap.MenuItem eventKey="start">Start</Bootstrap.MenuItem>
+                                <Bootstrap.MenuItem eventKey="stop">Stop</Bootstrap.MenuItem>
+                            </Bootstrap.DropdownButton>
+                        </td>
+                    </tr>
+                );
+            }.bind(this));
+            app_rows.push(rows);
+        }
+
+        var AppFormRedux = connect(function(state){
+            return {auth: state.auth, apps: state.apps};
+        })(AppForm);
+
+        return (
+            <div>
+                <AppFormRedux hosts = {this.state.hosts}/>
+                <Bootstrap.PageHeader>Current apps <small>All specified apps</small></Bootstrap.PageHeader>
+                <Bootstrap.Table striped bordered hover>
+                    <thead>
+                        <tr>
+                        <td>Hostname</td>
+                        <td>IP</td>
+                        <td>Size</td>
+                        <td>Status</td>
+                        <td>Host</td>
+                        <td>Actions</td>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {app_rows}
+                    </tbody>
+                </Bootstrap.Table>
+            </div>
+        );
+    }
+});
+
+var AppForm = React.createClass({
+    getInitialState: function () {
+        return {status: 'none', progress: 0, hosts: [], states: [], hostname: "", role: "", defaults: {sizes: [], networks: [], images: []}, stats: {cpu: "", maxCpu: "", ram: "", instances: ""}, host_usage: {cpu: "", ram: "", disk: ""}};
     },
 
     componentDidMount: function () {
@@ -17,12 +97,19 @@ var Appp = React.createClass({
             if(data.hosts.length > 0){
                 me.setState({defaults: {sizes: data.hosts[0].sizes, networks: data.hosts[0].networks, images: data.hosts[0].images}});
             }
-            Network.post('/api/hosts/info', me.props.auth.token, {hosts: [host]}).done(function(data) {
-                if(data){
-                    var stats = data[0].limits.absolute;
-                    me.setState({stats: {cpu: stats.totalCoresUsed, maxCpu: stats.maxTotalCores, ram: stats.totalRamUsed, instances: stats.totalInstancesUsed}});
-                }
-            });
+            if(me.props.hosts.length > 0){
+                var h = me.props.hosts[0];
+                var stats = h.limits.absolute;
+                var host_usage = h.host_usage;
+                me.setState({stats: {cpu: stats.totalCoresUsed, maxCpu: stats.maxTotalCores, ram: stats.totalRamUsed, instances: stats.totalInstancesUsed}});
+                me.setState({host_usage: {cpu: host_usage.total_vcpus_usage, ram: host_usage.total_memory_mb_usage, disk: host_usage.total_local_gb_usage}});
+            }
+            // Network.post('/api/hosts/info', me.props.auth.token, {hosts: [host]}).done(function(data) {
+            //     if(data){
+            //         var stats = data[0].limits.absolute;
+            //         me.setState({stats: {cpu: stats.totalCoresUsed, maxCpu: stats.maxTotalCores, ram: stats.totalRamUsed, instances: stats.totalInstancesUsed}});
+            //     }
+            // });
         });
         Network.get('/api/states', this.props.auth.token).done(function (data) {
             me.setState({states: data});
@@ -34,13 +121,14 @@ var Appp = React.createClass({
         });
     },
 
-    componentWillUnmount: function () {
-        this.props.dispatch({type: 'RESET_APP'});
-    },
+    // componentWillUnmount: function () {
+    //     this.props.dispatch({type: 'RESET_APP'});
+    // },
 
     onChange: function(e) {
         value = e.target.value;
         this.setState({hostname: value});
+        var i;
         for(i=0; i < this.state.hosts.length; i++){
             var host = this.state.hosts[i];
             if(host.name === value){
@@ -48,12 +136,17 @@ var Appp = React.createClass({
                 break;
             }
         }
-        Network.post('/api/hosts/info', this.props.auth.token, {hosts: [value]}).done(function(data) {
-            if(data){
-                var stats = data[0].limits.absolute;
-                this.setState({stats: {cpu: stats.totalCoresUsed, maxCpu: stats.maxTotalCores, ram: stats.totalRamUsed, instances: stats.totalInstancesUsed}});
-            }
-        }.bind(this));
+        var h = this.props.hosts[i];
+        var stats = h.limits.absolute;
+        var host_usage = h.host_usage;
+        this.setState({stats: {cpu: stats.totalCoresUsed, maxCpu: stats.maxTotalCores, ram: stats.totalRamUsed, instances: stats.totalInstancesUsed}});
+        this.setState({host_usage: {cpu: host_usage.total_vcpus_usage, ram: host_usage.total_memory_mb_usage, disk: host_usage.total_local_gb_usage}});
+        // Network.post('/api/hosts/info', this.props.auth.token, {hosts: [value]}).done(function(data) {
+        //     if(data){
+        //         var stats = data[0].limits.absolute;
+        //         this.setState({stats: {cpu: stats.totalCoresUsed, maxCpu: stats.maxTotalCores, ram: stats.totalRamUsed, instances: stats.totalInstancesUsed}});
+        //     }
+        // }.bind(this));
     },
 
     onChangeRole: function(e) {
@@ -104,9 +197,9 @@ var Appp = React.createClass({
         })(Stats);
 
         return (
-            <div>
+            <div className="container">
                 <Bootstrap.Col xs={12} sm={6} md={6}>
-                    <Bootstrap.PageHeader>Launch new app</Bootstrap.PageHeader>
+                    <Bootstrap.PageHeader className="header">Launch new app</Bootstrap.PageHeader>
                     <Bootstrap.Form onSubmit={this.onSubmit} horizontal>
                         <Bootstrap.FormGroup>
                             <Bootstrap.Col sm={4}>
@@ -176,7 +269,7 @@ var Appp = React.createClass({
                         </div>
                     </Bootstrap.Form>
                 </Bootstrap.Col>
-                <StatsRedux hostname = {this.state.hostname} stats = {this.state.stats} />
+                <StatsRedux hostname = {this.state.hostname} stats = {this.state.stats} host_usage = {this.state.host_usage} />
             </div>
         );
     },
@@ -203,9 +296,10 @@ var Stats = React.createClass({
     render: function () {
         return (
             <Bootstrap.Col xs={12} sm={6} md={6}>
-                <Bootstrap.PageHeader>{this.props.hostname}</Bootstrap.PageHeader>
+                <Bootstrap.PageHeader className="header">{this.props.hostname}</Bootstrap.PageHeader>
                 <label>CPU: </label>{this.props.stats.cpu} / {this.props.stats.maxCpu}<br/>
-                <label>RAM: </label>{this.props.stats.ram}<br/>
+                <label>RAM: </label>{this.props.host_usage.ram}<br/>
+                <label>DISK: </label>{this.props.host_usage.disk}<br/>
                 <label>INSTANCES: </label>{this.props.stats.instances}<br/>
             </Bootstrap.Col>
         );
