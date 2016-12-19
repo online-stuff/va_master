@@ -284,9 +284,10 @@ class LibVirtDriver(base.DriverBase):
                 'maxTotalInstances' : 'n/a'
             }},
             'host_usage' : {
-               'current_disk_usage_mb' : (storage_info[2] + 0.0) / 2**20, 
+               'ram_usage' : (storage_info[2] + 0.0) / 2**20, 
                'cpus_usage' : 0, 
-               'total_disk_usage_gb' : (storage_info[1] + 0.0) / 2**30,
+               'disk_usage_gb' : (storage_info[1] + 0.0) / 2**30,
+               'instances_used' : len(instances),
             },
             'status' : {'success' : True, 'message': ''}
 

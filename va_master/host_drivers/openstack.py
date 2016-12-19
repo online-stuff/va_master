@@ -206,12 +206,6 @@ class OpenStackDriver(base.DriverBase):
             }
             raise tornado.gen.Return(host_data)
            
-        host_usage = {
-            'total_disk_usage_gb' : sum([x['local_gb'] for x in tenant_usage['server_usages']]), 
-            'current_disk_usage_mb' : sum([x['memory_mb'] for x in tenant_usage['server_usages']]), 
-            'cpus_usage' : sum([x['vcpus'] for x in tenant_usage['server_usages']])
-        }
-
         instances = [
             {
                 'hostname' : x['name'], 
@@ -223,7 +217,13 @@ class OpenStackDriver(base.DriverBase):
             } for x in servers for y in tenant_usage['server_usages'] if x['name'] == y['name'] 
         ]
 
-        print ('Instances are : ', servers)
+        host_usage = {
+            'disk_usage_gb' : sum([x['local_gb'] for x in tenant_usage['server_usages']]), 
+            'ram_usage' : sum([x['memory_mb'] for x in tenant_usage['server_usages']]), 
+            'cpus_usage' : sum([x['vcpus'] for x in tenant_usage['server_usages']])
+            'instances_used' : len(instances),
+
+        }
 
         host_data = {
             'instances' : instances, #tenant_usage['server_usages'], 
