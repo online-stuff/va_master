@@ -255,16 +255,21 @@ class LibVirtDriver(base.DriverBase):
 
         storage = [x for x in conn.listAllStoragePools() if x.name() == 'default'][0]
         
-        instances = conn.listAllDomains()
-        instances = [
-            {
+        instances_list = conn.listAllDomains()
+
+        instances = []
+        for x in instances_list: 
+            instance =  {
                 'hostname' : x.name(), 
                 'ipv4' : 'n/a', 
                 'local_gb' : (x.info()[1] + 0.0) / 2**30, 
                 'memory_mb' : (x.info()[2] + 0.0) / 2**20, 
                 'status' : x.isActive(), 
-                'vcpus' : not (not x.isActive() or x.vcpus()), #weird workaround because if domain is not active, it throws an exception. 
-            } for x in instances]
+            }
+            if not x.isActive(): instance['vcpus'] = 0
+            else: instance['vcpus'] = x.vcpus() 
+            instances.append(instance)
+            
 
 
         info = conn.getInfo()
@@ -279,9 +284,9 @@ class LibVirtDriver(base.DriverBase):
                 'maxTotalInstances' : 'n/a'
             }},
             'host_usage' : {
-               'total_memory_mb_usage' : (storage_info[2] + 0.0) / 2**20, 
-               'total_vcpus_usage' : 0, 
-               'total_local_gb_usage' : (storage_info[1] + 0.0) / 2**30,
+               'current_disk_usage_mb' : (storage_info[2] + 0.0) / 2**20, 
+               'cpus_usage' : 0, 
+               'total_disk_usage_gb' : (storage_info[1] + 0.0) / 2**30,
             },
             'status' : {'success' : True, 'message': ''}
 
