@@ -12,7 +12,7 @@ def perform_instance_action(handler):
     hosts = yield store.get('hosts')
 
     host = [x for x in hosts if x['hostname'] == data['hostname']]
-    driver = yield handler.deploy_handler.get_driver_by_id(host['driver_name'])
+    driver = yield handler.config.deploy_handler.get_driver_by_id(host['driver_name'])
     success = yield driver.instance_action(data['instance_name'], host, data['action'])
 
 
