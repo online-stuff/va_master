@@ -7,6 +7,7 @@ import zipfile, tarfile
 
 @tornado.gen.coroutine
 def perform_instance_action(handler): 
+    data = handler.data
     store = handler.config.deploy_handler.datastore
     hosts = yield store.get('hosts')
 
