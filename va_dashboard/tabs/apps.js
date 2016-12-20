@@ -133,7 +133,7 @@ var AppForm = React.createClass({
         var i;
         for(i=0; i < this.state.hosts.length; i++){
             var host = this.state.hosts[i];
-            if(host.name === value){
+            if(host.hostname === value){
                 this.setState({defaults: {sizes: host.sizes, networks: host.networks, images: host.images}});
                 break;
             }
