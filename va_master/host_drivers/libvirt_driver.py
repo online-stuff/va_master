@@ -223,7 +223,7 @@ class LibVirtDriver(base.DriverBase):
         instance_action = {
             'delete' : instance.undefine,
             'reboot' : instance.reboot,
-            'start' : instance.start,
+            'start' : instance.create, 
             'stop' : instance.shutdown, 
             'suspend' : instance.suspend, 
             'resume' : instance.resume, 

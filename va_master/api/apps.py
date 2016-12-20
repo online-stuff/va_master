@@ -25,21 +25,15 @@ def manage_states(handler, action = 'append'):
     try:
         deploy_handler = handler.config.deploy_handler
         current_states = yield deploy_handler.datastore.get('states')
-        data = handler.data
-
-        new_state = {
-            'name' : data['name'],
-            'version' : data['version'],
-            'description' : data['description'], 
-            'icon' : data['icon'], 
-            'dependency' : data['dependency'], 
-            'path' : data['path'],
-            'substates' : data['substates']
-        }
 
         #TODO delete from /srv/salt
-        getattr(current_states, action)(new_state)
-        yield deploy_handler.datastore.insert('states', current_states)
+        getattr(current_states, action)(handler.data['name'])
+        store_action = {
+            'append' : deploy_handler.datastore.insert, 
+            'delete' : deploy_handler.datastore.delete, 
+        }[action]
+
+        yield store_action('states', current_states)
         yield deploy_handler.generate_top_sls()
     except: 
         import traceback
@@ -59,8 +53,6 @@ def reset_states(handler):
 @tornado.gen.coroutine
 def create_new_state(handler):
     data = handler.data['file'][0]
-    print ('My data is : ', data)
-    print ('Other stuff : ', handler.data)
     files_archive = data['body']
     state_name = data['filename']
 
@@ -70,8 +62,6 @@ def create_new_state(handler):
 
     with open(tmp_archive, 'w') as f:
         f.write(files_archive)
-    
-    print ('Got archive at ', tmp_archive)
 
     new_state = {
         'name' : data['name'],
