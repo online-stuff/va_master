@@ -6,7 +6,7 @@ import json
 import subprocess
 import os
 
-from salt.cloud.clouds import nova
+from novaclient import client
 
 PROVIDER_TEMPLATE = '''VAR_PROVIDER_NAME:
   auth_minion: VAR_THIS_IP
@@ -166,13 +166,17 @@ class OpenStackDriver(base.DriverBase):
 
     @tornado.gen.coroutine
     def instance_action(self, host, instance_name, action):
+        print ('In driver. ')
         try: 
-            nova = client.Client('v2.0', host['username'], host['password'], host['tenant'], host['identity_url'])
-            instance = [x for x in nova.servers.list() if x.name == instance_name]
+            nova = client.Client('2.0', host['username'], host['password'], host['tenant'], 'http://' + host['host_ip'] + '/v2.0')
+            instance = [x for x in nova.servers.list() if x.name == instance_name][0]
         except Exception as e: 
+            import traceback
+            traceback.print_exc()
             raise tornado.gen.Return({'success' : False, 'message' : 'Could not get instance. ' + e.message})
         try: 
-            success = getattr(instance, action)
+            success = getattr(instance, action)()
+            print ('Made action : ', success)
         except Exception as e: 
             raise tornado.gen.Return({'success' : False, 'message' : 'Action was not performed. ' + e.message})
 
@@ -220,7 +224,7 @@ class OpenStackDriver(base.DriverBase):
         host_usage = {
             'disk_usage_gb' : sum([x['local_gb'] for x in tenant_usage['server_usages']]), 
             'ram_usage' : sum([x['memory_mb'] for x in tenant_usage['server_usages']]), 
-            'cpus_usage' : sum([x['vcpus'] for x in tenant_usage['server_usages']])
+            'cpus_usage' : sum([x['vcpus'] for x in tenant_usage['server_usages']]),
             'instances_used' : len(instances),
 
         }

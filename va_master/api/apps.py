@@ -7,13 +7,17 @@ import zipfile, tarfile
 
 @tornado.gen.coroutine
 def perform_instance_action(handler): 
-    data = handler.data
-    store = handler.config.deploy_handler.datastore
-    hosts = yield store.get('hosts')
+    try: 
+        data = handler.data
+        store = handler.config.deploy_handler.datastore
+        hosts = yield store.get('hosts')
 
-    host = [x for x in hosts if x['hostname'] == data['hostname']]
-    driver = yield handler.config.deploy_handler.get_driver_by_id(host['driver_name'])
-    success = yield driver.instance_action(data['instance_name'], host, data['action'])
+        host = [x for x in hosts if x['hostname'] == data['hostname']][0]
+        driver = yield handler.config.deploy_handler.get_driver_by_id(host['driver_name'])
+        success = yield driver.instance_action(host, data['instance_name'], data['action'])
+    except: 
+        import traceback
+        traceback.print_exc()
 
 
 @tornado.gen.coroutine
@@ -56,6 +60,7 @@ def reset_states(handler):
 def create_new_state(handler):
     data = handler.data['file'][0]
     print ('My data is : ', data)
+    print ('Other stuff : ', handler.data)
     files_archive = data['body']
     state_name = data['filename']
 
@@ -68,6 +73,19 @@ def create_new_state(handler):
     
     print ('Got archive at ', tmp_archive)
 
+    new_state = {
+        'name' : data['name'],
+        'version' : data['version'],
+        'description' : data['description'], 
+        'icon' : data['icon'], 
+        'dependency' : data['dependency'], 
+        'path' : data['path'],
+        'substates' : data['substates']
+    }
+
+    with open(salt_path + tar_ref.getnames()[0] + '/appinfo.json', 'w') as f: 
+        f.write(json.dumps(new_state))
+
 #    zip_ref = zipfile.ZipFile(tmp_archive)
 #    zip_ref.extractall(salt_path)
 
@@ -75,16 +93,8 @@ def create_new_state(handler):
     tar_ref.extractall(salt_path)
     print ('Names are : ', tar_ref.getnames())
 
-    state_top = tar_ref.getnames()[0]
-    state_data = ''
-    with open(salt_path + state_top + '/appinfo.json') as f: 
-        state_data = json.loads(f.read())
-
-    handler.data.update(state_data)
 #    zip_ref.close()
     tar_ref.close()
-
-    #unzip(file_archive)
     manage_states(handler, 'append')
 
 
