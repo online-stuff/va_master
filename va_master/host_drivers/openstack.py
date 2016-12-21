@@ -80,7 +80,6 @@ class OpenStackDriver(base.DriverBase):
 
     @tornado.gen.coroutine
     def get_token(self, field_values):
-        print ('Field values are : ', field_values.keys())
         host, username, password, tenant = (field_values['host_ip'],
             field_values['username'], field_values['password'],
             field_values['tenant'])
@@ -190,14 +189,18 @@ class OpenStackDriver(base.DriverBase):
             servers = yield self.get_openstack_value(self.token_data, 'compute', 'servers/detail')
             servers = servers['servers']
 
-            limits = yield self.get_openstack_value(self.token_data, 'compute', 'limits')
             tenants = yield self.get_openstack_value(self.token_data, 'identity', 'tenants')
             tenant = [x for x in tenants['tenants'] if x['name'] == host['tenant']][0]
 
             tenant_id = tenant['id']
 
+            limits = yield self.get_openstack_value(self.token_data, 'compute', 'limits')
+            tenant_limits = yield self.get_openstack_value(self.token_data, 'volumev2', 'limits')
             tenant_usage = yield self.get_openstack_value(self.token_data, 'compute', 'os-simple-tenant-usage/' + tenant_id)
 
+
+            limits = limits['limits']
+            tenant_limits = tenant_limits['tenant_limits']
             tenant_usage = tenant_usage['tenant_usage']
 
 
@@ -206,7 +209,7 @@ class OpenStackDriver(base.DriverBase):
                 'instances' : [], 
                 'limits' : {},
                 'host_usage' : {},
-                'status' : {'success' : False, 'message' : 'Could not connect to the libvirt host. ' + e}
+                'status' : {'success' : False, 'message' : 'Could not connect to the libvirt host. ' + e.message}
             }
             raise tornado.gen.Return(host_data)
            
@@ -222,16 +225,22 @@ class OpenStackDriver(base.DriverBase):
         ]
 
         host_usage = {
-            'disk_usage_gb' : sum([x['local_gb'] for x in tenant_usage['server_usages']]), 
+            'free_disk' : tenant_limits['maxTotalVolumeGigabytes'] - tenant_limits['totalGigabytesUsed'], 
+            'local_usage_gb' : sum([x['local_gb'] for x in tenant_usage['server_usages']]), 
             'ram_usage' : sum([x['memory_mb'] for x in tenant_usage['server_usages']]), 
+#            'ram_usage' : limits['totalRamUsed']
             'cpus_usage' : sum([x['vcpus'] for x in tenant_usage['server_usages']]),
             'instances_used' : len(instances),
-
         }
+
+        host_usage['free_cores'] = limits['maxTotalCores'] - host_usage['cpus_usage']
+        host_usage['free_ram'] = limits['maxTotalRamSize'] - host_usage['ram_usage']
+
+        limits.update(tenant_limits)
 
         host_data = {
             'instances' : instances, #tenant_usage['server_usages'], 
-            'limits' : limits['limits'],
+            'limits' : limits,
             'host_usage' : host_usage, 
             'status' : {'success' : True, 'message': ''}
         }

@@ -281,13 +281,18 @@ class LibVirtDriver(base.DriverBase):
                 'totalRamUsed' : info[1], 
                 'totalCoresUsed' : info[2], 
                 'totalInstancesUsed' : len(conn.listDefinedDomains()),
+                'maxDiskCapacity' : storage_info[1],
+                'availableDiskCapacity' : storage_info[3], 
                 'maxTotalInstances' : 'n/a'
             }},
             'host_usage' : {
-               'ram_usage' : (storage_info[2] + 0.0) / 2**20, 
-               'cpus_usage' : 0, 
-               'disk_usage_gb' : (storage_info[1] + 0.0) / 2**30,
-               'instances_used' : len(instances),
+                'free_cores' : conn.getMaxVcpus(None) - info[2], 
+                'free_ram' : (info[1] - storage_info) / 2**20,
+                'free_disk' : storage_info[3] / 2** 30 - storage_info[1] / 2**30,
+                'ram_usage' : storage_info[2] / 2**20, 
+                'cpus_usage' : 0, 
+                'disk_usage_gb' : storage_info[1] / 2**30,
+                'instances_used' : len(instances),
             },
             'status' : {'success' : True, 'message': ''}
 
