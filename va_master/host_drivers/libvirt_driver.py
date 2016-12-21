@@ -262,8 +262,8 @@ class LibVirtDriver(base.DriverBase):
             instance =  {
                 'hostname' : x.name(), 
                 'ipv4' : 'n/a', 
-                'local_gb' : (x.info()[1] + 0.0) / 2**30, 
-                'memory_mb' : (x.info()[2] + 0.0) / 2**20, 
+                'local_gb' : (x.info()[2] + 0.0), 
+#                'memory_mb' : (x.info()[2] + 0.0) / 2**20, 
                 'status' : x.isActive(), 
             }
             if not x.isActive(): instance['vcpus'] = 0
@@ -274,29 +274,37 @@ class LibVirtDriver(base.DriverBase):
 
         info = conn.getInfo()
         storage_info = storage.info()
+        used_disk = sum([x.info()[1] for x in storage.listAllVolumes()])
+        total_disk = sum([x.info()[2] for x in storage.listAllVolumes()])
+
+        limits = {'absolute' : {
+            'maxTotalCores' : conn.getMaxVcpus(None),
+            'totalRamUsed' : sum([x.info()[1] for x in conn.listAllDomains()]),
+            'totalCoresUsed' : info[2], 
+            'totalInstancesUsed' : len(conn.listDefinedDomains()),
+            'maxDiskCapacity' : storage_info[1],
+            'availableDiskCapacity' : storage_info[3], 
+            'maxTotalInstances' : 'n/a', 
+            'maxRam' : sum([x.info()[2] for x in conn.listAllDomains()])
+        }}
+
+        host_usage = {
+            'free_cores' : conn.getMaxVcpus(None) - info[2], 
+            'free_disk' : storage_info[3] / 2** 30 - storage_info[1] / 2**30,
+            'ram_usage' : sum([x.info()[2] for x in conn.listAllDomains()]), 
+            'cpus_usage' : info[2],
+            'disk_usage_gb' : storage_info[1] / 2**30,
+            'instances_used' : len(instances), 
+        }
+        host_usage['free_ram'] = limits['absolute']['maxRam'] - host_usage['ram_usage']
+
         host_info = {
             'instances' : instances,
-            'limits' : {'absolute' : {
-                'maxTotalCores' : conn.getMaxVcpus(None),
-                'totalRamUsed' : info[1], 
-                'totalCoresUsed' : info[2], 
-                'totalInstancesUsed' : len(conn.listDefinedDomains()),
-                'maxDiskCapacity' : storage_info[1],
-                'availableDiskCapacity' : storage_info[3], 
-                'maxTotalInstances' : 'n/a'
-            }},
-            'host_usage' : {
-                'free_cores' : conn.getMaxVcpus(None) - info[2], 
-                'free_ram' : (info[1] - storage_info) / 2**20,
-                'free_disk' : storage_info[3] / 2** 30 - storage_info[1] / 2**30,
-                'ram_usage' : storage_info[2] / 2**20, 
-                'cpus_usage' : 0, 
-                'disk_usage_gb' : storage_info[1] / 2**30,
-                'instances_used' : len(instances),
-            },
+            'host_usage' : host_usage, 
+            'limits' : limits, 
             'status' : {'success' : True, 'message': ''}
-
         }
+        
 
         raise tornado.gen.Return(host_info)
 
