@@ -39,17 +39,17 @@ PROFILE_TEMPLATE = '''VAR_PROFILE_NAME:
 class OpenStackDriver(base.DriverBase):
     def __init__(self, provider_name = 'openstack_provider', profile_name = 'openstack_profile', host_ip = '192.168.80.39', key_name = 'va_master_key', key_path = '/root/va_master_key'):
         kwargs = {
-            'driver_name' : 'openstack', 
-            'provider_template' : PROVIDER_TEMPLATE, 
-            'profile_template' : PROFILE_TEMPLATE, 
-            'provider_name' : provider_name, 
-            'profile_name' : profile_name, 
+            'driver_name' : 'openstack',
+            'provider_template' : PROVIDER_TEMPLATE,
+            'profile_template' : PROFILE_TEMPLATE,
+            'provider_name' : provider_name,
+            'profile_name' : profile_name,
             'host_ip' : host_ip,
-            'key_name' : key_name, 
+            'key_name' : key_name,
             'key_path' : key_path
             }
         self.regions = ['RegionOne', ]
-        super(OpenStackDriver, self).__init__(**kwargs) 
+        super(OpenStackDriver, self).__init__(**kwargs)
 
     @tornado.gen.coroutine
     def driver_id(self):
@@ -66,7 +66,7 @@ class OpenStackDriver(base.DriverBase):
         os.environ['OS_PROJECT_NAME'] = self.provider_vars['VAR_TENANT']
         os.environ['OS_AUTH_URL'] = self.provider_vars['VAR_IDENTITY_URL']
         os.environ['PASSWORD'] = self.provider_vars['VAR_PASSWORD']
-       
+
     @tornado.gen.coroutine
     def get_steps(self):
         steps = yield super(OpenStackDriver, self).get_steps()
@@ -158,7 +158,7 @@ class OpenStackDriver(base.DriverBase):
     def get_host_status(self, host):
         try:
             self.token_data = yield self.get_token(host)
-        except Exception as e: 
+        except Exception as e:
             raise tornado.gen.Return({'success' : False, 'message' : 'Error connecting to libvirt host. ' + e.message})
 
         raise tornado.gen.Return({'success' : True, 'message' : ''})
@@ -166,24 +166,24 @@ class OpenStackDriver(base.DriverBase):
     @tornado.gen.coroutine
     def instance_action(self, host, instance_name, action):
         print ('In driver. ')
-        try: 
+        try:
             nova = client.Client('2.0', host['username'], host['password'], host['tenant'], 'http://' + host['host_ip'] + '/v2.0')
             instance = [x for x in nova.servers.list() if x.name == instance_name][0]
-        except Exception as e: 
+        except Exception as e:
             import traceback
             traceback.print_exc()
             raise tornado.gen.Return({'success' : False, 'message' : 'Could not get instance. ' + e.message})
-        try: 
+        try:
             success = getattr(instance, action)()
             print ('Made action : ', success)
-        except Exception as e: 
+        except Exception as e:
             raise tornado.gen.Return({'success' : False, 'message' : 'Action was not performed. ' + e.message})
 
         raise tornado.gen.Return({'success' : True, 'message' : ''})
 
     @tornado.gen.coroutine
     def get_host_data(self, host):
-        try: 
+        try:
             self.token_data = yield self.get_token(host)
 
             servers = yield self.get_openstack_value(self.token_data, 'compute', 'servers/detail')
@@ -204,32 +204,32 @@ class OpenStackDriver(base.DriverBase):
             tenant_usage = tenant_usage['tenant_usage']
 
 
-        except Exception as e: 
+        except Exception as e:
             host_data = {
-                'instances' : [], 
+                'instances' : [],
                 'limits' : {},
                 'host_usage' : {},
                 'status' : {'success' : False, 'message' : 'Could not connect to the libvirt host. ' + e.message}
             }
             raise tornado.gen.Return(host_data)
-           
+
         instances = [
             {
-                'hostname' : x['name'], 
-                'ipv4' : x['addresses'][x['addresses'].keys()[0]], 
-                'local_gb' : y['local_gb'], 
-                'memory_mb' : y['memory_mb'], 
+                'hostname' : x['name'],
+                'ipv4' : x['addresses'][x['addresses'].keys()[0]],
+                'local_gb' : y['local_gb'],
+                'memory_mb' : y['memory_mb'],
                 'vcpus' : y['vcpus'],
-                'status' : x['status'] 
-            } for x in servers for y in tenant_usage['server_usages'] if x['name'] == y['name'] 
+                'status' : x['status']
+            } for x in servers for y in tenant_usage['server_usages'] if x['name'] == y['name']
         ]
 
         host_usage = {
-            'free_disk' : tenant_limits['maxTotalVolumeGigabytes'] - tenant_limits['totalGigabytesUsed'], 
-            'local_usage_gb' : sum([x['local_gb'] for x in tenant_usage['server_usages']]), 
-            'ram_usage' : sum([x['memory_mb'] for x in tenant_usage['server_usages']]), 
+            'free_disk' : tenant_limits['maxTotalVolumeGigabytes'] - tenant_limits['totalGigabytesUsed'],
+            'local_usage_gb' : sum([x['local_gb'] for x in tenant_usage['server_usages']]),
+            'ram_usage' : sum([x['memory_mb'] for x in tenant_usage['server_usages']]),
 #            'ram_usage' : limits['totalRamUsed']
-            'cpus_usage' : sum([x['vcpus'] for x in tenant_usage['server_usages']]),
+            'cpus_usage' : sum([x['vcpus'] for x in tenant_usage['server_usages']]) / float(limits['absolute']['maxTotalCores']) * 100,
             'instances_used' : len(instances),
         }
 
@@ -239,9 +239,9 @@ class OpenStackDriver(base.DriverBase):
         limits.update(tenant_limits)
 
         host_data = {
-            'instances' : instances, #tenant_usage['server_usages'], 
+            'instances' : instances, #tenant_usage['server_usages'],
             'limits' : limits,
-            'host_usage' : host_usage, 
+            'host_usage' : host_usage,
             'status' : {'success' : True, 'message': ''}
         }
         raise tornado.gen.Return(host_data)
@@ -256,8 +256,8 @@ class OpenStackDriver(base.DriverBase):
     	    ))
         elif step_index == 0:
     	    self.token_data = yield self.get_token(field_values)
-    
-    	    self.field_values['networks'] = yield self.get_networks() 
+
+    	    self.field_values['networks'] = yield self.get_networks()
             self.field_values['sec_groups'] = yield self.get_sec_groups()
             self.field_values['images'] = yield self.get_images()
             print ('My images are : ', self.field_values['images'])
@@ -268,22 +268,22 @@ class OpenStackDriver(base.DriverBase):
             self.provider_vars['VAR_IDENTITY_URL'] = os_base_url
             self.provider_vars['VAR_REGION'] = field_values['region']
 
-        elif step_index == 1: 
-            for field in ['network', 'sec_group']: 
+        elif step_index == 1:
+            for field in ['network', 'sec_group']:
                 field_values[field] = field_values[field].split('|')[1]
 
-        try: 
+        try:
             step_kwargs = yield super(OpenStackDriver, self).validate_field_values(step_index, field_values)
-        except: 
+        except:
             import traceback
             traceback.print_exc()
         raise tornado.gen.Return(StepResult(**step_kwargs))
-       
-      
+
+
     @tornado.gen.coroutine
     def create_minion(self, host, data):
         try:
             yield super(OpenStackDriver, self).create_minion(host, data)
-        except: 
+        except:
             import traceback
             traceback.print_exc()

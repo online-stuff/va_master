@@ -97,7 +97,7 @@ var Appp = React.createClass({
 
 var AppForm = React.createClass({
     getInitialState: function () {
-        return {status: 'none', progress: 0, hosts: [], states: [], hostname: "", role: "", defaults: {sizes: [], networks: [], images: []}, stats: {cpu: "", maxCpu: "", instances: ""}, host_usage: {cpu: "", ram: "", disk: ""}};
+        return {status: 'none', progress: 0, hosts: [], states: [], hostname: "", role: "", defaults: {sizes: [], networks: [], images: []}, host_usage: {cpu: "", ram: "", disk: "", instances: ""}};
     },
 
     componentDidMount: function () {
@@ -110,11 +110,10 @@ var AppForm = React.createClass({
                 me.setState({defaults: {sizes: data.hosts[0].sizes, networks: data.hosts[0].networks, images: data.hosts[0].images}});
             }
             if(me.props.hosts.length > 0){
-                var h = me.props.hosts[0];
-                var stats = h.limits.absolute;
-                var host_usage = h.host_usage;
-                me.setState({stats: {cpu: stats.totalCoresUsed, maxCpu: stats.maxTotalCores, instances: stats.totalInstancesUsed}});
-                me.setState({host_usage: {cpu: host_usage.cpus_usage, ram: stats.totalRamUsed, disk: host_usage.total_disk_usage_gb}});
+                var host_usage = me.props.hosts[0].host_usage;
+                if(Object.keys(host_usage).length > 0){
+                    me.setState({host_usage: {cpu: host_usage.cpus_usage, ram: host_usage.ram_usage, disk: host_usage.disk_usage_gb, instances: host_usage.instances_used}});
+                }
             }
         });
         Network.get('/api/states', this.props.auth.token).done(function (data) {
@@ -138,11 +137,12 @@ var AppForm = React.createClass({
                 break;
             }
         }
-        var h = this.props.hosts[i-1];
-        var stats = h.limits.absolute;
-        var host_usage = h.host_usage;
-        this.setState({stats: {cpu: stats.totalCoresUsed, maxCpu: stats.maxTotalCores, instances: stats.totalInstancesUsed}});
-        this.setState({host_usage: {cpu: host_usage.cpus_usage, ram: stats.totalRamUsed, disk: host_usage.total_disk_usage_gb}});
+        var host_usage = this.props.hosts[i].host_usage;
+        if(Object.keys(host_usage).length > 0){
+            this.setState({host_usage: {cpu: host_usage.cpus_usage, ram: host_usage.ram_usage, disk: host_usage.disk_usage_gb, instances: host_usage.instances_used}});
+        }else{
+            this.setState({host_usage: {cpu: "", ram: "", disk: "", instances: ""}});
+        }
     },
 
     onChangeRole: function(e) {
@@ -293,10 +293,10 @@ var Stats = React.createClass({
         return (
             <Bootstrap.Col xs={12} sm={6} md={6}>
                 <Bootstrap.PageHeader className="header">{this.props.hostname}</Bootstrap.PageHeader>
-                <label>CPU: </label>{this.props.stats.cpu} / {this.props.stats.maxCpu}<br/>
+                <label>CPU: </label>{this.props.host_usage.cpu}%<br/>
                 <label>RAM: </label>{this.props.host_usage.ram}<br/>
                 <label>DISK: </label>{this.props.host_usage.disk}<br/>
-                <label>INSTANCES: </label>{this.props.stats.instances}<br/>
+                <label>INSTANCES: </label>{this.props.host_usage.instances}<br/>
             </Bootstrap.Col>
         );
 
