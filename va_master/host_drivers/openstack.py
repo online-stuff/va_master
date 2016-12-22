@@ -229,7 +229,7 @@ class OpenStackDriver(base.DriverBase):
             'local_usage_gb' : sum([x['local_gb'] for x in tenant_usage['server_usages']]),
             'ram_usage' : sum([x['memory_mb'] for x in tenant_usage['server_usages']]),
 #            'ram_usage' : limits['totalRamUsed']
-            'cpus_usage' : sum([x['vcpus'] for x in tenant_usage['server_usages']]) / float(limits['absolute']['maxTotalCores']) * 100,
+            'cpus_usage' : str(sum([x['vcpus'] for x in tenant_usage['server_usages']])) + " / " + str(limits['maxTotalCores']),
             'instances_used' : len(instances),
         }
 

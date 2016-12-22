@@ -2,17 +2,22 @@ var React = require('react');
 var connect = require('react-redux').connect;
 var Network = require('../network');
 var Bootstrap = require('react-bootstrap');
+var ReactDOM = require('react-dom');
 
 var Appp = React.createClass({
     getInitialState: function () {
         return {hosts: []};
     },
 
-    componentDidMount: function () {
+    getHostInfo: function() {
         var data = {hosts: []};
         Network.post('/api/hosts/info', this.props.auth.token, data).done(function(data) {
             this.setState({hosts: data});
         }.bind(this));
+    },
+
+    componentDidMount: function () {
+        this.getHostInfo();
     },
 
     componentWillUnmount: function () {
@@ -73,7 +78,7 @@ var Appp = React.createClass({
 
         return (
             <div>
-                <AppFormRedux hosts = {this.state.hosts}/>
+                <AppFormRedux hosts = {this.state.hosts} getHostInfo = {this.getHostInfo} />
                 <Bootstrap.PageHeader>Current apps <small>All specified apps</small></Bootstrap.PageHeader>
                 <Bootstrap.Table striped bordered hover>
                     <thead>
@@ -281,9 +286,20 @@ var AppForm = React.createClass({
                 clearInterval(interval);
             }
         }, 10000);
-        var data = {instance_name: this.refs.name.value, hostname: this.refs.hostname.value, role: this.refs.role.value, size: this.refs.flavor.value, image: this.refs.image.value, storage: this.refs.storage.value, network: this.refs.network.value};
+        var data = {
+            instance_name: ReactDOM.findDOMNode(this.refs.name).value,
+            hostname: ReactDOM.findDOMNode(this.refs.hostname).value,
+            role: ReactDOM.findDOMNode(this.refs.role).value,
+            size: ReactDOM.findDOMNode(this.refs.flavor).value,
+            image: ReactDOM.findDOMNode(this.refs.image).value,
+            storage: ReactDOM.findDOMNode(this.refs.storage).value,
+            network: ReactDOM.findDOMNode(this.refs.network).value
+        };
         Network.post('/api/apps', this.props.auth.token, data).done(function(data) {
-            me.setState({status: 'launched'});
+            setTimeout(function(){
+                me.setState({status: 'launched'});
+                me.props.getHostInfo();
+            }, 2000);
         });
     }
 });
@@ -293,7 +309,7 @@ var Stats = React.createClass({
         return (
             <Bootstrap.Col xs={12} sm={6} md={6}>
                 <Bootstrap.PageHeader className="header">{this.props.hostname}</Bootstrap.PageHeader>
-                <label>CPU: </label>{this.props.host_usage.cpu}%<br/>
+                <label>CPU: </label>{this.props.host_usage.cpu}<br/>
                 <label>RAM: </label>{this.props.host_usage.ram}<br/>
                 <label>DISK: </label>{this.props.host_usage.disk}<br/>
                 <label>INSTANCES: </label>{this.props.host_usage.instances}<br/>

@@ -292,7 +292,7 @@ class LibVirtDriver(base.DriverBase):
             'free_cores' : conn.getMaxVcpus(None) - info[2],
             'free_disk' : storage_info[3] / 2** 30 - storage_info[1] / 2**30,
             'ram_usage' : sum([x.info()[2] for x in conn.listAllDomains()]),
-            'cpus_usage' : info[2] / float(limits['absolute']['maxTotalCores']) * 100,
+            'cpus_usage' : str(info[2]) + " / " + str(limits['absolute']['maxTotalCores']),
             'disk_usage_gb' : storage_info[1] / 2**30,
             'instances_used' : len(instances),
         }
