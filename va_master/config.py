@@ -1,3 +1,5 @@
+import tornado
+import functools
 import pkg_resources
 import logging
 import os
@@ -30,6 +32,11 @@ class Config(object):
         for kw in kwargs:
             setattr(self, kw, kwargs[kw])
         self.deploy_handler = deploy_handler.DeployHandler(self.datastore, self.deploy_pool_count)
+
+    def init_handler(self, init_vals): 
+        run_sync = tornado.ioloop.IOLoop.instance().run_sync
+        init_vals = functools.partial(self.deploy_handler.init_vals, init_vals)
+        run_sync(init_vals)
 
     def pretty_version(self):
         return '.'.join([str(x) for x in self.version])

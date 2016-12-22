@@ -20,6 +20,30 @@ class DeployHandler(object):
         self.deploy_pool_count = deploy_pool_count
         self.pool = ProcessPoolExecutor(deploy_pool_count)
         
+
+    @tornado.gen.coroutine
+    def init_vals(self, store, **kwargs):
+        init_vars = {
+            'salt_key_path' : 'salt_key_path', 
+            'salt_key_name' : 'salt_key_name', 
+            'salt_master_fqdn' : 'salt_master_fqdn', 
+            'libvirt_flavours' :' libvirt_flavours', 
+        }
+        try: 
+            store_values = yield self.datastore.get('init_vals')
+        except:
+            print ('No store values found - probably initializing deploy_handler for the first time. Will initialize with cli arguments. ')
+
+        for var in init_vars: 
+            if var in kwargs: 
+                setattr(self, var, kwargs[var])
+            else: 
+                if var in store_values: 
+                    setattr(self, var, store_values[var])
+                else:
+                    print ("Variable '%s' defined neither in store nor in arguments and will not be set in deploy handler. This may result with further errors. " % (var))
+
+
     def start(self):
         pass
 
@@ -46,11 +70,19 @@ class DeployHandler(object):
             libvirt_flavours = yield self.datastore.get('libvirt_flavours')
             salt_master_fqdn = yield self.datastore.get('salt_master_fqdn')
 
-            self.drivers = [
-                openstack.OpenStackDriver(host_ip = hosts_ip, key_name = 'va_master_key_name', key_path = '/root/va_master_key'), 
-                libvirt_driver.LibVirtDriver(host_ip = hosts_ip, flavours = libvirt_flavours, salt_master_fqdn = salt_master_fqdn, key_name = 'va_master_key', key_path = '/root/va_master_key'),
-                generic_driver.GenericDriver(host_ip = hosts_ip, key_name = 'va_master_key_name', key_path = '/root/va_master_key'), 
-            ]
+            kwargs = {
+                'host_ip' : hosts_ip, 
+                'key_name' : self.salt_key_name, 
+                'key_path' : self.salt_key_path, 
+                'libvirt_flavours' : self.libvirt_flavours, 
+            }
+
+
+            self.drivers = [x(**kwargs) for x in [
+                openstack.OpenStackDriver, 
+                libvirt_driver.LibVirtDriver,
+                generic_driver.GenericDriver,
+            ]]
 
         raise tornado.gen.Return(self.drivers)
 
