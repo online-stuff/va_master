@@ -22,7 +22,12 @@ def is_cli():
 def cli_info(msg):
     """Outputs a CLI information message to the console."""
     if not is_cli(): return
-    sys.stdout.write('%s\n' % msg)
+
+    sys.stdout.write('%(yellow)s[info]%(nocolor)s %(msg)s\n' % {
+        'yellow': '\033[93m',
+        'nocolor': '\033[0m',
+        'msg': msg
+    })
 
 def cli_success(msg):
     """Outputs a CLI success message to the console."""
@@ -43,6 +48,37 @@ def cli_error(msg):
     })
 
 
+def generate_store_config(values):
+    store_config = {
+        'libvirt_flavours' : 
+        {
+            'va-small' : 
+            {
+                'vol_capacity' : 5, 
+                'memory' : 2**20, 
+                'max_memory' : 2**20, 
+                'num_cpus' : 1
+            }, 
+            'debian' : 
+            {
+                'vol_capacity' : 5, 
+                'memory' : 2**20, 
+                'max_memory' : 2**20, 
+                'num_cpus' : 1
+            }
+        },
+        'available_panels' : 
+        {
+            'user' : ['directory', 'overview'], 
+            'admin' : ['overview', 'hosts', 'apps', 'store', 'directory']
+        },
+    }
+    store_config.update(values)
+
+    return store_config
+
+
+
 def handle_init(args):
     """Handles cli `start` command. Should write proper conf and start daemon."""
     # If optional arguments weren't specified, interactively ask.
@@ -51,29 +87,38 @@ def handle_init(args):
         ('admin_user', 'Enter username for the first admin'),
         ('admin_pass', 'Enter password for the first admin'), 
         ('salt_master_fqdn', 'Enter the fqdn for the salt master'),
+        ('salt_key_path', 'Enter the path to the salt key. '), 
+        ('salt_key_name', 'Enter the name of the salt key. '), 
     ]
     values = {}
+    
+    if args.skip_args: 
+        cli_info('Setting up the va_master module without prompting for arguments. If this is the first time you are setting up the environment, you might want to make sure you enter all arguments or run init again without skip_args. ')
+
     for attr in attrs:
         name = attr[0]
         cmdhelp = attr[1]
         values[name] = getattr(args, name)
-        if values[name] is None: # The CLI `args` doesn't have it, ask.
+        if (values[name] is None) and not args.skip_args: # The CLI `args` doesn't have it, ask.
             values[name] = raw_input('%s: ' % cmdhelp)
+    values = {k: v for k, v in values.items() if v}
     result = True # If `result` is True, all actions completed successfully
-    try:
-        cli_environment.write_supervisor_conf()
-        cli_success('Configured Supervisor.')
-    except:
-        cli_error('Failed configuring Supervisor: ')
-        traceback.print_exc()
-        result = False # We failed with step #1
-    try:
-        cli_environment.write_consul_conf(values['ip'])
-        cli_success('Configured Consul.')
-    except:
-        cli_error('Failed configuring Consul: ')
-        traceback.print_exc()
-        result = False # We failed with step #2
+    if values.get('ip'): 
+        try:
+            cli_environment.write_supervisor_conf()
+            cli_success('Configured Supervisor.')
+        except:
+            cli_error('Failed configuring Supervisor: ')
+            traceback.print_exc()
+            result = False # We failed with step #1
+        try:
+            cli_environment.write_consul_conf(values['ip'])
+            cli_success('Configured Consul.')
+        except:
+            import traceback
+            cli_error('Failed configuring Consul: ')
+            traceback.print_exc()
+            result = False # We failed with step #2
 
     if not result:
         cli_error('Initialization failed because of one or more errors.')
@@ -90,7 +135,7 @@ def handle_init(args):
             sys.exit(1)
 
         from .api import login
-        cli_config = config.Config()
+        cli_config = config.Config(init_vals = values)
 
 #        from . import datastore
         store = cli_config.datastore
@@ -112,46 +157,48 @@ def handle_init(args):
             sys.exit(1)
         else:
             # We have a connection, create an admin account
-            create_admin = functools.partial(login.create_admin,
-                store, values['admin_user'], values['admin_pass'])
+            if values.get('admin_user') and values.get('admin_pass'): 
+                create_admin = functools.partial(login.create_admin,
+                    store, values['admin_user'], values['admin_pass'])
+                create_admin_run = run_sync(create_admin)
 
             states_data = run_sync(functools.partial(cli_config.deploy_handler.get_states_data))
-            store_states = functools.partial(store.insert, 'states', states_data)
+            values.update({'states' : states_data})
 
-            #Store some stuff in datastore
-            store_ip = functools.partial(store.insert, 'master_ip', values['ip'])
 
-            #TODO get flavours from github or something
-            libvirt_flavours = {'va-small' : {'vol_capacity' : 5, 'memory' : 2**20, 'max_memory' : 2**20, 'num_cpus' : 1}, 'debian' : {'vol_capacity' : 5, 'memory' : 2**20, 'max_memory' : 2**20, 'num_cpus' : 1}}
-            available_panels = {'user' : ['directory', 'overview'], 'admin' : ['overview', 'hosts', 'apps', 'store', 'directory']}
+            try:
+                store_config = run_sync(functools.partial(store.get, 'init_vals'))
+            except: 
+                store_config = {}
 
-            salt_fqdn = functools.partial(store.insert, 'salt_master_fqdn', values['salt_master_fqdn'])
-            store_flavours = functools.partial(store.insert, 'libvirt_flavours', libvirt_flavours)
-            store_available_panels = functools.partial(store.insert, 'panel_types', available_panels)
+            store_config.update(generate_store_config(values))
 
-            run_sync(create_admin)
-            run_sync(store_ip)
-            run_sync(store_flavours)
-            run_sync(store_states)
-            run_sync(salt_fqdn)
-            run_sync(store_available_panels)
+            
+            store_config = run_sync(functools.partial(store.insert, 'init_vals', store_config))
+#            run_sync(store_config)
 
             #Generate an ssh-key
-            try: 
+            if values.get('salt_key_path') and values.get('salt_key_name'): 
+                values['salt_key_path'] = values['salt_key_path'] + '/' * (values['salt_key_path'][-1] != '/')
                 try: 
-                    os.mkdir('/root/va_master_key')
+                    try: 
+                        os.mkdir(values['salt_key_path'])
+#                        os.mkdir('/root/va_master_key')
+                    except: 
+                        pass
+                    ssh_cmd = ['ssh-keygen', '-t', 'rsa', '-f', values['salt_key_path'] + values['salt_key_name'], '-N', '']
+
+#                    ssh_cmd = ['ssh-keygen', '-t', 'rsa', '-f', '/root/va_master_key/va_master_key_name', '-N', '']
+
+                    subprocess.call(ssh_cmd)
                 except: 
-                    pass
-
-                ssh_cmd = ['ssh-keygen', '-t', 'rsa', '-f', '/root/va_master_key/va_master_key_name', '-N', '']
-
-                subprocess.call(ssh_cmd)
-            except: 
-                import traceback
-                print ('Could not generate a key. Probably already exists. ')
-                traceback.print_exc()
+                    import traceback
+                    print ('Could not generate a key. Probably already exists. ')
+                    traceback.print_exc()
 
             cli_success('Created first account. Setup is finished.')
+            cli_config.init_handler(init_vals = values)
+
 
 def handle_jsbuild(args):
     try:
@@ -172,11 +219,14 @@ def entry():
     subparsers = parser.add_subparsers(help='action')
 
     init_sub = subparsers.add_parser('init', help='Initializes and starts server')
+    init_sub.add_argument('--skip_args', help = 'If set, the cli will not prompt you for values for arguments which were not supplied. ', action = 'store_true')
     init_sub.add_argument('--ip', help='The IP of this machine, which is ' + \
         'going to be advertised to apps')
     init_sub.add_argument('--admin-user', help='Username of the first admin')
     init_sub.add_argument('--admin-pass', help='Password of the first admin')
     init_sub.add_argument('--salt-master-fqdn', help='Enter the fqdn for the salt master')
+    init_sub.add_argument('--salt-key-path', help = 'Enter the path to the salt key. ')
+    init_sub.add_argument('--salt-key-name', help = 'Enter the name of the salt key. ') 
 
     # args.sub will equal 'start' if this subparser is used
     init_sub.set_defaults(sub='init')
