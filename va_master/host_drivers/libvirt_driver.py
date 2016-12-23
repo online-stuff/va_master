@@ -263,11 +263,11 @@ class LibVirtDriver(base.DriverBase):
                 'hostname' : x.name(),
                 'ipv4' : 'n/a',
                 'local_gb' : (x.info()[2] + 0.0),
-#                'memory_mb' : (x.info()[2] + 0.0) / 2**20,
+                'memory_mb' : (x.info()[2] + 0.0) / 2**20,
                 'status' : x.isActive(),
             }
             if not x.isActive(): instance['vcpus'] = 0
-            else: instance['vcpus'] = x.vcpus()
+            else: instance['vcpus'] = x.info()[3]
             instances.append(instance)
 
 
