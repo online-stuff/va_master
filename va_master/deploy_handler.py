@@ -74,15 +74,18 @@ class DeployHandler(object):
                 'host_ip' : hosts_ip, 
                 'key_name' : self.salt_key_name, 
                 'key_path' : self.salt_key_path, 
-                'libvirt_flavours' : self.libvirt_flavours, 
             }
 
 
             self.drivers = [x(**kwargs) for x in [
                 openstack.OpenStackDriver, 
-                libvirt_driver.LibVirtDriver,
                 generic_driver.GenericDriver,
             ]]
+
+            kwargs['flavours'] =  self.libvirt_flavours
+            kwargs['salt_master_fqdn'] = salt_master_fqdn
+
+            self.drivers.append(libvirt_driver.LibVirtDriver(**kwargs))
 
         raise tornado.gen.Return(self.drivers)
 

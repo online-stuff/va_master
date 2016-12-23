@@ -8,6 +8,7 @@ def bootstrap():
     from . import config, server
 
     my_config = config.Config()
+    my_config.init_handler({})
     my_config.logger.info('Starting deploy handler...')
 
     app = server.get_app(my_config)
