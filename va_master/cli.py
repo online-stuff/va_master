@@ -89,6 +89,8 @@ def handle_init(args):
         ('salt_master_fqdn', 'Enter the fqdn for the salt master'),
         ('salt_key_path', 'Enter the path to the salt key. '), 
         ('salt_key_name', 'Enter the name of the salt key. '), 
+        ('host_vpn_endpoint', 'Enter the VPN endpoint. Will default to vpn.<salt_master_fqdn>' ),
+        ('company_name', 'The name of Your company. It will be used in the VPN certifiates. ')
     ]
     values = {}
     
@@ -101,6 +103,10 @@ def handle_init(args):
         values[name] = getattr(args, name)
         if (values[name] is None) and not args.skip_args: # The CLI `args` doesn't have it, ask.
             values[name] = raw_input('%s: ' % cmdhelp)
+
+    if not values['host_vpn_endpoint'] and values['salt_master_fqdn']: 
+        values['host_vpn_endpoint'] = 'vpn.' + values['salt_master_fqdn']
+
     values = {k: v for k, v in values.items() if v}
     result = True # If `result` is True, all actions completed successfully
     if values.get('ip'): 
@@ -133,6 +139,14 @@ def handle_init(args):
             '/var/log/supervisor/supervisord.log')
             traceback.print_exc()
             sys.exit(1)
+
+        try: 
+            cli_environment.run_vpn(values['host_vpn_endpoint'])
+            cli_success('VPN is running. ')
+        except: 
+            cli_error('Failed to start VPN. Error was : ')
+            import traceback
+            traceback.print_exc()
 
         from .api import login
         cli_config = config.Config(init_vals = values)
@@ -219,14 +233,20 @@ def entry():
     subparsers = parser.add_subparsers(help='action')
 
     init_sub = subparsers.add_parser('init', help='Initializes and starts server')
-    init_sub.add_argument('--skip_args', help = 'If set, the cli will not prompt you for values for arguments which were not supplied. ', action = 'store_true')
-    init_sub.add_argument('--ip', help='The IP of this machine, which is ' + \
-        'going to be advertised to apps')
-    init_sub.add_argument('--admin-user', help='Username of the first admin')
-    init_sub.add_argument('--admin-pass', help='Password of the first admin')
-    init_sub.add_argument('--salt-master-fqdn', help='Enter the fqdn for the salt master')
-    init_sub.add_argument('--salt-key-path', help = 'Enter the path to the salt key. ')
-    init_sub.add_argument('--salt-key-name', help = 'Enter the name of the salt key. ') 
+    
+    expected_args = [
+        ('ip', 'Enter the IPv4 addr. of this machine'),
+        ('admin-user', 'Enter username for the first admin'),
+        ('admin-pass', 'Enter password for the first admin'), 
+        ('salt-master_fqdn', 'Enter the fqdn for the salt master'),
+        ('salt-key_path', 'Enter the path to the salt key. '), 
+        ('salt-key_name', 'Enter the name of the salt key. '), 
+        ('host-vpn-endpoint', 'Enter the VPN endpoint. Will default to vpn.<salt_master_fqdn>' ),
+        ('company-name', 'The name of Your company. It will be used in the VPN certifiates. ')
+    ]
+    for arg in expected_args: 
+        init_sub.add_argument('--' + arg[0], help = arg[1])
+    init_sub.add_argument('--skip-args', help = 'If set, the cli will not prompt you for values for arguments which were not supplied. ', action = 'store_true')
 
     # args.sub will equal 'start' if this subparser is used
     init_sub.set_defaults(sub='init')

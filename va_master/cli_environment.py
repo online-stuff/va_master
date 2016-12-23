@@ -8,8 +8,9 @@ import urllib
 import zipfile
 import tempfile
 import platform
-import json
+import json, yaml
 
+from salt import client
 import distutils.spawn
 
 # Datastore connection retry time
@@ -33,6 +34,18 @@ startretries=1
 
 [program:va_master]
 command=%(python_path)s -m va_master'''
+
+
+def run_vpn(vpn_domain):
+    with open('/srv/salt/pillars/credentials.sls', 'r') as f: 
+        a = yaml.load(f.read())
+        a['domain'] = vpn_domain
+    with open('/srv/salt/pillars/credentials.sls', 'w') as f: 
+        f.write(yaml.dump(a, default_flow_style=False))
+
+#    salt_client = client.LocalClient()
+#    salt_client.cmd('va-vpn', 'state.highstate')    
+        
 
 def write_supervisor_conf():
     """Writes configuration file for Supervisor daemon."""
