@@ -191,7 +191,7 @@ class OpenStackDriver(base.DriverBase):
 
             servers = yield self.get_openstack_value(self.token_data, 'compute', 'servers/detail')
             servers = servers['servers']
-            print ('Servers are : ', servers)
+#            print ('Servers are : ', servers)
 
             tenants = yield self.get_openstack_value(self.token_data, 'identity', 'tenants')
             tenant = [x for x in tenants['tenants'] if x['name'] == host['tenant']][0]
@@ -204,11 +204,13 @@ class OpenStackDriver(base.DriverBase):
 
 
             limits = limits['limits']
-            tenant_limits = tenant_limits['tenant_limits']
             tenant_usage = tenant_usage['tenant_usage']
+            tenant_limits = tenant_limits['limits']
 
 
         except Exception as e: 
+            import traceback
+            print traceback.print_exc()
             host_data = {
                 'instances' : [], 
                 'limits' : {},
@@ -216,22 +218,23 @@ class OpenStackDriver(base.DriverBase):
                 'status' : {'success' : False, 'message' : 'Could not connect to the libvirt host. ' + e.message}
             }
             raise tornado.gen.Return(host_data)
-           
+          
+        print (flavors )
 
         instances = [
             {
                 'hostname' : x['name'], 
-                'ipv4' : x['addresses'][x['addresses'].keys()[0]], 
+                'ipv4' : x['addresses'], #[x['addresses'].keys()[0]], 
 #                'local_gb' : y['local_gb'], 
-                'size' : flavors[x['flavor']['id']], 
+                'size' : f, 
                 'memory_mb' : y['memory_mb'], 
                 'vcpus' : y['vcpus'],
                 'status' : x['status'] 
-            } for x in servers for y in tenant_usage['server_usages'] if x['name'] == y['name'] 
+            } for x in servers for y in tenant_usage['server_usages'] for f in flavors if y['name'] == x['name'] and f['id'] == x['flavor']['id']
         ]
 
         host_usage = {
-            'free_disk' : tenant_limits['maxTotalVolumeGigabytes'] - tenant_limits['totalGigabytesUsed'], 
+            'free_disk' : tenant_limits['absolute']['maxTotalVolumeGigabytes'] - tenant_limits['absolute']['totalGigabytesUsed'], 
             'local_usage_gb' : sum([x['local_gb'] for x in tenant_usage['server_usages']]), 
             'ram_usage' : sum([x['memory_mb'] for x in tenant_usage['server_usages']]), 
 #            'ram_usage' : limits['totalRamUsed']
@@ -239,8 +242,9 @@ class OpenStackDriver(base.DriverBase):
             'instances_used' : len(instances),
         }
 
-        host_usage['free_cores'] = limits['maxTotalCores'] - host_usage['cpus_usage']
-        host_usage['free_ram'] = limits['maxTotalRamSize'] - host_usage['ram_usage']
+        print (limits)
+        host_usage['free_cores'] = limits['absolute']['maxTotalCores'] - host_usage['cpus_usage']
+        host_usage['free_ram'] = limits['absolute']['maxTotalRAMSize'] - host_usage['ram_usage']
 
         limits.update(tenant_limits)
 
