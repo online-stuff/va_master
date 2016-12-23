@@ -96,7 +96,7 @@ var Host = React.createClass({
         var usage = this.props.host_usage;
         cpuData.push(usage.free_cores);
         ramData.push(usage.free_ram);
-        diskData.push(Math.abs(usage.free_disk)*100000);
+        diskData.push(usage.free_disk);
         var data = [cpuData, ramData, diskData];
         var colors = this.getRandomColors(instances.length+1);
         return {
