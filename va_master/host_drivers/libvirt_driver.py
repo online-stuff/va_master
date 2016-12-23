@@ -262,8 +262,8 @@ class LibVirtDriver(base.DriverBase):
             instance =  {
                 'hostname' : x.name(), 
                 'ipv4' : 'n/a', 
-                'local_gb' : (x.info()[2] + 0.0), 
-#                'memory_mb' : (x.info()[2] + 0.0) / 2**20, 
+                'size' : 'va-small', #TODO get this from store
+                'memory_mb' : (x.info()[2] + 0.0) / 2**20, 
                 'status' : x.isActive(), 
             }
             if not x.isActive(): instance['vcpus'] = 0

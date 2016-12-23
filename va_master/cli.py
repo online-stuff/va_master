@@ -140,13 +140,6 @@ def handle_init(args):
             traceback.print_exc()
             sys.exit(1)
 
-        try: 
-            cli_environment.run_vpn(values['host_vpn_endpoint'])
-            cli_success('VPN is running. ')
-        except: 
-            cli_error('Failed to start VPN. Error was : ')
-            import traceback
-            traceback.print_exc()
 
         from .api import login
         cli_config = config.Config(init_vals = values)
@@ -170,6 +163,18 @@ def handle_init(args):
                 % attempts)
             sys.exit(1)
         else:
+
+            try:
+                cli_info('Trying to start VPN. ')
+                if values.get('host_vpn_endpoint'): 
+                    cli_envorinment.write_vpn_pillar(values['host_vpn_endpoint']) 
+                cli_success('VPN is running. ')
+            except: 
+                cli_error('Failed to start VPN. Error was : ')
+                import traceback
+                traceback.print_exc()
+
+ 
             # We have a connection, create an admin account
             if values.get('admin_user') and values.get('admin_pass'): 
                 create_admin = functools.partial(login.create_admin,

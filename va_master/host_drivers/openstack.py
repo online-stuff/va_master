@@ -186,8 +186,12 @@ class OpenStackDriver(base.DriverBase):
         try: 
             self.token_data = yield self.get_token(host)
 
+            flavors = yield self.get_openstack_value(self.token_data, 'compute', 'flavors/detail')
+            flavors = flavors['flavors']
+
             servers = yield self.get_openstack_value(self.token_data, 'compute', 'servers/detail')
             servers = servers['servers']
+            print ('Servers are : ', servers)
 
             tenants = yield self.get_openstack_value(self.token_data, 'identity', 'tenants')
             tenant = [x for x in tenants['tenants'] if x['name'] == host['tenant']][0]
@@ -213,11 +217,13 @@ class OpenStackDriver(base.DriverBase):
             }
             raise tornado.gen.Return(host_data)
            
+
         instances = [
             {
                 'hostname' : x['name'], 
                 'ipv4' : x['addresses'][x['addresses'].keys()[0]], 
-                'local_gb' : y['local_gb'], 
+#                'local_gb' : y['local_gb'], 
+                'size' : flavors[x['flavor']['id']], 
                 'memory_mb' : y['memory_mb'], 
                 'vcpus' : y['vcpus'],
                 'status' : x['status'] 
