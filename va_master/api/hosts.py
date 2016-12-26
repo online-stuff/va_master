@@ -17,6 +17,7 @@ def reset_hosts(handler):
 
 @tornado.gen.coroutine
 def delete_host(handler):
+    print ('Data : ', handler.data)
     host = handler.data['hostname']
     hosts = yield handler.config.deploy_handler.datastore.get('hosts')
     hosts = [x for x in hosts if not x['hostname'] == host]

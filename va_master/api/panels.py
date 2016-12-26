@@ -10,9 +10,10 @@ from login import auth_only
 def list_panels(handler): 
     user_group = yield login.get_user_type(handler)
 
-    panels = yield handler.config.deploy_handler.datastore.get('panels')
-    if user_group == 'user': 
-        panels = [x for x in panels if x['user_allowed']]
+    panels = yield handler.config.deploy_handler.datastore.get('init_vals')
+    panels = panels['available_panels'][user_group]
+#    if user_group == 'user': 
+#        panels = [x for x in panels if x['user_allowed']]
 
     raise tornado.gen.Return(panels)
 

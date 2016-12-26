@@ -68,6 +68,7 @@ class ApiHandler(tornado.web.RequestHandler):
         try: 
             try: 
                 if 'json' in self.request.headers['Content-Type']: 
+                    print ('Json received : ', self.request.body)
                     data = json.loads(self.request.body)
                 else:
                     print (self.request, self.request.body)

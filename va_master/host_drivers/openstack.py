@@ -219,7 +219,7 @@ class OpenStackDriver(base.DriverBase):
             }
             raise tornado.gen.Return(host_data)
           
-        print (flavors )
+#        print (flavors )
 
         instances = [
             {
@@ -242,7 +242,7 @@ class OpenStackDriver(base.DriverBase):
             'instances_used' : len(instances),
         }
 
-        print (limits)
+ #       print (limits)
         host_usage['free_cores'] = limits['absolute']['maxTotalCores'] - host_usage['cpus_usage']
         host_usage['free_ram'] = limits['absolute']['maxTotalRAMSize'] - host_usage['ram_usage']
 

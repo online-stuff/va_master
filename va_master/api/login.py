@@ -43,6 +43,7 @@ def get_user_type(handler):
 @tornado.gen.coroutine
 def is_token_valid(datastore, token, user_type = 'admin'):
     valid = True
+    print ('Token is : ', token)
     try:
         res = yield datastore.get('tokens/%s/by_token/%s' % (user_type, token))
     except datastore.KeyNotFound:
@@ -61,6 +62,7 @@ def auth_only(*args, **kwargs):
         def func(handler):
             token = handler.request.headers.get('Authorization', '')
             token = token.replace('Token ', '')
+            print ('Token is : ', token)
 
             user_type = yield get_user_type(handler)
 
