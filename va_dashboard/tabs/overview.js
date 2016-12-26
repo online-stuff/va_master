@@ -1,11 +1,40 @@
 var React = require('react');
 var connect = require('react-redux').connect;
 var Network = require('../network');
+var Chart = require("react-chartjs-2").Chart;
 var DoughnutChart = require("react-chartjs-2").Doughnut;
 var defaults = require("react-chartjs-2").defaults;
 var Bootstrap = require('react-bootstrap');
 
 defaults.global.legend.display = false;
+
+Chart.pluginService.register({
+    beforeDraw: function(chart) {
+        var width = chart.chart.width,
+            height = chart.chart.height,
+            ctx = chart.chart.ctx;
+
+        ctx.restore();
+        var fontSize = (height / 114).toFixed(2);
+        ctx.font = fontSize + "em sans-serif";
+        ctx.textBaseline = "middle";
+
+        var allData = chart.data.datasets[0].data;
+        var total = 0;
+
+        for (var i in allData) {
+            total += allData[i];
+        }
+        var percentage = Math.round(((total - allData[allData.length-1]) / total) * 100);
+
+        var text = percentage.toString() + "%",
+            textX = Math.round((width - ctx.measureText(text).width) / 2),
+            textY = height / 1.7;
+
+        ctx.fillText(text, textX, textY);
+        ctx.save();
+    }
+});
 
 var Overview = React.createClass({
     getInitialState: function () {
@@ -41,7 +70,7 @@ var Overview = React.createClass({
             return {auth: state.auth};
         })(Host);
         var host_rows = this.state.hosts.map(function(host) {
-            return <HostRedux title={host.hostname} chartData={host.instances} instances={host.instances.length} />;
+            return <HostRedux title={host.hostname} chartData={host.instances} instances={host.instances.length} host_usage={host.host_usage} />;
         }.bind(this));
         return (
             <div>
@@ -58,13 +87,18 @@ var Host = React.createClass({
     getInitialState: function () {
         var cpuData = [], ramData = [], diskData = [];
         var instances = this.props.chartData.map(function(instance) {
-            cpuData.push([instance.vcpus]);
-            ramData.push([instance.memory_mb]);
-            diskData.push([instance.local_gb]);
+            cpuData.push(instance.vcpus);
+            ramData.push(instance.memory_mb);
+            diskData.push(instance.local_gb);
             return instance.hostname;
         });
+        instances.push("Free");
+        var usage = this.props.host_usage;
+        cpuData.push(usage.free_cores);
+        ramData.push(usage.free_ram);
+        diskData.push(usage.free_disk);
         var data = [cpuData, ramData, diskData];
-        var colors = this.getRandomColors(instances.length);
+        var colors = this.getRandomColors(instances.length+1);
         return {
             chartData: data,
             labels: instances,
