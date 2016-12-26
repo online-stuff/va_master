@@ -233,35 +233,20 @@ class OpenStackDriver(base.DriverBase):
             } for x in servers for y in tenant_usage['server_usages'] for f in flavors if y['name'] == x['name'] and f['id'] == x['flavor']['id']
         ]
 
+        print ('Limits : ', limits['rate'])
+        print ('Usage ' , [x['vcpus'] for x in tenant_usage['server_usages']])
+
         host_usage = {
             'free_disk' : tenant_limits['absolute']['maxTotalVolumeGigabytes'] - tenant_limits['absolute']['totalGigabytesUsed'], 
             'local_usage_gb' : sum([x['local_gb'] for x in tenant_usage['server_usages']]), 
             'ram_usage' : sum([x['memory_mb'] for x in tenant_usage['server_usages']]), 
-=======
-
-        instances = [
-            {
-                'hostname' : x['name'],
-                'ipv4' : x['addresses'][x['addresses'].keys()[0]],
-                'local_gb' : y['local_gb'],
-                'memory_mb' : y['memory_mb'],
-                'vcpus' : y['vcpus'],
-                'status' : x['status']
-            } for x in servers for y in tenant_usage['server_usages'] if x['name'] == y['name']
-        ]
-
-        host_usage = {
-            'free_disk' : tenant_limits['maxTotalVolumeGigabytes'] - tenant_limits['totalGigabytesUsed'],
-            'local_usage_gb' : sum([x['local_gb'] for x in tenant_usage['server_usages']]),
-            'ram_usage' : sum([x['memory_mb'] for x in tenant_usage['server_usages']]),
->>>>>>> staci_dev
 #            'ram_usage' : limits['totalRamUsed']
-            'cpus_usage' : str(sum([x['vcpus'] for x in tenant_usage['server_usages']])) + " / " + str(limits['maxTotalCores']),
+            'cpus_usage' : str(sum([x['vcpus'] for x in tenant_usage['server_usages']])) + " / " + str(limits['absolute']['maxTotalCores']),
             'instances_used' : len(instances),
         }
 
- #       print (limits)
-        host_usage['free_cores'] = limits['absolute']['maxTotalCores'] - host_usage['cpus_usage']
+        print host_usage['cpus_usage']
+        host_usage['free_cores'] = limits['absolute']['maxTotalCores'] - sum([x['vcpus'] for x in tenant_usage['server_usages']])
         host_usage['free_ram'] = limits['absolute']['maxTotalRAMSize'] - host_usage['ram_usage']
 
         limits.update(tenant_limits)
