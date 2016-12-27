@@ -37,9 +37,9 @@ var Appp = React.createClass({
     render: function () {
         var app_rows = [];
         for(var i = 0; i < this.state.hosts.length; i++){
-            hostname = this.state.hosts[i].hostname;
+            // hostname = this.state.hosts[i].hostname;
             var rows = this.state.hosts[i].instances.map(function(app) {
-                ipaddr = app.ipv4;
+                ipaddr = app.ip;
                 if(Array.isArray(ipaddr)){
                     if(ipaddr.length > 0){
                         var ips = "";
@@ -55,11 +55,11 @@ var Appp = React.createClass({
                     <tr key={app.hostname}>
                         <td>{app.hostname}</td>
                         <td>{ipaddr}</td>
-                        <td>{app.local_gb}</td>
+                        <td>{app.size}</td>
                         <td>{app.status}</td>
-                        <td>{hostname}</td>
+                        <td>{app.host}</td>
                         <td>
-                            <Bootstrap.DropdownButton bsStyle='primary' title="Choose" onSelect = {this.btn_clicked.bind(this, app.hostname, hostname)}>
+                            <Bootstrap.DropdownButton bsStyle='primary' title="Choose" onSelect = {this.btn_clicked.bind(this, app.hostname, app.host)}>
                                 <Bootstrap.MenuItem eventKey="reboot">Reboot</Bootstrap.MenuItem>
                                 <Bootstrap.MenuItem eventKey="delete">Delete</Bootstrap.MenuItem>
                                 <Bootstrap.MenuItem eventKey="start">Start</Bootstrap.MenuItem>
@@ -102,7 +102,7 @@ var Appp = React.createClass({
 
 var AppForm = React.createClass({
     getInitialState: function () {
-        return {status: 'none', progress: 0, hosts: [], states: [], hostname: "", role: "", defaults: {sizes: [], networks: [], images: []}, host_usage: {cpu: "", ram: "", disk: "", instances: ""}};
+        return {status: 'none', progress: 0, hosts: [], states: [], hostname: "", role: "", defaults: {sizes: [], networks: [], images: []}, host_usage: {cpu: "", maxCpu: "", ram: "", maxRam: "", disk: "", maxDisk: "", instances: "", maxInstances: ""}};
     },
 
     componentDidMount: function () {
@@ -117,7 +117,7 @@ var AppForm = React.createClass({
             if(me.props.hosts.length > 0){
                 var host_usage = me.props.hosts[0].host_usage;
                 if(Object.keys(host_usage).length > 0){
-                    me.setState({host_usage: {cpu: host_usage.cpus_usage, ram: host_usage.ram_usage, disk: host_usage.disk_usage_gb, instances: host_usage.instances_used}});
+                    me.setState({host_usage: {cpu: host_usage.used_cpus, maxCpu: host_usage.max_cpus, ram: host_usage.used_ram, maxRam: host_usage.max_ram, disk: host_usage.used_disk, maxDisk: host_usage.max_disk, instances: host_usage.used_instances, maxInstances: host_usage.max_instances}});
                 }
             }
         });
@@ -144,9 +144,9 @@ var AppForm = React.createClass({
         }
         var host_usage = this.props.hosts[i].host_usage;
         if(Object.keys(host_usage).length > 0){
-            this.setState({host_usage: {cpu: host_usage.cpus_usage, ram: host_usage.ram_usage, disk: host_usage.disk_usage_gb, instances: host_usage.instances_used}});
+            this.setState({host_usage: {cpu: host_usage.used_cpus, maxCpu: host_usage.max_cpus, ram: host_usage.used_ram, maxRam: host_usage.max_ram, disk: host_usage.used_disk, maxDisk: host_usage.max_disk, instances: host_usage.used_instances, maxInstances: host_usage.max_instances}});
         }else{
-            this.setState({host_usage: {cpu: "", ram: "", disk: "", instances: ""}});
+            this.setState({host_usage: {cpu: "", maxCpu: "", ram: "", maxRam: "", disk: "", maxDisk: "", instances: "", maxInstances: ""}});
         }
     },
 
@@ -309,10 +309,10 @@ var Stats = React.createClass({
         return (
             <Bootstrap.Col xs={12} sm={6} md={6}>
                 <Bootstrap.PageHeader className="header">{this.props.hostname}</Bootstrap.PageHeader>
-                <label>CPU: </label>{this.props.host_usage.cpu}<br/>
-                <label>RAM: </label>{this.props.host_usage.ram}<br/>
-                <label>DISK: </label>{this.props.host_usage.disk}<br/>
-                <label>INSTANCES: </label>{this.props.host_usage.instances}<br/>
+                <label>CPU: </label>{this.props.host_usage.cpu} / {this.props.host_usage.maxCpu}<br/>
+                <label>RAM: </label>{this.props.host_usage.ram} / {this.props.host_usage.maxRam}<br/>
+                <label>DISK: </label>{this.props.host_usage.disk} / {this.props.host_usage.maxDisk}<br/>
+                <label>INSTANCES: </label>{this.props.host_usage.instances} / {this.props.host_usage.maxInstances}<br/>
             </Bootstrap.Col>
         );
 
