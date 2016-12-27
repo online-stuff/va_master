@@ -191,7 +191,7 @@ class OpenStackDriver(base.DriverBase):
 
             servers = yield self.get_openstack_value(self.token_data, 'compute', 'servers/detail')
             servers = servers['servers']
-#            print ('Servers are : ', servers)
+            print ('Servers are : ', servers, '\n\n\n\n')
 
             tenants = yield self.get_openstack_value(self.token_data, 'identity', 'tenants')
             tenant = [x for x in tenants['tenants'] if x['name'] == host['tenant']][0]
@@ -203,9 +203,17 @@ class OpenStackDriver(base.DriverBase):
             tenant_usage = yield self.get_openstack_value(self.token_data, 'compute', 'os-simple-tenant-usage/' + tenant_id)
 
 
-            limits = limits['limits']
+            limits = limits['limits']['absolute']
+            print ('Limits are : ', limits)
+            print ('\n\n\n\n\n')
             tenant_usage = tenant_usage['tenant_usage']
-            tenant_limits = tenant_limits['limits']
+            print ('Tenant usage is : ', tenant_usage)
+            print ('\n\n\n\n\n')
+            tenant_limits = tenant_limits['limits']['absolute']
+            print ('Tenant limits are : ', tenant_limits)
+            print ('\n\n\n\n\n')
+            print ('Flavors are : ', flavors, '\n\n\n\n')
+
 
 
         except Exception as e: 
@@ -218,42 +226,38 @@ class OpenStackDriver(base.DriverBase):
                 'status' : {'success' : False, 'message' : 'Could not connect to the libvirt host. ' + e.message}
             }
             raise tornado.gen.Return(host_data)
-          
-#        print (flavors )
 
         instances = [
             {
                 'hostname' : x['name'], 
-                'ipv4' : x['addresses'], #[x['addresses'].keys()[0]], 
-#                'local_gb' : y['local_gb'], 
-                'size' : f, 
-                'memory_mb' : y['memory_mb'], 
-                'vcpus' : y['vcpus'],
-                'status' : x['status'] 
+                'ip' : x['addresses'].get('private', x['addresses'].get('public', [{'addr':'n/a'}]))[0]['addr'], #[x['addresses'].keys()[0]], 
+                'size' : f['name'],
+                'used_disk' : y['local_gb'], 
+                'used_ram' : y['memory_mb'], 
+                'used_cpu' : y['vcpus'],
+                'status' : x['status'], 
+                'host' : host['hostname'], 
             } for x in servers for y in tenant_usage['server_usages'] for f in flavors if y['name'] == x['name'] and f['id'] == x['flavor']['id']
         ]
 
-        print ('Limits : ', limits['rate'])
-        print ('Usage ' , [x['vcpus'] for x in tenant_usage['server_usages']])
 
         host_usage = {
-            'free_disk' : tenant_limits['absolute']['maxTotalVolumeGigabytes'] - tenant_limits['absolute']['totalGigabytesUsed'], 
-            'local_usage_gb' : sum([x['local_gb'] for x in tenant_usage['server_usages']]), 
-            'ram_usage' : sum([x['memory_mb'] for x in tenant_usage['server_usages']]), 
-#            'ram_usage' : limits['totalRamUsed']
-            'cpus_usage' : str(sum([x['vcpus'] for x in tenant_usage['server_usages']])) + " / " + str(limits['absolute']['maxTotalCores']),
-            'instances_used' : len(instances),
+            'max_cpus' : limits['maxTotalCores'],
+            'used_cpus' : limits['totalCoresUsed'], 
+            'free_cpus' : limits['maxTotalCores'] - limits['totalCoresUsed'], 
+            'max_ram' : limits['maxTotalRAMSize'], 
+            'used_ram' : limits['totalRAMUsed'],
+            'free_ram' : limits['maxTotalRAMSize'] - limits['totalRAMUsed'], 
+            'max_disk' : tenant_limits['maxTotalVolumeGigabytes'], 
+            'used_disk' : tenant_limits['totalGigabytesUsed'], 
+            'free_disk' : tenant_limits['maxTotalVolumeGigabytes'] - tenant_limits['maxTotalVolumeGigabytes'],
+            'max_instances' : limits['maxTotalInstances'], 
+            'used_instances' : limits['totalInstancesUsed'], 
+            'free_instances' : limits['maxTotalInstances'] - limits['totalInstancesUsed']
         }
-
-        print host_usage['cpus_usage']
-        host_usage['free_cores'] = limits['absolute']['maxTotalCores'] - sum([x['vcpus'] for x in tenant_usage['server_usages']])
-        host_usage['free_ram'] = limits['absolute']['maxTotalRAMSize'] - host_usage['ram_usage']
-
-        limits.update(tenant_limits)
 
         host_data = {
             'instances' : instances, #tenant_usage['server_usages'],
-            'limits' : limits,
             'host_usage' : host_usage,
             'status' : {'success' : True, 'message': ''}
         }

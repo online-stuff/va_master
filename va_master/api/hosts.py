@@ -7,6 +7,7 @@ import panels
 @tornado.gen.coroutine
 def list_hosts(handler):
     hosts = yield handler.config.deploy_handler.list_hosts()
+    print (hosts[0])
     handler.json({'hosts': hosts})
 
 
