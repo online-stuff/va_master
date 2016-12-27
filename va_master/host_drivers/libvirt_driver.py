@@ -280,57 +280,42 @@ class LibVirtDriver(base.DriverBase):
         used_disk = sum([x.info()[1] for x in storage.listAllVolumes()])
         total_disk = sum([x.info()[2] for x in storage.listAllVolumes()])
 
-        instances = [
-        {            
-            'hostname' : x.name(), 
-            'ip' : 'n/a', 
-            'size' : 'va-small', 
-            'status' : self.libvirt_states[x.info()[0]], 
-            'host' : host['hostname'],
-            'used_ram' : x.info()[2] / 2.0**10,
-            'used_disk': x.blockInfo('hda')[1] / 2.0**30,
-            'used_cpu': x.info()[3], 
-        } for x in conn.listAllDomains()]
+        instances = []
+        for x in conn.listAllDomains():
+            instance =  {            
+                'hostname' : x.name(), 
+                'ip' : 'n/a', 
+                'size' : 'va-small', 
+                'status' : self.libvirt_states[x.info()[0]], 
+                'host' : host['hostname'],
+                'used_ram' : x.info()[2] / 2.0**10,
+                'used_cpu': x.info()[3], 
+            }
+            try: 
+                instance['used_disk'] = x.blockInfo('hda')[1] / 2.0**30
+            except: 
+                import traceback
+                print ('Cannot get used disk for instance : ', x.name())
+                instance['used_disk'] = 'n/a'
+                traceback.print_exc()
         
         host_usage =  {
             'max_cpus' : conn.getMaxVcpus(None), 
             'used_cpus' : sum([x['used_cpu'] for x in instances]), 
             'max_ram' : sum([x.info()[1] for x in conn.listAllDomains()]) / 2.0**10, 
             'used_ram' : sum([x['used_ram'] for x in instances]),
-            'max_disk' : storage_info()[1] / 2.0**30, 
-            'used_disk' : storage_info()[2] / 2.0**30, 
-            'free_disk' : storage_info()[3] / 2.0**30, 
+            'max_disk' : storage_info[1] / 2.0**30, 
+            'used_disk' : storage_info[2] / 2.0**30, 
+            'free_disk' : storage_info[3] / 2.0**30, 
             'max_instances' : 'n/a', 
             'used_instances' : len(instances),
       }
         host_usage['free_cpus'] = host_usage['max_cpus'] - host_usage['used_cpus']
         host_usage['free_ram'] = host_usage['max_ram'] - host_usage['used_ram']
 
-        limits = {'absolute' : {
-            'maxTotalCores' : conn.getMaxVcpus(None),
-            'totalRamUsed' : sum([x.info()[1] for x in conn.listAllDomains()]),
-            'totalCoresUsed' : info[2],
-            'totalInstancesUsed' : len(conn.listDefinedDomains()),
-            'maxDiskCapacity' : storage_info[1],
-            'availableDiskCapacity' : storage_info[3],
-            'maxTotalInstances' : 'n/a',
-            'maxRam' : sum([x.info()[2] for x in conn.listAllDomains()])
-        }}
-
-        host_usage = {
-            'free_cores' : conn.getMaxVcpus(None) - info[2],
-            'free_disk' : storage_info[3] / 2** 30 - storage_info[1] / 2**30,
-            'ram_usage' : sum([x.info()[2] for x in conn.listAllDomains()]),
-            'cpus_usage' : str(info[2]) + " / " + str(limits['absolute']['maxTotalCores']),
-            'disk_usage_gb' : storage_info[1] / 2**30,
-            'instances_used' : len(instances),
-        }
-        host_usage['free_ram'] = limits['absolute']['maxRam'] - host_usage['ram_usage']
-
         host_info = {
             'instances' : instances,
             'host_usage' : host_usage,
-            'limits' : limits,
             'status' : {'success' : True, 'message': ''}
         }
 
