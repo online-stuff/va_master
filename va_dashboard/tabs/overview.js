@@ -87,14 +87,14 @@ var Host = React.createClass({
     getInitialState: function () {
         var cpuData = [], ramData = [], diskData = [];
         var instances = this.props.chartData.map(function(instance) {
-            cpuData.push(instance.vcpus);
-            ramData.push(instance.memory_mb);
-            diskData.push(instance.local_gb);
+            cpuData.push(instance.used_cpu);
+            ramData.push(instance.used_ram);
+            diskData.push(instance.used_disk);
             return instance.hostname;
         });
         instances.push("Free");
         var usage = this.props.host_usage;
-        cpuData.push(usage.free_cores);
+        cpuData.push(usage.free_cpus);
         ramData.push(usage.free_ram);
         diskData.push(usage.free_disk);
         var data = [cpuData, ramData, diskData];
