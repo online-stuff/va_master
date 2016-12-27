@@ -154,6 +154,10 @@ class LibVirtDriver(base.DriverBase):
         self.flavours = flavours
         self.salt_master_fqdn = salt_master_fqdn
         self.config_drive = CONFIG_DRIVE
+
+        self.libvirt_states = ['no_state', 'running', 'blocked', 'paused', 'shutdown', 'shutoff', 'crashed', 'power_suspended']
+
+
         super(LibVirtDriver, self).__init__(**kwargs)
 
 
@@ -271,11 +275,36 @@ class LibVirtDriver(base.DriverBase):
             instances.append(instance)
 
 
-
         info = conn.getInfo()
         storage_info = storage.info()
         used_disk = sum([x.info()[1] for x in storage.listAllVolumes()])
         total_disk = sum([x.info()[2] for x in storage.listAllVolumes()])
+
+        instances = [
+        {            
+            'hostname' : x.name(), 
+            'ip' : 'n/a', 
+            'size' : 'va-small', 
+            'status' : self.libvirt_states[x.info()[0]], 
+            'host' : host['hostname'],
+            'used_ram' : x.info()[2] / 2.0**10,
+            'used_disk': x.blockInfo('hda')[1] / 2.0**30,
+            'used_cpu': x.info()[3], 
+        } for x in conn.listAllDomains()]
+        
+        host_usage =  {
+            'max_cpus' : conn.getMaxVcpus(None), 
+            'used_cpus' : sum([x['used_cpu'] for x in instances]), 
+            'max_ram' : sum([x.info()[1] for x in conn.listAllDomains()]) / 2.0**10, 
+            'used_ram' : sum([x['used_ram'] for x in instances]),
+            'max_disk' : storage_info()[1] / 2.0**30, 
+            'used_disk' : storage_info()[2] / 2.0**30, 
+            'free_disk' : storage_info()[3] / 2.0**30, 
+            'max_instances' : 'n/a', 
+            'used_instances' : len(instances),
+      }
+        host_usage['free_cpus'] = host_usage['max_cpus'] - host_usage['used_cpus']
+        host_usage['free_ram'] = host_usage['max_ram'] - host_usage['used_ram']
 
         limits = {'absolute' : {
             'maxTotalCores' : conn.getMaxVcpus(None),
