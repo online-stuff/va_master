@@ -7,6 +7,8 @@ import json
 
 paths = {
     'get' : {
+        'apps/vpn_users' : apps.get_openvpn_users,
+
         'status' : status.status, 
 
         'drivers' : hosts.list_drivers, 

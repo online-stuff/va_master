@@ -4,6 +4,14 @@ import json
 import subprocess
 import requests
 import zipfile, tarfile
+from salt.client import Caller
+
+
+#@auth_only
+def get_openvpn_users(handler):
+    cl = Caller()
+    users = cl.cmd('openvpn.list_users')
+    handler.json(users)
 
 @tornado.gen.coroutine
 def perform_instance_action(handler): 
@@ -103,6 +111,7 @@ def get_app_info(handler):
 def launch_app(handler):
     try: 
         data = handler.data
+        print ('My data is : ', data)
         deploy_handler = handler.config.deploy_handler
         store = deploy_handler.datastore
 
