@@ -132,6 +132,7 @@ class OpenStackDriver(base.DriverBase):
 
     @tornado.gen.coroutine
     def get_networks(self):
+        print ('Getting networks. ')
         networks = yield self.get_openstack_value(self.token_data, 'network', 'v2.0/networks')
         networks = ['|'.join([x['name'], x['id']]) for x in networks['networks']]
         raise tornado.gen.Return(networks)
@@ -154,6 +155,47 @@ class OpenStackDriver(base.DriverBase):
         sizes = [x['name'] for x in sizes['flavors']]
         raise tornado.gen.Return(sizes)
 
+
+    @tornado.gen.coroutine
+    def get_instances(self, host):
+        try:
+            self.token_data = yield self.get_token(host)
+
+            flavors = yield self.get_openstack_value(self.token_data, 'compute', 'flavors/detail')
+            flavors = flavors['flavors']
+
+            servers = yield self.get_openstack_value(self.token_data, 'compute', 'servers/detail')
+            servers = servers['servers']
+            print ('Servers are : ', servers, '\n\n\n\n')
+
+            tenants = yield self.get_openstack_value(self.token_data, 'identity', 'tenants')
+            tenant = [x for x in tenants['tenants'] if x['name'] == host['tenant']][0]
+
+            tenant_id = tenant['id']
+            tenant_usage = yield self.get_openstack_value(self.token_data, 'compute', 'os-simple-tenant-usage/' + tenant_id)
+
+            tenant_usage = tenant_usage['tenant_usage']
+            instances = [
+                {
+                    'hostname' : x['name'], 
+                    'ip' : x['addresses'].get('private', x['addresses'].get('public', [{'addr':'n/a'}]))[0]['addr'], #[x['addresses'].keys()[0]], 
+                    'size' : f['name'],
+                    'used_disk' : y['local_gb'], 
+                    'used_ram' : y['memory_mb'], 
+                    'used_cpu' : y['vcpus'],
+                    'status' : x['status'], 
+                    'host' : host['hostname'], 
+                } for x in servers for y in tenant_usage['server_usages'] for f in flavors if y['name'] == x['name'] and f['id'] == x['flavor']['id']
+            ]
+        except Exception as e: 
+            print ('Cannot get instances. ')
+            import traceback
+            print traceback.print_exc()
+            raise tornado.gen.Return([])
+        raise tornado.gen.Return(instances)
+
+
+
     @tornado.gen.coroutine
     def get_host_status(self, host):
         try:
@@ -162,6 +204,57 @@ class OpenStackDriver(base.DriverBase):
             raise tornado.gen.Return({'success' : False, 'message' : 'Error connecting to libvirt host. ' + e.message})
 
         raise tornado.gen.Return({'success' : True, 'message' : ''})
+
+    @tornado.gen.coroutine
+    def get_host_data(self, host):
+        try:
+            self.token_data = yield self.get_token(host)
+
+            tenants = yield self.get_openstack_value(self.token_data, 'identity', 'tenants')
+            tenant = [x for x in tenants['tenants'] if x['name'] == host['tenant']][0]
+
+            tenant_id = tenant['id']
+
+            limits = yield self.get_openstack_value(self.token_data, 'compute', 'limits')
+            tenant_limits = yield self.get_openstack_value(self.token_data, 'volumev2', 'limits')
+
+            limits = limits['limits']['absolute']
+            tenant_limits = tenant_limits['limits']['absolute']
+        except Exception as e: 
+            import traceback
+            print traceback.print_exc()
+            host_data = {
+                'instances' : [],
+                'limits' : {},
+                'host_usage' : {},
+                'status' : {'success' : False, 'message' : 'Could not connect to the libvirt host. ' + e.message}
+            }
+            raise tornado.gen.Return(host_data)
+
+
+        instances = yield self.get_instances(host)
+
+        host_usage = {
+            'max_cpus' : limits['maxTotalCores'],
+            'used_cpus' : limits['totalCoresUsed'], 
+            'free_cpus' : limits['maxTotalCores'] - limits['totalCoresUsed'], 
+            'max_ram' : limits['maxTotalRAMSize'], 
+            'used_ram' : limits['totalRAMUsed'],
+            'free_ram' : limits['maxTotalRAMSize'] - limits['totalRAMUsed'], 
+            'max_disk' : tenant_limits['maxTotalVolumeGigabytes'], 
+            'used_disk' : tenant_limits['totalGigabytesUsed'], 
+            'free_disk' : tenant_limits['maxTotalVolumeGigabytes'] - tenant_limits['maxTotalVolumeGigabytes'],
+            'max_instances' : limits['maxTotalInstances'], 
+            'used_instances' : limits['totalInstancesUsed'], 
+            'free_instances' : limits['maxTotalInstances'] - limits['totalInstancesUsed']
+        }
+
+        host_data = {
+            'instances' : instances, 
+            'host_usage' : host_usage,
+            'status' : {'success' : True, 'message': ''}
+        }
+        raise tornado.gen.Return(host_data)
 
     @tornado.gen.coroutine
     def instance_action(self, host, instance_name, action):
@@ -181,88 +274,6 @@ class OpenStackDriver(base.DriverBase):
 
         raise tornado.gen.Return({'success' : True, 'message' : ''})
 
-    @tornado.gen.coroutine
-    def get_host_data(self, host):
-        try:
-            self.token_data = yield self.get_token(host)
-
-            flavors = yield self.get_openstack_value(self.token_data, 'compute', 'flavors/detail')
-            flavors = flavors['flavors']
-
-            servers = yield self.get_openstack_value(self.token_data, 'compute', 'servers/detail')
-            servers = servers['servers']
-            print ('Servers are : ', servers, '\n\n\n\n')
-
-            tenants = yield self.get_openstack_value(self.token_data, 'identity', 'tenants')
-            tenant = [x for x in tenants['tenants'] if x['name'] == host['tenant']][0]
-
-            tenant_id = tenant['id']
-
-            limits = yield self.get_openstack_value(self.token_data, 'compute', 'limits')
-            tenant_limits = yield self.get_openstack_value(self.token_data, 'volumev2', 'limits')
-            tenant_usage = yield self.get_openstack_value(self.token_data, 'compute', 'os-simple-tenant-usage/' + tenant_id)
-
-
-            limits = limits['limits']['absolute']
-            print ('Limits are : ', limits)
-            print ('\n\n\n\n\n')
-            tenant_usage = tenant_usage['tenant_usage']
-            print ('Tenant usage is : ', tenant_usage)
-            print ('\n\n\n\n\n')
-            tenant_limits = tenant_limits['limits']['absolute']
-            print ('Tenant limits are : ', tenant_limits)
-            print ('\n\n\n\n\n')
-            print ('Flavors are : ', flavors, '\n\n\n\n')
-
-
-
-        except Exception as e: 
-            import traceback
-            print traceback.print_exc()
-            host_data = {
-                'instances' : [],
-                'limits' : {},
-                'host_usage' : {},
-                'status' : {'success' : False, 'message' : 'Could not connect to the libvirt host. ' + e.message}
-            }
-            raise tornado.gen.Return(host_data)
-
-        instances = [
-            {
-                'hostname' : x['name'], 
-                'ip' : x['addresses'].get('private', x['addresses'].get('public', [{'addr':'n/a'}]))[0]['addr'], #[x['addresses'].keys()[0]], 
-                'size' : f['name'],
-                'used_disk' : y['local_gb'], 
-                'used_ram' : y['memory_mb'], 
-                'used_cpu' : y['vcpus'],
-                'status' : x['status'], 
-                'host' : host['hostname'], 
-            } for x in servers for y in tenant_usage['server_usages'] for f in flavors if y['name'] == x['name'] and f['id'] == x['flavor']['id']
-        ]
-
-
-        host_usage = {
-            'max_cpus' : limits['maxTotalCores'],
-            'used_cpus' : limits['totalCoresUsed'], 
-            'free_cpus' : limits['maxTotalCores'] - limits['totalCoresUsed'], 
-            'max_ram' : limits['maxTotalRAMSize'], 
-            'used_ram' : limits['totalRAMUsed'],
-            'free_ram' : limits['maxTotalRAMSize'] - limits['totalRAMUsed'], 
-            'max_disk' : tenant_limits['maxTotalVolumeGigabytes'], 
-            'used_disk' : tenant_limits['totalGigabytesUsed'], 
-            'free_disk' : tenant_limits['maxTotalVolumeGigabytes'] - tenant_limits['maxTotalVolumeGigabytes'],
-            'max_instances' : limits['maxTotalInstances'], 
-            'used_instances' : limits['totalInstancesUsed'], 
-            'free_instances' : limits['maxTotalInstances'] - limits['totalInstancesUsed']
-        }
-
-        host_data = {
-            'instances' : instances, #tenant_usage['server_usages'],
-            'host_usage' : host_usage,
-            'status' : {'success' : True, 'message': ''}
-        }
-        raise tornado.gen.Return(host_data)
-
 
 
     @tornado.gen.coroutine
@@ -273,12 +284,6 @@ class OpenStackDriver(base.DriverBase):
     	    ))
         elif step_index == 0:
     	    self.token_data = yield self.get_token(field_values)
-
-    	    self.field_values['networks'] = yield self.get_networks()
-            self.field_values['sec_groups'] = yield self.get_sec_groups()
-            self.field_values['images'] = yield self.get_images()
-            print ('My images are : ', self.field_values['images'])
-            self.field_values['sizes']= yield self.get_sizes()
             os_base_url = 'http://' + field_values['host_ip'] + '/v2.0'
 
             self.provider_vars['VAR_TENANT'] = field_values['tenant']

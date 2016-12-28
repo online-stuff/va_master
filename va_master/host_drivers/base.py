@@ -92,6 +92,7 @@ class DriverBase(object):
             {'name': 'Security'}
         ])
 
+
     @tornado.gen.coroutine
     def get_salt_configs(self, skip_provider = False, skip_profile = False, base_profile = False):
         if not (self.profile_template or self.provider_template): 
@@ -156,6 +157,57 @@ class DriverBase(object):
         self.steps = [host_info, net_sec, imagesize]
         raise tornado.gen.Return(self.steps)
 
+    @tornado.gen.coroutine
+    def get_networks(self):
+        print ('I am in base driver. ')
+        networks = [] 
+        raise tornado.gen.Return(networks)
+
+    @tornado.gen.coroutine
+    def get_sec_groups(self):
+       	sec_groups =[] 
+    	raise tornado.gen.Return(sec_groups)
+
+    @tornado.gen.coroutine
+    def get_images(self):
+        images = []
+        raise tornado.gen.Return(images)
+
+    @tornado.gen.coroutine
+    def get_sizes(self):
+        sizes = []
+        raise tornado.gen.Return(sizes)
+
+    @tornado.gen.coroutine
+    def instance_action(self, host, instance_name, action):
+        instance_action = {
+            'delete' : 'delete_function', 
+            'reboot' : 'reboot_function', 
+            'start' : 'start_function', 
+            'stop' : 'stop_function', 
+        }
+        if action not in instance_action: 
+            raise tornado.gen.Return({'success' : False, 'message' : 'Action not supported : ' + action})
+
+        success = instance_action[action](instance_name)
+        raise tornado.gen.Return({'success' : True, 'message' : ''})
+
+
+    @tornado.gen.coroutine
+    def get_host_data(self, host):
+        try: 
+            host_data = {
+                'instances' : [], 
+                'host_usage' : {},
+            }
+            #Functions that connect to host here. 
+        except Exception as e: 
+            host_data = {
+                'instances' : [], 
+                'host_usage' : {},
+                'status' : {'success' : False, 'message' : 'Could not connect to the libvirt host. ' + e}
+            }
+            raise tornado.gen.Return(host_data)
 
     @tornado.gen.coroutine
     def validate_field_values(self, step_index, field_values):
@@ -172,6 +224,12 @@ class DriverBase(object):
                 if field_values[key]: 
                     self.field_values[key] = field_values[key]
 
+    	    self.field_values['networks'] = yield self.get_networks()
+            self.field_values['sec_groups'] = yield self.get_sec_groups()
+            self.field_values['images'] = yield self.get_images()
+            self.field_values['sizes']= yield self.get_sizes()
+
+
             self.provider_vars['VAR_USERNAME'] = field_values['username']
             self.provider_vars['VAR_PASSWORD'] = field_values['password']
 
@@ -185,6 +243,8 @@ class DriverBase(object):
         elif step_index == 1:
             self.provider_vars['VAR_NETWORK_ID'] = field_values['network']
             self.profile_vars['VAR_SEC_GROUP'] = field_values['sec_group']
+
+            print ('My networks : ', self.field_values['networks'])
 
             self.field_values['defaults']['network'] = field_values['network']
             self.field_values['defaults']['sec_group'] = field_values['sec_group']

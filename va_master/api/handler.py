@@ -68,10 +68,8 @@ class ApiHandler(tornado.web.RequestHandler):
         try: 
             try: 
                 if 'json' in self.request.headers['Content-Type']: 
-                    print ('Json received : ', self.request.body)
                     data = json.loads(self.request.body)
                 else:
-                    print (self.request, self.request.body)
                     data = {self.request.arguments[x][0] for x in self.request.arguments}
                     data.update(self.request.files)
             except ValueError: 

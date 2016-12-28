@@ -155,7 +155,7 @@ class LibVirtDriver(base.DriverBase):
         self.salt_master_fqdn = salt_master_fqdn
         self.config_drive = CONFIG_DRIVE
 
-        self.libvirt_states = ['no_state', 'running', 'blocked', 'paused', 'shutdown', 'shutoff', 'crashed', 'power_suspended']
+        self.libvirt_states = ['no_state', 'ACTIVE', 'blocked', 'PAUSED', 'shutdown', 'SHUTOFF', 'crashed', 'SUSPENDED']
 
 
         super(LibVirtDriver, self).__init__(**kwargs)
@@ -205,6 +205,10 @@ class LibVirtDriver(base.DriverBase):
         raise tornado.gen.Return(images)
 
     @tornado.gen.coroutine
+    def get_sizes(self):
+        raise tornado.gen.Return(self.flavours)
+
+    @tornado.gen.coroutine
     def get_host_status(self, host):
         try:
             host_url = host['host_protocol'] + '://' + host['host_ip'] + '/system'
@@ -213,6 +217,89 @@ class LibVirtDriver(base.DriverBase):
             raise tornado.gen.Return({'success' : False, 'message' : 'Error connecting to libvirt host. ' + e.message})
 
         raise tornado.gen.Return({'success' : True, 'message' : ''})
+
+    @tornado.gen.coroutine
+    def get_instances(self, host):
+        host_url = host['host_protocol'] + '://' + host['host_ip'] + '/system'
+
+        try:
+            conn = libvirt.open(host_url)
+        except Exception as e:
+            raise tornado.gen.Return([])
+
+        instances = []
+        for x in conn.listAllDomains():
+            instance =  {            
+                'hostname' : x.name(), 
+                'ip' : 'n/a', 
+                'size' : 'va-small', 
+                'status' : self.libvirt_states[x.info()[0]], 
+                'host' : host['hostname'],
+                'used_ram' : x.info()[2] / 2.0**10,
+                'used_cpu': x.info()[3], 
+            }
+            try: 
+                instance['used_disk'] = x.blockInfo('hda')[1] / 2.0**30
+            except: 
+                import traceback
+                print ('Cannot get used disk for instance : ', x.name())
+                instance['used_disk'] = 'n/a'
+                traceback.print_exc()
+
+        raise tornado.gen.Return(instances)
+
+
+    @tornado.gen.coroutine
+    def get_host_data(self, host):
+        host_url = host['host_protocol'] + '://' + host['host_ip'] + '/system'
+
+        try:
+            conn = libvirt.open(host_url)
+        except Exception as e:
+            host_data = {
+                'instances' : [],
+                'limits' : {},
+                'host_usage' : {},
+                'status' : {'success' : False, 'message' : 'Could not connect to the libvirt host. ' + e}
+            }
+            raise tornado.gen.Return(host_data)
+
+
+        instances = yield self.get_instances(host)
+
+        storage = [x for x in conn.listAllStoragePools() if x.name() == 'default'][0]
+
+
+
+        info = conn.getInfo()
+        storage_info = storage.info()
+        used_disk = sum([x.info()[1] for x in storage.listAllVolumes()])
+        total_disk = sum([x.info()[2] for x in storage.listAllVolumes()])
+
+        
+        host_usage =  {
+            'max_cpus' : conn.getMaxVcpus(None), 
+            'used_cpus' : sum([x['used_cpu'] for x in instances]), 
+            'max_ram' : sum([x.info()[1] for x in conn.listAllDomains()]) / 2.0**10, 
+            'used_ram' : sum([x['used_ram'] for x in instances]),
+            'max_disk' : storage_info[1] / 2.0**30, 
+            'used_disk' : storage_info[2] / 2.0**30, 
+            'free_disk' : storage_info[3] / 2.0**30, 
+            'max_instances' : 'n/a', 
+            'used_instances' : len(instances),
+      }
+        host_usage['free_cpus'] = host_usage['max_cpus'] - host_usage['used_cpus']
+        host_usage['free_ram'] = host_usage['max_ram'] - host_usage['used_ram']
+
+        host_info = {
+            'instances' : instances,
+            'host_usage' : host_usage,
+            'status' : {'success' : True, 'message': ''}
+        }
+
+
+        raise tornado.gen.Return(host_info)
+
 
     @tornado.gen.coroutine
     def instance_action(self, host, instance_name, action):
@@ -241,86 +328,6 @@ class LibVirtDriver(base.DriverBase):
 
         raise tornado.gen.Return({'success' : True, 'message' : ''})
 
-    @tornado.gen.coroutine
-    def get_host_data(self, host):
-        host_url = host['host_protocol'] + '://' + host['host_ip'] + '/system'
-
-        try:
-            conn = libvirt.open(host_url)
-        except Exception as e:
-            host_data = {
-                'instances' : [],
-                'limits' : {},
-                'host_usage' : {},
-                'status' : {'success' : False, 'message' : 'Could not connect to the libvirt host. ' + e}
-            }
-            raise tornado.gen.Return(host_data)
-
-
-        storage = [x for x in conn.listAllStoragePools() if x.name() == 'default'][0]
-
-        instances_list = conn.listAllDomains()
-
-        instances = []
-        for x in instances_list:
-            instance =  {
-                'hostname' : x.name(), 
-                'ipv4' : 'n/a', 
-                'size' : 'va-small', #TODO get this from store
-                'memory_mb' : (x.info()[2] + 0.0) / 2**20, 
-                'status' : x.isActive(), 
-            }
-            if not x.isActive(): instance['vcpus'] = 0
-            else: instance['vcpus'] = x.info()[3]
-            instances.append(instance)
-
-
-        info = conn.getInfo()
-        storage_info = storage.info()
-        used_disk = sum([x.info()[1] for x in storage.listAllVolumes()])
-        total_disk = sum([x.info()[2] for x in storage.listAllVolumes()])
-
-        instances = []
-        for x in conn.listAllDomains():
-            instance =  {            
-                'hostname' : x.name(), 
-                'ip' : 'n/a', 
-                'size' : 'va-small', 
-                'status' : self.libvirt_states[x.info()[0]], 
-                'host' : host['hostname'],
-                'used_ram' : x.info()[2] / 2.0**10,
-                'used_cpu': x.info()[3], 
-            }
-            try: 
-                instance['used_disk'] = x.blockInfo('hda')[1] / 2.0**30
-            except: 
-                import traceback
-                print ('Cannot get used disk for instance : ', x.name())
-                instance['used_disk'] = 'n/a'
-                traceback.print_exc()
-        
-        host_usage =  {
-            'max_cpus' : conn.getMaxVcpus(None), 
-            'used_cpus' : sum([x['used_cpu'] for x in instances]), 
-            'max_ram' : sum([x.info()[1] for x in conn.listAllDomains()]) / 2.0**10, 
-            'used_ram' : sum([x['used_ram'] for x in instances]),
-            'max_disk' : storage_info[1] / 2.0**30, 
-            'used_disk' : storage_info[2] / 2.0**30, 
-            'free_disk' : storage_info[3] / 2.0**30, 
-            'max_instances' : 'n/a', 
-            'used_instances' : len(instances),
-      }
-        host_usage['free_cpus'] = host_usage['max_cpus'] - host_usage['used_cpus']
-        host_usage['free_ram'] = host_usage['max_ram'] - host_usage['used_ram']
-
-        host_info = {
-            'instances' : instances,
-            'host_usage' : host_usage,
-            'status' : {'success' : True, 'message': ''}
-        }
-
-
-        raise tornado.gen.Return(host_info)
 
 
     @tornado.gen.coroutine
