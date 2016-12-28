@@ -102,7 +102,7 @@ var Appp = React.createClass({
 
 var AppForm = React.createClass({
     getInitialState: function () {
-        return {status: 'none', progress: 0, hosts: [], states: [], hostname: "", role: "", defaults: {sizes: [], networks: [], images: []}, host_usage: {cpu: "", maxCpu: "", ram: "", maxRam: "", disk: "", maxDisk: "", instances: "", maxInstances: ""}};
+        return {status: 'none', progress: 0, hosts: [], states: [], hostname: "", role: "", defaults: {sizes: [], networks: [], images: [], sec_groups: []}, host_usage: {cpu: "", maxCpu: "", ram: "", maxRam: "", disk: "", maxDisk: "", instances: "", maxInstances: ""}};
     },
 
     componentDidMount: function () {
@@ -112,7 +112,7 @@ var AppForm = React.createClass({
             var host = data.hosts[0].hostname;
             me.setState({hostname: host});
             if(data.hosts.length > 0){
-                me.setState({defaults: {sizes: data.hosts[0].sizes, networks: data.hosts[0].networks, images: data.hosts[0].images}});
+                me.setState({defaults: {sizes: data.hosts[0].sizes, networks: data.hosts[0].networks, images: data.hosts[0].images, sec_groups: data.hosts[0].sec_groups}});
             }
             if(me.props.hosts.length > 0){
                 var host_usage = me.props.hosts[0].host_usage;
@@ -138,7 +138,7 @@ var AppForm = React.createClass({
         for(i=0; i < this.state.hosts.length; i++){
             var host = this.state.hosts[i];
             if(host.hostname === value){
-                this.setState({defaults: {sizes: host.sizes, networks: host.networks, images: host.images}});
+                this.setState({defaults: {sizes: host.sizes, networks: host.networks, images: host.images, sec_groups: host.sec_groups}});
                 break;
             }
         }
@@ -191,6 +191,10 @@ var AppForm = React.createClass({
 
         var network_rows = this.state.defaults.networks.map(function(network) {
             return <option key = {network}>{network}</option>
+        });
+
+        var sec_groups = this.state.defaults.sec_groups.map(function(sec) {
+            return <option key = {sec}>{sec}</option>
         });
 
         var StatsRedux = connect(function(state){
@@ -260,6 +264,16 @@ var AppForm = React.createClass({
                                 </Bootstrap.FormControl>
                             </Bootstrap.Col>
                         </Bootstrap.FormGroup>
+                        <Bootstrap.FormGroup>
+                            <Bootstrap.Col componentClass={Bootstrap.ControlLabel} sm={2}>
+                                Security group
+                            </Bootstrap.Col>
+                            <Bootstrap.Col sm={10}>
+                                <Bootstrap.FormControl componentClass="select" ref='sec_group'>
+                                    {sec_groups}
+                                </Bootstrap.FormControl>
+                            </Bootstrap.Col>
+                        </Bootstrap.FormGroup>
                         <Bootstrap.ButtonGroup>
                             <Bootstrap.Button type="submit" bsStyle='primary'>
                                 Launch
@@ -293,7 +307,8 @@ var AppForm = React.createClass({
             size: ReactDOM.findDOMNode(this.refs.flavor).value,
             image: ReactDOM.findDOMNode(this.refs.image).value,
             storage: ReactDOM.findDOMNode(this.refs.storage).value,
-            network: ReactDOM.findDOMNode(this.refs.network).value
+            network: ReactDOM.findDOMNode(this.refs.network).value,
+            sec_group: ReactDOM.findDOMNode(this.refs.sec_group).value
         };
         Network.post('/api/apps', this.props.auth.token, data).done(function(data) {
             setTimeout(function(){
