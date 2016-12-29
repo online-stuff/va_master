@@ -66,17 +66,11 @@ def generate_store_config(values):
                 'max_memory' : 2**20, 
                 'num_cpus' : 1
             }
-        },
-        'available_panels' : 
-        {
-            'user' : ['directory', 'overview'], 
-            'admin' : ['overview', 'hosts', 'apps', 'store', 'directory']
-        },
+        }
     }
     store_config.update(values)
 
     return store_config
-
 
 
 def handle_init(args):
@@ -167,7 +161,7 @@ def handle_init(args):
             try:
                 cli_info('Trying to start VPN. ')
                 if values.get('host_vpn_endpoint'): 
-                    cli_envorinment.write_vpn_pillar(values['host_vpn_endpoint']) 
+                    cli_environment.write_vpn_pillar(values['host_vpn_endpoint']) 
                 cli_success('VPN is running. ')
             except: 
                 cli_error('Failed to start VPN. Error was : ')
@@ -186,15 +180,20 @@ def handle_init(args):
 
 
             try:
-                store_config = run_sync(functools.partial(store.get, 'init_vals'))
+                store_config = run_sync(functools.partial(store.get, 'init_vals')) or {}
             except: 
                 store_config = {}
 
             store_config.update(generate_store_config(values))
-
             
-            store_config = run_sync(functools.partial(store.insert, 'init_vals', store_config))
-#            run_sync(store_config)
+#            store_config = run_sync(functools.partial(store.insert, 'init_vals', store_config))
+            run_sync(functools.partial(store.insert, 'init_vals', store_config))
+
+            try:
+                panels = run_sync(functools.partial(store.get, 'panels')) or {'admin' : [], 'user' : []}
+            except: 
+                run_sync(functools.partial(store.insert, 'panels', {'admin' : {}, 'user' : {}}))
+
 
             #Generate an ssh-key
             if values.get('salt_key_path') and values.get('salt_key_name'): 
@@ -205,11 +204,14 @@ def handle_init(args):
 #                        os.mkdir('/root/va_master_key')
                     except: 
                         pass
-                    ssh_cmd = ['ssh-keygen', '-t', 'rsa', '-f', values['salt_key_path'] + values['salt_key_name'], '-N', '']
+                    key_full_path = values['salt_key_path'] + values['salt_key_name']
+
+                    ssh_cmd = ['ssh-keygen', '-t', 'rsa', '-f', key_full_path, '-N', '']
 
 #                    ssh_cmd = ['ssh-keygen', '-t', 'rsa', '-f', '/root/va_master_key/va_master_key_name', '-N', '']
 
                     subprocess.call(ssh_cmd)
+                    subprocess.call(['mv', key_full_path, key_full_path + '.pem'])
                 except: 
                     import traceback
                     print ('Could not generate a key. Probably already exists. ')
@@ -244,8 +246,8 @@ def entry():
         ('admin-user', 'Enter username for the first admin'),
         ('admin-pass', 'Enter password for the first admin'), 
         ('salt-master_fqdn', 'Enter the fqdn for the salt master'),
-        ('salt-key_path', 'Enter the path to the salt key. '), 
-        ('salt-key_name', 'Enter the name of the salt key. '), 
+        ('salt-key-path', 'Enter the path to the salt key. '), 
+        ('salt-key-name', 'Enter the name of the salt key. '), 
         ('host-vpn-endpoint', 'Enter the VPN endpoint. Will default to vpn.<salt_master_fqdn>' ),
         ('company-name', 'The name of Your company. It will be used in the VPN certifiates. ')
     ]

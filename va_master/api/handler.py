@@ -8,6 +8,7 @@ import json
 paths = {
     'get' : {
         'apps/vpn_users' : apps.get_openvpn_users,
+        'apps/add_app' : apps.add_app,
 
         'status' : status.status, 
 
@@ -18,7 +19,7 @@ paths = {
         'states' : apps.get_states, 
         'states/reset' : apps.reset_states, 
 
-
+        'panels/new_panel' : panels.new_panel,
         'panels' : panels.get_panels, 
         'panels/get_panel' : panels.get_panel_for_user, 
     },
@@ -44,7 +45,6 @@ class ApiHandler(tornado.web.RequestHandler):
         self.config = config
         self.datastore = config.datastore
         self.data = {}
-        self.deploy_handler = None
 
     def json(self, obj, status=200):
         self.set_header('Content-Type', 'application/json')
@@ -63,7 +63,8 @@ class ApiHandler(tornado.web.RequestHandler):
 
     @tornado.gen.coroutine
     def get(self, path):
-        yield self.exec_method('get', path, self.request.query_arguments)
+        args = self.request.query_arguments
+        yield self.exec_method('get', path, {x : args[x][0] for x in args})
 
     @tornado.gen.coroutine
     def post(self, path):

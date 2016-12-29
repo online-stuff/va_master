@@ -102,6 +102,7 @@ class DeployHandler(object):
     def list_hosts(self):
         try:
             hosts = yield self.datastore.get('hosts')
+            print ('Hosts are : ', hosts)
             for host in hosts: 
                 driver = yield self.get_driver_by_id(host['driver_name'])
                 host_status = yield driver.get_host_status(host)
@@ -125,7 +126,7 @@ class DeployHandler(object):
             traceback.print_exc()
 
     @tornado.gen.coroutine
-    def get_states_data(self):
+    def get_states_data(self, states = []):
         states_data = []
         subdirs = glob.glob('/srv/salt/*')
         for state in subdirs:
@@ -138,6 +139,8 @@ class DeployHandler(object):
                 print ('error with ', state)
                 import traceback
                 traceback.print_exc()
+        if states: 
+            states_data = [x for x in states_data if x['name'] in states]
         raise tornado.gen.Return(states_data)
 
 
@@ -164,6 +167,42 @@ class DeployHandler(object):
             import traceback
             traceback.print_exc()
 
+
+    def delete_panel(self, panel_name): 
+        try: 
+            panels = yield self.datastore.get('panels')
+            del panels['user'][panel_name]
+            del panels['admin'][panel_name]
+            yield self.datastore.insert('panels', panels)
+        except: 
+            import traceback
+            traceback.print_exc()
+
+
+    @tornado.gen.coroutine
+    def store_panel(self, panel):
+        try: 
+            panels = yield self.datastore.get('panels')
+            print ('Panels are : ', panels)
+            panels['user'][panel['panel_name']] = panel['user']
+            panels['admin'][panel['panel_name']] = panel['admin']
+            yield self.datastore.insert('panels', panels)
+        except: 
+            import traceback
+            traceback.print_exc()
+
+
+
+    @tornado.gen.coroutine
+    def store_app(self, app, host):
+        try: 
+            hosts = yield self.datastore.get('hosts')
+            host = [h for h in hosts if h['hostname'] == host][0]
+            host['instances'].append(app)
+            yield self.datastore.insert('hosts', host)
+        except: 
+            import traceback
+            traceback.print_exc()
 
     @tornado.gen.coroutine
     def generate_top_sls(self):

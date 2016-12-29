@@ -6,6 +6,13 @@ import requests
 import zipfile, tarfile
 from salt.client import Caller
 
+from salt.client import Caller
+
+
+@tornado.gen.coroutine
+def add_app(handler):
+    app = yield get_app_info(handler)
+    yield handler.config.deploy_handler.store_app(app, handler.data['host'])
 
 #@auth_only
 def get_openvpn_users(handler):
@@ -99,11 +106,11 @@ def create_new_state(handler):
 @tornado.gen.coroutine
 def get_app_info(handler):
     instance_name = handler.data['instance_name']
-    
-    instance_info_cmd = ['salt-call', instance_name, 'mine.get', 'inventory', '--output', 'json']
-    instance_info = json.loads(subprocess.check_output(instance_info_cmd))
+   
+    cl = Caller()
+    instance_info = cl.cmd('mine.get', instance_name, 'inventory') 
 
-    raise tornado.gen.Return(get_app_info)
+    raise tornado.gen.Return(instance_info)
 
         
 #@auth_only
@@ -123,16 +130,19 @@ def launch_app(handler):
 
         driver = yield deploy_handler.get_driver_by_id(required_host['driver_name'])
         yield driver.create_minion(required_host, data)
+
+        panel = yield deploy_handler.get_states_info()
+        panel = [x for x in panel if x['name'] == data['role']][0]['panels']
+        yield deploy_handler.store_panel(panel, data['role'])
+        
+
+
         minion_info = yield get_app_info(handler)
 
         states = yield store.get('states')
         state = [x for x in states if x['name'] == data['role']][0]
 
-
-        panels = yield store.get('panels')
-        panels.append({'name' : data['instance_name'], 'role' : data['role'], 'user_allowed' : state.get('user_allowed', False)})
-
-        required_host['instances'].append(data['instance_name'])
+        required_host['instances'].append(minion_info)
         yield store.insert('hosts', hosts)
     except: 
         import traceback

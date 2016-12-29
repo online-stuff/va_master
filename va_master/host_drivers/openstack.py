@@ -166,7 +166,6 @@ class OpenStackDriver(base.DriverBase):
 
             servers = yield self.get_openstack_value(self.token_data, 'compute', 'servers/detail')
             servers = servers['servers']
-            print ('Servers are : ', servers, '\n\n\n\n')
 
             tenants = yield self.get_openstack_value(self.token_data, 'identity', 'tenants')
             tenant = [x for x in tenants['tenants'] if x['name'] == host['tenant']][0]
