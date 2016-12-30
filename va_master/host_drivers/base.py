@@ -281,9 +281,12 @@ class DriverBase(object):
 
 
         self.profile_vars['VAR_ROLE'] = data['role']
+        self.profile_vars['VAR_IMAGE'] = data['image']
+        self.profile_vars['VAR_SIZE'] = data['size']
         new_profile = data['instance_name'] + '-profile'
         self.profile_vars['VAR_PROFILE_NAME'] = new_profile
-        self.profile_template = profile_template
+        self.profile_vars['VAR_SEC_GROUP'] = 'default'
+#        self.profile_template = profile_template
 
         yield self.get_salt_configs(skip_provider = True)
         yield self.write_configs(skip_provider = True)
