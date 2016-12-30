@@ -9,7 +9,7 @@ from login import auth_only
 @tornado.gen.coroutine
 def new_panel(handler):
     states = yield handler.config.deploy_handler.get_states_data()
-    panel = {'panel_name' : handler.data['panel_name']}
+    panel = {'panel_name' : handler.data['panel_name'], 'role' : handler.data['role']}
     panel.update([x for x in states if x['name'] == handler.data['role']][0]['panels'])
     raise tornado.gen.Return(handler.config.deploy_handler.store_panel(panel))
 

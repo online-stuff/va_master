@@ -183,9 +183,15 @@ class DeployHandler(object):
     def store_panel(self, panel):
         try: 
             panels = yield self.datastore.get('panels')
-            print ('Panels are : ', panels)
-            panels['user'][panel['role']][panel['panel_name']] = panel['user']
-            panels['admin'][panel['role']][panel['panel_name']] = panel['admin']
+            print ('Panels are : ', panels, ' and my panel is : ', panel)
+            role_user_panels = panels['user'].get('role', [])
+            role_user_panels += panel['user']
+
+            role_admin_panels = panels['admin'].get('role', [])
+            role_admin_panels += panel['admin']
+
+            panels['user'][panel['role']] = role_user_panels
+            panels['admin'][panel['role']] = role_admin_panels
             yield self.datastore.insert('panels', panels)
         except: 
             import traceback
