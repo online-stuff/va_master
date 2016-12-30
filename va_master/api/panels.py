@@ -12,7 +12,6 @@ def new_panel(handler):
     panel = {'panel_name' : handler.data['panel_name']}
     panel.update([x for x in states if x['name'] == handler.data['role']][0]['panels'])
     raise tornado.gen.Return(handler.config.deploy_handler.store_panel(panel))
-        
 
 
 @tornado.gen.coroutine

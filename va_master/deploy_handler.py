@@ -184,8 +184,8 @@ class DeployHandler(object):
         try: 
             panels = yield self.datastore.get('panels')
             print ('Panels are : ', panels)
-            panels['user'][panel['panel_name']] = panel['user']
-            panels['admin'][panel['panel_name']] = panel['admin']
+            panels['user'][panel['role']][panel['panel_name']] = panel['user']
+            panels['admin'][panel['role']][panel['panel_name']] = panel['admin']
             yield self.datastore.insert('panels', panels)
         except: 
             import traceback
