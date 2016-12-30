@@ -23,7 +23,6 @@ paths = {
         'panels' : panels.get_panels, 
         'panels/get_panel' : panels.get_panel_for_user, 
     },
-
     'post' : {
         'login' : login.user_login, 
         
@@ -36,6 +35,8 @@ paths = {
         'state/add' : apps.create_new_state,
 
         'panel_action' : panels.panel_action, 
+        'panels/action' : panels.panel_action #must have instance_name and action in data, ex: panels/action instance_name=nino_dir action=list_users
+
     }
 
 }
