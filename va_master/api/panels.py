@@ -35,17 +35,21 @@ def panel_action_execute(handler):
     state = instance_info[instance]['role']
     action = handler.data['action']
 
+
+    args = handler.data.get('args', [])
+
     states = yield handler.config.deploy_handler.datastore.get('states')
     state = [x for x in states if x['name'] == state][0]
 
-    result = cl.cmd(instance, state['module'] + '.' + action)
+    result = cl.cmd(instance, state['module'] + '.' + action , args)
     raise tornado.gen.Return(result)
 
 
-@auth_only
+#@auth_only
 @tornado.gen.coroutine
 def panel_action(handler):
-    yield panel_action_execute(handler)
+    instance_result = yield panel_action_execute(handler)
+    handler.json(instance_result)
 
 
 #@auth_only(user_allowed = True)
