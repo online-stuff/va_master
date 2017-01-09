@@ -5,7 +5,7 @@ import traceback
 import functools
 import tornado
 import tornado.gen
-from host_drivers import openstack, aws, vcloud, libvirt_driver, generic_driver
+from host_drivers import openstack, aws, vcloud, libvirt_driver, generic_driver, century_link
 
 
 from Crypto.PublicKey import RSA
@@ -80,7 +80,10 @@ class DeployHandler(object):
             self.drivers = [x(**kwargs) for x in [
                 openstack.OpenStackDriver, 
                 generic_driver.GenericDriver,
+                century_link.CenturyLinkDriver
             ]]
+
+            #Libvirt also needs these kwargs. 
 
             kwargs['flavours'] =  self.libvirt_flavours
             kwargs['salt_master_fqdn'] = salt_master_fqdn
