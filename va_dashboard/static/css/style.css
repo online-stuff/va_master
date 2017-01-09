@@ -155,3 +155,54 @@ ul.left-menu a.active{
 .header{
     margin-top: 0px;
 }
+
+.modal-body{
+    display: flex !important;
+}
+
+.left{
+    display: inline-block;
+    width: 50%;
+    padding-right: 20px;
+    align-items: stretch;
+}
+
+.right{
+    display: inline-block;
+    width: 50%;
+    align-items: stretch;
+}
+
+.right h3{
+    margin-top: 0px;
+}
+
+.divider-vertical{
+    height: 50px;
+}
+
+.panels-title{
+    padding: 5px !important;
+    font-weight: bold;
+}
+
+.modal-body input{
+    margin-bottom: 5px;
+}
+
+.fa-angle-down{
+    padding-right: 10px;
+}
+
+ul.left-menu div{
+    padding: 0px !important;
+    margin: 0px !important;
+}
+
+.panel{
+    cursor: pointer;
+}
+
+.danger a{
+    color: #d9534f !important;
+}
