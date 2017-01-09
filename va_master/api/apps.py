@@ -18,6 +18,9 @@ def add_app(handler):
 def get_openvpn_users(handler):
     cl = Caller()
     users = cl.cmd('openvpn.list_users')
+    print ('Users are : ', users)
+    users['active'] = [{'name' : x, 'check' : False} for x in users['active']]
+    print ('Users are : ', users)
     handler.json(users)
 
 @tornado.gen.coroutine
