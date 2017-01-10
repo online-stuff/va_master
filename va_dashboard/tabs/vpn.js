@@ -63,7 +63,7 @@ var Vpn = React.createClass({
                 <tr key={vpn.name}>
                     <td><input type="checkbox" checked={this.state.checkall || this.state.active[i].check} onChange = {this.changeCheck.bind(this, i)} /></td>
                     <td>{vpn.name}</td>
-                    <td>{vpn.connected}</td>
+                    <td>{vpn.connected?"True":"False"}</td>
                     <td>
                         <Bootstrap.DropdownButton bsStyle='default' title="Choose" onSelect = {this.btn_clicked.bind(this, vpn.name)}>
                             <Bootstrap.MenuItem eventKey="download">Download certificate</Bootstrap.MenuItem>
