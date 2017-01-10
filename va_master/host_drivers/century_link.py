@@ -87,16 +87,21 @@ class CenturyLinkDriver(base.DriverBase):
 
     @tornado.gen.coroutine
     def get_networks(self):
-        networks = ['list', 'of', 'networks']
+        url = '/v2-experimental/networks/{accountAlias}/{dataCenter}'
+        network = ['sadf']
+#        networks = yield self.get_rest_value(url)
         raise tornado.gen.Return(networks)
 
     @tornado.gen.coroutine
     def get_sec_groups(self):
+        url = '/v2/groups/account/id'
         sec_groups = ['list', 'of', 'security', 'groups']
         raise tornado.gen.Return(sec_groups)
 
     @tornado.gen.coroutine
     def get_images(self):
+        url = '/v2/datacenters/account/datacenter/deploymentCapabilities'
+#        images = yield self.get_rest_value(url)
         images = ['list', 'of', 'images']
         raise tornado.gen.Return(images)
 
