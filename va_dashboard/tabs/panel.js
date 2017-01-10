@@ -44,6 +44,7 @@ var Panel = React.createClass({
         var redux = {};
 
         var elements = this.state.template.content.map(function(element) {
+            element.key = element.name;
             if(Object.keys(redux).indexOf(element.type) < 0){
                 var Component = widgets[element.type];
                 redux[element.type] = connect(function(state){

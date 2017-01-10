@@ -41,13 +41,13 @@ var Home = React.createClass({
             var instances = panel.instances.map(function(instance) {
                 var subpanels = panel.subpanels.map(function(panel) {
                     return (
-                        <li><Router.Link to={'panel/' + panel.key + '/' + instance} activeClassName='active'>
+                        <li key={panel.key}><Router.Link to={'panel/' + panel.key + '/' + instance} activeClassName='active'>
                             <span>{panel.name}</span>
                         </Router.Link></li>
                     );
                 });
                 return (
-                    <div>
+                    <div key={instance}>
                         <span className="panels-title">{instance}</span>
                         <ul className='left-menu'>
                             {subpanels}
@@ -56,7 +56,7 @@ var Home = React.createClass({
                 );
             });
             return (
-                <Bootstrap.Panel header={header} eventKey={i}>
+                <Bootstrap.Panel key={panel.name} header={header} eventKey={i}>
                     {instances}
                 </Bootstrap.Panel>
             );

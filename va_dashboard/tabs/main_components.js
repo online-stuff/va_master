@@ -11,6 +11,7 @@ var Div = React.createClass({
     render: function () {
         var redux = {};
         var elements = this.props.elements.map(function(element) {
+            element.key = element.name;
             var Component = components[element.type];
             if(element.type == "Table"){
                 redux[element.type] = connect(function(state){
@@ -52,7 +53,7 @@ var Table = React.createClass({
                     className = action.class;
                 }
                 return (
-                    <Bootstrap.MenuItem eventKey={action.action} className={className}>{action.name}</Bootstrap.MenuItem>
+                    <Bootstrap.MenuItem key={action.name} eventKey={action.action} className={className}>{action.name}</Bootstrap.MenuItem>
                 );
             });
             action_col = true;
@@ -60,20 +61,21 @@ var Table = React.createClass({
         var rows = this.props.source.map(function(row) {
             var columns = cols.map(function(col) {
                 return (
-                    <Reactable.Td column={col}>
+                    <Reactable.Td key={col} column={col}>
                         {row[col]}
                     </Reactable.Td>
                 );
             });
+            var key = row[this.props.id];
             if(action_col){
                 action_col = <Reactable.Td column="action">
-                    <Bootstrap.DropdownButton bsStyle='primary' title="Choose" onSelect = {this.btn_clicked.bind(this, row[this.props.id])}>
+                    <Bootstrap.DropdownButton bsStyle='primary' title="Choose" onSelect = {this.btn_clicked.bind(this, key)}>
                         {actions}
                     </Bootstrap.DropdownButton>
                 </Reactable.Td>
             }
             return (
-                <Reactable.Tr>
+                <Reactable.Tr key={key}>
                     {columns}
                     {action_col}
                 </Reactable.Tr>
@@ -147,11 +149,12 @@ var Modal = React.createClass({
             }else{
                 action = this.action.bind(this, btn.action);
             }
-            return <Bootstrap.Button onClick={action} bsStyle = {btn.class}>{btn.name}</Bootstrap.Button>;
+            return <Bootstrap.Button key={btn.name} onClick={action} bsStyle = {btn.class}>{btn.name}</Bootstrap.Button>;
         }.bind(this));
 
         var redux = {};
         var elements = this.props.content.map(function(element) {
+            element.key = element.name;
             var Component = components[element.type];
             if(element.type == "Form"){
                 element.data = this.state.data;
@@ -235,10 +238,11 @@ var Form = React.createClass({
             var type = element.type;
             if(type.charAt(0) === type.charAt(0).toLowerCase()){
                 if(type == "checkbox"){
-                    return ( <Bootstrap.Checkbox name={element.name} checked={this.props.data[element.name]} inline onChange={this.props.form_changed}>{element.label}</Bootstrap.Checkbox>);
+                    return ( <Bootstrap.Checkbox key={element.name} name={element.name} checked={this.props.data[element.name]} inline onChange={this.props.form_changed}>{element.label}</Bootstrap.Checkbox>);
                 }
-                return ( <Bootstrap.FormControl type={type} name={element.name} value={this.props.data[element.name]} placeholder={element.label} onChange={this.props.form_changed} autoFocus={element.name == this.props.focus} /> );
+                return ( <Bootstrap.FormControl key={element.name} type={type} name={element.name} value={this.props.data[element.name]} placeholder={element.label} onChange={this.props.form_changed} autoFocus={element.name == this.props.focus} /> );
             }
+            element.key = element.name;
             if(Object.keys(redux).indexOf(type) < 0){
                 if(type == "Button" && element.action == "modal"){
                     modal = true;

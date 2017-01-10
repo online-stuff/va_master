@@ -36,19 +36,19 @@ var Button = React.createClass({
     },
 
     render: function () {
-        var which = "", glyph;
+        var onclick = null, glyph;
         switch (this.props.action) {
             case "modal":
-                which = this.openModal;
+                onclick = this.openModal;
                 break;
             default:
-                which = "";
+                onclick = null;
         }
         if(this.props.hasOwnProperty('glyph')){
             glyph = <Bootstrap.Glyphicon glyph='plus' />;
         }
         return (
-            <Bootstrap.Button onClick={which}>
+            <Bootstrap.Button onClick={onclick}>
                 {glyph}
                 {this.props.name}
             </Bootstrap.Button>

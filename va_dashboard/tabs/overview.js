@@ -71,7 +71,7 @@ var Overview = React.createClass({
             return {auth: state.auth};
         })(Host);
         var host_rows = this.state.hosts.map(function(host) {
-            return <HostRedux title={host.hostname} chartData={host.instances} instances={host.instances.length} host_usage={host.host_usage} />;
+            return <HostRedux key={host.hostname} title={host.hostname} chartData={host.instances} instances={host.instances.length} host_usage={host.host_usage} />;
         }.bind(this));
         return (
             <div>
