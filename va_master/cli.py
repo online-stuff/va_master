@@ -50,7 +50,7 @@ def cli_error(msg):
 
 def generate_store_config(values):
     store_config = {
-        'libvirt_flavours' : 
+        'va_flavours' : 
         {
             'va-small' : 
             {
