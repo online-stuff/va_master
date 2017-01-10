@@ -21,6 +21,42 @@ def get_openvpn_users(handler):
     users['active'] = [{'name' : x, 'check' : False, 'connected' : x in users['status']['client_list']} for x in users['active']]
     handler.json(users)
 
+def add_openvpn_user(handler):
+    cl = Caller()
+    success = cl.cmd('openvpn.add_user', username = handler.data['username'])
+    handler.json(success)
+
+def revoke_openvpn_user(handler):
+    cl = Caller()
+    success = cl.cmd('openvpn.revoke_user', username = handler.data['username'])
+    handler.json(success)   
+
+def list_user_logins(handler): 
+    cl = Caller()
+    success = cl.cmd('openvpn.list_user_logins', user = handler.data['username'])
+    handler.json(success)
+
+def download_vpn_cert(handler):
+    cl = Caller()
+    cert = cl.cmd('openvpn.get_config', username = handler.data['username'])
+
+    vpn_cert_path = '/tmp/' + handler.data['username'] + '_vpn.cert'
+    with open(vpn_cert_path, 'w') as f: 
+        f.write(cert)
+ 
+    handler.set_header('Content-Type', 'application/octet-stream')
+    handler.set_header('Content-Disposition', 'attachment; filename=' + vpn_cert_path)
+    with open(vpn_cert_path, 'r') as f:
+        while True:
+            data = f.read(4096)
+            if not data:
+                break
+            handler.write(data)
+    handler.finish()
+   
+    #serve file
+
+
 @tornado.gen.coroutine
 def perform_instance_action(handler): 
     try: 

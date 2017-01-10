@@ -32,6 +32,12 @@ paths = {
 
         'apps' : apps.launch_app, 
         'apps/action' : apps.perform_instance_action, 
+        'apps/add_vpn_user': apps.add_openvpn_user,
+        'apps/revoke_vpn_user': apps.revoke_openvpn_user,
+        'apps/list_user_logins': apps.list_user_logins,
+        'apps/download_vpn_cert': apps.download_vpn_cert,
+
+
         'state/add' : apps.create_new_state,
 
         'panel_action' : panels.panel_action, 
