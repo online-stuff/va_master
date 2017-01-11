@@ -134,7 +134,7 @@ def launch_app(handler):
 
         panel = yield deploy_handler.get_states_info()
         panel = [x for x in panel if x['name'] == data['role']][0]['panels']
-        yield deploy_handler.store_panel(panel, data['role'])
+        yield deploy_handler.store_panel(panel['panels'])
         
 
 
