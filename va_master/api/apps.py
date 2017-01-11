@@ -50,17 +50,7 @@ def download_vpn_cert(handler):
     with open(vpn_cert_path, 'w') as f: 
         f.write(cert)
  
-    handler.set_header('Content-Type', 'application/octet-stream')
-    handler.set_header('Content-Disposition', 'attachment; filename=' + vpn_cert_path)
-    with open(vpn_cert_path, 'r') as f:
-        while True:
-            data = f.read(4096)
-            if not data:
-                break
-            handler.write(data)
-    handler.finish()
-   
-    #serve file
+    handler.serve_file(vpn_cert_path)
 
 
 @tornado.gen.coroutine

@@ -91,3 +91,21 @@ class ApiHandler(tornado.web.RequestHandler):
             import traceback
             traceback.print_exc()
 
+
+    @tornado.gen.coroutine
+    def serve_file(self, file_path, chunk_size = 4096):
+        try: 
+            self.set_header('Content-Type', 'application/octet-stream')
+            self.set_header('Content-Disposition', 'attachment; filename=' + file_path)
+            with open(file_path, 'r') as f:
+                while True:
+                    data = f.read(chunk_size)
+                    if not data:
+                        break
+                    self.write(data)
+            self.finish()
+        except: 
+            import traceback
+            traceback.print_exc()
+
+
