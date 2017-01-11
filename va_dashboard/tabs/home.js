@@ -6,9 +6,22 @@ var connect = require('react-redux').connect;
 var Network = require('../network');
 
 var Home = React.createClass({
+    getInitialState: function() {
+        return {
+            'panels': []
+        };
+    },
+    getPanels: function() {
+        var me = this;
+        Network.get('/api/panels', this.props.auth.token).done(function (data) {
+            me.setState({panels: data.panels});
+        });
+    },
     componentDidMount: function() {
         if(!this.props.auth.token){
             Router.hashHistory.push('/login');
+        }else{
+            this.getPanels();
         }
     },
     componentWillReceiveProps: function(props) {
@@ -21,6 +34,34 @@ var Home = React.createClass({
         this.props.dispatch({type: 'LOGOUT'});
     },
     render: function () {
+        var panels = this.state.panels.map(function(panel, i) {
+            var header = (
+                <span><i className={'fa fa-' + panel.icon} /> {panel.name} <i className='fa fa-angle-down pull-right' /></span>
+            )
+            var instances = panel.instances.map(function(instance) {
+                var subpanels = panel.subpanels.map(function(panel) {
+                    return (
+                        <li key={panel.key}><Router.Link to={'panel/' + panel.key + '/' + instance} activeClassName='active'>
+                            <span>{panel.name}</span>
+                        </Router.Link></li>
+                    );
+                });
+                return (
+                    <div key={instance}>
+                        <span className="panels-title">{instance}</span>
+                        <ul className='left-menu'>
+                            {subpanels}
+                        </ul>
+                    </div>
+                );
+            });
+            return (
+                <Bootstrap.Panel key={panel.name} header={header} eventKey={i}>
+                    {instances}
+                </Bootstrap.Panel>
+            );
+        });
+
         return (
         <div>
             <Bootstrap.Navbar bsStyle='inverse'>
@@ -53,6 +94,16 @@ var Home = React.createClass({
                     <Router.Link to='store' activeClassName='active'>
                     <Bootstrap.Glyphicon glyph='cloud' /> Store</Router.Link>
                     </li>
+                    <li>
+                    <Router.Link to='vpn' activeClassName='active'>
+                        <span><i className='fa fa-lock' /> VPN</span>
+                    </Router.Link>
+                    </li>
+                    <li role="separator" className="divider-vertical"></li>
+                    <li className="panels-title">Admin panels</li>
+                    <li><Bootstrap.Accordion>
+                        {panels}
+                    </Bootstrap.Accordion></li>
                 </ul>
             </div>
             <div className='main-content'>
