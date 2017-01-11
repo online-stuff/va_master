@@ -202,11 +202,12 @@ class LibVirtDriver(base.DriverBase):
         except:
             import traceback
             traceback.print_exc()
+        print ('Got images : ', images)
         raise tornado.gen.Return(images)
 
     @tornado.gen.coroutine
     def get_sizes(self):
-        raise tornado.gen.Return(self.flavours)
+        raise tornado.gen.Return(self.flavours.keys())
 
     @tornado.gen.coroutine
     def get_host_status(self, host):
@@ -332,6 +333,7 @@ class LibVirtDriver(base.DriverBase):
 
     @tornado.gen.coroutine
     def validate_field_values(self, step_index, field_values):
+        print ('Validating on step : ', step_index)
         if step_index < 0:
             protocols = ['qemu', 'qemu+tcp', 'qemu+tls']
     	    raise tornado.gen.Return(StepResult(
@@ -358,7 +360,6 @@ class LibVirtDriver(base.DriverBase):
         step_kwargs = yield super(LibVirtDriver, self).validate_field_values(step_index, field_values)
 
         raise tornado.gen.Return(StepResult(**step_kwargs))
-
 
 
 
