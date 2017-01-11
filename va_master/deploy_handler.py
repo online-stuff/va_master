@@ -187,7 +187,7 @@ class DeployHandler(object):
     def store_panel(self, panel):
         try: 
             panels = yield self.datastore.get('panels')
-            print ('Panels are : ', panels, ' and my panel is : ', panel)
+
             role_user_panels = panels['user'].get('role', [])
             role_user_panels += panel['user']
 

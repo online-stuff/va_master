@@ -120,12 +120,6 @@ class CenturyLinkDriver(base.DriverBase):
             self.host_url = field_values['host_url']
             self.token = yield self.get_token(field_values)
 
-            self.field_values['networks'] = yield self.get_networks() 
-            self.field_values['sec_groups'] = yield self.get_sec_groups()
-            self.field_values['images'] = yield self.get_images()
-            self.field_values['sizes']= yield self.get_sizes()
-
-
-       	step_kwargs = yield super(CenturyLinkDriver, self).validate_field_values(step_index, field_values)
+      	step_kwargs = yield super(CenturyLinkDriver, self).validate_field_values(step_index, field_values)
         raise tornado.gen.Return(StepResult(**step_kwargs))
        
