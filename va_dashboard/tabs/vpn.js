@@ -40,17 +40,40 @@ var Vpn = React.createClass({
         });
     },
 
+    addVpn: function (username) {
+        this.setState({active: this.state.active.concat([{"connected": false, "name": username, "check": false}])});
+    },
+
     componentDidMount: function () {
         this.getCurrentVpns();
     },
 
-    btn_clicked: function(id, evtKey){
-        console.log(id);
-        console.log(evtKey);
-        // var data = {id: id, action: evtKey};
-        // Network.post('/api/vpn', this.props.auth.token, data).done(function(d) {
-        //     console.log(d);
-        // });
+    btn_clicked: function(username, evtKey){
+        var data = {username: username};
+        switch (evtKey) {
+            case "download":
+                Network.post("/api/apps/download_vpn_cert", this.props.auth.token, data).done(function(d) {
+                    var data = new Blob([d], {type: 'octet/stream'});
+                    var url = window.URL.createObjectURL(data);
+                    tempLink = document.createElement('a');
+                    tempLink.href = url;
+                    tempLink.setAttribute('download', 'certificate.txt');
+                    tempLink.click();
+                });
+                break;
+            case "revoke":
+                Network.post("/api/apps/revoke_vpn_user", this.props.auth.token, data).done(function(d) {
+                    if(d === true){
+                        this.setState({revoked: this.state.revoked.concat([username])});
+                    }
+                }.bind(this));
+                break;
+            case "list":
+                Router.hashHistory.push('/vpn/list_logins/' + username);
+                break;
+            default:
+                break;
+        }
     },
 
     openModal: function() {
@@ -58,7 +81,12 @@ var Vpn = React.createClass({
     },
 
     render: function () {
-        var active_rows = this.state.active.map(function(vpn, i) {
+        var active_rows = this.state.active.filter(function(vpn) {
+            if(this.state.revoked.indexOf(vpn.name) > -1){
+                return false;
+            }
+            return true;
+        }.bind(this)).map(function(vpn, i) {
             return (
                 <tr key={vpn.name}>
                     <td><input type="checkbox" checked={this.state.checkall || this.state.active[i].check} onChange = {this.changeCheck.bind(this, i)} /></td>
@@ -77,9 +105,9 @@ var Vpn = React.createClass({
 
         var revoked_rows = this.state.revoked.map(function(vpn) {
             return (
-                <tr key={vpn.name}>
-                    <td>{vpn.name}</td>
-                    <td>{vpn.connected}</td>
+                <tr key={vpn}>
+                    <td>{vpn}</td>
+                    <td>False</td>
                 </tr>
             );
         });
@@ -108,7 +136,7 @@ var Vpn = React.createClass({
                     <Bootstrap.Glyphicon glyph='plus' />
                     Add user
                 </Bootstrap.Button>
-                <ModalRedux />
+                <ModalRedux addVpn = {this.addVpn} />
                 <Bootstrap.Table striped bordered hover>
                     <thead>
                         <tr>
@@ -174,11 +202,16 @@ var Modal = React.createClass({
             data[elements[i].name] = elements[i].value;
         }
         console.log(data);
-        //Network.post();
+        var me = this;
+        Network.post("/api/apps/add_vpn_user", this.props.auth.token, data).done(function(d) {
+            if(d === true){
+                me.props.addVpn(data['username']);
+            }
+            me.props.dispatch({type: 'CLOSE_MODAL'});
+        });
     },
 
     render: function () {
-        var redux = {};
         return (
             <Bootstrap.Modal show={this.props.modal.isOpen} onHide={this.close}>
             <Bootstrap.Modal.Header closeButton>
@@ -188,8 +221,8 @@ var Modal = React.createClass({
             <Bootstrap.Modal.Body>
                 <div className="left">
                     <Bootstrap.Form ref="forma">
-                        <Bootstrap.FormControl type='text' name="Name" placeholder="Name" />
-                        <Bootstrap.FormControl type='text' name="Description" placeholder="Description" />
+                        <Bootstrap.FormControl type='text' name="username" placeholder="Name" />
+                        {/* <Bootstrap.FormControl type='text' name="Description" placeholder="Description" /> */}
                     </Bootstrap.Form>
                 </div>
                 <div className="right">

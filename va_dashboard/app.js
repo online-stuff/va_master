@@ -85,30 +85,6 @@ function apps(state, action){
     return newState;
 };
 
-// function form(state, action){
-//     if(typeof state === 'undefined'){
-//         return {data: {}, url: ""};
-//     }
-//
-//     var newState = Object.assign({}, state);
-//     console.log("IN APP");
-//     console.log(action.type);
-//     console.log(newState);
-//     if(action.type == 'UPDATE_FORM'){
-//         newState.data = action.data;
-//         console.log(action.data);
-//     }
-//     else if(action.type == 'SEND_FORM'){
-//         newState.url = action.url;
-//         console.log(action.url);
-//     }
-//     else if(action.type == 'RESET_FORM'){
-//         newState.data = {};
-//     }
-//
-//     return newState;
-// };
-
 var mainReducer = Redux.combineReducers({auth: auth, table: table, modal: modal, apps: apps});
 var store = Redux.createStore(mainReducer);
 
@@ -119,6 +95,7 @@ var Apps = require('./tabs/apps');
 var Store = require('./tabs/store');
 var Panel = require('./tabs/panel');
 var Vpn = require('./tabs/vpn');
+var VpnLogins = require('./tabs/vpn_logins');
 
 var Login = require('./login');
 var App = React.createClass({
@@ -131,6 +108,7 @@ var App = React.createClass({
                 <Router.Route path='/apps' component={Apps} />
                 <Router.Route path='/store' component={Store} />
                 <Router.Route path='/vpn' component={Vpn} />
+                <Router.Route path='/vpn/list_logins/:username' component={VpnLogins} />
                 <Router.Route path='/panel/:id/:instance' component={Panel} />
             </Router.Route>
             <Router.Route path='/login' component={Login} />
