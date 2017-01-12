@@ -55,6 +55,7 @@ def validate_newhost_fields(handler):
         raise tornado.gen.Return(None)
 
     found_driver = yield handler.config.deploy_handler.get_driver_by_id(driver_id)
+    print ('Validating with step index from api : ', step_index)
 
     if found_driver is None:
         handler.json({'error': 'bad_driver'}, 400)

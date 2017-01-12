@@ -87,16 +87,21 @@ class CenturyLinkDriver(base.DriverBase):
 
     @tornado.gen.coroutine
     def get_networks(self):
-        networks = ['list', 'of', 'networks']
+        url = '/v2-experimental/networks/{accountAlias}/{dataCenter}'
+        network = ['sadf']
+#        networks = yield self.get_rest_value(url)
         raise tornado.gen.Return(networks)
 
     @tornado.gen.coroutine
     def get_sec_groups(self):
+        url = '/v2/groups/account/id'
         sec_groups = ['list', 'of', 'security', 'groups']
         raise tornado.gen.Return(sec_groups)
 
     @tornado.gen.coroutine
     def get_images(self):
+        url = '/v2/datacenters/account/datacenter/deploymentCapabilities'
+#        images = yield self.get_rest_value(url)
         images = ['list', 'of', 'images']
         raise tornado.gen.Return(images)
 
@@ -115,12 +120,6 @@ class CenturyLinkDriver(base.DriverBase):
             self.host_url = field_values['host_url']
             self.token = yield self.get_token(field_values)
 
-            self.field_values['networks'] = yield self.get_networks() 
-            self.field_values['sec_groups'] = yield self.get_sec_groups()
-            self.field_values['images'] = yield self.get_images()
-            self.field_values['sizes']= yield self.get_sizes()
-
-
-       	step_kwargs = yield super(CenturyLinkDriver, self).validate_field_values(step_index, field_values)
+      	step_kwargs = yield super(CenturyLinkDriver, self).validate_field_values(step_index, field_values)
         raise tornado.gen.Return(StepResult(**step_kwargs))
        
