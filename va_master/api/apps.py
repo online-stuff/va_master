@@ -149,5 +149,7 @@ def launch_app(handler):
         import traceback
         traceback.print_exc()
 
-
-
+@tornado.gen.coroutine
+def get_user_actions(handler):
+    actions = yield handler.config.deploy_handler.get_actions(int(handler.data.get('no_actions', 0)))
+    handler.json(actions)
