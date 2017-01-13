@@ -244,12 +244,10 @@ class DriverBase(object):
             self.provider_vars['VAR_NETWORK_ID'] = field_values['network']
             self.profile_vars['VAR_SEC_GROUP'] = field_values['sec_group']
 
-            print ('My networks : ', self.field_values['networks'])
-
             self.field_values['defaults']['network'] = field_values['network']
             self.field_values['defaults']['sec_group'] = field_values['sec_group']
 
-
+            print ('My images are : ', self.field_values['images'], ' and my sizes : ', self.field_values['sizes'])
             raise tornado.gen.Return({
                 'errors':[], 'new_step_index':2, 'option_choices':{
                     'image': self.field_values['images'],

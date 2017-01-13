@@ -15,11 +15,43 @@ def add_app(handler):
     yield handler.config.deploy_handler.store_app(app, handler.data['host'])
 
 #@auth_only
+
+@tornado.gen.coroutine
 def get_openvpn_users(handler):
     cl = Caller()
     users = cl.cmd('openvpn.list_users')
     users['active'] = [{'name' : x, 'check' : False, 'connected' : x in users['status']['client_list']} for x in users['active']]
     handler.json(users)
+
+@tornado.gen.coroutine
+def add_openvpn_user(handler):
+    cl = Caller()
+    success = cl.cmd('openvpn.add_user', username = handler.data['username'])
+    handler.json(success)
+
+@tornado.gen.coroutine
+def revoke_openvpn_user(handler):
+    cl = Caller()
+    success = cl.cmd('openvpn.revoke_user', username = handler.data['username'])
+    handler.json(success)   
+
+@tornado.gen.coroutine
+def list_user_logins(handler): 
+    cl = Caller()
+    success = cl.cmd('openvpn.list_user_logins', user = handler.data['username'])
+    handler.json(success)
+
+@tornado.gen.coroutine
+def download_vpn_cert(handler):
+    cl = Caller()
+    cert = cl.cmd('openvpn.get_config', username = handler.data['username'])
+
+    vpn_cert_path = '/tmp/' + handler.data['username'] + '_vpn.cert'
+    with open(vpn_cert_path, 'w') as f: 
+        f.write(cert)
+ 
+    handler.serve_file(vpn_cert_path)
+
 
 @tornado.gen.coroutine
 def perform_instance_action(handler): 

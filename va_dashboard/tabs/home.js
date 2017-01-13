@@ -70,7 +70,7 @@ var Home = React.createClass({
                 </Bootstrap.Navbar.Header>
                 <Bootstrap.Navbar.Collapse>
                     <Bootstrap.Nav pullRight={true}>
-                        <Bootstrap.NavDropdown title={this.props.auth.username} onSelect={this.logOut}>
+                        <Bootstrap.NavDropdown title={this.props.auth.username} onSelect={this.logOut} id="nav-dropdown">
                                 <Bootstrap.MenuItem eventKey='logout'>Logout</Bootstrap.MenuItem>
                         </Bootstrap.NavDropdown>
                     </Bootstrap.Nav>

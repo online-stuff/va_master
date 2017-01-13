@@ -33,6 +33,12 @@ paths = {
 
         'apps' : apps.launch_app, 
         'apps/action' : apps.perform_instance_action, 
+        'apps/add_vpn_user': apps.add_openvpn_user,
+        'apps/revoke_vpn_user': apps.revoke_openvpn_user,
+        'apps/list_user_logins': apps.list_user_logins,
+        'apps/download_vpn_cert': apps.download_vpn_cert,
+
+
         'state/add' : apps.create_new_state,
 
         'panel_action' : panels.panel_action, 
@@ -88,4 +94,22 @@ class ApiHandler(tornado.web.RequestHandler):
         except: 
             import traceback
             traceback.print_exc()
+
+
+    @tornado.gen.coroutine
+    def serve_file(self, file_path, chunk_size = 4096):
+        try: 
+            self.set_header('Content-Type', 'application/octet-stream')
+            self.set_header('Content-Disposition', 'attachment; filename=' + file_path)
+            with open(file_path, 'r') as f:
+                while True:
+                    data = f.read(chunk_size)
+                    if not data:
+                        break
+                    self.write(data)
+            self.finish()
+        except: 
+            import traceback
+            traceback.print_exc()
+
 

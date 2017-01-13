@@ -27,7 +27,7 @@ class DeployHandler(object):
             'salt_key_path' : 'salt_key_path', 
             'salt_key_name' : 'salt_key_name', 
             'salt_master_fqdn' : 'salt_master_fqdn', 
-            'libvirt_flavours' :' libvirt_flavours', 
+            'va_flavours' :' va_flavours', 
         }
         try: 
             store_values = yield self.datastore.get('init_vals')
@@ -67,7 +67,8 @@ class DeployHandler(object):
     def get_drivers(self):
         if not self.drivers: 
             hosts_ip = yield self.datastore.get('master_ip')
-            libvirt_flavours = yield self.datastore.get('libvirt_flavours')
+            va_flavours = yield self.datastore.get('init_vals')
+            va_flavours = va_flavours['va_flavours']
             salt_master_fqdn = yield self.datastore.get('salt_master_fqdn')
 
             kwargs = {
@@ -85,7 +86,7 @@ class DeployHandler(object):
 
             #Libvirt also needs these kwargs. 
 
-            kwargs['flavours'] =  self.libvirt_flavours
+            kwargs['flavours'] =  self.va_flavours
             kwargs['salt_master_fqdn'] = salt_master_fqdn
 
             self.drivers.append(libvirt_driver.LibVirtDriver(**kwargs))
@@ -186,7 +187,7 @@ class DeployHandler(object):
     def store_panel(self, panel):
         try: 
             panels = yield self.datastore.get('panels')
-            print ('Panels are : ', panels, ' and my panel is : ', panel)
+
             role_user_panels = panels['user'].get('role', [])
             role_user_panels += panel['user']
 
