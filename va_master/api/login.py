@@ -29,7 +29,7 @@ def get_or_create_token(datastore, username, user_type = 'admin'):
             raise tornado.gen.Return(token_doc['token'])
 
 @tornado.gen.coroutine
-def get_user_type(handler):
+def get_current_user(handler):
     token = handler.request.headers.get('Authorization', '')
 
     token = token.replace('Token ', '')
@@ -37,7 +37,17 @@ def get_user_type(handler):
     for type in ['user', 'admin']: # add other types as necessary, maybe from datastore. 
         token_valid = yield is_token_valid(handler.datastore, token, type)
         if token_valid: 
-            raise tornado.gen.Return(type)
+            user = yield handler.datastore.get('tokens/%s/by_token/%s' % (type, token))
+            print ('Got user', user)
+            raise tornado.gen.Return({'username' : user['username'], 'type' : type})
+    raise tornado.gen.Return(None)
+
+
+@tornado.gen.coroutine
+def get_user_type(handler):
+    user = yield get_current_user(handler)
+    if user: 
+        raise tornado.gen.Return(user['username'])
     raise tornado.gen.Return(None)
 
 @tornado.gen.coroutine

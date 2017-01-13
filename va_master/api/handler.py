@@ -80,6 +80,8 @@ class ApiHandler(tornado.web.RequestHandler):
                 import traceback
                 traceback.print_exc()
                 data = {}
+            user = yield login.get_current_user(self)
+            print ('User ', user['username'], ' with type ', user['type'], ' tried to access ', path, ' with data ', data)
             yield self.exec_method('post', path, data)
         except: 
             import traceback
