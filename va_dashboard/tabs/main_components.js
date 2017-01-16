@@ -13,15 +13,16 @@ var Div = React.createClass({
         var elements = this.props.elements.map(function(element) {
             element.key = element.name;
             var Component = components[element.type];
-            if(element.type == "Table"){
-                redux[element.type] = connect(function(state){
-                    return {auth: state.auth, table: state.table};
-                })(Component);
-            }else{
-                redux[element.type] = connect(function(state){
-                    return {auth: state.auth};
-                })(Component);
-            }
+            redux[element.type] = connect(function(state){
+                var newstate = {auth: state.auth};
+                if(typeof element.reducers !== 'undefined'){
+                    var r = element.reducers;
+                    for (var i = 0; i < r.length; i++) {
+                        newstate[r[i]] = state[r[i]];
+                    }
+                }
+                return newstate;
+            })(Component);
             var Redux = redux[element.type];
             return React.createElement(Redux, element);
         });
@@ -101,9 +102,6 @@ var Modal = React.createClass({
                 }
             }
         }
-        console.log("initial state in modal");
-        console.log(data);
-        // this.props.dispatch({type: 'UPDATE_FORM', data: data});
         return {
             data: data,
             focus: ""
@@ -121,7 +119,6 @@ var Modal = React.createClass({
     action: function(action_name) {
         console.log(action_name);
         console.log(this.state.data);
-        // this.props.dispatch({type: 'SEND_FORM', url: action_name});
         // console.log(this.props.form.data);
         //Network.post();
     },
@@ -137,9 +134,6 @@ var Modal = React.createClass({
         }
         data[name] = val;
         this.setState({data: data});
-        console.log("in form change");
-        console.log(data);
-        // this.props.dispatch({type: 'UPDATE_FORM', data: data});
     },
 
     render: function () {
@@ -187,42 +181,9 @@ var Modal = React.createClass({
 });
 
 var Form = React.createClass({
-    // getInitialState: function () {
-    //     var data = {};
-    //     if(this.props.form_type == "basic"){
-    //         var elem = this.props.elements;
-    //         for(i=0; i<elem.length; i++){
-    //             data[elem[i].name] = elem[i].value;
-    //         }
-    //     }
-    //     // if(this.props.form_type == "basic"){
-    //     //     data = this.props.data;
-    //     // }
-    //     console.log("initial state");
-    //     console.log(data);
-    //     return {
-    //         data: data
-    //     };
-    // },
-
-    // form_changed: function(e) {
-    //     var name = e.target.name;
-    //     var val = e.target.value;
-    //     var data = this.state.data;
-    //     if(e.target.type == "checkbox"){
-    //         val = e.target.checked;
-    //     }
-    //     data[name] = val;
-    //     this.setState({data: data});
-    //     console.log("in change");
-    //     console.log(data);
-    //     // this.props.dispatch({type: 'UPDATE_FORM', data: data});
-    // },
-
     sendForm: function () {
         var data = this.state.data;
         console.log(data);
-        // this.props.dispatch({type: 'SEND_FORM', url: data});
         // Network.post('/api/', this.props.auth.token, data);
     },
 
@@ -250,10 +211,14 @@ var Form = React.createClass({
                 }
                 var Component = components[type];
                 redux[type] = connect(function(state){
-                    if(type == "Filter"){
-                        return {auth: state.auth, table: state.table};
+                    var newstate = {auth: state.auth};
+                    if(typeof element.reducers !== 'undefined'){
+                        var r = element.reducers;
+                        for (var i = 0; i < r.length; i++) {
+                            newstate[r[i]] = state[r[i]];
+                        }
                     }
-                    return {auth: state.auth};
+                    return newstate;
                 })(Component);
             }
             var Redux = redux[type];
@@ -261,10 +226,10 @@ var Form = React.createClass({
         }.bind(this));
 
         return (
-            <Bootstrap.Form className={this.props.class}>
+            <form className={this.props.class}>
                 {inputs}
                 {modal && React.createElement(ModalRedux, modalElem) }
-            </Bootstrap.Form>
+            </form>
         );
     }
 });
