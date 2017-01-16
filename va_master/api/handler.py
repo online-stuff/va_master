@@ -2,13 +2,14 @@ import tornado.web
 import tornado.gen
 from tornado.httpclient import AsyncHTTPClient, HTTPRequest
 from . import status, login, hosts, apps, panels
-import json
+import json, datetime
 
 
 paths = {
     'get' : {
         'apps/vpn_users' : apps.get_openvpn_users,
         'apps/add_app' : apps.add_app,
+        'apps/get_actions' : apps.get_user_actions, 
 
         'status' : status.status, 
 
@@ -86,7 +87,10 @@ class ApiHandler(tornado.web.RequestHandler):
                 import traceback
                 traceback.print_exc()
                 data = {}
+            user = yield login.get_current_user(self)
             yield self.exec_method('post', path, data)
+            yield self.config.deploy_handler.store_action(user, path, data)
+
         except: 
             import traceback
             traceback.print_exc()

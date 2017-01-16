@@ -75,6 +75,37 @@ class CenturyLinkDriver(base.DriverBase):
         raise tornado.gen.Return(resp)
 
     @tornado.gen.coroutine
+    def instance_action(self, host, instance_name, action):
+        instance_action = {
+            'delete' : 'delete_function', 
+            'reboot' : 'reboot_function', 
+            'start' : 'start_function', 
+            'stop' : 'stop_function', 
+        }
+        if action not in instance_action: 
+            raise tornado.gen.Return({'success' : False, 'message' : 'Action not supported : ' + action})
+
+        success = instance_action[action](instance_name)
+        raise tornado.gen.Return({'success' : True, 'message' : ''})
+
+
+    @tornado.gen.coroutine
+    def get_host_data(self, host):
+        try: 
+            host_data = {
+                'instances' : [], 
+                'host_usage' : {},
+            }
+            #Functions that connect to host here. 
+        except Exception as e: 
+            host_data = {
+                'instances' : [], 
+                'host_usage' : {},
+                'status' : {'success' : False, 'message' : 'Could not connect to the libvirt host. ' + e}
+            }
+            raise tornado.gen.Return(host_data)
+
+    @tornado.gen.coroutine
     def get_steps(self):
         steps = yield super(CenturyLinkDriver, self).get_steps()
 

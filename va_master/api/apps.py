@@ -166,7 +166,7 @@ def launch_app(handler):
 
         panel = yield deploy_handler.get_states_info()
         panel = [x for x in panel if x['name'] == data['role']][0]['panels']
-        yield deploy_handler.store_panel(panel, data['role'])
+        yield deploy_handler.store_panel(panel['panels'])
         
 
 
@@ -181,5 +181,7 @@ def launch_app(handler):
         import traceback
         traceback.print_exc()
 
-
-
+@tornado.gen.coroutine
+def get_user_actions(handler):
+    actions = yield handler.config.deploy_handler.get_actions(int(handler.data.get('no_actions', 0)))
+    handler.json(actions)

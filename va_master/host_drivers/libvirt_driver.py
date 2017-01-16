@@ -238,13 +238,14 @@ class LibVirtDriver(base.DriverBase):
                 'host' : host['hostname'],
                 'used_ram' : x.info()[2] / 2.0**10,
                 'used_cpu': x.info()[3], 
+                'used_disk' : 'n/a',
+
             }
             try: 
                 instance['used_disk'] = x.blockInfo('hda')[1] / 2.0**30
             except: 
                 import traceback
                 print ('Cannot get used disk for instance : ', x.name())
-                instance['used_disk'] = 'n/a'
                 traceback.print_exc()
 
         raise tornado.gen.Return(instances)

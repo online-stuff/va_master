@@ -1,4 +1,4 @@
-import json, glob, yaml
+import json, glob, yaml, datetime
 import requests
 import subprocess
 import traceback
@@ -230,3 +230,24 @@ class DeployHandler(object):
             import traceback
             traceback.print_exc()
 
+
+    @tornado.gen.coroutine
+    def store_action(self, user, path, data):
+        try: 
+            actions = yield self.datastore.get('actions')
+        except: 
+            actions = []
+        actions.append({
+            'username' : user['username'], 
+            'type' : user['type'], 
+            'path' : path, 
+            'data' : str(data), 
+            'time' : str(datetime.datetime.now())
+        })
+        yield self.datastore.insert('actions', actions)
+
+    @tornado.gen.coroutine
+    def get_actions(self, number_actions, filters = {}):
+        all_actions = yield self.datastore.get('actions')
+        actions = all_actions[:number_actions] if number_actions else all_actions
+        raise tornado.gen.Return(all_actions[:number_actions])
