@@ -53,6 +53,7 @@ class DriverBase(object):
 
     @abc.abstractmethod
     def  __init__(self, driver_name,  provider_template, profile_template, provider_name, profile_name, host_ip, key_name, key_path):
+        """base"""
 
         self.field_values = {
                 'driver_name' : driver_name,
@@ -75,13 +76,13 @@ class DriverBase(object):
     @abc.abstractmethod
     @tornado.gen.coroutine
     def driver_id(self):
-        """Returns a unique ID for this driver."""
+        """base"""
         pass
 
     @abc.abstractmethod
     @tornado.gen.coroutine
     def friendly_name(self):
-        """"Returns the friendly name of this driver."""
+        """base"""
         pass
 
     @tornado.gen.coroutine
@@ -159,27 +160,32 @@ class DriverBase(object):
 
     @tornado.gen.coroutine
     def get_networks(self):
+        """base"""
         print ('I am in base driver. ')
         networks = [] 
         raise tornado.gen.Return(networks)
 
     @tornado.gen.coroutine
     def get_sec_groups(self):
+        """base"""
        	sec_groups =[] 
     	raise tornado.gen.Return(sec_groups)
 
     @tornado.gen.coroutine
     def get_images(self):
+        """base"""
         images = []
         raise tornado.gen.Return(images)
 
     @tornado.gen.coroutine
     def get_sizes(self):
+        """base"""
         sizes = []
         raise tornado.gen.Return(sizes)
 
     @tornado.gen.coroutine
     def instance_action(self, host, instance_name, action):
+        """base"""
         instance_action = {
             'delete' : 'delete_function', 
             'reboot' : 'reboot_function', 
@@ -195,6 +201,7 @@ class DriverBase(object):
 
     @tornado.gen.coroutine
     def get_host_data(self, host):
+        """base"""
         try: 
             host_data = {
                 'instances' : [], 
@@ -211,6 +218,7 @@ class DriverBase(object):
 
     @tornado.gen.coroutine
     def validate_field_values(self, step_index, field_values):
+        """base"""
 
         print ('My field values: ', self.field_values)
 
@@ -271,6 +279,7 @@ class DriverBase(object):
 
     @tornado.gen.coroutine
     def create_minion(self, host, data):
+        """base"""
         profile_dir = host['profile_conf_dir']
         profile_template = ''
 

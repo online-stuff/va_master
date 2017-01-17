@@ -1,5 +1,9 @@
-from . import base
-from .base import Step, StepResult
+try: 
+    from . import base
+    from .base import Step, StepResult
+except: 
+    import base
+    from base import Step, StepResult
 from tornado.httpclient import AsyncHTTPClient, HTTPRequest
 import tornado.gen
 import json
@@ -37,6 +41,7 @@ class CenturyLinkDriver(base.DriverBase):
 
     @tornado.gen.coroutine
     def get_token(self, field_values):
+        """untested"""
         host, username, password, host_url = (field_values['host_ip'],
             field_values['username'], field_values['password'],
             field_values['host_url'])
@@ -60,6 +65,7 @@ class CenturyLinkDriver(base.DriverBase):
 
     @tornado.gen.coroutine
     def get_url_value(self, url):
+        """untested"""
         full_url = 'https://' + self.host_url + url
         req = HTTPRequest(url, 'GET', body=json.dumps(data), headers={
             'Content-Type': 'application/json', 
@@ -76,6 +82,7 @@ class CenturyLinkDriver(base.DriverBase):
 
     @tornado.gen.coroutine
     def instance_action(self, host, instance_name, action):
+        """unfinished"""
         instance_action = {
             'delete' : 'delete_function', 
             'reboot' : 'reboot_function', 
@@ -91,6 +98,7 @@ class CenturyLinkDriver(base.DriverBase):
 
     @tornado.gen.coroutine
     def get_host_data(self, host):
+        """unfinished"""
         try: 
             host_data = {
                 'instances' : [], 
@@ -118,6 +126,7 @@ class CenturyLinkDriver(base.DriverBase):
 
     @tornado.gen.coroutine
     def get_networks(self):
+        """unfinished"""
         url = '/v2-experimental/networks/{accountAlias}/{dataCenter}'
         network = ['sadf']
 #        networks = yield self.get_rest_value(url)
@@ -125,12 +134,14 @@ class CenturyLinkDriver(base.DriverBase):
 
     @tornado.gen.coroutine
     def get_sec_groups(self):
+        """unfinished"""
         url = '/v2/groups/account/id'
         sec_groups = ['list', 'of', 'security', 'groups']
         raise tornado.gen.Return(sec_groups)
 
     @tornado.gen.coroutine
     def get_images(self):
+        """unfinished"""
         url = '/v2/datacenters/account/datacenter/deploymentCapabilities'
 #        images = yield self.get_rest_value(url)
         images = ['list', 'of', 'images']
@@ -138,6 +149,7 @@ class CenturyLinkDriver(base.DriverBase):
 
     @tornado.gen.coroutine
     def get_sizes(self):
+        """unfinished"""
         sizes = ['list', 'of', 'sizes']
         raise tornado.gen.Return(sizes)
 
@@ -153,4 +165,9 @@ class CenturyLinkDriver(base.DriverBase):
 
       	step_kwargs = yield super(CenturyLinkDriver, self).validate_field_values(step_index, field_values)
         raise tornado.gen.Return(StepResult(**step_kwargs))
-       
+      
+    @tornado.gen.coroutine
+    def create_minion(self, step_index, field_values):
+        """unfinished"""
+        pass
+ 
