@@ -43,7 +43,7 @@ def dicts_to_table(rows, drivers):
     table = ['Function|' + '|'.join(drivers)]
     table.append(('---|' * (1 + len(drivers)))[:-1])
     for section in rows: 
-        table.append(section.capitalize())
+        table.append(section.capitalize() + '|')
         for row in rows[section]: 
             new_row = ([row] + [
                 {
@@ -52,8 +52,8 @@ def dicts_to_table(rows, drivers):
                 }[x] for x in rows[section][row][1:]
             ])
             table.append('|'.join(new_row))
-        table.append('')
     table = '\n'.join(table)
+    print table
     return table 
 
 
