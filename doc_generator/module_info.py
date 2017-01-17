@@ -5,7 +5,8 @@ import sys, inspect, importlib, csv
 #Returns a list of tuples [('function_name', 'function_doc'), ...]
 def get_class_methods(cls):
     methods = inspect.getmembers(cls, predicate = inspect.ismethod)
-    return [(x[0], x[1].__doc__) for x in methods]
+    methods = [(x[0], x[1].__doc__) for x in methods]
+    return methods
 
 #Gets a list of tuples [('class', 'ClassName')], ...]
 #Returns a dictionary {'ClassName': [('function_name', 'function_doc'), ...]

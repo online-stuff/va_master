@@ -13,7 +13,8 @@ listed_functions = {
 }
 
 def get_driver_methods(driver):
-    return module_info.get_class_methods(driver)
+    methods =  module_info.get_class_methods(driver)
+    return methods
 
 def get_all_drivers_dicts(drivers): 
     if base.DriverBase not in drivers: 
@@ -25,8 +26,7 @@ def get_all_drivers_dicts(drivers):
 
 
 def get_rows(driver_methods): 
-#    driver_methods = driver_methods[driver_methods.keys()[0]]
-    print 'My methods are : ', driver_methods
+
     rows = {
         section:{
             func: [
@@ -35,11 +35,14 @@ def get_rows(driver_methods):
         } for section in listed_functions
     }
 
+    print 'Rows are : ', rows
+
     return rows
 
 
 
 def dicts_to_table(rows, drivers):
+    print 'Rows are : ', rows
     table = ['Function|' + '|'.join(drivers)]
     table.append(('---|' * (1 + len(drivers)))[:-1])
     for section in rows: 
@@ -59,8 +62,6 @@ def dicts_to_table(rows, drivers):
 
 def get_drivers(driver_names, driver_class_names):
     driver_modules = [importlib.import_module(driver_name) for driver_name in driver_names]
-    print 'Driver names : ', driver_names, ' and classes : ', driver_class_names
-    print 'Getting attrs: ',  [(driver_modules[i], driver_class_names[i]) for i in range(len(driver_class_names))]
 
     drivers = [getattr(driver_modules[i], driver_class_names[i]) for i in range(len(driver_class_names))]
     return drivers
@@ -76,21 +77,19 @@ def predefined():
 def main():
     table_file = sys.argv[1]
     if len(sys.argv) > 2: 
-        args = sys.argv
+        args = sys.argv[1:]
     else: 
         args = predefined()
-    print args
-    driver_names = args[2::2]
-    driver_class_names = args[3::2]
-    
+    driver_names = args[::2]
+    driver_class_names = args[1::2]
+
+    print driver_names
+    print driver_class_names    
 
     driver_names = ['va_master.host_drivers.base'] + driver_names
     driver_class_names = ['DriverBase'] + driver_class_names
 
     drivers = get_drivers(driver_names, driver_class_names)
-
-    print 'Driver names : ', drivers, ' and classes : ', driver_class_names
-
     all_dicts = get_all_drivers_dicts(zip(drivers, driver_class_names))
     t = dicts_to_table(all_dicts, driver_class_names)
     with open(table_file, 'w') as f: 
