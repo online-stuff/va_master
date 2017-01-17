@@ -29,7 +29,7 @@ Chart.pluginService.register({
 
         var text = percentage.toString() + "%",
             textX = Math.round((width - ctx.measureText(text).width) / 2),
-            textY = height / 1.7;
+            textY = height / 1.2;
 
         ctx.fillText(text, textX, textY);
         ctx.save();
@@ -70,12 +70,18 @@ var Overview = React.createClass({
         var HostRedux = connect(function(state){
             return {auth: state.auth};
         })(Host);
+        var LogRedux = connect(function(state){
+            return {auth: state.auth};
+        })(Log);
         var host_rows = this.state.hosts.map(function(host) {
             return <HostRedux key={host.hostname} title={host.hostname} chartData={host.instances} instances={host.instances.length} host_usage={host.host_usage} />;
         }.bind(this));
         return (
             <div>
-                {host_rows}
+                <div className="graph-block">
+                    {host_rows}
+                </div>
+                <LogRedux />
                 <div className="appblock">
                     {appblocks}
                     <div style={{clear: 'both'}} />
@@ -143,7 +149,10 @@ var DoughnutComponent = React.createClass({
                     maintainAspectRatio: false, title: {
                         display: true,
                         text: this.props.title
-                    }
+                    },
+                    cutoutPercentage: 70,
+                    rotation: 1 * Math.PI,
+                    circumference: 1 * Math.PI
                 }, chartData: {
                     labels: this.props.labels,
                     datasets: [
@@ -158,6 +167,27 @@ var DoughnutComponent = React.createClass({
         return (
             <div className="chart">
                 <DoughnutChart data={this.state.chartData} options={this.state.chartOptions}/>
+            </div>
+        );
+    }
+});
+
+var Log = React.createClass({
+    getInitialState: function () {
+        return {logs: [
+            ]
+        }
+    },
+    render: function() {
+        var log_rows = this.state.logs.map(function(log, i) {
+            return (
+                <div key={i}>{log.description}</div>
+            );
+        }.bind(this));
+        return (
+            <div className="log-block">
+                <Bootstrap.PageHeader>Log</Bootstrap.PageHeader>
+                {log_rows}
             </div>
         );
     }
