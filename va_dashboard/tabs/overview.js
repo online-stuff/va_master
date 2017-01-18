@@ -174,7 +174,7 @@ var DoughnutComponent = React.createClass({
 
 var Log = React.createClass({
     getInitialState: function () {
-        var ws = new WebSocket("ws://192.168.80.39/sockets/log_monitor");
+        var ws = new WebSocket("ws://192.168.80.39:8888/sockets/log_monitor");
         ws.onopen = function() {
             ws.send("Hello, world");
         };
