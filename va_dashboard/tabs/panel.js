@@ -7,7 +7,6 @@ var widgets = require('./main_components');
 
 var Panel = React.createClass({
     getInitialState: function () {
-        console.log("initial state");
         return {
             template: {
                 "title": "",
@@ -48,7 +47,14 @@ var Panel = React.createClass({
             if(Object.keys(redux).indexOf(element.type) < 0){
                 var Component = widgets[element.type];
                 redux[element.type] = connect(function(state){
-                    return {auth: state.auth};
+                    var newstate = {auth: state.auth};
+                    if(typeof element.reducers !== 'undefined'){
+                        var r = element.reducers;
+                        for (var i = 0; i < r.length; i++) {
+                            newstate[r[i]] = state[r[i]];
+                        }
+                    }
+                    return newstate;
                 })(Component);
             }
             var Redux = redux[element.type];

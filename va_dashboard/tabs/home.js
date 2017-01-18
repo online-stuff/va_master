@@ -8,7 +8,8 @@ var Network = require('../network');
 var Home = React.createClass({
     getInitialState: function() {
         return {
-            'panels': []
+            'panels': [],
+            'collapse': false
         };
     },
     getPanels: function() {
@@ -32,6 +33,9 @@ var Home = React.createClass({
     logOut: function (key, event) {
         if(key === 'logout')
         this.props.dispatch({type: 'LOGOUT'});
+    },
+    collapse: function () {
+        this.setState({collapse: !this.state.collapse});
     },
     render: function () {
         var panels = this.state.panels.map(function(panel, i) {
@@ -66,7 +70,8 @@ var Home = React.createClass({
         <div>
             <Bootstrap.Navbar bsStyle='inverse'>
                 <Bootstrap.Navbar.Header>
-                    <Bootstrap.Navbar.Brand><img src='/static/logo.png' className='top-logo'/></Bootstrap.Navbar.Brand>
+                    <Bootstrap.Glyphicon glyph='menu-hamburger' onClick={this.collapse} />
+                    <img src='/static/logo.png' className='top-logo'/>
                 </Bootstrap.Navbar.Header>
                 <Bootstrap.Navbar.Collapse>
                     <Bootstrap.Nav pullRight={true}>
@@ -76,38 +81,40 @@ var Home = React.createClass({
                     </Bootstrap.Nav>
                 </Bootstrap.Navbar.Collapse>
             </Bootstrap.Navbar>
-            <div className='sidebar'>
-                <ul className='left-menu'>
-                    <li>
-                    <Router.IndexLink to='' activeClassName='active'>
-                    <Bootstrap.Glyphicon glyph='home' /> Overview</Router.IndexLink>
-                    </li>
-                    <li>
-                    <Router.Link to='hosts' activeClassName='active'>
-                    <Bootstrap.Glyphicon glyph='hdd' /> Hosts</Router.Link>
-                    </li>
-                    <li>
-                    <Router.Link to='apps' activeClassName='active'>
-                    <Bootstrap.Glyphicon glyph='th' /> Apps</Router.Link>
-                    </li>
-                    <li>
-                    <Router.Link to='store' activeClassName='active'>
-                    <Bootstrap.Glyphicon glyph='cloud' /> Store</Router.Link>
-                    </li>
-                    <li>
-                    <Router.Link to='vpn' activeClassName='active'>
-                        <span><i className='fa fa-lock' /> VPN</span>
-                    </Router.Link>
-                    </li>
-                    <li role="separator" className="divider-vertical"></li>
-                    <li className="panels-title">Admin panels</li>
-                    <li><Bootstrap.Accordion>
-                        {panels}
-                    </Bootstrap.Accordion></li>
-                </ul>
-            </div>
             <div className='main-content'>
-                {this.props.children}
+                <div className='sidebar' style={this.state.collapse?{left: -210}:{left: 0}}>
+                    <ul className='left-menu'>
+                        <li>
+                        <Router.IndexLink to='' activeClassName='active'>
+                        <Bootstrap.Glyphicon glyph='home' /> Overview</Router.IndexLink>
+                        </li>
+                        <li>
+                        <Router.Link to='hosts' activeClassName='active'>
+                        <Bootstrap.Glyphicon glyph='hdd' /> Hosts</Router.Link>
+                        </li>
+                        <li>
+                        <Router.Link to='apps' activeClassName='active'>
+                        <Bootstrap.Glyphicon glyph='th' /> Apps</Router.Link>
+                        </li>
+                        <li>
+                        <Router.Link to='store' activeClassName='active'>
+                        <Bootstrap.Glyphicon glyph='cloud' /> Store</Router.Link>
+                        </li>
+                        <li>
+                        <Router.Link to='vpn' activeClassName='active'>
+                            <span><i className='fa fa-lock' /> VPN</span>
+                        </Router.Link>
+                        </li>
+                        <li role="separator" className="divider-vertical"></li>
+                        <li className="panels-title">Admin panels</li>
+                        <li><Bootstrap.Accordion>
+                            {panels}
+                        </Bootstrap.Accordion></li>
+                    </ul>
+                </div>
+                <div className="page-content" style={this.state.collapse?{'left': '15px', 'width': '95vw'}:{'left': '230px', 'width': '80vw'}}>
+                    {this.props.children}
+                </div>
             </div>
         </div>
         );

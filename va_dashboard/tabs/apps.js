@@ -203,7 +203,7 @@ var AppForm = React.createClass({
 
         return (
             <div className="container">
-                <Bootstrap.Col xs={12} sm={6} md={6}>
+                <Bootstrap.Col xs={12} sm={6} md={6} className="app-column">
                     <Bootstrap.PageHeader className="header">Launch new app</Bootstrap.PageHeader>
                     <Bootstrap.Form onSubmit={this.onSubmit} horizontal>
                         <Bootstrap.FormGroup>
