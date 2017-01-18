@@ -121,6 +121,7 @@ class ApiHandler(tornado.web.RequestHandler):
 
 class LogMessagingSocket(tornado.websocket.WebSocketHandler):
     #Socket gets messages when opened
+    @tornado.gen.coroutine
     def open(self, no_messages = 5, logfile = '/var/log/vapourapps/va-master.log'):
         print ('I am open')
         self.logfile = logfile
@@ -142,9 +143,11 @@ class LogMessagingSocket(tornado.websocket.WebSocketHandler):
     def check_origin(self, origin): 
         return True
 
+    @tornado.gen.coroutine
     def on_message(self, message): 
         message = json.loads(message)
         reply = {
             'get_messages' : self.get_messages
         }[message['action']]
-        return reply(message)
+        self.write_message(reply(message))
+

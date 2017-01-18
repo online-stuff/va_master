@@ -5,6 +5,8 @@ import tornado.gen
 import json
 import os
 
+
+
 class IndexHandler(tornado.web.RequestHandler):
     """Handles the index page of the dashboard."""
 
@@ -33,8 +35,10 @@ def get_app(config):
         (r"/", IndexHandler, path_settings),
         (r"/api/(.*)", ApiHandler, {'config': config}),
         (r"/static/(.*)", DebugStaticHandler, path_settings), 
-        (r"/sockets/log_monitor", LogMessagingSocket, path_settings),
+        (r"/log", LogMessagingSocket),
+
     ])
     # TODO: If config.release, disable debug mode for static assets
     # Note: running the debug mode is not dangerous in production, but it's slower.
     return app
+
