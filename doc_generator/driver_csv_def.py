@@ -26,11 +26,20 @@ def get_all_drivers_dicts(drivers):
 
 
 def get_rows(driver_methods): 
+    print [[x[0] for x in driver_methods[d] ] for d in driver_methods]
+
+    for section in listed_functions: 
+        for func in listed_functions[section]: 
+            print 'Looking for ', func
+            for d in driver_methods: 
+                print 'In ', d, ' i have ', driver_methods[d]
+                print [x for x in driver_methods[d] if x[0] == func and x[1] not in ['unfinished']]
+
 
     rows = {
         section:{
             func: [
-                any([x[0] == func for x in driver_methods[d] if x[1] not in ['base', 'unfinished']]) for d in driver_methods
+                [True for x in driver_methods[d] if x[0] == func and x[1]] or [False] for d in driver_methods
             ] for func in listed_functions[section]
         } for section in listed_functions
     }
@@ -48,12 +57,8 @@ def dicts_to_table(rows, drivers):
     for section in rows: 
         table.append(section.capitalize() + '|')
         for row in rows[section]: 
-            new_row = ([row] + [
-                {
-                    True : '+', 
-                    False : '-',
-                }[x] for x in rows[section][row][1:]
-            ])
+            new_row = ([row] + ['+' * x[0] or '-' for x in rows[section][row][1:] 
+           ])
             table.append('|'.join(new_row))
     table = '\n'.join(table)
     print table
