@@ -32,14 +32,13 @@ def get_rows(driver_methods):
         for func in listed_functions[section]: 
             print 'Looking for ', func
             for d in driver_methods: 
-                print 'In ', d, ' i have ', driver_methods[d]
-                print [x for x in driver_methods[d] if x[0] == func and x[1] not in ['unfinished']]
+                print 'In ', d, ' i have ' ,  [x for x in driver_methods[d] if x[0] == func and x[1] not in ['unfinished']]
 
 
     rows = {
         section:{
             func: [
-                [True for x in driver_methods[d] if x[0] == func and x[1]] or [False] for d in driver_methods
+                [True for x in driver_methods[d] if x[0] == func and x[1] not in ['undefined', None]] or [False] for d in driver_methods
             ] for func in listed_functions[section]
         } for section in listed_functions
     }

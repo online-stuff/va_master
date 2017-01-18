@@ -43,6 +43,8 @@ PROFILE_TEMPLATE = '''VAR_PROFILE_NAME:
 
 class OpenStackDriver(base.DriverBase):
     def __init__(self, provider_name = 'openstack_provider', profile_name = 'openstack_profile', host_ip = '192.168.80.39', key_name = 'va_master_key', key_path = '/root/va_master_key'):
+        """ The standard issue init method. Borrows most of the functionality from the BaseDriver init method, but adds a self.regions attribute, specific for OpenStack hosts. """
+
         kwargs = {
             'driver_name' : 'openstack',
             'provider_template' : PROVIDER_TEMPLATE,
@@ -67,6 +69,8 @@ class OpenStackDriver(base.DriverBase):
 
     @tornado.gen.coroutine
     def export_env_variables(self, username, tenant, url, password):
+        """ A method I made to help call nova commands, but not being used actively. Keeping it here in case it's needed some time. """
+
         os.environ['OS_USERNAME'] = self.provider_vars['VAR_USERNAME']
         os.environ['OS_PROJECT_NAME'] = self.provider_vars['VAR_TENANT']
         os.environ['OS_AUTH_URL'] = self.provider_vars['VAR_IDENTITY_URL']
@@ -74,6 +78,8 @@ class OpenStackDriver(base.DriverBase):
 
     @tornado.gen.coroutine
     def get_steps(self):
+        """ Adds a host_ip, tenant and region field to the first step. These are needed in order to get OpenStack values. """
+
         steps = yield super(OpenStackDriver, self).get_steps()
         steps[0].add_fields([
             ('host_ip', 'Keystone host_ip:port (xx.xx.xxx.xx:35357)', 'str'),
@@ -85,6 +91,13 @@ class OpenStackDriver(base.DriverBase):
 
     @tornado.gen.coroutine
     def get_token(self, field_values):
+        """ 
+            Gets a token from an OpenStack server which is used to get OpenStack values 
+
+            Arguments: 
+            field_values -- A dictionary containing information about the host. It must have a host_ip, username, password and tenant value. The host_ip should be the base ip with the port, for instance 192.168.80.16:5000. 
+        """
+
         host, username, password, tenant = (field_values['host_ip'],
             field_values['username'], field_values['password'],
             field_values['tenant'])
@@ -119,6 +132,15 @@ class OpenStackDriver(base.DriverBase):
 
     @tornado.gen.coroutine
     def get_openstack_value(self, token_data, token_value, url_endpoint):
+        """
+            Gets a specified value by using the OpenStack REST api. 
+
+            Arguments: 
+            token_data -- The token data from which we can extract the URLs for various resources. This is the data received with the get_token() method. 
+            token_value -- The resource that we need to take. Check the OpenStack REST API documentation for reference, or some of this driver's methods which use this (get_networks, get_images etc. )
+            url_endpoint -- The specific values we want to get. It varies from resource to resource so again, check the OpenStack documentation, or the other methods. 
+        """
+
         url = token_data[1][token_value]
         req = HTTPRequest('%s/%s' % (url, url_endpoint), 'GET', headers={
             'X-Auth-Token': token_data[0],
@@ -137,25 +159,28 @@ class OpenStackDriver(base.DriverBase):
 
     @tornado.gen.coroutine
     def get_networks(self):
-        print ('Getting networks. ')
+        """ Gets the networks using the get_openstack_value() method. """
         networks = yield self.get_openstack_value(self.token_data, 'network', 'v2.0/networks')
         networks = ['|'.join([x['name'], x['id']]) for x in networks['networks']]
         raise tornado.gen.Return(networks)
 
     @tornado.gen.coroutine
     def get_sec_groups(self):
+        """ Gets the security groups using the get_openstack_value() method. """
        	sec_groups = yield self.get_openstack_value(self.token_data, 'compute', 'os-security-groups')
-	sec_groups = ['|'.join([x['name'], x['id']]) for x in sec_groups['security_groups']]
-	raise tornado.gen.Return(sec_groups)
+        sec_groups = ['|'.join([x['name'], x['id']]) for x in sec_groups['security_groups']]
+        raise tornado.gen.Return(sec_groups)
 
     @tornado.gen.coroutine
     def get_images(self):
+        """ Gets the images using the get_openstack_value() method. """
         images = yield self.get_openstack_value(self.token_data, 'image', 'v2.0/images')
         images = [x['name'] for x in images['images']]
         raise tornado.gen.Return(images)
 
     @tornado.gen.coroutine
     def get_sizes(self):
+        """ Gets the sizes using the get_openstack_value() method. """
         sizes = yield self.get_openstack_value(self.token_data, 'compute', 'flavors')
         sizes = [x['name'] for x in sizes['flavors']]
         raise tornado.gen.Return(sizes)
@@ -163,6 +188,7 @@ class OpenStackDriver(base.DriverBase):
 
     @tornado.gen.coroutine
     def get_instances(self, host):
+        """ Gets various information about the instances so it can be returned to host_data. The format of the data for each instance follows the same format as in the base driver description """
         try:
             self.token_data = yield self.get_token(host)
 
@@ -202,6 +228,7 @@ class OpenStackDriver(base.DriverBase):
 
     @tornado.gen.coroutine
     def get_host_status(self, host):
+        """ Tries to get the token for the host. If not successful, returns an error message. """
         try:
             self.token_data = yield self.get_token(host)
         except Exception as e:
@@ -211,6 +238,7 @@ class OpenStackDriver(base.DriverBase):
 
     @tornado.gen.coroutine
     def get_host_data(self, host):
+        """ Gets various data about the host and all the instances using the get_openstack_value() method. Returns the data in the same format as defined in the base driver. """
         try:
             self.token_data = yield self.get_token(host)
 
@@ -260,9 +288,10 @@ class OpenStackDriver(base.DriverBase):
         }
         raise tornado.gen.Return(host_data)
 
+
     @tornado.gen.coroutine
     def instance_action(self, host, instance_name, action):
-        print ('In driver. ')
+        """ Performs instance actions using a nova client. """
         try:
             nova = client.Client('2.0', host['username'], host['password'], host['tenant'], 'http://' + host['host_ip'] + '/v2.0')
             instance = [x for x in nova.servers.list() if x.name == instance_name][0]
@@ -282,6 +311,7 @@ class OpenStackDriver(base.DriverBase):
 
     @tornado.gen.coroutine
     def validate_field_values(self, step_index, field_values):
+        """ Uses the base driver method, but adds the region tenant and identity_url variables, used in the configurations. """
         if step_index < 0:
     	    raise tornado.gen.Return(StepResult(
         		errors=[], new_step_index=0, option_choices={'region' : self.regions,}
@@ -308,6 +338,7 @@ class OpenStackDriver(base.DriverBase):
 
     @tornado.gen.coroutine
     def create_minion(self, host, data):
+        """ Works properly with the base driver method, but overwritten for bug tracking. """
         try:
             yield super(OpenStackDriver, self).create_minion(host, data)
         except:

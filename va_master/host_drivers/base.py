@@ -97,18 +97,24 @@ class DriverBase(object):
     @abc.abstractmethod
     @tornado.gen.coroutine
     def driver_id(self):
-        """The driver_id, recognized by the API and used in various methods. Example: my_driver"""
+        """
+            The driver_id, recognized by the API and used in various methods. Example: my_driver
+        """
         pass
 
     @abc.abstractmethod
     @tornado.gen.coroutine
     def friendly_name(self):
-        """Friendly name, shown in the website. Example: My beautiful Driver"""
+        """
+            Friendly name, shown in the website. Example: My beautiful Driver
+        """
         pass
 
     @tornado.gen.coroutine
     def new_host_step_descriptions(self):
-        """Shows these descriptions when creating a new host. Does not need to be overwritten. """
+        """
+            Shows these descriptions when creating a new host. Does not need to be overwritten. 
+        """
         raise tornado.gen.Return([
             {'name': 'Host info'},
             {'name': 'Pick a Network'},
@@ -142,7 +148,9 @@ class DriverBase(object):
 
     @tornado.gen.coroutine
     def write_configs(self, skip_provider=False, skip_profile=False):
-        """ Writes the saved configurations. If any of the arguments are set, the corresponding configuration will not be written. Does not need to be overwritten """
+        """ 
+            Writes the saved configurations. If any of the arguments are set, the corresponding configuration will not be written. Does not need to be overwritten 
+        """
         if not skip_provider: 
             with open('/etc/salt/cloud.providers.d/' + self.provider_vars['VAR_PROVIDER_NAME'] + '.conf', 'w') as f: 
                 f.write(self.provider_template)
@@ -155,7 +163,9 @@ class DriverBase(object):
 
     @tornado.gen.coroutine
     def get_steps(self):
-        """ These are the arguments entered when creating a new host, split into separate steps. Does not need to be overwritten, but probably should be in order to add other types of fields. You can just call this in your implementation and add fields to whichever step you want. """
+        """ 
+            These are the arguments entered when creating a new host, split into separate steps. Does not need to be overwritten, but probably should be in order to add other types of fields. You can just call this in your implementation and add fields to whichever step you want. 
+        """
 
         host_info = Step('Host info')
         host_info.add_fields([
@@ -184,31 +194,41 @@ class DriverBase(object):
 
     @tornado.gen.coroutine
     def get_networks(self):
-        """ Gets a list of all the networks for the specific implementation. This _needs_ to be overwritten. """
+        """ 
+            Gets a list of all the networks for the specific implementation. This _needs_ to be overwritten. 
+        """
         networks = [] 
         raise tornado.gen.Return(networks)
 
     @tornado.gen.coroutine
     def get_sec_groups(self):
-        """ Gets a list of all the security groups for the specific implementation. This _needs_ to be overwritten. """
+        """ 
+            Gets a list of all the security groups for the specific implementation. This _needs_ to be overwritten. 
+        """
        	sec_groups =[] 
     	raise tornado.gen.Return(sec_groups)
 
     @tornado.gen.coroutine
     def get_images(self):
-        """ Gets a list of all the images used to create instances. This _needs_ to be overwritten. """
+        """ 
+            Gets a list of all the images used to create instances. This _needs_ to be overwritten. 
+        """
         images = []
         raise tornado.gen.Return(images)
 
     @tornado.gen.coroutine
     def get_sizes(self):
-        """ Gets a list of all sizes (flavors) used to create instances. This _needs_ to be overwritten. """
+        """     
+            Gets a list of all sizes (flavors) used to create instances. This _needs_ to be overwritten. 
+        """
         sizes = []
         raise tornado.gen.Return(sizes)
 
     @tornado.gen.coroutine
     def instance_action(self, host, instance_name, action):
-        """ Performs an action for the instance. This function is a stub of how such a function _could_ look, but it depends on implementation. This _needs_ to be overwritten. """
+        """ 
+            Performs an action for the instance. This function is a stub of how such a function _could_ look, but it depends on implementation. This _needs_ to be overwritten. 
+        """
         instance_action = {
             'delete' : 'delete_function', 
             'reboot' : 'reboot_function', 
@@ -224,12 +244,16 @@ class DriverBase(object):
 
     @tornado.gen.coroutine
     def get_host_status(self, host):
-        """ Tries to estabilish a connection with the host. You should overwrite this method so as to properly return a negative value if the host is inaccessible. """
+        """ 
+            Tries to estabilish a connection with the host. You should overwrite this method so as to properly return a negative value if the host is inaccessible. 
+        """
         raise tornado.gen.Return({'success' : True, 'message': ''})
 
     @tornado.gen.coroutine
     def get_host_data(self, host):
-        """ Returns information about usage for the host and instances. The format of the data is in this function. This should be overwritten so you can see this data on the overview. """
+        """ 
+            Returns information about usage for the host and instances. The format of the data is in this function. This should be overwritten so you can see this data on the overview.
+         """
         try: 
             host_data = {
                 'instances' : [], 
