@@ -1,4 +1,4 @@
-from .api.handler import ApiHandler
+from .api.handler import ApiHandler, LogMessagingSocket
 import tornado.ioloop
 import tornado.web
 import tornado.gen
@@ -32,7 +32,8 @@ def get_app(config):
     app = tornado.web.Application([
         (r"/", IndexHandler, path_settings),
         (r"/api/(.*)", ApiHandler, {'config': config}),
-        (r"/static/(.*)", DebugStaticHandler, path_settings)
+        (r"/static/(.*)", DebugStaticHandler, path_settings), 
+        (r"/sockets/log_monitor", LogMessagingSocket, path_settings),
     ])
     # TODO: If config.release, disable debug mode for static assets
     # Note: running the debug mode is not dangerous in production, but it's slower.

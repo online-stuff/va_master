@@ -53,7 +53,28 @@ class DriverBase(object):
 
     @abc.abstractmethod
     def  __init__(self, driver_name,  provider_template, profile_template, provider_name, profile_name, host_ip, key_name, key_path):
-        """base"""
+        """
+            Initialize method for the base driver. Subclassing drivers should be overwriting this and calling it with custom arguments if they are needed. 
+            Takes care of the salt key, writing salt provider and profile configurations and so on. 
+
+
+            Keyword arguments: 
+            driver_name -- The computer friendly driver name, for instance "my_driver". Used to find the driver when performing API requests. 
+            provider_template -- A sample of how the provider configuration should look, with variable names which will be substituted from the profile_vars. 
+            
+            For instance, if you want to substitute an image, you should place VAR_IMAGE in the configuration, and if you're subclassing this class, the driver will replace it when generating the configuration. For custom template variables, you may need to add them to the self.provider_vars manually. 
+            Example: 
+                my_var = self.get_var_valule()
+                self.provider_vars['MY_VAR'] = my_var
+            And then you need to have MY_VAR in the provider template. 
+
+            profile_template -- Same as provider_template, except with the profile instead. 
+            provider_name -- The name of the provider for which the driver works, for instance: openstack_provider, or aws_provider. 
+            profile_name -- The name of the profile. The profile configuration is generated when an instance is created, and the final name is profile_name + instance_name. 
+            host_ip -- The host ip of the machine that this runs on. It can and should be taken from the datastore (the deploy_handler passes it as a default kwarg).
+            key_name -- The name of the keypair that will be used to connect to created instances. Example: va_master_key
+            key_path - The entire path minus the key name. Example: /root/va_master_key/, if the full path is /root/va_master_key/va_master_key.pem. 
+        """
 
         self.field_values = {
                 'driver_name' : driver_name,
@@ -76,17 +97,24 @@ class DriverBase(object):
     @abc.abstractmethod
     @tornado.gen.coroutine
     def driver_id(self):
-        """base"""
+        """
+            The driver_id, recognized by the API and used in various methods. Example: my_driver
+        """
         pass
 
     @abc.abstractmethod
     @tornado.gen.coroutine
     def friendly_name(self):
-        """base"""
+        """
+            Friendly name, shown in the website. Example: My beautiful Driver
+        """
         pass
 
     @tornado.gen.coroutine
     def new_host_step_descriptions(self):
+        """
+            Shows these descriptions when creating a new host. Does not need to be overwritten. 
+        """
         raise tornado.gen.Return([
             {'name': 'Host info'},
             {'name': 'Pick a Network'},
@@ -96,6 +124,15 @@ class DriverBase(object):
 
     @tornado.gen.coroutine
     def get_salt_configs(self, skip_provider = False, skip_profile = False, base_profile = False):
+        """
+            Creates configurations for salt implementations. Does not need to be overwritten. 
+            
+            Arguments: 
+            skip_provider -- If set to True, it will not create the provider configuration. This happens when creating an instance. 
+            skip_profile -- If set to True, it will not create the profile configuration. 
+            base_profile -- If set to True, it will not replace the profile name for the configuration. This happens when creating a new host to create a base profile template. This template is then read when creating a new instance, and the profile name is set. 
+        """
+
         if not (self.profile_template or self.provider_template): 
             raise tornado.gen.Return(None)
         if not skip_profile: 
@@ -111,6 +148,9 @@ class DriverBase(object):
 
     @tornado.gen.coroutine
     def write_configs(self, skip_provider=False, skip_profile=False):
+        """ 
+            Writes the saved configurations. If any of the arguments are set, the corresponding configuration will not be written. Does not need to be overwritten 
+        """
         if not skip_provider: 
             with open('/etc/salt/cloud.providers.d/' + self.provider_vars['VAR_PROVIDER_NAME'] + '.conf', 'w') as f: 
                 f.write(self.provider_template)
@@ -122,17 +162,11 @@ class DriverBase(object):
 
 
     @tornado.gen.coroutine
-    def new_host_step_descriptions(self):
-        raise tornado.gen.Return([
-            {'name': 'Host info'},
-            {'name': 'Pick a Network'},
-            {'name': 'Security'}
-        ])
-
-
-
-    @tornado.gen.coroutine
     def get_steps(self):
+        """ 
+            These are the arguments entered when creating a new host, split into separate steps. Does not need to be overwritten, but probably should be in order to add other types of fields. You can just call this in your implementation and add fields to whichever step you want. 
+        """
+
         host_info = Step('Host info')
         host_info.add_fields([
             ('hostname', 'Name for the host', 'str'),
@@ -160,32 +194,41 @@ class DriverBase(object):
 
     @tornado.gen.coroutine
     def get_networks(self):
-        """base"""
-        print ('I am in base driver. ')
+        """ 
+            Gets a list of all the networks for the specific implementation. This _needs_ to be overwritten. 
+        """
         networks = [] 
         raise tornado.gen.Return(networks)
 
     @tornado.gen.coroutine
     def get_sec_groups(self):
-        """base"""
+        """ 
+            Gets a list of all the security groups for the specific implementation. This _needs_ to be overwritten. 
+        """
        	sec_groups =[] 
     	raise tornado.gen.Return(sec_groups)
 
     @tornado.gen.coroutine
     def get_images(self):
-        """base"""
+        """ 
+            Gets a list of all the images used to create instances. This _needs_ to be overwritten. 
+        """
         images = []
         raise tornado.gen.Return(images)
 
     @tornado.gen.coroutine
     def get_sizes(self):
-        """base"""
+        """     
+            Gets a list of all sizes (flavors) used to create instances. This _needs_ to be overwritten. 
+        """
         sizes = []
         raise tornado.gen.Return(sizes)
 
     @tornado.gen.coroutine
     def instance_action(self, host, instance_name, action):
-        """base"""
+        """ 
+            Performs an action for the instance. This function is a stub of how such a function _could_ look, but it depends on implementation. This _needs_ to be overwritten. 
+        """
         instance_action = {
             'delete' : 'delete_function', 
             'reboot' : 'reboot_function', 
@@ -200,8 +243,17 @@ class DriverBase(object):
 
 
     @tornado.gen.coroutine
+    def get_host_status(self, host):
+        """ 
+            Tries to estabilish a connection with the host. You should overwrite this method so as to properly return a negative value if the host is inaccessible. 
+        """
+        raise tornado.gen.Return({'success' : True, 'message': ''})
+
+    @tornado.gen.coroutine
     def get_host_data(self, host):
-        """base"""
+        """ 
+            Returns information about usage for the host and instances. The format of the data is in this function. This should be overwritten so you can see this data on the overview.
+         """
         try: 
             host_data = {
                 'instances' : [], 
@@ -209,19 +261,54 @@ class DriverBase(object):
             }
             #Functions that connect to host here. 
         except Exception as e: 
-            host_data = {
-                'instances' : [], 
-                'host_usage' : {},
-                'status' : {'success' : False, 'message' : 'Could not connect to the libvirt host. ' + e}
-            }
+            host_data['status'] = {'success' : False, 'message' : 'Could not get data. ' + e}
             raise tornado.gen.Return(host_data)
+
+        host_usage =  {
+            'max_cpus' : 0, 
+            'used_cpus' : 0, 
+            'max_ram' : 0,  # in MB
+            'used_ram' : 0, # still in MB
+            'max_disk' : 0, # in GB this time
+            'used_disk' : 0, 
+            'free_disk' : 0, 
+            'max_instances' : 0, 
+            'used_instances' : 0,
+        }
+        host_usage['free_cpus'] = host_usage['max_cpus'] - host_usage['used_cpus']
+        host_usage['free_ram'] = host_usage['max_ram'] - host_usage['used_ram']
+
+
+        instances =  [{
+                'hostname' : '',
+                'ip' : 'n/a',
+                'size' : '',
+                'status' : 'SHUTOFF',
+                'host' : '',
+                'used_ram' : 0,
+                'used_cpu': 0,
+                'used_disk' : 0,
+
+        }]
+
+        host_info = {
+            'instances' : instances,
+            'host_usage' : host_usage,
+            'status' : {'success' : True, 'message': ''}
+        }
+        raise tornado.gen.Return(host_data)
 
     @tornado.gen.coroutine
     def validate_field_values(self, step_index, field_values):
-        """base"""
+        """ 
+            Validates and saves field values entered when adding a new host. This does not need to be overwritten, but you may want to do so. 
 
-        print ('My field values: ', self.field_values)
+            Arguments: 
+                step_index -- The current step that is being evaluated. The first (or 0th) step is after the driver has been chosen. 
+                field_values -- The results that are being evaluated. 
 
+            When the last step has been reached (the steps are defined in the get_steps() method), the results are evaluated, and everything that has been saved to self.field_values will be saved to the datastore and then used for performing instance actions, or creating instances. Make sure to add any custom values there. 
+        """
         if step_index < 0:
             raise tornado.gen.Return(StepResult(
                 errors=[], new_step_index=0, option_choices={}
@@ -279,7 +366,20 @@ class DriverBase(object):
 
     @tornado.gen.coroutine
     def create_minion(self, host, data):
-        """base"""
+        """
+            Creates a minion from the host data received from the datastore, and from data received from the panel. 
+            
+            Arguments: 
+            host - The datastore information about the host. It's important that it has the profile_conf_dir value, which is the base profile configuration. 
+            data - Data about the image. It's a dictionary with the following information: 
+                'role': The role with which the instance can be recognized, for instance va-directory
+                'image': The image used to create the instance, for instance VAInstance
+                'size': The size (flavor) used to create the instance, for instance va-small
+                'new_profile': The name of the profile, for instance my-directory
+                'instance_name': The name of the instance, for instance my_directory
+
+            This method will work with proper configurations and data, but only for salt-supported technology. You _need_ to overwrite this method if the technology of your driver does not work with salt. 
+        """
         profile_dir = host['profile_conf_dir']
         profile_template = ''
 
