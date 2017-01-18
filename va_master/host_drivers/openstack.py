@@ -1,5 +1,10 @@
-from . import base
-from .base import Step, StepResult
+try: 
+    from . import base
+    from .base import Step, StepResult
+except: 
+    import base
+    from base import Step, StepResult
+
 from tornado.httpclient import AsyncHTTPClient, HTTPRequest
 import tornado.gen
 import json

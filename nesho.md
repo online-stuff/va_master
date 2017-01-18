@@ -1,0 +1,17 @@
+Function|DriverBase|OpenStackDriver|LibVirtDriver|GenericDriver|CenturyLinkDriver
+---|---|---|---|---|---
+Images_actions|
+Networking|
+Host_actions|
+get_images|-|+|-|+|-
+get_sizes|-|+|-|+|-
+get_host_status|-|+|-|+|-
+get_networks|-|+|-|+|-
+get_host_data|-|+|-|+|-
+get_sec_groups|-|+|-|+|-
+Storage|
+General|
+create_minion|-|+|-|+|-
+driver_id|-|+|+|+|+
+friendly_name|-|+|+|+|+
+__init__|-|+|+|+|+
