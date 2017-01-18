@@ -139,6 +139,9 @@ class LogMessagingSocket(tornado.websocket.WebSocketHandler):
     def get_messages(message):
         return self.messages[-message['number_of_messages']:]
 
+    def check_origin(self, origin): 
+        return True
+
     def on_message(self, message): 
         message = json.loads(message)
         reply = {
