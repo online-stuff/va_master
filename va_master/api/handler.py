@@ -1,8 +1,8 @@
-import tornado.web
+import tornado.web, tornado.websocket
 import tornado.gen
 from tornado.httpclient import AsyncHTTPClient, HTTPRequest
 from . import status, login, hosts, apps, panels
-import json, datetime
+import json, datetime, syslog
 
 
 paths = {
@@ -89,6 +89,10 @@ class ApiHandler(tornado.web.RequestHandler):
                 data = {}
             user = yield login.get_current_user(self)
             yield self.exec_method('post', path, data)
+
+            message = 'User ' +  user['username'] + ' of type ' +  user['type'] + ' performed a POST request on ' +  path + ' with data ' + str(data) + ' at time ' + str(datetime.datetime.now())
+            print ('Logging: ', message)
+            syslog.syslog(syslog.LOG_INFO | syslog.LOG_LOCAL0, message)
             yield self.config.deploy_handler.store_action(user, path, data)
 
         except: 
@@ -113,3 +117,31 @@ class ApiHandler(tornado.web.RequestHandler):
             traceback.print_exc()
 
 
+
+
+class LogMessagingSocket(tornado.websocket.WebSocketHandler):
+    #Socket gets messages when opened
+    def open(self, no_messages = 5, logfile = '/var/log/vapourapps/va-master.log'):
+        print ('I am open')
+        self.logfile = logfile
+        with open(logfile) as f: 
+            self.messages = f.read().split('\n')
+        self.messages = self.messages
+        self.write_message(json.dumps(self.messages[-no_messages:]))
+        self.monitor_log()
+
+    def monitor_log(self):
+        for line in tailf.tailf(logfile): 
+            self.messages.append(line)
+            #TODO filter messages
+            self.write_message(json.dumps(self.messages[:-self.no_messages]))
+        
+    def get_messages(message):
+        return self.messages[-message['number_of_messages']:]
+
+    def on_message(self, message): 
+        message = json.loads(message)
+        reply = {
+            'get_messages' : self.get_messages
+        }[message['action']]
+        return reply(message)
