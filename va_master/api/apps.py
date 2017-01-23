@@ -1,10 +1,10 @@
 from .login import auth_only
+from sockets import LogMessagingSocket
 import tornado.gen
 import json
 import subprocess
 import requests
 import zipfile, tarfile
-from salt.client import Caller
 
 from salt.client import Caller
 
@@ -15,7 +15,6 @@ def add_app(handler):
     yield handler.config.deploy_handler.store_app(app, handler.data['host'])
 
 #@auth_only
-
 @tornado.gen.coroutine
 def get_openvpn_users(handler):
     cl = Caller()

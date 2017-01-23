@@ -188,11 +188,17 @@ class DeployHandler(object):
         try: 
             panels = yield self.datastore.get('panels')
 
+            print ('Adding panel: ', panel)
             role_user_panels = panels['user'].get('role', [])
-            role_user_panels += panel['user']
+            print ('Previous role user panels: ', role_user_panels , ' now adding ', {'panel_name' : panel['panel_name'], 'panels' : panel['user']})
+            role_user_panels.append({'panel_name' : panel['panel_name'], 'panels' : panel['user']})
+            print ('My user panels are : ', role_user_panels)
+
 
             role_admin_panels = panels['admin'].get('role', [])
-            role_admin_panels += panel['admin']
+            role_admin_panels.append({'panel_name' : panel['panel_name'], 'panels' : panel['admin']})
+            print ('My admin panels are : ', role_admin_panels)
+
 
             panels['user'][panel['role']] = role_user_panels
             panels['admin'][panel['role']] = role_admin_panels
@@ -201,6 +207,14 @@ class DeployHandler(object):
             import traceback
             traceback.print_exc()
 
+
+    @tornado.gen.coroutine
+    def reset_panels(self):
+        try: 
+            yield self.datastore.delete('panels')
+        except: 
+            import traceback
+            traceback.print_exc()
 
 
     @tornado.gen.coroutine
@@ -251,3 +265,5 @@ class DeployHandler(object):
         all_actions = yield self.datastore.get('actions')
         actions = all_actions[:number_actions] if number_actions else all_actions
         raise tornado.gen.Return(all_actions[:number_actions])
+
+

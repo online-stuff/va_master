@@ -186,8 +186,12 @@ var Log = React.createClass({
             ws.send("Hello, world");
         };
         ws.onmessage = function (evt) {
-            var data = JSON.parse(evt.data);
+            console.log("event data");
+            console.log(evt.data);
+            var data = evt.data;
             data.concat(me.state.logs);
+            console.log("concat data");
+            console.log(data);
             me.setState({logs: data});
         };
         ws.onerror = function(evt){
@@ -195,6 +199,9 @@ var Log = React.createClass({
         };
     },
     render: function() {
+        console.log("in render");
+        console.log(this.state.logs);
+        console.log(typeofthis.state.logs);
         var log_rows = this.state.logs.map(function(log, i) {
             return (
                 <div key={i}>{log}</div>

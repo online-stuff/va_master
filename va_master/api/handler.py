@@ -1,8 +1,12 @@
-import tornado.web
+import tornado.web, tornado.websocket
 import tornado.gen
+
+from watchdog.observers import Observer
+from watchdog.events import FileSystemEventHandler
+
 from tornado.httpclient import AsyncHTTPClient, HTTPRequest
 from . import status, login, hosts, apps, panels
-import json, datetime
+import json, datetime, syslog
 
 
 paths = {
@@ -20,7 +24,8 @@ paths = {
         'states' : apps.get_states, 
         'states/reset' : apps.reset_states, 
 
-        'panels/new_panel' : panels.new_panel,
+        'panels/reset_panels': panels.reset_panels, #JUST FOR TESTING
+        'panels/new_panel' : panels.new_panel, #JUST FOR TESTING
         'panels' : panels.get_panels, 
         'panels/get_panel' : panels.get_panel_for_user, 
     },
@@ -89,6 +94,10 @@ class ApiHandler(tornado.web.RequestHandler):
                 data = {}
             user = yield login.get_current_user(self)
             yield self.exec_method('post', path, data)
+
+            message = 'User ' +  user['username'] + ' of type ' +  user['type'] + ' performed a POST request on ' +  path + ' with data ' + str(data) + ' at time ' + str(datetime.datetime.now())
+            print ('Logging: ', message)
+            syslog.syslog(syslog.LOG_INFO | syslog.LOG_LOCAL0, message)
             yield self.config.deploy_handler.store_action(user, path, data)
 
         except: 
@@ -112,4 +121,50 @@ class ApiHandler(tornado.web.RequestHandler):
             import traceback
             traceback.print_exc()
 
+
+
+class LogHandler(FileSystemEventHandler):
+    def __init__(self, socket):
+        self.socket = socket
+        super(LogHandler, self).__init__()
+
+    def on_modified(self, event):
+        log_file = event.src_path
+        with open(log_file) as f: 
+            log_file = [x for x in f.read().split('\n') if x]
+        last_line = log_file[-1]
+        self.socket.write_message(last_line)
+
+
+class LogMessagingSocket(tornado.websocket.WebSocketHandler):
+
+    #Socket gets messages when opened
+    @tornado.web.asynchronous
+    @tornado.gen.engine
+    def open(self, no_messages = 5, logfile = '/var/log/vapourapps/va-master.log'):
+        print ('I am open')
+        self.logfile = logfile
+        with open(logfile) as f: 
+            self.messages = f.read().split('\n')
+        self.messages = self.messages
+        self.write_message(json.dumps(self.messages[-no_messages:]))
+
+        log_handler = LogHandler(self)
+        observer = Observer()
+        observer.schedule(log_handler, path = '/var/log/vapourapps/')
+        observer.start()
+        
+    def get_messages(message):
+        return self.messages[-message['number_of_messages']:]
+
+    def check_origin(self, origin): 
+        return True
+
+    @tornado.gen.coroutine
+    def on_message(self, message): 
+        message = json.loads(message)
+        reply = {
+            'get_messages' : self.get_messages
+        }[message['action']]
+        self.write_message(reply(message))
 
