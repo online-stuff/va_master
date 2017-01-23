@@ -1,5 +1,4 @@
 from .login import auth_only
-from sockets import LogMessagingSocket
 import tornado.gen
 import json
 import subprocess

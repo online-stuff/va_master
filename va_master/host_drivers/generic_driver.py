@@ -66,32 +66,32 @@ class GenericDriver(base.DriverBase):
 
     @tornado.gen.coroutine
     def get_networks(self):
-        """unfinished"""
+        
         networks = [] 
         raise tornado.gen.Return(networks)
 
     @tornado.gen.coroutine
     def get_sec_groups(self):
-        """unfinished"""
+        
        	sec_groups =[] 
     	raise tornado.gen.Return(sec_groups)
 
     @tornado.gen.coroutine
     def get_images(self):
-        """unfinished"""
+        
         images = []
         raise tornado.gen.Return(images)
 
     @tornado.gen.coroutine
     def get_sizes(self):
-        """unfinished"""
+        
         sizes = []
         raise tornado.gen.Return(sizes)
 
 
     @tornado.gen.coroutine
     def instance_action(self, host, instance_name, action):
-        """unfinished"""
+        
         instance_action = {
             'delete' : 'delete_function', 
             'reboot' : 'reboot_function', 
@@ -107,7 +107,7 @@ class GenericDriver(base.DriverBase):
 
     @tornado.gen.coroutine
     def get_host_data(self, host):
-        """unfinished"""
+        
         try: 
             data = {
                 'instances' : [], 
@@ -165,7 +165,7 @@ class GenericDriver(base.DriverBase):
       
     @tornado.gen.coroutine
     def create_minion(self, host, data):
-        """unfinished"""
+        
         try:
             yield super(GenericDriver, self).create_minion(host, data)
         except: 

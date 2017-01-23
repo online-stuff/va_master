@@ -17,46 +17,42 @@ def get_driver_methods(driver):
     return methods
 
 def get_all_drivers_dicts(drivers): 
-    if base.DriverBase not in drivers: 
-        drivers.append((base.DriverBase, 'Driverbase'))
-    all_methods = {d[1]: get_driver_methods(d[0]) for d in drivers}
+    all_methods = [(d[1], get_driver_methods(d[0])) for d in drivers]
     rows = get_rows(all_methods)
     return rows
    
 
 
 def get_rows(driver_methods): 
-    print [[x[0] for x in driver_methods[d] ] for d in driver_methods]
 
     for section in listed_functions: 
         for func in listed_functions[section]: 
-            print 'Looking for ', func
             for d in driver_methods: 
-                print 'In ', d, ' i have ' ,  [x for x in driver_methods[d] if x[0] == func and x[1] not in ['unfinished']]
+                pass
+#                print 'In ', d, ' i have ' ,  [x for x in d[1] if x[0] == func and x[1]]
 
 
     rows = {
         section:{
             func: [
-                [True for x in driver_methods[d] if x[0] == func and x[1] not in ['undefined', None]] or [False] for d in driver_methods
+                [True for x in d[1] if x[0] == func and x[1] ] or [False] for d in driver_methods
             ] for func in listed_functions[section]
         } for section in listed_functions
     }
-
-    print 'Rows are : ', rows
 
     return rows
 
 
 
 def dicts_to_table(rows, drivers):
-    print 'Rows are : ', rows
+#    print 'Rows are : ', rows
     table = ['Function|' + '|'.join(drivers)]
     table.append(('---|' * (1 + len(drivers)))[:-1])
     for section in rows: 
         table.append(section.capitalize() + '|')
         for row in rows[section]: 
-            new_row = ([row] + ['+' * x[0] or '-' for x in rows[section][row][1:] 
+#            new_row = ([row] + ['+' * x[0] + '-' * (not x[0]) for x in rows[section][row][1:] 
+            new_row = ([row] + ['+' if x[0] else '-'  for x in rows[section][row]
            ])
             table.append('|'.join(new_row))
     table = '\n'.join(table)
@@ -66,8 +62,8 @@ def dicts_to_table(rows, drivers):
 
 def get_drivers(driver_names, driver_class_names):
     driver_modules = [importlib.import_module(driver_name) for driver_name in driver_names]
-
     drivers = [getattr(driver_modules[i], driver_class_names[i]) for i in range(len(driver_class_names))]
+
     return drivers
 
 
@@ -86,9 +82,6 @@ def main():
         args = predefined()
     driver_names = args[::2]
     driver_class_names = args[1::2]
-
-    print driver_names
-    print driver_class_names    
 
     driver_names = ['va_master.host_drivers.base'] + driver_names
     driver_class_names = ['DriverBase'] + driver_class_names

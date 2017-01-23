@@ -60,10 +60,12 @@ class OpenStackDriver(base.DriverBase):
 
     @tornado.gen.coroutine
     def driver_id(self):
+        """ Pretty simple. """
         raise tornado.gen.Return('openstack')
 
     @tornado.gen.coroutine
     def friendly_name(self):
+        """ Pretty simple """
         raise tornado.gen.Return('OpenStack')
 
 
