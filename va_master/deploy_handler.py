@@ -145,6 +145,12 @@ class DeployHandler(object):
                 traceback.print_exc()
         if states: 
             states_data = [x for x in states_data if x['name'] in states]
+        try: 
+            panels = yield self.datastore.get('panels')
+        except: 
+            user_panels, admin_panels = ([{'name' : x['name'], 'icon' : x['icon'], 'instances' : [], 'panels' : x.get('panels', {'admin' : [], 'user' : []}[type])} for x in states_data] for type in ['user', 'admin'])
+            panels = {'user' : user_panels, 'admin' : admin_panels}
+            yield self.datastore.insert('panels', panels)
         raise tornado.gen.Return(states_data)
 
 
@@ -188,20 +194,16 @@ class DeployHandler(object):
         try: 
             panels = yield self.datastore.get('panels')
 
-            print ('Adding panel: ', panel)
-            role_user_panels = panels['user'].get('role', [])
-            print ('Previous role user panels: ', role_user_panels , ' now adding ', {'panel_name' : panel['panel_name'], 'panels' : panel['user']})
-            role_user_panels.append({'panel_name' : panel['panel_name'], 'panels' : panel['user']})
-            print ('My user panels are : ', role_user_panels)
+            
+            role_user_panels = filter(lambda x: x['name'] == panel['role'], panels['user'])[0]
+            role_user_panels['instances'].append(panel['panel_name'])
 
+            role_admin_panels = filter(lambda x: x['name'] == panel['role'], panels['admin'])[0]
+            role_admin_panels['instances'].append(panel['panel_name'])
 
-            role_admin_panels = panels['admin'].get('role', [])
-            role_admin_panels.append({'panel_name' : panel['panel_name'], 'panels' : panel['admin']})
-            print ('My admin panels are : ', role_admin_panels)
-
-
-            panels['user'][panel['role']] = role_user_panels
-            panels['admin'][panel['role']] = role_admin_panels
+#            panels['user'][panel['role']] = role_user_panels
+#            panels['admin'][panel['role']] = role_admin_panels
+            print ('New panels are : ', panels)
             yield self.datastore.insert('panels', panels)
         except: 
             import traceback
