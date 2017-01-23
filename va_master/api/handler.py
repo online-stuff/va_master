@@ -1,5 +1,9 @@
 import tornado.web, tornado.websocket
 import tornado.gen
+
+from watchdog.observers import Observer
+from watchdog.events import FileSystemEventHandler
+
 from tornado.httpclient import AsyncHTTPClient, HTTPRequest
 from . import status, login, hosts, apps, panels
 import json, datetime, syslog
@@ -118,10 +122,24 @@ class ApiHandler(tornado.web.RequestHandler):
 
 
 
+class LogHandler(FileSystemEventHandler):
+    def __init__(self, socket):
+        self.socket = socket
+        super(LogHandler, self).__init__()
+
+    def on_modified(self, event):
+        log_file = event.src_path
+        with open(log_file) as f: 
+            log_file = [x for x in f.read().split('\n') if x]
+        last_line = log_file[-1]
+        self.socket.write_message(last_line)
+
 
 class LogMessagingSocket(tornado.websocket.WebSocketHandler):
+
     #Socket gets messages when opened
-    @tornado.gen.coroutine
+    @tornado.web.asynchronous
+    @tornado.gen.engine
     def open(self, no_messages = 5, logfile = '/var/log/vapourapps/va-master.log'):
         print ('I am open')
         self.logfile = logfile
@@ -129,13 +147,11 @@ class LogMessagingSocket(tornado.websocket.WebSocketHandler):
             self.messages = f.read().split('\n')
         self.messages = self.messages
         self.write_message(json.dumps(self.messages[-no_messages:]))
-        self.monitor_log()
 
-    def monitor_log(self):
-        for line in tailf.tailf(logfile): 
-            self.messages.append(line)
-            #TODO filter messages
-            self.write_message(json.dumps(self.messages[:-self.no_messages]))
+        log_handler = LogHandler(self)
+        observer = Observer()
+        observer.schedule(log_handler, path = '/var/log/vapourapps/')
+        observer.start()
         
     def get_messages(message):
         return self.messages[-message['number_of_messages']:]
