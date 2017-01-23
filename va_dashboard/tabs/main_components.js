@@ -26,8 +26,13 @@ var Div = React.createClass({
             var Redux = redux[element.type];
             return React.createElement(Redux, element);
         });
+        var classes = this.props.class;
+        if(typeof this.props.div !== 'undefined'){
+            //TODO add other classes
+            classes = this.props.div.show;
+        }
         return (
-            <div className={this.props.class}>
+            <div className={classes}>
                 {elements}
             </div>
         );
@@ -200,6 +205,13 @@ var Form = React.createClass({
             if(type.charAt(0) === type.charAt(0).toLowerCase()){
                 if(type == "checkbox"){
                     return ( <Bootstrap.Checkbox key={element.name} name={element.name} checked={this.props.data[element.name]} inline onChange={this.props.form_changed}>{element.label}</Bootstrap.Checkbox>);
+                }
+                if(type == "dropdown"){
+                    return ( <Bootstrap.FormControl key={element.name} name={element.name} componentClass="select" placeholder={element.value[0]}>
+                        {element.value.map(function(option, i) {
+                            return <option key={i} value={option}>{option}</option>
+                        })}
+                    </Bootstrap.FormControl> );
                 }
                 return ( <Bootstrap.FormControl key={element.name} type={type} name={element.name} value={this.props.data[element.name]} placeholder={element.label} onChange={this.props.form_changed} autoFocus={element.name == this.props.focus} /> );
             }

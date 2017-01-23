@@ -245,7 +245,7 @@ ul.left-menu a.active{
     font-weight: bold;
 }
 
-.modal-body input{
+.modal-body input, .modal-body select{
     margin-bottom: 5px;
 }
 

@@ -85,7 +85,20 @@ function apps(state, action){
     return newState;
 };
 
-var mainReducer = Redux.combineReducers({auth: auth, table: table, modal: modal, apps: apps});
+function div(state, action){
+    if(typeof state === 'undefined'){
+        return {show: 'hidden'};
+    }
+
+    var newState = Object.assign({}, state);
+    if(action.type == 'TOGGLE'){
+        newState.show = newState.show ? '':'hidden';
+    }
+
+    return newState;
+};
+
+var mainReducer = Redux.combineReducers({auth: auth, table: table, modal: modal, apps: apps, div: div});
 var store = Redux.createStore(mainReducer);
 
 var Home = require('./tabs/home');

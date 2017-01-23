@@ -5,7 +5,6 @@ var Network = require('../network');
 var Filter = React.createClass({
 
     filter: function(e){
-        //this.props.handleChange(e.target.value);
         this.props.dispatch({type: 'FILTER', filterBy: e.target.value});
     },
 
@@ -33,14 +32,26 @@ var Button = React.createClass({
         this.props.dispatch({type: 'OPEN_MODAL'});
     },
 
+    showTarget: function(target) {
+        console.log(target);
+        this.props.dispatch({type: 'TOGGLE'});
+    },
+
+    btn_action: function(action) {
+        console.log(action);
+    },
+
     render: function () {
         var onclick = null, glyph;
         switch (this.props.action) {
             case "modal":
                 onclick = this.openModal;
                 break;
+            case "show":
+                onclick = this.showTarget.bind(this, this.props.target);
+                break;
             default:
-                onclick = null;
+                onclick = this.btn_action.bind(this, this.props.action);
         }
         if(this.props.hasOwnProperty('glyph')){
             glyph = <Bootstrap.Glyphicon glyph='plus' />;
