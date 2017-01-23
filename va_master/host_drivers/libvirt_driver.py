@@ -142,6 +142,18 @@ BASE_VOLUME_XML = """
 
 class LibVirtDriver(base.DriverBase):
     def __init__(self, flavours, salt_master_fqdn, provider_name = 'libvirt_provider', profile_name = 'libvirt_profile', host_ip = '192.168.80.39', path_to_images = '/etc/libvirt/qemu/', config_path = '/etc/salt/libvirt_configs/', key_name = 'va_master_key', key_path = '/root/va_master_key'):
+        """
+            Custom init for libvirt. Does not work with saltstack, so a lot of things have to be done manually. 
+
+            Arguments
+
+            flavours -- A list of "flavours" defined so it can work similar to OpenStack. A flavour is just a dictionary with some values which are used to create instances. Flavours are saved in the datastore, and the deploy_handler manages them. 
+            salt_master_fqdn -- The fqdn of the salt master, for instance 'my.domain'. 
+
+            The rest are similar to the Base driver arguments. 
+
+            The LibVirt driver defines a property libvirt_states, which maps LibVirt states to OpenStack states where possible.  
+        """
         kwargs = {
             'driver_name' : 'libvirt',
             'provider_template' : PROVIDER_TEMPLATE,
@@ -176,6 +188,7 @@ class LibVirtDriver(base.DriverBase):
 
     @tornado.gen.coroutine
     def get_steps(self):
+        """ Works like the Base get_steps, but adds the host_ip and host_protocol fields. Also, there are no security groups in LibVirt, so that field is removed. """
         steps = yield super(LibVirtDriver, self).get_steps()
         steps[0].add_fields([
             ('host_ip', 'Host ip', 'str'),
@@ -188,17 +201,20 @@ class LibVirtDriver(base.DriverBase):
 
     @tornado.gen.coroutine
     def get_networks(self):
+        """ Networks are retrieved via the python api. """
         networks = self.conn.listAllNetworks()
         networks = [x.name() for x in networks]
         raise tornado.gen.Return(networks)
 
     @tornado.gen.coroutine
     def get_sec_groups(self):
+        """ The list of security groups is empty. """
         sec_groups = []
         raise tornado.gen.Return(sec_groups)
 
     @tornado.gen.coroutine
     def get_images(self):
+        """ Lists all volumes from the default storage pool. """
         try:
             images = [x for x in self.conn.listAllStoragePools() if x.name() == 'default'][0]
             images = images.listAllVolumes()
@@ -211,10 +227,12 @@ class LibVirtDriver(base.DriverBase):
 
     @tornado.gen.coroutine
     def get_sizes(self):
+        """ Returns the flavours received from the datastore. """
         raise tornado.gen.Return(self.flavours.keys())
 
     @tornado.gen.coroutine
     def get_host_status(self, host):
+        """ Tries to open a connection to a host so as to get the status. """
         try:
             host_url = host['host_protocol'] + '://' + host['host_ip'] + '/system'
             self.conn = libvirt.open(host_url)
@@ -225,6 +243,7 @@ class LibVirtDriver(base.DriverBase):
 
     @tornado.gen.coroutine
     def get_instances(self, host):
+        """ Gets instances in the specified format so they can be used in get_host_data() """
         host_url = host['host_protocol'] + '://' + host['host_ip'] + '/system'
 
         try:
@@ -257,6 +276,7 @@ class LibVirtDriver(base.DriverBase):
 
     @tornado.gen.coroutine
     def get_host_data(self, host):
+        """ Gets host data as specified per the Base driver. """
         host_url = host['host_protocol'] + '://' + host['host_ip'] + '/system'
 
         try:
@@ -274,8 +294,6 @@ class LibVirtDriver(base.DriverBase):
         instances = yield self.get_instances(host)
 
         storage = [x for x in conn.listAllStoragePools() if x.name() == 'default'][0]
-
-
 
         info = conn.getInfo()
         storage_info = storage.info()
@@ -309,6 +327,7 @@ class LibVirtDriver(base.DriverBase):
 
     @tornado.gen.coroutine
     def instance_action(self, host, instance_name, action):
+        """ Performs an action via the python api. """
         host_url = host['host_protocol'] + '://' + host['host_ip'] + '/system'
 
         try:
@@ -370,6 +389,19 @@ class LibVirtDriver(base.DriverBase):
 
     @tornado.gen.coroutine
     def create_minion(self, host, data):
+        """ 
+            Instances are created manually, as there is no saltstack support. This happens by following these steps: 
+            
+            1. Open a connection to the libvirt host. 
+            2. Create a config drive for cloud init. What's needed for this is the salt master fqdn and the salt keys. 
+            3. Clone the libvirt volume selected when adding a host. 
+            4. If a certain storage is defined when creating an instance, create a new disk for it. 
+            5. Create an iso image from the config drive. 
+            6. Create an xml for the new instance. 
+            7. Define the image with the xml. 
+            8. Create permanent instance. 
+        
+        """
         print ('Creating minion. ')
         host_url = host['host_protocol'] + '://' + host['host_ip'] + '/system'
         conn = libvirt.open(host_url)

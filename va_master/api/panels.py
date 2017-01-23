@@ -7,8 +7,13 @@ import login, apps
 from login import auth_only
 
 @tornado.gen.coroutine
+def reset_panels(handler): 
+    yield handler.config.deploy_handler.reset_panels()
+
+@tornado.gen.coroutine
 def new_panel(handler):
     states = yield handler.config.deploy_handler.get_states_data()
+    print ('My data is : ', handler.data)
     panel = {'panel_name' : handler.data['panel_name'], 'role' : handler.data['role']}
     panel.update([x for x in states if x['name'] == handler.data['role']][0]['panels'])
     raise tornado.gen.Return(handler.config.deploy_handler.store_panel(panel))
@@ -18,7 +23,9 @@ def new_panel(handler):
 def list_panels(handler): 
     user_group = yield login.get_user_type(handler)
 
+    print ('Listing panels for user: ', user_group)
     panels = yield handler.config.deploy_handler.datastore.get('panels')
+    print ('Panels are : ', panels)
     panels = panels[user_group]
 
     raise tornado.gen.Return(panels)
@@ -66,10 +73,9 @@ def get_panel_for_user(handler):
         panel = handler.data['panel']
         user_panels = yield list_panels(handler)
         print ('Panel is : ', panel, 'and user panels are : ',  user_panels, 'with data : ', handler.data)
-
-        user_panels = user_panels[handler.data['instance_name']]
-        if panel in user_panels: 
-            print ('Panel is found. ')
+        panel = filter(lambda x: x['panel_name'] == handler.data['instance_name'], user_panels.get(panel, []))
+        if panel: 
+            panel = panel[0]
             handler.data['action'] = 'get_panel'
             try: 
                 print ('Executing. ')
@@ -80,10 +86,13 @@ def get_panel_for_user(handler):
 
             print ('My panel is : ', panel)
             handler.json(panel)
-        raise tornado.gen.Return({'error' : 'Cannot get panel. '})
+        else: 
+            raise tornado.gen.Return({'error' : 'Cannot get panel. '})
 
     except: 
         import traceback
         traceback.print_exc()
+
+
 
 

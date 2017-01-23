@@ -24,7 +24,8 @@ paths = {
         'states' : apps.get_states, 
         'states/reset' : apps.reset_states, 
 
-        'panels/new_panel' : panels.new_panel,
+        'panels/reset_panels': panels.reset_panels, #JUST FOR TESTING
+        'panels/new_panel' : panels.new_panel, #JUST FOR TESTING
         'panels' : panels.get_panels, 
         'panels/get_panel' : panels.get_panel_for_user, 
     },
