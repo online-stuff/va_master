@@ -50,6 +50,7 @@ class GenericDriver(base.DriverBase):
 
     @tornado.gen.coroutine
     def driver_id(self):
+        """ Pretty simple. """
         raise tornado.gen.Return('generic_driver')
 
     @tornado.gen.coroutine

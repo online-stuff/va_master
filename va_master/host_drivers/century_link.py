@@ -33,10 +33,12 @@ class CenturyLinkDriver(base.DriverBase):
 
     @tornado.gen.coroutine
     def driver_id(self):
+        """ Pretty simple. """
         raise tornado.gen.Return('century_link_driver')
 
     @tornado.gen.coroutine
     def friendly_name(self):
+        """ Pretty simple. """
         raise tornado.gen.Return('Century Link')
 
     @tornado.gen.coroutine

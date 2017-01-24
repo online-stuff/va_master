@@ -1,6 +1,7 @@
 #!/usr/bin/python
 
-import sys, os
+import sys, os, subprocess
+import git
 from doc_generator import driver_table_gen
 
 def pre_commit(msg): 
@@ -9,6 +10,24 @@ def pre_commit(msg):
         'nocolor': '\033[0m',
         'msg': msg
     })
+
+
+def check_diffs():
+
+    r = git.Repo('/root/va_master')
+    c = r.head.commit
+
+    diffs = c.diff()
+    pre_commit('Checkinf if drivers have been changed in. \n' + '\n'.join([x.a_path for x in diffs]))
+    
+    driver_diffs = [x.a_path for x in diffs if 'host_drivers' in x.a_path] 
+    if driver_diffs:
+        pre_commit('Found driver files have changed: \n' + '\n'.join(driver_diffs))
+        pre_commit('Will create table')
+        return True
+    else: 
+        pre_commit('Drivers seem fine. Skipping table. ')
+        return False
 
 def main():
     table_file = '/root/va_master/drivers.md' 
@@ -34,4 +53,7 @@ def main():
             f.write(t)
     pre_commit('Table has been generated. ')
 
-main()
+
+
+if check_diffs(): 
+    main()
