@@ -22,20 +22,24 @@ def get_all_drivers_dicts(drivers):
     return rows
    
 
-
 def get_rows(driver_methods): 
+    base_docs = dict(module_info.get_class_methods(base.DriverBase))
 
     for section in listed_functions: 
         for func in listed_functions[section]: 
             for d in driver_methods: 
                 pass
-#                print 'In ', d, ' i have ' ,  [x for x in d[1] if x[0] == func and x[1]]
+                f = [x for x in d[1] if x[0] == func and x[1]]
+                if f: 
+                    pass
+                #For debugging
+#                    print 'In ', d[0], ' i have ' , f[0][1] , ' for func ', func, 'and it\'s equal to base: ', f[0][1] == base_docs[func], ' because base is : ', base_docs[func] 
 
 
     rows = {
         section:{
             func: [
-                [True for x in d[1] if x[0] == func and x[1] ] or [False] for d in driver_methods
+                [True for x in d[1] if x[0] == func and x[1] and (x[1] != base_docs[func] or driver_methods.index(d) == 0) ] or [False] for d in driver_methods
             ] for func in listed_functions[section]
         } for section in listed_functions
     }

@@ -5,7 +5,7 @@ Networking|
 Host_actions|
 get_images|+|+|+|-|-
 get_sizes|+|+|+|-|-
-get_host_status|+|+|+|+|+
+get_host_status|+|+|+|-|-
 get_networks|+|+|+|-|-
 get_host_data|+|+|+|-|-
 get_sec_groups|+|+|+|-|-
