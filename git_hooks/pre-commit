@@ -5,12 +5,11 @@ import git
 from doc_generator import driver_table_gen
 
 def pre_commit(msg): 
-    sys.stdout.write('%(green)s[Pre-commit]%(nocolor)s %(msg)s\n' % {
-        'green': '\033[92m',
+    sys.stdout.write('%(yellow)s[Pre-commit]%(nocolor)s %(msg)s\n' % {
+        'yellow': '\033[93m',
         'nocolor': '\033[0m',
         'msg': msg
     })
-
 
 def check_diffs():
 
@@ -18,12 +17,12 @@ def check_diffs():
     c = r.head.commit
 
     diffs = c.diff()
-    pre_commit('Checkinf if drivers have been changed in. \n' + '\n'.join([x.a_path for x in diffs]))
+    pre_commit('Checking for driver changes. ')
     
     driver_diffs = [x.a_path for x in diffs if 'host_drivers' in x.a_path] 
     if driver_diffs:
-        pre_commit('Found driver files have changed: \n' + '\n'.join(driver_diffs))
-        pre_commit('Will create table')
+        pre_commit('Found driver changes: \n' + '\n'.join(driver_diffs))
+        pre_commit('Will create table. You will have to create another commit if you want to push the updated driver table. ')
         return True
     else: 
         pre_commit('Drivers seem fine. Skipping table. ')
@@ -45,7 +44,7 @@ def main():
     drivers = driver_table_gen.get_drivers(driver_names, driver_class_names)
     all_dicts = driver_table_gen.get_all_drivers_dicts(zip(drivers, driver_class_names))
     t = driver_table_gen.dicts_to_table(all_dicts, driver_class_names)
-    with open(table_file, 'rw') as f: 
+    with open(table_file, 'r+b') as f: 
         if f.read() == t: 
             pre_commit('No changes to table. ')
         else: 
