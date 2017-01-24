@@ -5,46 +5,17 @@ from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 
 from tornado.httpclient import AsyncHTTPClient, HTTPRequest
-from . import status, login, hosts, apps, panels
+#from . import status, login, hosts, apps, panels
+from . import url_handler
 import json, datetime, syslog
 
 #This will probably not be used anymore, keeping it here for reasons. 
-paths = {
-    'get' : {
-        'status' : status.status, 
 
-        'drivers' : hosts.list_drivers, 
-        'hosts' : hosts.list_hosts, 
-        'hosts/reset' : hosts.reset_hosts, 
-        
-        'states' : apps.get_states, 
-        'states/reset' : apps.reset_states, 
-
-        'panels/reset_panels': panels.reset_panels, #JUST FOR TESTING
-        'panels/new_panel' : panels.new_panel, #JUST FOR TESTING
-        'panels' : panels.get_panels, 
-        'panels/get_panel' : panels.get_panel_for_user, 
-    },
-    'post' : {
-        'login' : login.user_login, 
-        
-        'hosts/new/validate_fields' : hosts.validate_newhost_fields, 
-        'hosts/info' : hosts.get_host_info, 
-        'hosts/delete' : hosts.delete_host, 
-
-        'state/add' : apps.create_new_state,
-
-        'panel_action' : panels.panel_action, 
-        'panels/action' : panels.panel_action #must have instance_name and action in data, ex: panels/action instance_name=nino_dir action=list_users
-    }
-}
 
 paths = {'get' : {}, 'post' : {}}
 
-for api_module in [apps, login, hosts, apps, panels]: 
-    module_paths = api_module.get_paths()
-    for protocol in paths: 
-        paths[protocol].update(module_paths.get(protocol, {}))
+
+paths = url_handler.gather_paths()
 
 print (paths)
 
