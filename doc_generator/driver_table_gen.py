@@ -60,7 +60,6 @@ def dicts_to_table(rows, drivers):
            ])
             table.append('|'.join(new_row))
     table = '\n'.join(table)
-    print table
     return table 
 
 
@@ -97,4 +96,5 @@ def main():
         f.write(t)
 
 
-main()
+if __name__ == '__main__': 
+    main()

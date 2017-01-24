@@ -1,0 +1,37 @@
+#!/usr/bin/python
+
+import sys, os
+from doc_generator import driver_table_gen
+
+def pre_commit(msg): 
+    sys.stdout.write('%(green)s[Pre-commit]%(nocolor)s %(msg)s\n' % {
+        'green': '\033[92m',
+        'nocolor': '\033[0m',
+        'msg': msg
+    })
+
+def main():
+    table_file = '/root/va_master/drivers.md' 
+    pre_commit('Generating driver table at : ' + table_file)
+
+    args = driver_table_gen.predefined()
+    driver_names = args[::2]
+    driver_class_names = args[1::2]
+
+    driver_names = ['va_master.host_drivers.base'] + driver_names
+    driver_class_names = ['DriverBase'] + driver_class_names
+
+    pre_commit('Drivers with docs are : ' + ', '.join(driver_class_names))
+
+    drivers = driver_table_gen.get_drivers(driver_names, driver_class_names)
+    all_dicts = driver_table_gen.get_all_drivers_dicts(zip(drivers, driver_class_names))
+    t = driver_table_gen.dicts_to_table(all_dicts, driver_class_names)
+    with open(table_file, 'rw') as f: 
+        if f.read() == t: 
+            pre_commit('No changes to table. ')
+        else: 
+            pre_commit('Drivers changed - updating table. ')
+            f.write(t)
+    pre_commit('Table has been generated. ')
+
+main()
