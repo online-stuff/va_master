@@ -8,6 +8,32 @@ import zipfile, tarfile
 from salt.client import Caller
 
 
+
+def get_paths():
+    paths = {
+        'get' : {
+            'apps/vpn_users' : get_openvpn_users,
+            'apps/add_app' : add_app,
+            'apps/get_actions' : get_user_actions, 
+
+            'states' : get_states, 
+            'states/reset' : reset_states, #Just for testing
+
+
+        },
+        'post' : {
+            'state/add' : create_new_state,
+
+            'apps' : launch_app, 
+            'apps/action' : perform_instance_action, 
+            'apps/add_vpn_user': add_openvpn_user,
+            'apps/revoke_vpn_user': revoke_openvpn_user,
+            'apps/list_user_logins': list_user_logins,
+            'apps/download_vpn_cert': download_vpn_cert,
+        }
+    }
+    return paths
+
 @tornado.gen.coroutine
 def add_app(handler):
     app = yield get_app_info(handler)
