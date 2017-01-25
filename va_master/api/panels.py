@@ -85,10 +85,16 @@ def get_panels(handler):
 def get_panel_for_user(handler):
     try: 
         panel = handler.data['panel']
+
         user_panels = yield list_panels(handler)
+        instance_info = yield apps.get_app_info(handler)
+        instance_info = instance_info[handler.data['instance_name']]
+        print ('Instance info is : ', instance_info)
+        state = instance_info['role']
+
         print ('Panel is : ', panel, 'and user panels are : ',  user_panels, 'with data : ', handler.data)
-        panel = filter(lambda x: x['panel_name'] == handler.data['instance_name'], user_panels.get(panel, []))
-        if panel: 
+        state = filter(lambda x: x['name'] == state, user_panels)[0]
+        if handler.data['instance_name'] in state['instances']:
             panel = panel[0]
             handler.data['action'] = 'get_panel'
             try: 

@@ -12,18 +12,14 @@ import json, datetime, syslog
 #This will probably not be used anymore, keeping it here for reasons. 
 
 
-paths = {'get' : {}, 'post' : {}}
-
-
-paths = url_handler.gather_paths()
-
-print (paths)
-
 class ApiHandler(tornado.web.RequestHandler):
     def initialize(self, config):
         self.config = config
         self.datastore = config.datastore
         self.data = {}
+
+        self.paths = url_handler.gather_paths()
+        print ('My paths are : ', self.paths)
 
     def json(self, obj, status=200):
         self.set_header('Content-Type', 'application/json')
@@ -35,7 +31,7 @@ class ApiHandler(tornado.web.RequestHandler):
     def exec_method(self, method, path, data):
         self.data = data
         try:
-            yield paths[method][path](self)
+            yield self.paths[method][path](self)
         except: 
             import traceback
             traceback.print_exc()
@@ -58,17 +54,23 @@ class ApiHandler(tornado.web.RequestHandler):
                 import traceback
                 traceback.print_exc()
                 data = {}
-            user = yield login.get_current_user(self)
-            yield self.exec_method('post', path, data)
 
-            message = 'User ' +  user['username'] + ' of type ' +  user['type'] + ' performed a POST request on ' +  path + ' with data ' + str(data) + ' at time ' + str(datetime.datetime.now())
-            print ('Logging: ', message)
-            syslog.syslog(syslog.LOG_INFO | syslog.LOG_LOCAL0, message)
-            yield self.config.deploy_handler.store_action(user, path, data)
+            yield self.exec_method('post', path, data)
+            yield self.log_message(path, data)
 
         except: 
             import traceback
             traceback.print_exc()
+
+
+    @tornado.gen.coroutine
+    def log_message(self, path, data):
+
+        user = yield url_handler.login.get_current_user(self)
+        message = 'User ' +  user['username'] + ' of type ' +  user['type'] + ' performed a POST request on ' +  path + ' with data ' + str(data) + ' at time ' + str(datetime.datetime.now())
+
+        print ('Logging: ', message)
+        syslog.syslog(syslog.LOG_INFO | syslog.LOG_LOCAL0, message)
 
 
     @tornado.gen.coroutine
