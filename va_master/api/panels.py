@@ -6,6 +6,20 @@ import login, apps
 
 from login import auth_only
 
+def get_paths():
+    paths = {
+        'get' : {
+            'panels/reset_panels': reset_panels, #JUST FOR TESTING
+            'panels/new_panel' : new_panel, #JUST FOR TESTING
+            'panels' : get_panels, 
+            'panels/get_panel' : get_panel_for_user, 
+        },
+        'post' : {
+            'panels/action' : panel_action #must have instance_name and action in data, ex: panels/action instance_name=nino_dir action=list_users
+        }
+    }
+    return paths
+
 @tornado.gen.coroutine
 def reset_panels(handler): 
     yield handler.config.deploy_handler.reset_panels()

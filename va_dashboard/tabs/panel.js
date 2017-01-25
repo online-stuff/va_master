@@ -18,7 +18,7 @@ var Panel = React.createClass({
 
     getPanel: function (id, instance) {
         var me = this;
-        var data = {'panel': id, 'instance': instance};
+        var data = {'panel': id, 'instance_name': instance};
         console.log(data);
         Network.get('/api/panels/get_panel', this.props.auth.token, data).done(function (data) {
             me.setState({template: data});

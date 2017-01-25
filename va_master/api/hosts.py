@@ -3,6 +3,24 @@ import tornado.gen
 import json
 import panels
 
+
+
+def get_paths():
+    paths = {
+        'get' : {
+            'hosts' : list_hosts, 
+            'hosts/reset' : reset_hosts, 
+            'drivers' : list_drivers, 
+
+        },
+        'post' : {
+            'hosts/info' : get_host_info, 
+            'hosts/new/validate_fields' : validate_newhost_fields, 
+            'hosts/delete' : delete_host, 
+        }
+    }
+    return paths
+
 #@auth_only(user_allowed = True)
 @tornado.gen.coroutine
 def list_hosts(handler):

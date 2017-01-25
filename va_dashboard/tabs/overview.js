@@ -42,7 +42,7 @@ var Overview = React.createClass({
     },
     componentWillMount() {
         this.getHosts();
-	},
+    },
     getHosts: function(){
         var data = {hosts: []};
         Network.post('/api/hosts/info', this.props.auth.token, data).done(function(data) {
@@ -179,9 +179,8 @@ var Log = React.createClass({
         }
     },
     componentDidMount: function () {
-        // var host = window.location.host;
-        // var ws = new WebSocket("ws://"+ host +":80/log");
-        var ws = new WebSocket("ws://192.168.80.39:80/log");
+        var host = window.location.host;
+        var ws = new WebSocket("ws://"+ host +":80/log");
         var me = this;
         ws.onopen = function() {
             ws.send("Hello, world");

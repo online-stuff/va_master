@@ -8,14 +8,14 @@ var Network = require('../network');
 var Home = React.createClass({
     getInitialState: function() {
         return {
-            'panels': [],
+            'data': [],
             'collapse': false
         };
     },
     getPanels: function() {
         var me = this;
         Network.get('/api/panels', this.props.auth.token).done(function (data) {
-            me.setState({panels: data.panels});
+            me.setState({data: data});
         });
     },
     componentDidMount: function() {
@@ -38,12 +38,12 @@ var Home = React.createClass({
         this.setState({collapse: !this.state.collapse});
     },
     render: function () {
-        var panels = this.state.panels.map(function(panel, i) {
+        var panels = this.state.data.map(function(panel, i) {
             var header = (
-                <span><i className={'fa fa-' + panel.icon} /> {panel.name} <i className='fa fa-angle-down pull-right' /></span>
+                <span><i className={'fa ' + panel.icon} /> {panel.name} <i className='fa fa-angle-down pull-right' /></span>
             )
             var instances = panel.instances.map(function(instance) {
-                var subpanels = panel.subpanels.map(function(panel) {
+                var subpanels = panel.panels.admin.map(function(panel) {
                     return (
                         <li key={panel.key}><Router.Link to={'panel/' + panel.key + '/' + instance} activeClassName='active'>
                             <span>{panel.name}</span>

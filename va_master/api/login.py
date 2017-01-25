@@ -9,6 +9,19 @@ from pbkdf2 import crypt
 # TODO: Check if the implementation of the `pbkdf2` lib is credible,
 # and if the library is maintained and audited. May switch to bcrypt.
 
+def get_paths():
+    paths = {
+        'get' : {
+        },
+        'post' : {
+            'login' : user_login, 
+        }
+    }
+    return paths
+
+
+
+
 
 @tornado.gen.coroutine
 def get_or_create_token(datastore, username, user_type = 'admin'):

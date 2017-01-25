@@ -8,13 +8,9 @@ from tornado.httpclient import AsyncHTTPClient, HTTPRequest
 from . import status, login, hosts, apps, panels
 import json, datetime, syslog
 
-
+#This will probably not be used anymore, keeping it here for reasons. 
 paths = {
     'get' : {
-        'apps/vpn_users' : apps.get_openvpn_users,
-        'apps/add_app' : apps.add_app,
-        'apps/get_actions' : apps.get_user_actions, 
-
         'status' : status.status, 
 
         'drivers' : hosts.list_drivers, 
@@ -36,22 +32,21 @@ paths = {
         'hosts/info' : hosts.get_host_info, 
         'hosts/delete' : hosts.delete_host, 
 
-        'apps' : apps.launch_app, 
-        'apps/action' : apps.perform_instance_action, 
-        'apps/add_vpn_user': apps.add_openvpn_user,
-        'apps/revoke_vpn_user': apps.revoke_openvpn_user,
-        'apps/list_user_logins': apps.list_user_logins,
-        'apps/download_vpn_cert': apps.download_vpn_cert,
-
-
         'state/add' : apps.create_new_state,
 
         'panel_action' : panels.panel_action, 
         'panels/action' : panels.panel_action #must have instance_name and action in data, ex: panels/action instance_name=nino_dir action=list_users
-
     }
-
 }
+
+paths = {'get' : {}, 'post' : {}}
+
+for api_module in [apps, login, hosts, apps, panels]: 
+    module_paths = api_module.get_paths()
+    for protocol in paths: 
+        paths[protocol].update(module_paths.get(protocol, {}))
+
+print (paths)
 
 class ApiHandler(tornado.web.RequestHandler):
     def initialize(self, config):

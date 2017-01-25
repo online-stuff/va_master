@@ -192,7 +192,7 @@ def handle_init(args):
             try:
                 panels = run_sync(functools.partial(store.get, 'panels')) or {'admin' : [], 'user' : []}
             except: 
-                run_sync(functools.partial(store.insert, 'panels', {'admin' : {}, 'user' : {}}))
+                run_sync(functools.partial(store.insert, 'panels', {'admin' : [], 'user' :[]}))
 
 
             #Generate an ssh-key

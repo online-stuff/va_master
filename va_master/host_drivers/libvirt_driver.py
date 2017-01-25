@@ -179,10 +179,12 @@ class LibVirtDriver(base.DriverBase):
 
     @tornado.gen.coroutine
     def driver_id(self):
+        """ Pretty simple. """
         raise tornado.gen.Return('libvirt')
 
     @tornado.gen.coroutine
     def friendly_name(self):
+        """ Pretty simple. """
         raise tornado.gen.Return('LibVirt')
 
 
