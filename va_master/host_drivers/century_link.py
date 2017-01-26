@@ -174,7 +174,11 @@ class CenturyLinkDriver(base.DriverBase):
         raise tornado.gen.Return(StepResult(**step_kwargs))
       
     @tornado.gen.coroutine
-    def create_minion(self, step_index, field_values):
-        
-        pass
- 
+    def create_minion(self, host, data):
+        self.datacenter = clc.v2.Datacenter()
+        clc.v2.Server.Create(
+            name = data['instance_name'], 
+            template = self.datacenter.Templates(), 
+            group_id = self.datacenter.Groups(),
+            network_id = self.datacenter.Networks()
+        )
