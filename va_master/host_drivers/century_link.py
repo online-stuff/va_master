@@ -9,10 +9,7 @@ import tornado.gen
 import json
 import subprocess
 
-from libcloud.compute.types import Provider
-from libcloud.compute.providers import get_driver
-
-from salt.cloud.clouds import nova
+import clc
 
 PROVIDER_TEMPLATE = "" 
 PROFILE_TEMPLATE = "" 
@@ -41,9 +38,9 @@ class CenturyLinkDriver(base.DriverBase):
         """ Pretty simple. """
         raise tornado.gen.Return('Century Link')
 
+    #Untested; may be used instead of the python api in case we want to list blueprints. 
     @tornado.gen.coroutine
     def get_token(self, field_values):
-        """untested"""
         host, username, password, host_url = (field_values['host_ip'],
             field_values['username'], field_values['password'],
             field_values['host_url'])
@@ -64,10 +61,9 @@ class CenturyLinkDriver(base.DriverBase):
             raise tornado.gen.Return((None, None))
         raise tornado.gen.Return(resp['bearerToken'])
 
-
+    #Untested; may be used instead of the python api. 
     @tornado.gen.coroutine
     def get_url_value(self, url):
-        """untested"""
         full_url = 'https://' + self.host_url + url
         req = HTTPRequest(url, 'GET', body=json.dumps(data), headers={
             'Content-Type': 'application/json', 
@@ -99,29 +95,73 @@ class CenturyLinkDriver(base.DriverBase):
 
 
     @tornado.gen.coroutine
+    def get_instances(self, host):
+        servers = self.datacenter.Groups().get(host['defaults']['sec_group'])
+        servers = [x.data for x in servers]
+
+        instances =  [{
+                'hostname' : x['name'],
+                'ip' : x['details']['ipAddresses'],
+                'size' : x['details']['storageGB'],
+                'status' : 'SHUTOFF',
+                'host' : host['hostname'],
+                'used_ram' : x['details']['memoryMB'],
+                'used_cpu': x['details']['cpu'],
+                'used_disk' : x['details']['diskCount'],
+
+        } for x in servers]
+        raise tornado.gen.Return(instances)
+
+
+    @tornado.gen.coroutine
     def get_host_data(self, host):
-        
-        try: 
+        try:
+            clc.v2.SetCredentials(host['username'], host['password'])
+            self.account = clc.v2.Account()
+            seld.datacenter = self.account.PrimaryDatacenter() 
+            instances = yield self.get_instances(host)
             host_data = {
-                'instances' : [], 
-                'host_usage' : {},
+                'instances' : instances, 
+                'host_usage' : {
+                    'max_cpus' : 'n/a',
+                    'used_cpus' : sum([x['used_cpu'] for x in instances]),
+                    'free_cpus' : 'n/a',
+                    'max_ram' : 'n/a',
+                    'used_ram' : sum([x['used_ram'] for x in instances]),
+                    'free_ram' : 'n/a',
+                    'max_disk' : 'n/a',
+                    'used_disk' : sum([x['used_disk'] for x in instances]),
+                    'free_disk' : 'n/a',
+                    'max_instances' : 'n/a',
+                    'used_instances' : len(instances),
+                    'free_instances' :'n/a' 
+                },
             }
             #Functions that connect to host here. 
         except Exception as e: 
+            import traceback
+            traceback.print_exc()
             host_data = {
                 'instances' : [], 
                 'host_usage' : {},
-                'status' : {'success' : False, 'message' : 'Could not connect to the libvirt host. ' + e}
+                'status' : {'success' : False, 'message' : 'Could not connect to the libvirt host. ' + e.message}
             }
             raise tornado.gen.Return(host_data)
+        raise tornado.gen.Return(host_data)
+
+    @tornado.gen.coroutine
+    def get_host_status(self, host):
+        try: 
+            clc.v2.SetCredentials(host['username'], host['password'])
+            self.account = clc.v2.Account()
+        except: 
+            raise tornado.gen.Return({'success' : False, 'message' : 'Could not connect to host: ' + e.message})
+        raise tornado.gen.Return({'success' : True, 'message': ''})
+
 
     @tornado.gen.coroutine
     def get_steps(self):
         steps = yield super(CenturyLinkDriver, self).get_steps()
-
-        steps[0].add_fields([
-            ('host_url', 'Host url', 'str'),
-        ])
 
         self.steps = steps
         raise tornado.gen.Return(steps)
@@ -129,26 +169,31 @@ class CenturyLinkDriver(base.DriverBase):
     @tornado.gen.coroutine
     def get_networks(self):
         
-#        networks = self.datacenter.Networks()
-        url = '/v2-experimental/networks/{accountAlias}/{dataCenter}'
-        network = ['sadf']
+        networks = self.datacenter.Networks().networks
+        networks = [x.name for x in networks]
+#        url = '/v2-experimental/networks/{accountAlias}/{dataCenter}'
+#        network = ['sadf']
 #        networks = yield self.get_rest_value(url)
         raise tornado.gen.Return(networks)
 
     @tornado.gen.coroutine
     def get_sec_groups(self):
         
+        sec_groups = self.datacenter.Groups().groups
+        sec_groups = [x.name for x in sec_groups]
 #        sec_groups = self.datacenter.Groups()
-        url = '/v2/groups/account/id'
-        sec_groups = ['list', 'of', 'security', 'groups']
+#        url = '/v2/groups/account/id'
+#        sec_groups = ['list', 'of', 'security', 'groups']
         raise tornado.gen.Return(sec_groups)
 
     @tornado.gen.coroutine
     def get_images(self):
-        
-        url = '/v2/datacenters/account/datacenter/deploymentCapabilities'
+ 
+        images = self.datacenter.Templates().templates
+        images = [x.name for x in images]       
+#        url = '/v2/datacenters/account/datacenter/deploymentCapabilities'
 #        images = yield self.get_rest_value(url)
-        images = ['list', 'of', 'images']
+#       images = ['list', 'of', 'images']
         raise tornado.gen.Return(images)
 
     @tornado.gen.coroutine
@@ -164,11 +209,11 @@ class CenturyLinkDriver(base.DriverBase):
                 errors=[], new_step_index=0, option_choices={}
             ))
         elif step_index == 0:
-            self.host_url = field_values['host_url']
+#            self.host_url = field_values['host_url']
             clc.v2.SetCredentials(field_values['username'], field_values['password'])
             self.account = clc.v2.Account()
             self.datacenter = self.account.PrimaryDatacenter()
-            self.token = yield self.get_token(field_values)
+#            self.token = yield self.get_token(field_values)
 
       	step_kwargs = yield super(CenturyLinkDriver, self).validate_field_values(step_index, field_values)
         raise tornado.gen.Return(StepResult(**step_kwargs))

@@ -6,7 +6,7 @@ from va_master.host_drivers import base
 
 listed_functions = {
     'general' : ['__init__', 'create_minion', 'driver_id', 'friendly_name', 'validate_field_values',], 
-    'host_actions' : ['get_host_data', 'get_images', 'get_sizes', 'get_sec_groups', 'get_networks', 'get_host_status'], 
+    'host_actions' : ['get_host_data','get_instances',  'get_images', 'get_sizes', 'get_sec_groups', 'get_networks', 'get_host_status'], 
     'networking' : [], 
     'storage' : [], 
     'images_actions' : ['instance_action']
@@ -30,6 +30,7 @@ def get_all_drivers_dicts(drivers):
 
 def get_rows(driver_methods): 
     base_docs = dict(module_info.get_class_methods(base.DriverBase))
+    print base_docs.keys()
 
     for section in listed_functions: 
         for func in listed_functions[section]: 

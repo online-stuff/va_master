@@ -249,6 +249,26 @@ class DriverBase(object):
         """
         raise tornado.gen.Return({'success' : True, 'message': ''})
 
+
+    @tornado.gen.coroutine
+    def get_instances(self, host):
+        """
+            Gets a list of instances in the following format. The keys are fairly descriptive. used_ram is in mb, used_disk is in GB
+        """
+        instances =  [{
+            'hostname' : '',
+            'ip' : 'n/a',
+            'size' : '',
+            'status' : 'SHUTOFF',
+            'host' : '',
+            'used_ram' : 0,
+            'used_cpu': 0,
+            'used_disk' : 0,
+
+        }]
+        raise tornado.gen.Return(instances)
+       
+
     @tornado.gen.coroutine
     def get_host_data(self, host):
         """ 
@@ -278,18 +298,7 @@ class DriverBase(object):
         host_usage['free_cpus'] = host_usage['max_cpus'] - host_usage['used_cpus']
         host_usage['free_ram'] = host_usage['max_ram'] - host_usage['used_ram']
 
-
-        instances =  [{
-                'hostname' : '',
-                'ip' : 'n/a',
-                'size' : '',
-                'status' : 'SHUTOFF',
-                'host' : '',
-                'used_ram' : 0,
-                'used_cpu': 0,
-                'used_disk' : 0,
-
-        }]
+        instances = yield self.get_instances(self, host)
 
         host_info = {
             'instances' : instances,

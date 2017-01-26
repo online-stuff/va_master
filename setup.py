@@ -16,7 +16,8 @@ setuptools.setup(
     'pyVmomi', #for vmware
     'libvirt-python', #for, well, libvirt
     'gitpython',
-    'watchdog'
+    'watchdog', 
+    'clc-sdk',
   ],
   zip_safe=False,
   entry_points = {

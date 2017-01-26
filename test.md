@@ -5,6 +5,7 @@ instance_action|+|+|+|-|-
 Storage|
 Host_actions|
 get_images|+|+|+|-|-
+get_instances|+|+|+|-|-
 get_sizes|+|+|+|-|-
 get_host_status|+|+|+|-|-
 get_networks|+|+|+|-|-
@@ -19,9 +20,8 @@ friendly_name|+|+|+|-|+
 __init__|+|+|+|-|-
 Custom functions|
 ||export_env_variables|clone_libvirt_volume||get_token
-||get_instances|create_config_drive||get_url_value
-||get_openstack_value|create_domain_xml||
-||get_token|create_iso_image||
+||get_openstack_value|create_config_drive||get_url_value
+||get_token|create_domain_xml||
+|||create_iso_image||
 |||create_libvirt_volume||
 |||create_salt_key||
-|||get_instances||
