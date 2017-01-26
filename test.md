@@ -1,6 +1,7 @@
 Function|DriverBase|OpenStackDriver|LibVirtDriver|GenericDriver|CenturyLinkDriver
 ---|---|---|---|---|---
 Images_actions|
+instance_action|+|+|+|-|-
 Storage|
 Host_actions|
 get_images|+|+|+|-|-
@@ -16,12 +17,11 @@ driver_id|+|+|+|+|+
 friendly_name|+|+|+|-|+
 __init__|+|+|+|-|-
 Custom functions|
-instance_action|export_env_variables|clone_libvirt_volume|instance_action|get_token
-new_host_step_descriptions|get_instances|create_config_drive|new_host_step_descriptions|get_url_value
-|get_openstack_value|create_domain_xml||instance_action
-|get_token|create_iso_image||new_host_step_descriptions
-|instance_action|create_libvirt_volume||
-|new_host_step_descriptions|create_salt_key||
-||get_instances||
-||instance_action||
-||new_host_step_descriptions||
+|new_host_step_descriptions|export_env_variables|clone_libvirt_volume|new_host_step_descriptions|get_token
+||get_instances|create_config_drive||get_url_value
+||get_openstack_value|create_domain_xml||new_host_step_descriptions
+||get_token|create_iso_image||
+||new_host_step_descriptions|create_libvirt_volume||
+|||create_salt_key||
+|||get_instances||
+|||new_host_step_descriptions||

@@ -9,7 +9,7 @@ listed_functions = {
     'host_actions' : ['get_host_data', 'get_images', 'get_sizes', 'get_sec_groups', 'get_networks', 'get_host_status'], 
     'networking' : [], 
     'storage' : [], 
-    'images_actions' : []
+    'images_actions' : ['instance_action']
 }
 
 base_driver_functions = ['write_configs', 'get_steps', 'validate_field_values', 'get_salt_configs']
@@ -74,7 +74,7 @@ def dicts_to_table(rows, drivers):
            ])
             table.append('|'.join(new_row))
     table.append('Custom functions|')
-    custom_rows = ['|'.join([x or '' for x in r]) for r in rows['custom_func']]
+    custom_rows = ['|'.join([''] + [x or '' for x in r]) for r in rows['custom_func']]
     [table.append(r) for r in custom_rows]
     table = '\n'.join(table)
     return table 
