@@ -135,6 +135,7 @@ class DeployHandler(object):
         for state in subdirs:
             try: 
                 with open(state + '/appinfo.json') as f: 
+                    print ('Opening ', state)
                     states_data.append(json.loads(f.read()))
             except IOError as e: 
                 print (state, ' does not have an appinfo file, skipping. ')

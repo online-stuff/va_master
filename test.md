@@ -13,7 +13,7 @@ get_sec_groups|+|+|+|-|-
 Networking|
 General|
 create_minion|+|+|+|-|-
-new_host_step_descriptions|+|-|-|-|-
+validate_field_values|+|+|+|-|-
 driver_id|+|+|+|+|+
 friendly_name|+|+|+|-|+
 __init__|+|+|+|-|-

@@ -28,6 +28,7 @@ def reset_panels(handler):
 def new_panel(handler):
     states = yield handler.config.deploy_handler.get_states_data()
     print ('My data is : ', handler.data)
+    print ('Looking for states: ', [x['name'] for x in states])
     panel = {'panel_name' : handler.data['panel_name'], 'role' : handler.data['role']}
     panel.update([x for x in states if x['name'] == handler.data['role']][0]['panels'])
     raise tornado.gen.Return(handler.config.deploy_handler.store_panel(panel))
