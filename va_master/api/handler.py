@@ -19,7 +19,6 @@ class ApiHandler(tornado.web.RequestHandler):
         self.data = {}
 
         self.paths = url_handler.gather_paths()
-        print ('My paths are : ', self.paths)
 
     def json(self, obj, status=200):
         self.set_header('Content-Type', 'application/json')

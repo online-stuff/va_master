@@ -181,14 +181,12 @@ def launch_app(handler):
 
 
         hosts = yield store.get('hosts')
-        print (data)
-        print (data['hostname'])
         required_host = [host for host in hosts if host['hostname'] == data['hostname']][0]
 
         driver = yield deploy_handler.get_driver_by_id(required_host['driver_name'])
         yield driver.create_minion(required_host, data)
 
-        panel = yield deploy_handler.get_states_info()
+        panel = yield deploy_handler.get_states_data()
         panel = [x for x in panel if x['name'] == data['role']][0]['panels']
         yield deploy_handler.store_panel(panel['panels'])
         
