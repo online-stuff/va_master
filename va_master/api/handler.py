@@ -5,54 +5,20 @@ from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 
 from tornado.httpclient import AsyncHTTPClient, HTTPRequest
-from . import status, login, hosts, apps, panels
+#from . import status, login, hosts, apps, panels
+from . import url_handler
 import json, datetime, syslog
 
 #This will probably not be used anymore, keeping it here for reasons. 
-paths = {
-    'get' : {
-        'status' : status.status, 
 
-        'drivers' : hosts.list_drivers, 
-        'hosts' : hosts.list_hosts, 
-        'hosts/reset' : hosts.reset_hosts, 
-        
-        'states' : apps.get_states, 
-        'states/reset' : apps.reset_states, 
-
-        'panels/reset_panels': panels.reset_panels, #JUST FOR TESTING
-        'panels/new_panel' : panels.new_panel, #JUST FOR TESTING
-        'panels' : panels.get_panels, 
-        'panels/get_panel' : panels.get_panel_for_user, 
-    },
-    'post' : {
-        'login' : login.user_login, 
-        
-        'hosts/new/validate_fields' : hosts.validate_newhost_fields, 
-        'hosts/info' : hosts.get_host_info, 
-        'hosts/delete' : hosts.delete_host, 
-
-        'state/add' : apps.create_new_state,
-
-        'panel_action' : panels.panel_action, 
-        'panels/action' : panels.panel_action #must have instance_name and action in data, ex: panels/action instance_name=nino_dir action=list_users
-    }
-}
-
-paths = {'get' : {}, 'post' : {}}
-
-for api_module in [apps, login, hosts, apps, panels]: 
-    module_paths = api_module.get_paths()
-    for protocol in paths: 
-        paths[protocol].update(module_paths.get(protocol, {}))
-
-print (paths)
 
 class ApiHandler(tornado.web.RequestHandler):
     def initialize(self, config):
         self.config = config
         self.datastore = config.datastore
         self.data = {}
+
+        self.paths = url_handler.gather_paths()
 
     def json(self, obj, status=200):
         self.set_header('Content-Type', 'application/json')
@@ -64,7 +30,7 @@ class ApiHandler(tornado.web.RequestHandler):
     def exec_method(self, method, path, data):
         self.data = data
         try:
-            yield paths[method][path](self)
+            yield self.paths[method][path](self)
         except: 
             import traceback
             traceback.print_exc()
@@ -87,17 +53,23 @@ class ApiHandler(tornado.web.RequestHandler):
                 import traceback
                 traceback.print_exc()
                 data = {}
-            user = yield login.get_current_user(self)
-            yield self.exec_method('post', path, data)
 
-            message = 'User ' +  user['username'] + ' of type ' +  user['type'] + ' performed a POST request on ' +  path + ' with data ' + str(data) + ' at time ' + str(datetime.datetime.now())
-            print ('Logging: ', message)
-            syslog.syslog(syslog.LOG_INFO | syslog.LOG_LOCAL0, message)
-            yield self.config.deploy_handler.store_action(user, path, data)
+            yield self.exec_method('post', path, data)
+            yield self.log_message(path, data)
 
         except: 
             import traceback
             traceback.print_exc()
+
+
+    @tornado.gen.coroutine
+    def log_message(self, path, data):
+
+        user = yield url_handler.login.get_current_user(self)
+        message = 'User ' +  user['username'] + ' of type ' +  user['type'] + ' performed a POST request on ' +  path + ' with data ' + str(data) + ' at time ' + str(datetime.datetime.now())
+
+        print ('Logging: ', message)
+        syslog.syslog(syslog.LOG_INFO | syslog.LOG_LOCAL0, message)
 
 
     @tornado.gen.coroutine

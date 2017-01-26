@@ -106,7 +106,6 @@ class DeployHandler(object):
     def list_hosts(self):
         try:
             hosts = yield self.datastore.get('hosts')
-            print ('Hosts are : ', hosts)
             for host in hosts: 
                 driver = yield self.get_driver_by_id(host['driver_name'])
                 host_status = yield driver.get_host_status(host)

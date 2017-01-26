@@ -52,6 +52,14 @@ VAR_PUBLIC_KEY
 VAR_PRIVATE_KEY
 """
 
+
+DISK_XML = """<disk type='file' device='disk'>
+      <driver name='qemu' type='qcow2'/>
+      <source file='/var/lib/libvirt/images/va-master.local.qcow2'/>
+      <target dev='vda' bus='virtio'/>
+    </disk>
+"""
+
 DOMAIN_XML = """<domain type='kvm'>
   <name>va-master.local</name>
   <memory unit='KiB'>1048576</memory>
@@ -131,7 +139,7 @@ BASE_VOLUME_XML = """
   <capacity unit='bytes'>VAR_SIZE</capacity>
   <target>
     <path>/var/lib/libvirt/images/VAR_NAME</path>
-    <format type='qcow2'/>
+    <format type='VAR_FORMAT'/>
     <permissions>
       <mode>0600</mode>
       <owner>0</owner>
@@ -370,6 +378,7 @@ class LibVirtDriver(base.DriverBase):
             self.field_values['host_ip'] = field_values['host_ip']
             try:
                 self.conn = libvirt.open(host_url)
+                print ('Opened connection to ', host_url)
                 self.field_values['host_protocol'] = field_values['host_protocol']
             except:
                 import traceback
@@ -415,13 +424,17 @@ class LibVirtDriver(base.DriverBase):
 
         old_vol = [x for x in storage.listAllVolumes() if x.name() == data['image']][0]
         new_vol = yield self.clone_libvirt_volume(storage, flavour['vol_capacity'], old_vol, data['instance_name'] + '-volume.qcow2')
+        disks = [new_vol.name()]
         if storage_disk:
             new_disk = yield self.create_libvirt_volume(storage, storage_disk, data['instance_name'] + '-disk.qcow2')
+            disks.append(new_disk.name())
+        else: 
+            disks.append(None)
         print ('New disk created!. ')
 
-        iso_image = yield self.create_iso_image(conn, data['instance_name'], config_drive, old_vol)
+        iso_image = yield self.create_iso_image(host_url, conn, data['instance_name'], config_drive, old_vol)
 
-        new_xml = yield self.create_domain_xml(data['instance_name'], new_vol.name(), new_disk.name(), iso_image)
+        new_xml = yield self.create_domain_xml(data['instance_name'], disks, iso_image)
 
         try:
             new_img = conn.defineXML(new_xml)
@@ -435,17 +448,20 @@ class LibVirtDriver(base.DriverBase):
 
 
     @tornado.gen.coroutine
-    def create_domain_xml(self, instance_name, vol_name, disk_name, iso_name):
+    def create_domain_xml(self, instance_name, disks, iso_name):
         old_xml = DOMAIN_XML
 
         print ('Generating domain xml')
         tree = ET.fromstring(old_xml)
         tree.find('name').text = instance_name
 
-        domain_disks = [x for x in tree.find('devices').findall('disk') if x.get('device') == 'disk']
+        devices = tree.find('devices')
+        domain_disks = [x for x in devices.findall('disk') if x.get('device') == 'disk']
 
-        for disk_volume in zip(domain_disks, [vol_name, disk_name]):
-            disk_volume[0].find('source').attrib['file'] = '/var/lib/libvirt/images/' + disk_volume[1]
+        if disks[1]: 
+            domain_disks[1].find('source').attrib['file'] = '/var/lib/libvirt/images/' + disks[1]
+        else: 
+            devices.remove(devices[1])
 
         domain_iso_disk = [x for x in tree.find('devices').findall('disk') if x.get('device') == 'cdrom'][0]
         domain_iso_disk.find('source').attrib['file'] = self.config_path  + iso_name
@@ -457,23 +473,27 @@ class LibVirtDriver(base.DriverBase):
 
 
     @tornado.gen.coroutine
-    def create_iso_image(self, conn, vol_name, config_drive, base_volume):
+    def create_iso_image(self, host_url, conn, vol_name, config_drive, base_volume):
         print ('Trying to create iso from dir: ', config_drive)
 
         try:
-            iso_path = self.config_path +  vol_name + '.iso'
+            iso_name = vol_name + '.iso'
+            iso_path = self.config_path + iso_name
             iso_command = ['xorrisofs', '-J', '-r', '-V', 'config_drive', '-o', iso_path, config_drive]
-            subprocess.call(iso_command)
-
             storage = [x for x in conn.listAllStoragePools() if x.name() == 'default'][0]
-            iso_volume = yield self.create_libvirt_volume(storage, 1, vol_name + '.iso')
 
+            upload_command = ['virsh', '-c', host_url, 'vol-upload', '--pool', storage.name(), iso_name, iso_path]
+
+            iso_volume = yield self.create_libvirt_volume(storage, 1, iso_name)
+
+            subprocess.call(iso_command)
+            subprocess.call(upload_command)
             with open(iso_path, 'r') as f:
                 #Libvirt documentation is terrible and I don't really know how this works.
                 def handler(stream, data, file_):
                     return file_.read(data)
                 st = conn.newStream(0)
-                st.sendAll(handler, f)
+#                st.sendAll(handler, f)
 
         except:
             import traceback
@@ -514,6 +534,7 @@ class LibVirtDriver(base.DriverBase):
             vol_values = {
                 'VAR_SIZE' : str(vol_size * (2 ** 30)),
                 'VAR_NAME' : vol_name,
+                'VAR_FORMAT' : 'raw'
             }
 
             for key in vol_values:

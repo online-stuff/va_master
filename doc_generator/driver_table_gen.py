@@ -5,12 +5,18 @@ import module_info
 from va_master.host_drivers import base
 
 listed_functions = {
-    'general' : ['__init__', 'create_minion', 'driver_id', 'friendly_name'], 
+    'general' : ['__init__', 'create_minion', 'driver_id', 'friendly_name', 'new_host_step_descriptions',], 
     'host_actions' : ['get_host_data', 'get_images', 'get_sizes', 'get_sec_groups', 'get_networks', 'get_host_status'], 
     'networking' : [], 
     'storage' : [], 
-    'images_actions' : []
+    'images_actions' : ['instance_action']
 }
+
+base_driver_functions = ['write_configs', 'get_steps', 'validate_field_values', 'get_salt_configs']
+
+def get_all_func():
+    all_functions = reduce(lambda x,y: x+y, listed_functions.values())
+    return all_functions
 
 def get_driver_methods(driver):
     methods =  module_info.get_class_methods(driver)
@@ -44,6 +50,14 @@ def get_rows(driver_methods):
         } for section in listed_functions
     }
 
+    custom_rows = [[
+        x[0] for x in d[1] if x[0] not in get_all_func() and x[0] not in base_driver_functions
+    ] for d in driver_methods]
+    print custom_rows
+    custom_rows = map(lambda *l: list(l), *custom_rows)
+    print custom_rows
+
+    rows['custom_func'] = custom_rows
     return rows
 
 
@@ -52,13 +66,16 @@ def dicts_to_table(rows, drivers):
 #    print 'Rows are : ', rows
     table = ['Function|' + '|'.join(drivers)]
     table.append(('---|' * (1 + len(drivers)))[:-1])
-    for section in rows: 
+    for section in listed_functions: 
         table.append(section.capitalize() + '|')
         for row in rows[section]: 
 #            new_row = ([row] + ['+' * x[0] + '-' * (not x[0]) for x in rows[section][row][1:] 
             new_row = ([row] + ['+' if x[0] else '-'  for x in rows[section][row]
            ])
             table.append('|'.join(new_row))
+    table.append('Custom functions|')
+    custom_rows = ['|'.join([''] + [x or '' for x in r]) for r in rows['custom_func']]
+    [table.append(r) for r in custom_rows]
     table = '\n'.join(table)
     return table 
 
@@ -92,6 +109,7 @@ def main():
     drivers = get_drivers(driver_names, driver_class_names)
     all_dicts = get_all_drivers_dicts(zip(drivers, driver_class_names))
     t = dicts_to_table(all_dicts, driver_class_names)
+    print t
     with open(table_file, 'w') as f: 
         f.write(t)
 

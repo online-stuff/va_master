@@ -15,6 +15,8 @@ setuptools.setup(
     'pbkdf2', 
     'pyVmomi', #for vmware
     'libvirt-python', #for, well, libvirt
+    'gitpython',
+    'watchdog'
   ],
   zip_safe=False,
   entry_points = {
