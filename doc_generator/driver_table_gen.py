@@ -5,7 +5,7 @@ import module_info
 from va_master.host_drivers import base
 
 listed_functions = {
-    'general' : ['__init__', 'create_minion', 'driver_id', 'friendly_name'], 
+    'general' : ['__init__', 'create_minion', 'driver_id', 'friendly_name', 'new_host_step_descriptions',], 
     'host_actions' : ['get_host_data', 'get_images', 'get_sizes', 'get_sec_groups', 'get_networks', 'get_host_status'], 
     'networking' : [], 
     'storage' : [], 
