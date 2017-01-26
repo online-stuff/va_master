@@ -36,10 +36,10 @@ startretries=1
 command=%(python_path)s -m va_master'''
 
 def write_vpn_pillar(vpn_domain):
-    with open('/srv/salt/pillars/credentials.sls', 'r') as f: 
+    with open('/srv/pillar/credentials.sls', 'r') as f: 
         a = yaml.load(f.read())
         a['domain'] = vpn_domain
-    with open('/srv/salt/pillars/credentials.sls', 'w') as f: 
+    with open('/srv/pillar/credentials.sls', 'w') as f: 
         f.write(yaml.dump(a, default_flow_style=False))
 
 
