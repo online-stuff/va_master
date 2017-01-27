@@ -15,7 +15,24 @@ PROVIDER_TEMPLATE = ""
 PROFILE_TEMPLATE = "" 
 
 class CenturyLinkDriver(base.DriverBase):
-    def __init__(self, provider_name = 'century_link_provider', profile_name = 'century_link__profile', host_ip = '192.168.80.39', key_name = 'va_master_key', key_path = '/root/va_master/va_master_key/'):
+    def __init__(self, flavours, salt_master_fqdn, provider_name = 'century_link_provider', profile_name = 'century_link__profile', host_ip = '192.168.80.39', key_name = 'va_master_key', key_path = '/root/va_master/va_master_key/'):
+        """
+            Works ok atm but needs more stuff in the future. Namely, we need the following: 
+                - Proper way to work with Blueprints. Options are : 
+                    - Use the REST API. This isn't a good solution because then we either need to use the REST api for everything, which is clubbersome, or mix REST API usage with the python API, which is bad practice. And also, I wouldn't want to reinvent the wheel. 
+                    - Save Blueprint values in the datastore. This isn't ideal because we don't want to have too many things in the datastore, and this is clc-specific, but it's better than the alternative. 
+                - A way to get usage statistics. No option for this yet in the python API, so I may need to check out the REST API. If that's the only way, then that'll work for the Blueprints too, with all the pitfalls mentioned there. 
+                - Creating hosts. Driver is in the beginning stage atm, so this is for a later stage. 
+
+            The arguments are fairly generic. Some of the more important ones are: 
+            Arguments:  
+                flavours -- Information about storage, CPU and other hardware for the host. We're using these to stay close to the OpenStack model. 
+                salt_master_fqdn -- May be used for the config_drive if we need to generate it. Keeping it in just in case, but not used atm. 
+        """
+
+        self.flavours = flavours
+        
+
         kwargs = {
             'driver_name' : 'century_link_driver', 
             'provider_template' : PROVIDER_TEMPLATE, 
@@ -41,6 +58,7 @@ class CenturyLinkDriver(base.DriverBase):
     #Untested; may be used instead of the python api in case we want to list blueprints. 
     @tornado.gen.coroutine
     def get_token(self, field_values):
+        """ A function not in use atm, but if we need to use the clc REST API, this is how we get the token. """
         host, username, password, host_url = (field_values['host_ip'],
             field_values['username'], field_values['password'],
             field_values['host_url'])
@@ -64,6 +82,7 @@ class CenturyLinkDriver(base.DriverBase):
     #Untested; may be used instead of the python api. 
     @tornado.gen.coroutine
     def get_url_value(self, url):
+        """ After getting the token, this is how we can get values. """
         full_url = 'https://' + self.host_url + url
         req = HTTPRequest(url, 'GET', body=json.dumps(data), headers={
             'Content-Type': 'application/json', 
@@ -96,14 +115,22 @@ class CenturyLinkDriver(base.DriverBase):
 
     @tornado.gen.coroutine
     def get_instances(self, host):
-        servers = self.datacenter.Groups().get(host['defaults']['sec_group'])
+        """ Gets instances from the group selected when adding the host. """
+        try: 
+            datacenter = self.datacenter
+        except: 
+            clc.v2.SetCredentials(host['username'], host['password'])
+            self.account = clc.v2.Account()
+            datacenter = self.datacenter = self.account.PrimaryDatacenter() 
+
+        servers = datacenter.Groups().Get(host['defaults']['sec_group']).Servers().servers
         servers = [x.data for x in servers]
 
         instances =  [{
                 'hostname' : x['name'],
                 'ip' : x['details']['ipAddresses'],
                 'size' : x['details']['storageGB'],
-                'status' : 'SHUTOFF',
+                'status' : x['status'],
                 'host' : host['hostname'],
                 'used_ram' : x['details']['memoryMB'],
                 'used_cpu': x['details']['cpu'],
@@ -115,6 +142,7 @@ class CenturyLinkDriver(base.DriverBase):
 
     @tornado.gen.coroutine
     def get_host_data(self, host):
+        """ Gets instances properly, but doesn't yet get host_usage. """
         try:
             clc.v2.SetCredentials(host['username'], host['password'])
             self.account = clc.v2.Account()
@@ -151,6 +179,7 @@ class CenturyLinkDriver(base.DriverBase):
 
     @tornado.gen.coroutine
     def get_host_status(self, host):
+        """ Works properly it seems. """
         try: 
             clc.v2.SetCredentials(host['username'], host['password'])
             self.account = clc.v2.Account()
@@ -161,6 +190,7 @@ class CenturyLinkDriver(base.DriverBase):
 
     @tornado.gen.coroutine
     def get_steps(self):
+        """ Uses the generic get_steps """
         steps = yield super(CenturyLinkDriver, self).get_steps()
 
         self.steps = steps
@@ -168,42 +198,37 @@ class CenturyLinkDriver(base.DriverBase):
 
     @tornado.gen.coroutine
     def get_networks(self):
-        
+        """ Properly gets networks. The url variable is there in case we need the REST API. """
         networks = self.datacenter.Networks().networks
         networks = [x.name for x in networks]
 #        url = '/v2-experimental/networks/{accountAlias}/{dataCenter}'
-#        network = ['sadf']
-#        networks = yield self.get_rest_value(url)
         raise tornado.gen.Return(networks)
 
     @tornado.gen.coroutine
     def get_sec_groups(self):
-        
+        """ Gets the ordinary Groups, despite being called "get_sec_groups()". The name is kept the same for consistency. The url variable is there in case we need the REST API. """
         sec_groups = self.datacenter.Groups().groups
         sec_groups = [x.name for x in sec_groups]
-#        sec_groups = self.datacenter.Groups()
 #        url = '/v2/groups/account/id'
-#        sec_groups = ['list', 'of', 'security', 'groups']
         raise tornado.gen.Return(sec_groups)
 
     @tornado.gen.coroutine
     def get_images(self):
- 
+        """ Gets the images. Currently, lists templates, but in the future, it will use the datastore. The url variable is there in case we need the REST API. """ 
         images = self.datacenter.Templates().templates
         images = [x.name for x in images]       
 #        url = '/v2/datacenters/account/datacenter/deploymentCapabilities'
-#        images = yield self.get_rest_value(url)
-#       images = ['list', 'of', 'images']
         raise tornado.gen.Return(images)
 
     @tornado.gen.coroutine
     def get_sizes(self):
-        
-        sizes = ['list', 'of', 'sizes']
+        """ Returns the flavours kept in the datastore. """
+        sizes = self.flavours.keys()
         raise tornado.gen.Return(sizes)
 
     @tornado.gen.coroutine
     def validate_field_values(self, step_index, field_values):
+        """ Authenticates via the python API. """
         if step_index < 0:
             raise tornado.gen.Return(StepResult(
                 errors=[], new_step_index=0, option_choices={}
