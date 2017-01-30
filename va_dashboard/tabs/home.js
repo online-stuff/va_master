@@ -8,14 +8,14 @@ var Network = require('../network');
 var Home = React.createClass({
     getInitialState: function() {
         return {
-            'panels': [],
+            'data': [],
             'collapse': false
         };
     },
     getPanels: function() {
         var me = this;
         Network.get('/api/panels', this.props.auth.token).done(function (data) {
-            me.setState({panels: data.panels});
+            me.setState({data: data});
         });
     },
     componentDidMount: function() {
@@ -38,6 +38,33 @@ var Home = React.createClass({
         this.setState({collapse: !this.state.collapse});
     },
     render: function () {
+        var panels = this.state.data.map(function(panel, i) {
+            var header = (
+                <span><i className={'fa ' + panel.icon} /> {panel.name} <i className='fa fa-angle-down pull-right' /></span>
+            )
+            var instances = panel.instances.map(function(instance) {
+                var subpanels = panel.panels.admin.map(function(panel) {
+                    return (
+                        <li key={panel.key}><Router.Link to={'panel/' + panel.key + '/' + instance} activeClassName='active'>
+                            <span>{panel.name}</span>
+                        </Router.Link></li>
+                    );
+                });
+                return (
+                    <div key={instance}>
+                        <span className="panels-title">{instance}</span>
+                        <ul className='left-menu'>
+                            {subpanels}
+                        </ul>
+                    </div>
+                );
+            });
+            return (
+                <Bootstrap.Panel key={panel.name} header={header} eventKey={i}>
+                    {instances}
+                </Bootstrap.Panel>
+            );
+        });
 
         return (
         <div>
@@ -78,6 +105,11 @@ var Home = React.createClass({
                             <span><i className='fa fa-lock' /> VPN</span>
                         </Router.Link>
                         </li>
+                        <li role="separator" className="divider-vertical"></li>
+                        <li className="panels-title">Admin panels</li>
+                        <li><Bootstrap.Accordion>
+                            {panels}
+                        </Bootstrap.Accordion></li>
                     </ul>
                 </div>
                 <div className="page-content" style={this.state.collapse?{'left': '15px', 'width': '95vw'}:{'left': '230px', 'width': '80vw'}}>
