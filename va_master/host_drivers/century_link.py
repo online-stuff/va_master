@@ -18,20 +18,19 @@ class CenturyLinkDriver(base.DriverBase):
     def __init__(self, flavours, salt_master_fqdn, provider_name = 'century_link_provider', profile_name = 'century_link__profile', host_ip = '192.168.80.39', key_name = 'va_master_key', key_path = '/root/va_master/va_master_key/'):
         """
             Works ok atm but needs more stuff in the future. Namely, we need the following: 
-                - Proper way to work with Blueprints. Options are : 
-                    - Use the REST API. This isn't a good solution because then we either need to use the REST api for everything, which is clubbersome, or mix REST API usage with the python API, which is bad practice. And also, I wouldn't want to reinvent the wheel. 
-                    - Save Blueprint values in the datastore. This isn't ideal because we don't want to have too many things in the datastore, and this is clc-specific, but it's better than the alternative. 
-                - A way to get usage statistics. No option for this yet in the python API, so I may need to check out the REST API. If that's the only way, then that'll work for the Blueprints too, with all the pitfalls mentioned there. 
+                - A way to get usage statistics. No option for this yet in the python API, so I may need to check out the REST API. 
                 - Creating hosts. Driver is in the beginning stage atm, so this is for a later stage. 
 
             The arguments are fairly generic. Some of the more important ones are: 
             Arguments:  
                 flavours -- Information about storage, CPU and other hardware for the host. We're using these to stay close to the OpenStack model. 
                 salt_master_fqdn -- May be used for the config_drive if we need to generate it. Keeping it in just in case, but not used atm. 
+
+            The locations parameter is hardcoded atm, may need to get locations in a different manner. 
         """
 
         self.flavours = flavours
-        
+        self.locations = [u'PrimaryDatacenter', u'au1', u'ca1', u'ca2', u'ca3', u'de1', u'gb1', u'gb3', u'il1', u'ny1', u'sg1', u'uc1', u'ut1', u'va1', u'va2', u'wa1']        
 
         kwargs = {
             'driver_name' : 'century_link_driver', 
@@ -44,6 +43,10 @@ class CenturyLinkDriver(base.DriverBase):
             'key_path' : key_path
             }
         super(CenturyLinkDriver, self).__init__(**kwargs) 
+
+    def get_datacenter(self, location): 
+        self.datacenter = [x for x in clc.v2.Datacenter.Datacenters() if location in x.location][0]
+        return self.datacenter
 
     @tornado.gen.coroutine
     def driver_id(self):
@@ -145,8 +148,8 @@ class CenturyLinkDriver(base.DriverBase):
         """ Gets instances properly, but doesn't yet get host_usage. """
         try:
             clc.v2.SetCredentials(host['username'], host['password'])
+            self.get_datacenter(host['location'])
             self.account = clc.v2.Account()
-            self.datacenter = self.account.PrimaryDatacenter() 
             instances = yield self.get_instances(host)
             host_data = {
                 'instances' : instances, 
@@ -193,9 +196,8 @@ class CenturyLinkDriver(base.DriverBase):
         """ Uses the generic get_steps """
         steps = yield super(CenturyLinkDriver, self).get_steps()
 
-        self.steps[0].add_fields(steps[0].add_fields([
-            ('api_key', 'Enter your api key here. To get an api key, you must create an api user first. ', 'str'),
-            ('api_secret', 'Enter the api secret here. ', 'str'),
+        steps[0].add_fields([
+            ('location', 'Select the location for the datacenter you want to be using, or use the Primary Datacenter. ', 'options'),
         ])
 
         self.steps = steps
@@ -220,8 +222,9 @@ class CenturyLinkDriver(base.DriverBase):
     @tornado.gen.coroutine
     def get_images(self):
         """ Gets the images. Currently, lists templates, but in the future, it will use the datastore. The url variable is there in case we need the REST API. """ 
-        images = self.api.Call('post', 'Blueprint/GetBlueprints', {'Visibility' : 1})
-        images = [x['name'] for x in images]       
+        images = self.datacenter.Templates().templates
+#        images = self.api.Call('post', 'Blueprint/GetBlueprints', {'Visibility' : 1})
+        images = [x.name for x in images]       
 #        url = '/v2/datacenters/account/datacenter/deploymentCapabilities'
         raise tornado.gen.Return(images)
 
@@ -236,7 +239,7 @@ class CenturyLinkDriver(base.DriverBase):
         """ Authenticates via the python API. """
         if step_index < 0:
             raise tornado.gen.Return(StepResult(
-                errors=[], new_step_index=0, option_choices={}
+                errors=[], new_step_index=0, option_choices={'location' : self.locations}
             ))
         elif step_index == 0:
 #            self.host_url = field_values['host_url']
@@ -244,12 +247,15 @@ class CenturyLinkDriver(base.DriverBase):
             clc.v1.SetCredentials(field_values['username'], field_values['password'])
             self.account = clc.v2.Account() # Maybe just use v1? v2 has no endpoints for blueprints yet...
 
-            self.field_values['api_key'] = field_values['api_key']
-            self.field_values['api_secret'] = field_values['api_secret']
+            if field_values['location'] == 'PrimaryDatacenter': 
+                self.datacenter = self.account.PrimaryDatacenter()
+            else: 
+                self.datacenter = [x for x in clc.v2.Datacenter.Datacenters() if field_values['location'] in x.location][0]
 
-            clc.v1.API.SetCredentials(field_values['api_key'], field_values['api_secret'])
-            self.api = clc.v1.API #Needed for blueprints and other v1 actions
-            self.datacenter = self.account.PrimaryDatacenter()
+            self.field_values['location'] = self.datacenter.location
+
+#            clc.v1.SetCredentials(field_values['api_key'], field_values['api_secret'])
+#            self.api = clc.v1.API #Needed for blueprints and other v1 actions
 #            self.token = yield self.get_token(field_values)
 
       	step_kwargs = yield super(CenturyLinkDriver, self).validate_field_values(step_index, field_values)
@@ -257,15 +263,37 @@ class CenturyLinkDriver(base.DriverBase):
       
     @tornado.gen.coroutine
     def create_minion(self, host, data):
-        clc.v2.SetCredentials(host['username'], host['password'])
-        self.account = clc.v2.Account()
-        self.datacenter = self.account.PrimaryDatacenter()
+        print ('Creating minion with data: ', data)
+        try: 
+            clc.v2.SetCredentials(host['username'], host['password'])
+            self.account = clc.v2.Account()
+            self.get_datacenter(host['location'])
 
-        group_id = 
+            flavour = self.flavours[data['size']]
 
-        clc.v2.Server.Create(
-            name = data['instance_name'], 
-            template = self.datacenter.Templates().get(data['image']), 
-            group_id = self.datacenter.Groups().get(data['sec_group']).id
-            network_id = self.datacenter.Networks().get(data['network']).id
-        )
+            server_data = {
+              "name": data['instance_name'],
+              "description": "Created from the VA dashboard. ",
+              "groupId": self.datacenter.Groups().Get(data['sec_group']).id,
+              "sourceServerId": self.datacenter.Templates().Get(data['image']).id,
+              "isManagedOS": False,
+              "networkId": self.datacenter.Networks().Get(data['network']).id,
+              "cpu": flavour['num_cpus'],
+              "memoryGB": flavour['vol_capacity'],
+              "type": "standard",
+              "storageType": "standard",
+            }
+
+            success = clc.v2.API.Call('post', 'servers/%s' % (self.account.alias), json.dumps(server_data), debug = True).WaitUntilComplete()
+#            success = clc.v2.Server.Create(
+#                name = data['instance_name'], 
+#                template = self.datacenter.Templates().Get(data['image']).id, 
+#                group_id = self.datacenter.Groups().Get(data['sec_group']).id,
+#                network_id = self.datacenter.Networks().Get(data['network']).id,
+#                cpu = flavour['num_cpus'], 
+#                memory = flavour['vol_capacity'], 
+#            )
+            print ('Result was : ', success)
+        except: 
+            import traceback
+            traceback.print_exc()

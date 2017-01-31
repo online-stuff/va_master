@@ -68,7 +68,7 @@ class ApiHandler(tornado.web.RequestHandler):
         user = yield url_handler.login.get_current_user(self)
         message = '[info]Action:type=POST,user=' +  user['username'] + '|type=' +  user['type'] +'|path=' +  path + '|data=' + str(data) + '|time=' + str(datetime.datetime.now())
 
-        print ('Logging: ', message)
+#        print ('Logging: ', message)
         syslog.syslog(syslog.LOG_INFO | syslog.LOG_LOCAL0, message)
 
 
