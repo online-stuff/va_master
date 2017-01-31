@@ -28,6 +28,7 @@ def reset_panels(handler):
 def new_panel(handler):
     states = yield handler.config.deploy_handler.get_states_data()
     print ('My data is : ', handler.data)
+    print ('Looking for states: ', [x['name'] for x in states])
     panel = {'panel_name' : handler.data['panel_name'], 'role' : handler.data['role']}
     panel.update([x for x in states if x['name'] == handler.data['role']][0]['panels'])
     raise tornado.gen.Return(handler.config.deploy_handler.store_panel(panel))
@@ -37,9 +38,7 @@ def new_panel(handler):
 def list_panels(handler): 
     user_group = yield login.get_user_type(handler)
 
-    print ('Listing panels for user: ', user_group)
     panels = yield handler.config.deploy_handler.datastore.get('panels')
-    print ('Panels are : ', panels)
     panels = panels[user_group]
 
     raise tornado.gen.Return(panels)
@@ -104,6 +103,7 @@ def get_panel_for_user(handler):
                 import traceback
                 traceback.print_exc()
 
+            panel = panel[handler.data['panel']]
             print ('My panel is : ', panel)
             handler.json(panel)
         else: 

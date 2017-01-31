@@ -81,7 +81,6 @@ class DeployHandler(object):
             self.drivers = [x(**kwargs) for x in [
                 openstack.OpenStackDriver, 
                 generic_driver.GenericDriver,
-                century_link.CenturyLinkDriver
             ]]
 
             #Libvirt also needs these kwargs. 
@@ -89,7 +88,7 @@ class DeployHandler(object):
             kwargs['flavours'] =  self.va_flavours
             kwargs['salt_master_fqdn'] = salt_master_fqdn
 
-            self.drivers.append(libvirt_driver.LibVirtDriver(**kwargs))
+            self.drivers += [x(**kwargs) for x in century_link.CenturyLinkDriver, libvirt_driver.LibVirtDriver]
 
         raise tornado.gen.Return(self.drivers)
 
@@ -135,6 +134,7 @@ class DeployHandler(object):
         for state in subdirs:
             try: 
                 with open(state + '/appinfo.json') as f: 
+                    print ('Opening ', state)
                     states_data.append(json.loads(f.read()))
             except IOError as e: 
                 print (state, ' does not have an appinfo file, skipping. ')

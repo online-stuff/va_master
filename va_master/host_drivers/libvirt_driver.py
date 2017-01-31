@@ -367,6 +367,7 @@ class LibVirtDriver(base.DriverBase):
 
     @tornado.gen.coroutine
     def validate_field_values(self, step_index, field_values):
+        """ Adds the host_protocol field, and opens a connection libvirt.conn to get info about the host. """
         print ('Validating on step : ', step_index)
         if step_index < 0:
             protocols = ['qemu', 'qemu+tcp', 'qemu+tls']

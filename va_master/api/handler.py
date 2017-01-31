@@ -66,9 +66,9 @@ class ApiHandler(tornado.web.RequestHandler):
     def log_message(self, path, data):
 
         user = yield url_handler.login.get_current_user(self)
-        message = 'User ' +  user['username'] + ' of type ' +  user['type'] + ' performed a POST request on ' +  path + ' with data ' + str(data) + ' at time ' + str(datetime.datetime.now())
+        message = '[info]Action:type=POST,user=' +  user['username'] + '|type=' +  user['type'] +'|path=' +  path + '|data=' + str(data) + '|time=' + str(datetime.datetime.now())
 
-        print ('Logging: ', message)
+#        print ('Logging: ', message)
         syslog.syslog(syslog.LOG_INFO | syslog.LOG_LOCAL0, message)
 
 
@@ -100,7 +100,14 @@ class LogHandler(FileSystemEventHandler):
         with open(log_file) as f: 
             log_file = [x for x in f.read().split('\n') if x]
         last_line = log_file[-1]
-        self.socket.write_message(last_line)
+        print ('Last line is : ', last_line)
+        if '[info]Action:' in last_line: 
+            last_line = last_line.split('[info]Action:')[1]
+            last_line = dict([x.split('=') for x in last_line.split('|')])
+            print ('Last line json is : ', last_line)
+        else: 
+            print ('Didnt catch line: ', last_line)
+        self.socket.write_message(json.dumps(last_line))
 
 
 class LogMessagingSocket(tornado.websocket.WebSocketHandler):

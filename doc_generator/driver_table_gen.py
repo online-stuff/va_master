@@ -5,14 +5,14 @@ import module_info
 from va_master.host_drivers import base
 
 listed_functions = {
-    'general' : ['__init__', 'create_minion', 'driver_id', 'friendly_name', 'new_host_step_descriptions',], 
-    'host_actions' : ['get_host_data', 'get_images', 'get_sizes', 'get_sec_groups', 'get_networks', 'get_host_status'], 
+    'general' : ['__init__', 'create_minion', 'driver_id', 'friendly_name', 'validate_field_values',], 
+    'host_actions' : ['get_host_data','get_instances',  'get_images', 'get_sizes', 'get_sec_groups', 'get_networks', 'get_host_status'], 
     'networking' : [], 
     'storage' : [], 
     'images_actions' : ['instance_action']
 }
 
-base_driver_functions = ['write_configs', 'get_steps', 'validate_field_values', 'get_salt_configs']
+base_driver_functions = ['write_configs', 'get_steps',  'get_salt_configs', 'new_host_step_descriptions']
 
 def get_all_func():
     all_functions = reduce(lambda x,y: x+y, listed_functions.values())
@@ -30,6 +30,7 @@ def get_all_drivers_dicts(drivers):
 
 def get_rows(driver_methods): 
     base_docs = dict(module_info.get_class_methods(base.DriverBase))
+    print base_docs.keys()
 
     for section in listed_functions: 
         for func in listed_functions[section]: 
