@@ -38,9 +38,7 @@ def new_panel(handler):
 def list_panels(handler): 
     user_group = yield login.get_user_type(handler)
 
-    print ('Listing panels for user: ', user_group)
     panels = yield handler.config.deploy_handler.datastore.get('panels')
-    print ('Panels are : ', panels)
     panels = panels[user_group]
 
     raise tornado.gen.Return(panels)

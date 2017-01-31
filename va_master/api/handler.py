@@ -100,7 +100,14 @@ class LogHandler(FileSystemEventHandler):
         with open(log_file) as f: 
             log_file = [x for x in f.read().split('\n') if x]
         last_line = log_file[-1]
-        self.socket.write_message(last_line)
+        print ('Last line is : ', last_line)
+        if '[info]Action:' in last_line: 
+            last_line = last_line.split('[info]Action:')[1]
+            last_line = dict([x.split('=') for x in last_line.split('|')])
+            print ('Last line json is : ', last_line)
+        else: 
+            print ('Didnt catch line: ', last_line)
+        self.socket.write_message(json.dumps(last_line))
 
 
 class LogMessagingSocket(tornado.websocket.WebSocketHandler):

@@ -128,7 +128,7 @@ class CenturyLinkDriver(base.DriverBase):
 
         instances =  [{
                 'hostname' : x['name'],
-                'ip' : x['details']['ipAddresses'],
+                'ip' : None if not x['details']['ipAddresses'] else x['details']['ipAddresses'][0]['internal'],
                 'size' : x['details']['storageGB'],
                 'status' : x['status'],
                 'host' : host['hostname'],
@@ -146,7 +146,7 @@ class CenturyLinkDriver(base.DriverBase):
         try:
             clc.v2.SetCredentials(host['username'], host['password'])
             self.account = clc.v2.Account()
-            seld.datacenter = self.account.PrimaryDatacenter() 
+            self.datacenter = self.account.PrimaryDatacenter() 
             instances = yield self.get_instances(host)
             host_data = {
                 'instances' : instances, 
