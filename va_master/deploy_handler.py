@@ -27,7 +27,7 @@ class DeployHandler(object):
             'salt_key_path' : 'salt_key_path', 
             'salt_key_name' : 'salt_key_name', 
             'salt_master_fqdn' : 'salt_master_fqdn', 
-            'va_flavours' :' va_flavours', 
+            'va_flavours' : 'va_flavours', 
         }
         try: 
             store_values = yield self.datastore.get('init_vals')
@@ -66,9 +66,9 @@ class DeployHandler(object):
     @tornado.gen.coroutine
     def get_drivers(self):
         if not self.drivers: 
-            hosts_ip = yield self.datastore.get('master_ip')
-            va_flavours = yield self.datastore.get('init_vals')
-            va_flavours = va_flavours['va_flavours']
+            init_vals = yield self.datastore.get('init_vals')
+            hosts_ip =  init_vals['ip'] 
+            va_flavours = init_vals['va_flavours']
             salt_master_fqdn = yield self.datastore.get('salt_master_fqdn')
 
             kwargs = {

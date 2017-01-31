@@ -76,6 +76,7 @@ def panel_action(handler):
 @tornado.gen.coroutine
 def get_panels(handler):
     panels = yield list_panels(handler)
+    print ('Got panels: ', panels)
     handler.json(panels)
 
 
@@ -103,7 +104,7 @@ def get_panel_for_user(handler):
                 import traceback
                 traceback.print_exc()
 
-            panel = panel[handler.data['panel']]
+            panel = panel[handler.data['instance_name']]
             print ('My panel is : ', panel)
             handler.json(panel)
         else: 
