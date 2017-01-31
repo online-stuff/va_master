@@ -193,6 +193,11 @@ class CenturyLinkDriver(base.DriverBase):
         """ Uses the generic get_steps """
         steps = yield super(CenturyLinkDriver, self).get_steps()
 
+        self.steps[0].add_fields(steps[0].add_fields([
+            ('api_key', 'Enter your api key here. To get an api key, you must create an api user first. ', 'str'),
+            ('api_secret', 'Enter the api secret here. ', 'str'),
+        ])
+
         self.steps = steps
         raise tornado.gen.Return(steps)
 
@@ -215,8 +220,8 @@ class CenturyLinkDriver(base.DriverBase):
     @tornado.gen.coroutine
     def get_images(self):
         """ Gets the images. Currently, lists templates, but in the future, it will use the datastore. The url variable is there in case we need the REST API. """ 
-        images = self.datacenter.Templates().templates
-        images = [x.name for x in images]       
+        images = self.api.Call('post', 'Blueprint/GetBlueprints', {'Visibility' : 1})
+        images = [x['name'] for x in images]       
 #        url = '/v2/datacenters/account/datacenter/deploymentCapabilities'
         raise tornado.gen.Return(images)
 
@@ -236,7 +241,14 @@ class CenturyLinkDriver(base.DriverBase):
         elif step_index == 0:
 #            self.host_url = field_values['host_url']
             clc.v2.SetCredentials(field_values['username'], field_values['password'])
-            self.account = clc.v2.Account()
+            clc.v1.SetCredentials(field_values['username'], field_values['password'])
+            self.account = clc.v2.Account() # Maybe just use v1? v2 has no endpoints for blueprints yet...
+
+            self.field_values['api_key'] = field_values['api_key']
+            self.field_values['api_secret'] = field_values['api_secret']
+
+            clc.v1.API.SetCredentials(field_values['api_key'], field_values['api_secret'])
+            self.api = clc.v1.API #Needed for blueprints and other v1 actions
             self.datacenter = self.account.PrimaryDatacenter()
 #            self.token = yield self.get_token(field_values)
 
@@ -245,10 +257,15 @@ class CenturyLinkDriver(base.DriverBase):
       
     @tornado.gen.coroutine
     def create_minion(self, host, data):
-        self.datacenter = clc.v2.Datacenter()
+        clc.v2.SetCredentials(host['username'], host['password'])
+        self.account = clc.v2.Account()
+        self.datacenter = self.account.PrimaryDatacenter()
+
+        group_id = 
+
         clc.v2.Server.Create(
             name = data['instance_name'], 
-            template = self.datacenter.Templates(), 
-            group_id = self.datacenter.Groups(),
-            network_id = self.datacenter.Networks()
+            template = self.datacenter.Templates().get(data['image']), 
+            group_id = self.datacenter.Groups().get(data['sec_group']).id
+            network_id = self.datacenter.Networks().get(data['network']).id
         )
