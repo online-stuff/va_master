@@ -102,13 +102,26 @@ class CenturyLinkDriver(base.DriverBase):
 
     @tornado.gen.coroutine
     def instance_action(self, host, instance_name, action):
-        
-        instance_action = {
-            'delete' : 'delete_function', 
-            'reboot' : 'reboot_function', 
-            'start' : 'start_function', 
-            'stop' : 'stop_function', 
+        clc.v2.SetCredentials(host['username'], host['passwprd'])
+        self.account = clc.v2.Account()
+        self.get_datacenter(host['location'])
+
+        #post_arg is simply to cut down on code; it creates a tuple of arguments ready to be sent to the API. 
+        post_arg = lambda action: ('post', 'operations/%s/servers/'%s % (self.account.alias, action), {'serverIds' : [server.id]})
+
+        server = self.datacenter.Groups().Get(host['defaults']['sec_group']).Servers().Get(instance_name)
+
+        action_map = {
+            'delete'  : ('delete', 'servers/%s/%s' % (self.account.alias, server.id), {}),
+            'reboot'  : post_arg('reboot'),
+            'start'   : post_arg('powerOn'),
+            'stop'    : post_arg('powerOff'),
+            'suspend' : post_arg('pause'),
+#            'resume'  : None,
         }
+
+        clc.v2.API.Call(*action_map[action], debug = True)
+ 
         if action not in instance_action: 
             raise tornado.gen.Return({'success' : False, 'message' : 'Action not supported : ' + action})
 

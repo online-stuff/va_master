@@ -103,6 +103,7 @@ def get_panel_for_user(handler):
                 import traceback
                 traceback.print_exc()
 
+            panel = panel[handler.data['panel']]
             print ('My panel is : ', panel)
             handler.json(panel)
         else: 
