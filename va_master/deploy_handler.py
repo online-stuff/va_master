@@ -69,7 +69,7 @@ class DeployHandler(object):
             init_vals = yield self.datastore.get('init_vals')
             hosts_ip =  init_vals['ip'] 
             va_flavours = init_vals['va_flavours']
-            salt_master_fqdn = yield self.datastore.get('salt_master_fqdn')
+            salt_master_fqdn = init_vals['salt_master_fqdn']
 
             kwargs = {
                 'host_ip' : hosts_ip, 
