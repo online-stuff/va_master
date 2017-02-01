@@ -32,6 +32,7 @@ class DeployHandler(object):
         try: 
             store_values = yield self.datastore.get('init_vals')
         except:
+            store_values = {}
             print ('No store values found - probably initializing deploy_handler for the first time. Will initialize with cli arguments. ')
 
         for var in init_vars: 
