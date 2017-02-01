@@ -37,6 +37,7 @@ def new_panel(handler):
 @tornado.gen.coroutine
 def list_panels(handler): 
     user_group = yield login.get_user_type(handler)
+    print ('User group is : ', user_group)
 
     panels = yield handler.config.deploy_handler.datastore.get('panels')
     panels = panels[user_group]

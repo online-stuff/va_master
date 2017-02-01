@@ -60,7 +60,7 @@ def get_current_user(handler):
 def get_user_type(handler):
     user = yield get_current_user(handler)
     if user: 
-        raise tornado.gen.Return(user['username'])
+        raise tornado.gen.Return(user['type'])
     raise tornado.gen.Return(None)
 
 @tornado.gen.coroutine
@@ -85,7 +85,7 @@ def auth_only(*args, **kwargs):
         def func(handler):
             token = handler.request.headers.get('Authorization', '')
             token = token.replace('Token ', '')
-            print ('Token is : ', token)
+#            print ('Token is : ', token)
 
             user_type = yield get_user_type(handler)
 
