@@ -125,7 +125,7 @@ def get_host_info(handler):
     store = deploy_handler.datastore
 
     required_hosts = data.get('hosts')
-    hosts = yield store.get('hosts')
+    hosts = yield handler.config.deploy_handler.list_hosts()
 
     if required_hosts: 
         hosts = [host for host in hosts if host['hostname'] in required_hosts]

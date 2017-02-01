@@ -195,6 +195,8 @@ class DeployHandler(object):
 
             
             role_user_panels = filter(lambda x: x['name'] == panel['role'], panels['user'])[0]
+            if panel['panel_name'] in role_user_panels['instances']: raise tornado.gen.Return()
+
             role_user_panels['instances'].append(panel['panel_name'])
 
             role_admin_panels = filter(lambda x: x['name'] == panel['role'], panels['admin'])[0]

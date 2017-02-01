@@ -296,6 +296,8 @@ class CenturyLinkDriver(base.DriverBase):
               "type": "standard",
               "storageType": "standard",
             }
+            if data.get('primary_dns'): 
+                server_data['primaryDns'] = data['primary_dns']
 
             success = clc.v2.API.Call('post', 'servers/%s' % (self.account.alias), json.dumps(server_data), debug = True).WaitUntilComplete()
 #            success = clc.v2.Server.Create(
