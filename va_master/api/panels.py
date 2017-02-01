@@ -62,6 +62,7 @@ def panel_action_execute(handler):
     state = [x for x in states if x['name'] == state][0]
 
     result = cl.cmd(instance, state['module'] + '.' + action , args)
+    print ('Result is : ', result)
     raise tornado.gen.Return(result)
 
 
@@ -95,8 +96,9 @@ def get_panel_for_user(handler):
         print ('Panel is : ', panel, 'and user panels are : ',  user_panels, 'with data : ', handler.data)
         state = filter(lambda x: x['name'] == state, user_panels)[0]
         if handler.data['instance_name'] in state['instances']:
-            panel = panel[0]
+#            panel = panel[0]
             handler.data['action'] = 'get_panel'
+            handler.data['args'] = [panel]
             try: 
                 print ('Executing. ')
                 panel = yield panel_action_execute(handler)
