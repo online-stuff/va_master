@@ -151,10 +151,10 @@ class DriverBase(object):
         """ 
             Writes the saved configurations. If any of the arguments are set, the corresponding configuration will not be written. Does not need to be overwritten 
         """
-        if not skip_provider: 
+        if not skip_provider and self.provider_template: 
             with open('/etc/salt/cloud.providers.d/' + self.provider_vars['VAR_PROVIDER_NAME'] + '.conf', 'w') as f: 
                 f.write(self.provider_template)
-        if not skip_profile:
+        if not skip_profile and self.profile_template:
              profile_conf_dir =  '/etc/salt/cloud.profiles.d/' + self.profile_vars['VAR_PROFILE_NAME'] + '.conf'
              self.field_values['profile_conf_dir'] = profile_conf_dir
              with open(profile_conf_dir, 'w') as f: 
