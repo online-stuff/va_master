@@ -55,7 +55,7 @@ class ApiHandler(tornado.web.RequestHandler):
                 data = {}
 
             yield self.exec_method('post', path, data)
-            yield self.log_message(path, data)
+#            yield self.log_message(path, data)
 
         except: 
             import traceback
