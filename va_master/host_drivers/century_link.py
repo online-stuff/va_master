@@ -110,6 +110,9 @@ class CenturyLinkDriver(base.DriverBase):
         print [x.data['details']['hostName'] for x in servers_list]
         server = [x for x in servers_list if x.data['details']['hostName'] == instance_name] or [None]
         server = server[0]
+        if not server: 
+            print ('Did not find serverw with name: ', instance_name)
+            raise tornado.gen.Return({'success' : False, 'message' : 'Did not find server with name: ' + instance_name})
 
 
         #post_arg is simply to cut down on code; it creates a tuple of arguments ready to be sent to the API. 
@@ -127,8 +130,6 @@ class CenturyLinkDriver(base.DriverBase):
 
         if action not in action_map: 
             raise tornado.gen.Return({'success' : False, 'message' : 'Action not supported : ' + action})
-        if not server: 
-            raise tornado.gen.Return({'success' : False, 'message' : 'Did not find server with name: ' + instance_name})
         clc.v2.API.Call(*action_map[action], debug = True)
 
 #        success = instance_action[action](instance_name)
@@ -292,6 +293,7 @@ class CenturyLinkDriver(base.DriverBase):
 
             server_data = {
               "name": data['instance_name'],
+              "hostName": data['instance_name'],
               "description": "Created from the VA dashboard. ",
               "groupId": self.datacenter.Groups().Get(data['sec_group']).id,
               "sourceServerId": self.datacenter.Templates().Get(data['image']).id,
@@ -304,6 +306,14 @@ class CenturyLinkDriver(base.DriverBase):
             }
             if data.get('primary_dns'): 
                 server_data['primaryDns'] = data['primary_dns']
+            if data.get('storage'): 
+                server_data['additionalDisks'] = [
+                    {
+                        'path' : 'data', 
+                        'sizeGB' : data['storage'], 
+                        'type' : 'raw'
+                    }
+                ]
 
             success = clc.v2.API.Call('post', 'servers/%s' % (self.account.alias), json.dumps(server_data), debug = True).WaitUntilComplete()
 #            success = clc.v2.Server.Create(
