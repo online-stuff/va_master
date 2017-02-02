@@ -22,6 +22,7 @@ PROVIDER_TEMPLATE = '''VAR_PROVIDER_NAME:
   ssh_key_name: VAR_SSH_NAME
   ssh_key_file: VAR_SSH_FILE
   ssh_interface: private_ips
+  use_keystoneauth: True
   driver: nova
   user: VAR_USERNAME
   tenant: VAR_TENANT
