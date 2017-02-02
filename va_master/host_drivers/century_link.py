@@ -102,14 +102,18 @@ class CenturyLinkDriver(base.DriverBase):
 
     @tornado.gen.coroutine
     def instance_action(self, host, instance_name, action):
-        clc.v2.SetCredentials(host['username'], host['passwprd'])
+        clc.v2.SetCredentials(host['username'], host['password'])
         self.account = clc.v2.Account()
         self.get_datacenter(host['location'])
 
-        #post_arg is simply to cut down on code; it creates a tuple of arguments ready to be sent to the API. 
-        post_arg = lambda action: ('post', 'operations/%s/servers/'%s % (self.account.alias, action), {'serverIds' : [server.id]})
+        servers_list = self.datacenter.Groups().Get(host['defaults']['sec_group']).Servers().Servers()
+        print [x.data['details']['hostName'] for x in servers_list]
+        server = [x for x in servers_list if x.data['details']['hostName'] == instance_name] or [None]
+        server = server[0]
 
-        server = self.datacenter.Groups().Get(host['defaults']['sec_group']).Servers().Get(instance_name)
+
+        #post_arg is simply to cut down on code; it creates a tuple of arguments ready to be sent to the API. 
+        post_arg = lambda action: ('post', 'operations/%s/servers/%s' % (self.account.alias, action), '["%s"]'% server.id)
 
         action_map = {
             'delete'  : ('delete', 'servers/%s/%s' % (self.account.alias, server.id), {}),
@@ -120,12 +124,14 @@ class CenturyLinkDriver(base.DriverBase):
 #            'resume'  : None,
         }
 
-        clc.v2.API.Call(*action_map[action], debug = True)
- 
-        if action not in instance_action: 
-            raise tornado.gen.Return({'success' : False, 'message' : 'Action not supported : ' + action})
 
-        success = instance_action[action](instance_name)
+        if action not in action_map: 
+            raise tornado.gen.Return({'success' : False, 'message' : 'Action not supported : ' + action})
+        if not server: 
+            raise tornado.gen.Return({'success' : False, 'message' : 'Did not find server with name: ' + instance_name})
+        clc.v2.API.Call(*action_map[action], debug = True)
+
+#        success = instance_action[action](instance_name)
         raise tornado.gen.Return({'success' : True, 'message' : ''})
 
 
