@@ -343,6 +343,14 @@ class OpenStackDriver(base.DriverBase):
     def create_minion(self, host, data):
         """ Works properly with the base driver method, but overwritten for bug tracking. """
         try:
+            nova = client.Client('2.0', host['username'], host['password'], host['tenant'], 'http://' + host['host_ip'] + '/v2.0')
+#            full_key_path = host['salt_key_path'] + ('/' * host['salt_key_path'][-1] != '/') + host['salt_key_name'] + '.pub'
+            print ('Full path is : ', self.key_path)
+            f = ''
+            with open(self.key_path) as f: 
+                key = f.read()
+            print ('Got key! ', key)
+            keypair = nova.keypairs.create(self.key_name, key)
             yield super(OpenStackDriver, self).create_minion(host, data)
         except:
             import traceback
