@@ -102,7 +102,7 @@ var Appp = React.createClass({
 
 var AppForm = React.createClass({
     getInitialState: function () {
-        return {status: 'none', progress: 0, hosts: [], states: [], hostname: "", role: "", defaults: {sizes: [], networks: [], images: [], sec_groups: []}, host_usage: {cpu: "", maxCpu: "", ram: "", maxRam: "", disk: "", maxDisk: "", instances: "", maxInstances: ""}};
+        return {status: 'none', progress: 0, hosts: [], states: [], hostname: "", role: "", defaults: {image: "", network: "", sec_group: "", size: ""}, options: {sizes: [], networks: [], images: [], sec_groups: []}, host_usage: {cpu: "", maxCpu: "", ram: "", maxRam: "", disk: "", maxDisk: "", instances: "", maxInstances: ""}};
     },
 
     componentDidMount: function () {
@@ -112,7 +112,9 @@ var AppForm = React.createClass({
             var host = data.hosts[0].hostname;
             me.setState({hostname: host});
             if(data.hosts.length > 0){
-                me.setState({defaults: {sizes: data.hosts[0].sizes, networks: data.hosts[0].networks, images: data.hosts[0].images, sec_groups: data.hosts[0].sec_groups}});
+                var first_host = data.hosts[0];
+                me.setState({options: {sizes: first_host.sizes, networks: first_host.networks, images: first_host.images, sec_groups: first_host.sec_groups}});
+                me.setState({defaults: first_host.defaults});
             }
             if(me.props.hosts.length > 0){
                 var host_usage = me.props.hosts[0].host_usage;
@@ -138,7 +140,8 @@ var AppForm = React.createClass({
         for(i=0; i < this.state.hosts.length; i++){
             var host = this.state.hosts[i];
             if(host.hostname === value){
-                this.setState({defaults: {sizes: host.sizes, networks: host.networks, images: host.images, sec_groups: host.sec_groups}});
+                this.setState({options: {sizes: host.sizes, networks: host.networks, images: host.images, sec_groups: host.sec_groups}});
+                this.setState({defaults: host.defaults});
                 break;
             }
         }
@@ -169,31 +172,45 @@ var AppForm = React.createClass({
             statusDisplay = 'none';
         }
 
+        var me = this;
+
         var host_rows = this.state.hosts.map(function(host, i) {
             return <option key = {i}>{host.hostname}</option>
         });
 
         var state_rows = this.state.states.map(function(state) {
-            if(state.name == this.props.apps.select){
+            if(state.name == me.props.apps.select){
                 return <option key = {state.name} selected>{state.name}</option>
             }else{
                 return <option key = {state.name}>{state.name}</option>
             }
-        }.bind(this));
+        });
 
-        var img_rows = this.state.defaults.images.map(function(img) {
+        var img_rows = this.state.options.images.map(function(img) {
+            if(img == me.state.defaults.image){
+                return <option key = {img} selected>{img}</option>
+            }
             return <option key = {img}>{img}</option>
         });
 
-        var sizes_rows = this.state.defaults.sizes.map(function(size) {
+        var sizes_rows = this.state.options.sizes.map(function(size) {
+            if(size == me.state.defaults.size){
+                return <option key = {size} selected>{size}</option>
+            }
             return <option key = {size}>{size}</option>
         });
 
-        var network_rows = this.state.defaults.networks.map(function(network) {
+        var network_rows = this.state.options.networks.map(function(network) {
+            if(network.split("|")[1] == me.state.defaults.network){
+                return <option key = {network} selected>{network}</option>
+            }
             return <option key = {network}>{network}</option>
         });
 
-        var sec_groups = this.state.defaults.sec_groups.map(function(sec) {
+        var sec_groups = this.state.options.sec_groups.map(function(sec) {
+            if(sec.split("|")[1] == me.state.defaults.sec_group){
+                return <option key = {sec} selected>{sec}</option>
+            }
             return <option key = {sec}>{sec}</option>
         });
 
