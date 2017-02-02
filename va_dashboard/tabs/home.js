@@ -15,7 +15,8 @@ var Home = React.createClass({
     getPanels: function() {
         var me = this;
         Network.get('/api/panels', this.props.auth.token).done(function (data) {
-            me.setState({data: data});
+            if(data)
+                me.setState({data: data});
         });
     },
     componentDidMount: function() {
