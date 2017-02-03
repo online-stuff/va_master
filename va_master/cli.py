@@ -11,6 +11,7 @@ import subprocess
 import distutils
 import traceback
 import functools
+import imp
 
 consul_conf_path = '/etc/consul.json'
 
@@ -235,6 +236,34 @@ def handle_jsbuild(args):
         cli_success(('Compiled JS using the command `node %s`, into `' + \
             'dashboard/static/*`') % build_path)
 
+
+def handle_add_module(args):
+    file_path = args.module_path
+    file_name = file_path.split('/')[-1]
+    file_contents = ''
+    with open(file_path, 'r') as f: 
+        file_contents = f.read()
+    cli_info('Read file ' + file_path)
+
+    new_module = imp.load_source(file_name, file_path)
+    cli_info('Imported module. Checking for get_paths()')
+    
+    if not hasattr(new_module, 'get_paths'): 
+        cli_error('Your module must have a get_paths() function. Refer to the documentation for instructions. ')
+        return
+    #TODO more checks. 
+    cli_success('Module looks fine. Adding to api. ')
+
+    va_path = '/'.join((os.path.realpath(__file__).split('/')[:-1]))
+    api_path = os.path.join(va_path, 'api/')
+    with open(api_path + file_name, 'w') as f: 
+        f.write(file_contents)
+    cli_success('Module copied to : ' + api_path + file_name)
+        
+    
+
+
+
 def entry():
     parser = argparse.ArgumentParser(description='A VapourApps client interface')
     subparsers = parser.add_subparsers(help='action')
@@ -265,11 +294,18 @@ def entry():
     stop_sub = subparsers.add_parser('stop', help='Stops the server')
     stop_sub.set_defaults(sub='stop')
 
+    add_module = subparsers.add_parser('add_module', help='Adds an api module. Check the documentation on how to write api modules. ')
+    add_module.add_argument('--module-path', help = 'Path to the python module. ')
+
+    add_module.set_defaults(sub='add_module')
+
+
     args = parser.parse_args()
     # Define handlers for each subparser
     handlers = {
         'init': handle_init,
         'jsbuild': handle_jsbuild,
+        'add_module' : handle_add_module,
         'stop': lambda x: None
     }
     # Call the proper handler based on the subparser argument

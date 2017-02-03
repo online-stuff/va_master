@@ -108,7 +108,7 @@ class CenturyLinkDriver(base.DriverBase):
 
         servers_list = self.datacenter.Groups().Get(host['defaults']['sec_group']).Servers().Servers()
         print [x.data['details']['hostName'] for x in servers_list]
-        server = [x for x in servers_list if x.data['details']['hostName'] == instance_name] or [None]
+        server = [x for x in servers_list if x.data['details']['hostName'] == instance_name or x.id == instance_name] or [None]
         server = server[0]
         if not server: 
             print ('Did not find serverw with name: ', instance_name)
@@ -312,6 +312,9 @@ class CenturyLinkDriver(base.DriverBase):
                         'type' : 'raw'
                     }
                 ]
+
+            if data.get('extra_args'):
+                server_data.update(data['extra_args'])
 
             success = clc.v2.API.Call('post', 'servers/%s' % (self.account.alias), json.dumps(server_data), debug = True).WaitUntilComplete()
 #            success = clc.v2.Server.Create(
