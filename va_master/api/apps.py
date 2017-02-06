@@ -6,7 +6,7 @@ import requests
 import zipfile, tarfile
 
 from salt.client import Caller
-
+import panels
 
 
 def get_paths():
@@ -188,17 +188,15 @@ def launch_app(handler):
         driver = yield deploy_handler.get_driver_by_id(required_host['driver_name'])
         yield driver.create_minion(required_host, data)
 
-        panel = yield deploy_handler.get_states_data()
-        panel = [x for x in panel if x['name'] == data['role']][0]['panels']
-        yield deploy_handler.store_panel(panel['panels'])
-        
-
-
         minion_info = yield get_app_info(handler)
 
         states = yield store.get('states')
         state = [x for x in states if x['name'] == data['role']][0]
 
+        panel = {'panel_name' : handler.data['panel_name'], 'role' : minion_info['role']}
+        panel.update(state['panels'])
+        yield handler.config.deploy_handler.store_panel(panel)
+ 
         required_host['instances'].append(minion_info)
         yield store.insert('hosts', hosts)
     except: 

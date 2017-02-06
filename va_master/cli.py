@@ -245,13 +245,23 @@ def handle_add_module(args):
         file_contents = f.read()
     cli_info('Read file ' + file_path)
 
-    new_module = imp.load_source(file_name, file_path)
-    cli_info('Imported module. Checking for get_paths()')
-    
-    if not hasattr(new_module, 'get_paths'): 
-        cli_error('Your module must have a get_paths() function. Refer to the documentation for instructions. ')
+    try: 
+        new_module = imp.load_source(file_name, file_path)
+        cli_info('Imported module. Checking for get_paths()')
+        
+        paths = getattr(new_module, 'get_paths')()
+        paths_list = {}
+
+        for key in ['get', 'post', 'delete', 'put']: 
+            paths_list.update(paths.get(key, {}))
+
+        for path in paths_list: 
+            if not callable(paths_list[path]): 
+                raise Exception('Attribute ' +  str(paths_list[path]) + ' is not callable. ')
+    except Exception as e: 
+        cli_error('Error adding module: ' + e.message)
         return
-    #TODO more checks. 
+        #TODO more checks. 
     cli_success('Module looks fine. Adding to api. ')
 
     va_path = '/'.join((os.path.realpath(__file__).split('/')[:-1]))

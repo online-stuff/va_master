@@ -50,6 +50,7 @@ def panel_action_execute(handler):
 
 
     print ('Have localclient')
+    print (handler.data, ' is my data')
     instance = handler.data['instance_name']
     instance_info = yield apps.get_app_info(handler)
     print ('My info is : ', instance_info)
