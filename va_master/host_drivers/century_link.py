@@ -302,8 +302,6 @@ class CenturyLinkDriver(base.DriverBase):
               "type": "standard",
               "storageType": "standard",
             }
-            if data.get('primary_dns'): 
-                server_data['primaryDns'] = data['primary_dns']
             if data.get('storage'): 
                 server_data['additionalDisks'] = [
                     {
@@ -313,18 +311,10 @@ class CenturyLinkDriver(base.DriverBase):
                     }
                 ]
 
-            if data.get('extra_args'):
-                server_data.update(data['extra_args'])
+            #Extra args are usually supplied by external applications. 
+            server_data.update(data.get('extra_args', {}))
 
             success = clc.v2.API.Call('post', 'servers/%s' % (self.account.alias), json.dumps(server_data), debug = True).WaitUntilComplete()
-#            success = clc.v2.Server.Create(
-#                name = data['instance_name'], 
-#                template = self.datacenter.Templates().Get(data['image']).id, 
-#                group_id = self.datacenter.Groups().Get(data['sec_group']).id,
-#                network_id = self.datacenter.Networks().Get(data['network']).id,
-#                cpu = flavour['num_cpus'], 
-#                memory = flavour['vol_capacity'], 
-#            )
             print ('Result was : ', success)
         except: 
             import traceback
