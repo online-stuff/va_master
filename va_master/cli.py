@@ -193,11 +193,9 @@ def handle_init(args):
                 os.mkdir(store_coonfig.ssh_key_path)
             except: 
                 pass
-            key_full_path = store_config/salt_key_path + store_config.salt_key_name
+            key_full_path = cli_config.ssh_key_path + cli_config.ssh_key_name
 
             ssh_cmd = ['ssh-keygen', '-t', 'rsa', '-f', key_full_path, '-N', '']
-
-#                    ssh_cmd = ['ssh-keygen', '-t', 'rsa', '-f', '/root/va_master_key/va_master_key_name', '-N', '']
 
             subprocess.call(ssh_cmd)
             subprocess.call(['mv', key_full_path, key_full_path + '.pem'])
