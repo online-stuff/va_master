@@ -133,6 +133,16 @@ class CenturyLinkDriver(base.DriverBase):
 #        success = instance_action[action](instance_name)
         raise tornado.gen.Return({'success' : True, 'message' : ''})
 
+    @tornado.gen.coroutine
+    def get_host_billing(self, host):
+        get_datacenter(self, location)
+        group = self.datacenter.Groups().Get(host['defaults']['sec_group'])
+
+        billing_link = [x for x in clc.v2.API.Call(group.data['links']) if 'billing' in x['rel']]
+        billing_info = clc.v2.API.Call('get', billing_link['href'])
+        bililng_info = billing_info['groups'].values()[0]
+
+        raise tornado.gen.Return({'success' : True, 'message' : billing_info})
 
     @tornado.gen.coroutine
     def get_instances(self, host):
