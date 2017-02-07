@@ -177,6 +177,12 @@ class CenturyLinkDriver(base.DriverBase):
         try:
             clc.v2.SetCredentials(host['username'], host['password'])
             self.get_datacenter(host['location'])
+            group = self.datacenter.Groups().Get(data['sec_group'])
+
+            group_stats_link = [x for x in group.data['links'] if x['rel'] == 'statistics']
+            group_stats = clc.v2.API.Call('get', group_stats_link['href'] + '?type=latest')
+            #TODO do stuff with group_stats
+
             self.account = clc.v2.Account()
             instances = yield self.get_instances(host)
             host_data = {
