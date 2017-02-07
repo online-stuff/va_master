@@ -28,10 +28,13 @@ class Config(object):
         self.server_port = 80
         self.server_static_path = get_server_static()
         self.deploy_pool_count = 3
+        self.ssh_key_path = '/root/.ssh'
+        self.ssh_key_name = 'va-master' 
+
         # Now dynamically inject any kwargs
         for kw in kwargs:
             setattr(self, kw, kwargs[kw])
-        self.deploy_handler = deploy_handler.DeployHandler(self.datastore, self.deploy_pool_count)
+        self.deploy_handler = deploy_handler.DeployHandler(self.datastore, self.deploy_pool_count, self.ssh_key_name, self.ssh_key_path)
 
     def init_handler(self, init_vals): 
         run_sync = tornado.ioloop.IOLoop.instance().run_sync

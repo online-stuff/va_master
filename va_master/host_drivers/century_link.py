@@ -15,7 +15,7 @@ PROVIDER_TEMPLATE = ""
 PROFILE_TEMPLATE = "" 
 
 class CenturyLinkDriver(base.DriverBase):
-    def __init__(self, flavours, salt_master_fqdn, provider_name = 'century_link_provider', profile_name = 'century_link__profile', host_ip = '192.168.80.39', key_name = 'va_master_key', key_path = '/root/va_master/va_master_key/'):
+    def __init__(self, flavours, provider_name = 'century_link_provider', profile_name = 'century_link__profile', host_ip = '192.168.80.39', key_name = 'va_master_key', key_path = '/root/va_master/va_master_key/'):
         """
             Works ok atm but needs more stuff in the future. Namely, we need the following: 
                 - A way to get usage statistics. No option for this yet in the python API, so I may need to check out the REST API. 
