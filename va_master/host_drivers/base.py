@@ -395,7 +395,6 @@ class DriverBase(object):
         with open(profile_dir) as f: 
             profile_template = f.read()
 
-
         self.profile_vars['VAR_ROLE'] = data['role']
         self.profile_vars['VAR_IMAGE'] = data['image']
         self.profile_vars['VAR_SIZE'] = data['size']
