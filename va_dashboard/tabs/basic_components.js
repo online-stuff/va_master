@@ -29,7 +29,9 @@ var Filter = React.createClass({
 var Button = React.createClass({
 
     openModal: function() {
-        this.props.dispatch({type: 'OPEN_MODAL'});
+        var modal = this.props.modalTemplate;
+        modal.args = [];
+        this.props.dispatch({type: 'OPEN_MODAL', template: modal});
     },
 
     showTarget: function(target) {

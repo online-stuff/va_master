@@ -41,13 +41,21 @@ var Div = React.createClass({
 
 var Table = React.createClass({
     btn_clicked: function(id, evtKey){
-        console.log(id);
-        console.log(evtKey);
-        var arr = evtKey.split(".");
-        // var data = {id: id, action: arr[1]};
-        // Network.post('/api/' + arr[0], this.props.auth.token, data).done(function(d) {
-        //     console.log(d);
-        // });
+        if(evtKey in this.props.modals){
+            var modal = this.props.modals[evtKey];
+            modal.args = [id];
+            this.props.dispatch({type: 'OPEN_MODAL', template: modal});
+        }else{
+            var data = {"instance_name": this.props.panel.instance, "action": evtKey, "args": [id]};
+            var me = this;
+            me.props.dispatch({type: 'SHOW_ALERT', msg: "SUCCESS"});
+            // Network.post('/api/panels/action', this.props.auth.token, data).done(function(d) {
+            //     var msg = d[me.props.panel.instance];
+            //     if(msg){
+            //         me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
+            //     }
+            // });
+        }
     },
     render: function () {
         var cols = Object.keys(this.props.source[0]);
@@ -98,23 +106,24 @@ var Table = React.createClass({
 var Modal = React.createClass({
 
     getInitialState: function () {
-        var content = this.props.content, data = {};
+        var content = this.props.modal.template.content, data = [];
         for(j=0; j<content.length; j++){
             if(content[j].type == "Form"){
                 var elem = content[j].elements;
                 for(i=0; i<elem.length; i++){
-                    data[elem[i].name] = elem[i].value;
+                    data[i] = elem[i].value;
                 }
             }
         }
+        var args = [];
+        if("args" in this.props.modal.template){
+            args = this.props.modal.template.args;
+        }
         return {
             data: data,
-            focus: ""
+            focus: "",
+            args: args
         };
-    },
-
-    open: function() {
-        this.props.dispatch({type: 'OPEN_MODAL'});
     },
 
     close: function() {
@@ -122,27 +131,35 @@ var Modal = React.createClass({
     },
 
     action: function(action_name) {
-        console.log(action_name);
-        console.log(this.state.data);
-        // console.log(this.props.form.data);
-        //Network.post();
+        var data = {"instance_name": this.props.panel.instance, "action": action_name, "args": this.state.args.concat(this.state.data)};
+        var me = this;
+        Network.post("/api/panels/action", this.props.auth.token, data).done(function(d) {
+            var msg = d[me.props.panel.instance];
+            if(msg){
+                me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
+                me.props.dispatch({type: 'CLOSE_MODAL'});
+            }else{
+                me.props.dispatch({type: 'CLOSE_MODAL'});
+            }
+        });
     },
 
     form_changed: function(e) {
         var name = e.target.name;
         var val = e.target.value;
+        var id = e.target.id;
         var data = this.state.data;
         if(e.target.type == "checkbox"){
             val = e.target.checked;
         }else{
             this.setState({focus: name});
         }
-        data[name] = val;
+        data[id] = val;
         this.setState({data: data});
     },
 
     render: function () {
-        var btns = this.props.buttons.map(function(btn){
+        var btns = this.props.modal.template.buttons.map(function(btn){
             if(btn.action == "cancel"){
                 action = this.close;
             }else{
@@ -152,7 +169,7 @@ var Modal = React.createClass({
         }.bind(this));
 
         var redux = {};
-        var elements = this.props.content.map(function(element) {
+        var elements = this.props.modal.template.content.map(function(element) {
             element.key = element.name;
             var Component = components[element.type];
             if(element.type == "Form"){
@@ -169,7 +186,7 @@ var Modal = React.createClass({
         return (
             <Bootstrap.Modal show={this.props.modal.isOpen} onHide={this.close}>
             <Bootstrap.Modal.Header closeButton>
-              <Bootstrap.Modal.Title>{this.props.title}</Bootstrap.Modal.Title>
+              <Bootstrap.Modal.Title>{this.props.modal.template.title}</Bootstrap.Modal.Title>
             </Bootstrap.Modal.Header>
 
             <Bootstrap.Modal.Body>
@@ -186,40 +203,29 @@ var Modal = React.createClass({
 });
 
 var Form = React.createClass({
-    sendForm: function () {
-        var data = this.state.data;
-        console.log(data);
-        // Network.post('/api/', this.props.auth.token, data);
-    },
 
     render: function () {
         var redux = {};
-        var ModalRedux = connect(function(state){
-            return {auth: state.auth, modal: state.modal};
-        })(Modal);
 
-        var modal = false, modalElem = null;
-
-        var inputs = this.props.elements.map(function(element) {
+        var inputs = this.props.elements.map(function(element, index) {
             var type = element.type;
             if(type.charAt(0) === type.charAt(0).toLowerCase()){
                 if(type == "checkbox"){
-                    return ( <Bootstrap.Checkbox key={element.name} name={element.name} checked={this.props.data[element.name]} inline onChange={this.props.form_changed}>{element.label}</Bootstrap.Checkbox>);
+                    return ( <Bootstrap.Checkbox id={index} key={element.name} name={element.name} checked={this.props.data[index]} inline onChange={this.props.form_changed}>{element.label}</Bootstrap.Checkbox>);
                 }
                 if(type == "dropdown"){
-                    return ( <Bootstrap.FormControl key={element.name} name={element.name} componentClass="select" placeholder={element.value[0]}>
+                    return ( <Bootstrap.FormControl id={index} key={element.name} name={element.name} componentClass="select" placeholder={element.value[0]}>
                         {element.value.map(function(option, i) {
                             return <option key={i} value={option}>{option}</option>
                         })}
                     </Bootstrap.FormControl> );
                 }
-                return ( <Bootstrap.FormControl key={element.name} type={type} name={element.name} value={this.props.data[element.name]} placeholder={element.label} onChange={this.props.form_changed} autoFocus={element.name == this.props.focus} /> );
+                return ( <Bootstrap.FormControl id={index} key={element.name} type={type} name={element.name} value={this.props.data[index]} placeholder={element.label} onChange={this.props.form_changed} autoFocus={element.name == this.props.focus} /> );
             }
             element.key = element.name;
             if(Object.keys(redux).indexOf(type) < 0){
                 if(type == "Button" && element.action == "modal"){
-                    modal = true;
-                    modalElem = element.modal;
+                    element.modalTemplate = element.modal;
                 }
                 var Component = components[type];
                 redux[type] = connect(function(state){
@@ -240,7 +246,6 @@ var Form = React.createClass({
         return (
             <form className={this.props.class}>
                 {inputs}
-                {modal && React.createElement(ModalRedux, modalElem) }
             </form>
         );
     }

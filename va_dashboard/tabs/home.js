@@ -39,7 +39,12 @@ var Home = React.createClass({
         this.setState({collapse: !this.state.collapse});
     },
     render: function () {
-        var panels = this.state.data.map(function(panel, i) {
+        var panels = this.state.data.filter(function(panel) {
+            if(panel.instances.length > 0){
+                return true;
+            }
+            return false;
+        }).map(function(panel, i) {
             var header = (
                 <span><i className={'fa ' + panel.icon} /> {panel.name} <i className='fa fa-angle-down pull-right' /></span>
             )

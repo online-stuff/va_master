@@ -20,6 +20,7 @@ var Panel = React.createClass({
         var me = this;
         var data = {'panel': id, 'instance_name': instance};
         console.log(data);
+        this.props.dispatch({type: 'CHANGE_PANEL', panel: id, instance: instance});
         Network.get('/api/panels/get_panel', this.props.auth.token, data).done(function (data) {
             me.setState({template: data});
         });
@@ -39,8 +40,15 @@ var Panel = React.createClass({
         this.props.dispatch({type: 'RESET_FILTER'});
     },
 
+    handleAlertDismiss() {
+        this.props.dispatch({type: 'HIDE_ALERT'});
+    },
+
     render: function () {
         var redux = {};
+        var ModalRedux = connect(function(state){
+            return {auth: state.auth, modal: state.modal, panel: state.panel, alert: state.alert};
+        })(widgets.Modal);
 
         var elements = this.state.template.content.map(function(element) {
             element.key = element.name;
@@ -63,8 +71,10 @@ var Panel = React.createClass({
 
         return (
             <div key={this.props.params.id}>
-                <h1>{this.state.template.title}</h1>
+                <Bootstrap.PageHeader>{this.state.template.title} <small>{this.props.params.instance}</small></Bootstrap.PageHeader>
                 {elements}
+                <ModalRedux />
+                {this.props.alert.show && React.createElement(Bootstrap.Alert, {bsStyle: 'danger', onDismiss: this.handleAlertDismiss, className: "messages"}, this.props.alert.msg) }
             </div>
         );
     }
@@ -72,7 +82,7 @@ var Panel = React.createClass({
 });
 
 Panel = connect(function(state){
-    return {auth: state.auth};
+    return {auth: state.auth, panel: state.panel, alert: state.alert};
 })(Panel);
 
 module.exports = Panel;
