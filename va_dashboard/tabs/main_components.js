@@ -48,13 +48,12 @@ var Table = React.createClass({
         }else{
             var data = {"instance_name": this.props.panel.instance, "action": evtKey, "args": [id]};
             var me = this;
-            me.props.dispatch({type: 'SHOW_ALERT', msg: "SUCCESS"});
-            // Network.post('/api/panels/action', this.props.auth.token, data).done(function(d) {
-            //     var msg = d[me.props.panel.instance];
-            //     if(msg){
-            //         me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
-            //     }
-            // });
+            Network.post('/api/panels/action', this.props.auth.token, data).done(function(d) {
+                var msg = d[me.props.panel.instance];
+                if(msg){
+                    me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
+                }
+            });
         }
     },
     render: function () {
