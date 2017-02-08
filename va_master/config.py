@@ -28,7 +28,7 @@ class Config(object):
         self.server_port = 80
         self.server_static_path = get_server_static()
         self.deploy_pool_count = 3
-        self.ssh_key_path = '/root/.ssh'
+        self.ssh_key_path = '/root/.ssh/'
         self.ssh_key_name = 'va-master' 
 
         # Now dynamically inject any kwargs
