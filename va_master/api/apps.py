@@ -45,25 +45,25 @@ def get_openvpn_users(handler):
     cl = Caller()
     users = cl.cmd('openvpn.list_users')
     users['active'] = [{'name' : x, 'check' : False, 'connected' : x in users['status']['client_list']} for x in users['active']]
-    handler.json(users)
+    raise tornado.gen.Return(users)
 
 @tornado.gen.coroutine
 def add_openvpn_user(handler):
     cl = Caller()
     success = cl.cmd('openvpn.add_user', username = handler.data['username'])
-    handler.json(success)
+    raise tornado.gen.Return(success)
 
 @tornado.gen.coroutine
 def revoke_openvpn_user(handler):
     cl = Caller()
     success = cl.cmd('openvpn.revoke_user', username = handler.data['username'])
-    handler.json(success)   
+    raise tornado.gen.Return(success)   
 
 @tornado.gen.coroutine
 def list_user_logins(handler): 
     cl = Caller()
     success = cl.cmd('openvpn.list_user_logins', user = handler.data['username'])
-    handler.json(success)
+    raise tornado.gen.Return(success)
 
 @tornado.gen.coroutine
 def download_vpn_cert(handler):
@@ -116,7 +116,7 @@ def manage_states(handler, action = 'append'):
 @tornado.gen.coroutine
 def get_states(handler):
     states_data = yield handler.config.deploy_handler.get_states()
-    handler.json(states_data)
+    raise tornado.gen.Return(states_data)
 
 
 @tornado.gen.coroutine
@@ -206,4 +206,4 @@ def launch_app(handler):
 @tornado.gen.coroutine
 def get_user_actions(handler):
     actions = yield handler.config.deploy_handler.get_actions(int(handler.data.get('no_actions', 0)))
-    handler.json(actions)
+    raise tornado.gen.Return(actions)

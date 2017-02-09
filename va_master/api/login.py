@@ -46,9 +46,12 @@ def get_current_user(handler):
     token = handler.request.headers.get('Authorization', '')
 
     token = token.replace('Token ', '')
+#    print ('Token is : ', token)
     
     for type in ['user', 'admin']: # add other types as necessary, maybe from datastore. 
+        print ('Checking validity for ', type)
         token_valid = yield is_token_valid(handler.datastore, token, type)
+        print ('Validity for ', type, ' is ', token_valid)
         if token_valid: 
             user = yield handler.datastore.get('tokens/%s/by_token/%s' % (type, token))
 #            print ('Got user', user)
@@ -67,14 +70,27 @@ def get_user_type(handler):
 @tornado.gen.coroutine
 def is_token_valid(datastore, token, user_type = 'admin'):
     valid = True
-    print ('Token is : ', token)
     try:
-        res = yield datastore.get('tokens/%s/by_token/%s' % (user_type, token))
-    except datastore.KeyNotFound:
-        raise tornado.gen.Return(False)
-
-    valid = (res['username'] != '__invalid__')
-    raise tornado.gen.Return(valid)
+        try:
+            print ('Looking for ', user_type, token)
+            res = yield datastore.get('tokens/%s/by_token/%s' % (user_type, token))
+            print ('res is : ', res)
+        except datastore.KeyNotFound:
+            print ('Did not find token for ', user_type, token)
+            raise tornado.gen.Return(False)
+        except Exception as e: 
+            print ('Something weird happened. ')
+            print (e)
+            import traceback
+            traceback.print_exc()
+        print ('Res: ', res)
+#        valid = (res['username'] != '__invalid__')
+        raise tornado.gen.Return(valid)
+    except:
+        print ('Got this thing: ')
+        import traceback
+        traceback.print_exc()
+        raise
 
 #So far, one kwarg is used: user_allowed. 
 def auth_only(*args, **kwargs):
@@ -89,10 +105,10 @@ def auth_only(*args, **kwargs):
 #            print ('Token is : ', token)
 
             user_type = yield get_user_type(handler)
-
+#            print ('User type is : ', user_type)
             #user_type is None if the token is invalid
             if not user_type or (user_type == 'user' and not user_allowed): 
-                handler.json({'error': 'bad_token'}, 401)
+                raise tornado.gen.Return({'success': False, 'message' : 'No user with this token found. Try to log in again. '})
             else:
                 yield routine(handler)
         return func
@@ -133,7 +149,7 @@ def user_login(handler):
             username = body['username'].decode('utf8')
             password = body['password'].decode('utf8')
         except:
-            handler.json({'error': 'bad_body'}, 400)
+            raise tornado.gen.Return({'error': 'bad_body'}, 400)
 
         if '@' in username: 
             yield ldap_login(handler)
@@ -141,9 +157,9 @@ def user_login(handler):
 
         try:
             admins = yield handler.datastore.get('admins')
-            print ('My admins are : ', admins)
+#            print ('My admins are : ', admins)
         except handler.datastore.KeyNotFound:
-            handler.json({'error': 'no_admins'}, 401)
+            raise tornado.gen.Return({'error': 'no_admins'}, 401)
             # TODO: handle this gracefully?
             raise tornado.gen.Return()
 
@@ -163,10 +179,12 @@ def user_login(handler):
         pw_hash = account_info['password_hash']
         if crypt(password, pw_hash) == pw_hash:
             token = yield get_or_create_token(handler.datastore, username, user_type = 'admin')
-            handler.json({'token': token})
+            raise tornado.gen.Return({'token': token})
         else:
-            handler.json({'error': 'invalid_password'}, 401)
+            raise tornado.gen.Return({'error': 'invalid_password'}, 401)
 
+    except tornado.gen.Return:
+        raise
     except: 
         import traceback
         traceback.print_exc()
@@ -184,9 +202,9 @@ def ldap_login(handler):
     
     if result['success']: 
         token = yield get_or_create_token(handler.datastore, username, user_type = result['user_type'])
-        handler.json({'token' : token})
+        raise tornado.gen.Return({'token' : token})
     else: 
-        handler.json({'error' : 'Invalid login: ' + result}, 401)
+        raise tornado.gen.Return({'error' : 'Invalid login: ' + result}, 401)
 
 
 

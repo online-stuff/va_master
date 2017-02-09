@@ -463,7 +463,9 @@ class LibVirtDriver(base.DriverBase):
             devices.remove(devices[1])
 
         domain_iso_disk = [x for x in tree.find('devices').findall('disk') if x.get('device') == 'cdrom'][0]
-        domain_iso_disk.find('source').attrib['file'] = self.config_path  + iso_name
+
+        #Patekata mu e kaj pool-ot kaj sto e uploadiran volume 08.02.2017
+        domain_iso_disk.find('source').attrib['file'] = '/var/lib/libvirt/images/' + iso_name #self.config_path  + iso_name
 
 
         mac = tree.find('devices').find('interface').find('mac')
@@ -597,7 +599,7 @@ class LibVirtDriver(base.DriverBase):
             }],
             'salt-minion' : {
                 'conf' : {
-                    'master' : self.self.host_ip
+                    'master' : self.host_ip
                 },
                 'public_key' : pub_key,
                 'private_key' : pri_key,

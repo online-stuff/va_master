@@ -23,22 +23,29 @@ class ApiHandler(tornado.web.RequestHandler):
     def json(self, obj, status=200):
         self.set_header('Content-Type', 'application/json')
         self.set_status(status)
+        print ('Writing ', obj)
         self.write(json.dumps(obj))
         self.finish()
 
     @tornado.gen.coroutine
     def exec_method(self, method, path, data):
         self.data = data
-        try:
-            yield self.paths[method][path](self)
-        except: 
+        api_func = self.paths[method][path]
+        try: 
+            print ('Calling : ', api_func)
+            result = yield api_func(self)
+            print ('Got result: ', result, ' for function ', api_func)
+
+        except Exception as e: 
             import traceback
             traceback.print_exc()
+            print ('Exception is : ', e)
+        self.json(result)
 
     @tornado.gen.coroutine
     def get(self, path):
         args = self.request.query_arguments
-        yield self.exec_method('get', path, {x : args[x][0] for x in args})
+        result = yield self.exec_method('get', path, {x : args[x][0] for x in args})
 
     @tornado.gen.coroutine
     def post(self, path):
