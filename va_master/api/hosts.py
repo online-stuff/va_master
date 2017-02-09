@@ -48,7 +48,7 @@ def delete_host(handler):
 
 #Doesn't work with API right now because of some auth issues. For some reason, if auth is on, it thinks the user is not an admin and fucks everything up. 
 #Just a note for future reference, this needs to be fixed soon. 
-@auth_only
+#@auth_only
 @tornado.gen.coroutine
 def list_drivers(handler):
     print ('Listing drivers. ')
@@ -61,7 +61,8 @@ def list_drivers(handler):
         steps = [x.serialize() for x in steps]
         out['drivers'].append({'id': driver_id,
             'friendly_name': name, 'steps': steps})
-#    print ('Out is : ', out)
+    print ('Out is : ', out)
+#    raise Exception(json.dumps(out))
     raise tornado.gen.Return(out)
 
 @auth_only

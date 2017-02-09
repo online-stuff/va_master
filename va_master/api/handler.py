@@ -7,6 +7,7 @@ from watchdog.events import FileSystemEventHandler
 from tornado.httpclient import AsyncHTTPClient, HTTPRequest
 #from . import status, login, hosts, apps, panels
 from . import url_handler
+from login import get_current_user
 import json, datetime, syslog
 
 #This will probably not be used anymore, keeping it here for reasons. 
@@ -30,16 +31,32 @@ class ApiHandler(tornado.web.RequestHandler):
     @tornado.gen.coroutine
     def exec_method(self, method, path, data):
         self.data = data
-        api_func = self.paths[method][path]
         try: 
-            print ('Calling : ', api_func)
-            result = yield api_func(self)
-            print ('Got result: ', result, ' for function ', api_func)
+            print ('User in handler: ')
+            user = yield get_current_user(self)
 
-        except Exception as e: 
+            print ('User in handler is : ', user)
+            if not user: 
+                self.json({'success' : False, 'message' : 'User not authenticated properly. ', 'data' : {}})
+
+        except: 
             import traceback
             traceback.print_exc()
-            print ('Exception is : ', e)
+
+#        try: 
+        result = yield self.paths[method][path](self)
+#            print ('Got result: ', result, ' for function ', api_func)
+#        except tornado.gen.Return as e:
+#            print ('Got Return')
+#            print (e)
+#            result = 'boobs'
+#        except tornado.gen.Return:
+#            raise
+#        except Exception as e: 
+#            result = json.loads(e.message)
+#            import traceback
+#            traceback.print_exc()
+#            print ('Exception is : ', e)
         self.json(result)
 
     @tornado.gen.coroutine
