@@ -22,7 +22,7 @@ def get_paths():
     }
     return paths
 
-#@auth_only(user_allowed = True)
+##@auth_only(user_allowed = True)
 @tornado.gen.coroutine
 def list_hosts(handler):
     hosts = yield handler.config.deploy_handler.list_hosts()
@@ -48,10 +48,9 @@ def delete_host(handler):
 
 #Doesn't work with API right now because of some auth issues. For some reason, if auth is on, it thinks the user is not an admin and fucks everything up. 
 #Just a note for future reference, this needs to be fixed soon. 
-#@auth_only
+##@auth_only
 @tornado.gen.coroutine
 def list_drivers(handler):
-    print ('Listing drivers. ')
     drivers = yield handler.config.deploy_handler.get_drivers()
     out = {'drivers': []}
     for driver in drivers:
@@ -61,11 +60,10 @@ def list_drivers(handler):
         steps = [x.serialize() for x in steps]
         out['drivers'].append({'id': driver_id,
             'friendly_name': name, 'steps': steps})
-    print ('Out is : ', out)
 #    raise Exception(json.dumps(out))
     raise tornado.gen.Return(out)
 
-@auth_only
+#@auth_only
 @tornado.gen.coroutine
 def validate_newhost_fields(handler):
     ok = True
@@ -92,24 +90,26 @@ def validate_newhost_fields(handler):
             raise tornado.gen.Return({'error': 'bad_step'}, 400)
         else:
             if step_index < 0 or driver_steps[step_index].validate(field_values):
-                try:
+                try: 
                     result = yield found_driver.validate_field_values(step_index, field_values)
-                    if result.new_step_index == -1:
-                        print ('Adding new host')
-                        handler.config.deploy_handler.create_host(found_driver)
-                    raise tornado.gen.Return(result.serialize())
-                except: 
-                    import traceback
-                    traceback.print_exc()
+                except tornado.gen.Return: 
+                    raise
+                except Exception as e:
+                    raise tornado.gen.Return({'success' : False, 'message' : 'Could not validate field values. Error was : ' + e.message, 'data' : {}})
+                if result.new_step_index == -1:
+                    print ('Adding new host')
+                    handler.config.deploy_handler.create_host(found_driver)
+                raise tornado.gen.Return(result.serialize())
             else:
-                handler.json({
+                result = {
                     'errors': ['Some fields are not filled.'],
                     'new_step_index': step_index,
                     'option_choices': None
-                })
+                }
+            raise tornado.gen.Return(result)
 
 
-@auth_only
+#@auth_only
 @tornado.gen.coroutine
 def create_host(handler):
     try:

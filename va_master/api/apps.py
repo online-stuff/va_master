@@ -39,7 +39,7 @@ def add_app(handler):
     app = yield get_app_info(handler)
     yield handler.config.deploy_handler.store_app(app, handler.data['host'])
 
-#@auth_only
+##@auth_only
 @tornado.gen.coroutine
 def get_openvpn_users(handler):
     cl = Caller()
@@ -172,7 +172,7 @@ def get_app_info(handler):
     raise tornado.gen.Return(instance_info)
 
         
-#@auth_only
+##@auth_only
 @tornado.gen.coroutine
 def launch_app(handler):
     try: 

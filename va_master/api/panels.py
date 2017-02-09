@@ -60,21 +60,21 @@ def panel_action_execute(handler):
     raise tornado.gen.Return(result)
 
 
-#@auth_only
+##@auth_only
 @tornado.gen.coroutine
 def panel_action(handler):
     instance_result = yield panel_action_execute(handler)
     raise tornado.gen.Return(instance_result)
 
 
-#@auth_only(user_allowed = True)
+##@auth_only(user_allowed = True)
 @tornado.gen.coroutine
 def get_panels(handler):
     panels = yield list_panels(handler)
     raise tornado.gen.Return(panels)
 
 
-@auth_only(user_allowed = True)
+#@auth_only(user_allowed = True)
 @tornado.gen.coroutine
 def get_panel_for_user(handler):
     try: 

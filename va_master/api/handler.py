@@ -24,7 +24,6 @@ class ApiHandler(tornado.web.RequestHandler):
     def json(self, obj, status=200):
         self.set_header('Content-Type', 'application/json')
         self.set_status(status)
-        print ('Writing ', obj)
         self.write(json.dumps(obj))
         self.finish()
 
@@ -32,31 +31,16 @@ class ApiHandler(tornado.web.RequestHandler):
     def exec_method(self, method, path, data):
         self.data = data
         try: 
-            print ('User in handler: ')
             user = yield get_current_user(self)
 
-            print ('User in handler is : ', user)
             if not user: 
                 self.json({'success' : False, 'message' : 'User not authenticated properly. ', 'data' : {}})
-
+            elif user['type'] == 'user' and 'user' not in self.paths.get('user_allowed', []): 
+                self.json({'success' : False, 'message' : 'User does not have appropriate privileges. ', 'data' : {}})
         except: 
             import traceback
             traceback.print_exc()
-
-#        try: 
         result = yield self.paths[method][path](self)
-#            print ('Got result: ', result, ' for function ', api_func)
-#        except tornado.gen.Return as e:
-#            print ('Got Return')
-#            print (e)
-#            result = 'boobs'
-#        except tornado.gen.Return:
-#            raise
-#        except Exception as e: 
-#            result = json.loads(e.message)
-#            import traceback
-#            traceback.print_exc()
-#            print ('Exception is : ', e)
         self.json(result)
 
     @tornado.gen.coroutine
