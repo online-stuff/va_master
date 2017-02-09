@@ -175,33 +175,29 @@ def get_app_info(handler):
 ##@auth_only
 @tornado.gen.coroutine
 def launch_app(handler):
-    try: 
-        data = handler.data
-        print ('My data is : ', data)
-        deploy_handler = handler.config.deploy_handler
-        store = deploy_handler.datastore
+    data = handler.data
+    print ('My data is : ', data)
+    deploy_handler = handler.config.deploy_handler
+    store = deploy_handler.datastore
 
 
-        hosts = yield store.get('hosts')
-        required_host = [host for host in hosts if host['hostname'] == data['hostname']][0]
+    hosts = yield store.get('hosts')
+    required_host = [host for host in hosts if host['hostname'] == data['hostname']][0]
 
-        driver = yield deploy_handler.get_driver_by_id(required_host['driver_name'])
-        yield driver.create_minion(required_host, data)
+    driver = yield deploy_handler.get_driver_by_id(required_host['driver_name'])
+    yield driver.create_minion(required_host, data)
 
-        minion_info = yield get_app_info(handler)
+    minion_info = yield get_app_info(handler)
 
-        states = yield store.get('states')
-        state = [x for x in states if x['name'] == data['role']][0]
+    states = yield store.get('states')
+    state = [x for x in states if x['name'] == data['role']][0]
 
-        panel = {'panel_name' : handler.data['panel_name'], 'role' : minion_info['role']}
-        panel.update(state['panels'])
-        yield handler.config.deploy_handler.store_panel(panel)
- 
-        required_host['instances'].append(minion_info)
-        yield store.insert('hosts', hosts)
-    except: 
-        import traceback
-        traceback.print_exc()
+    panel = {'panel_name' : handler.data['instance_name'], 'role' : minion_info['role']}
+    panel.update(state['panels'])
+    yield handler.config.deploy_handler.store_panel(panel)
+
+    required_host['instances'].append(minion_info)
+    yield store.insert('hosts', hosts)
 
 @tornado.gen.coroutine
 def get_user_actions(handler):

@@ -77,38 +77,32 @@ def get_panels(handler):
 #@auth_only(user_allowed = True)
 @tornado.gen.coroutine
 def get_panel_for_user(handler):
-    try: 
-        panel = handler.data['panel']
+    panel = handler.data['panel']
 
-        user_panels = yield list_panels(handler)
-        instance_info = yield apps.get_app_info(handler)
-        instance_info = instance_info[handler.data['instance_name']]
-        print ('Instance info is : ', instance_info)
-        state = instance_info['role']
+    user_panels = yield list_panels(handler)
+    instance_info = yield apps.get_app_info(handler)
+    instance_info = instance_info[handler.data['instance_name']]
+    print ('Instance info is : ', instance_info)
+    state = instance_info['role']
 
-        print ('Panel is : ', panel, 'and user panels are : ',  user_panels, 'with data : ', handler.data)
-        state = filter(lambda x: x['name'] == state, user_panels)[0]
-        if handler.data['instance_name'] in state['instances']:
+    print ('Panel is : ', panel, 'and user panels are : ',  user_panels, 'with data : ', handler.data)
+    state = filter(lambda x: x['name'] == state, user_panels)[0]
+    if handler.data['instance_name'] in state['instances']:
 #            panel = panel[0]
-            handler.data['action'] = 'get_panel'
-            handler.data['args'] = [panel]
-            try: 
-                print ('Executing. ')
-                panel = yield panel_action_execute(handler)
-            except: 
-                import traceback
-                traceback.print_exc()
+        handler.data['action'] = 'get_panel'
+        handler.data['args'] = [panel]
+        try: 
+            print ('Executing. ')
+            panel = yield panel_action_execute(handler)
+        except: 
+            import traceback
+            traceback.print_exc()
 
-            panel = panel[handler.data['instance_name']]
-            print ('My panel is : ', panel)
-            raise tornado.gen.Return(panel)
-        else: 
-            raise tornado.gen.Return({'error' : 'Cannot get panel. '})
-
-    except: 
-        import traceback
-        traceback.print_exc()
-
+        panel = panel[handler.data['instance_name']]
+        print ('My panel is : ', panel)
+        raise tornado.gen.Return(panel)
+    else: 
+        raise tornado.gen.Return({'error' : 'Cannot get panel. '})
 
 
 

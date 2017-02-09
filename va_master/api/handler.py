@@ -82,9 +82,6 @@ class ApiHandler(tornado.web.RequestHandler):
             'data' : data, 
             'time' : str(datetime.datetime.now()),
         })
-#        message = '[info]Action:type=POST,user=' +  user['username'] + '|type=' +  user['type'] +'|path=' +  path + '|data=' + str(data) + '|time=' + str(datetime.datetime.now())
-
-#        print ('Logging: ', message)
         syslog.syslog(syslog.LOG_INFO | syslog.LOG_LOCAL0, message)
 
 
