@@ -22,6 +22,7 @@ class ApiHandler(tornado.web.RequestHandler):
         self.paths = url_handler.gather_paths()
 
     def json(self, obj, status=200):
+        print ('I am in json')
         self.set_header('Content-Type', 'application/json')
         self.set_status(status)
         self.write(json.dumps(obj))
@@ -41,7 +42,16 @@ class ApiHandler(tornado.web.RequestHandler):
             import traceback
             traceback.print_exc()
         result = yield self.paths[method][path](self)
-        self.json(result)
+        try:
+
+            if result.exception(): 
+                print ('exception: ', result.exception())
+                self.json({'success' : False, 'message' : 'Error accessing ' + path + ' : ' + result.exception().message, 'data' : {}}, 401)
+#            result = yield result
+            self.json({'success' : True, 'message' : '', 'data' : result})
+        except: 
+            import traceback
+            traceback.print_exc()
 
     @tornado.gen.coroutine
     def get(self, path):
