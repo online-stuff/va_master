@@ -29,7 +29,6 @@ def list_hosts(handler):
     for host in hosts: 
         driver = yield handler.config.deploy_handler.get_driver_by_id(host['driver_name'])
         host['instances'] = yield driver.get_instances(host)
-    a = 1/0
     raise tornado.gen.Return({'hosts': hosts})
 
 
