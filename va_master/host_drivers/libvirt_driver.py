@@ -457,6 +457,8 @@ class LibVirtDriver(base.DriverBase):
         devices = tree.find('devices')
         domain_disks = [x for x in devices.findall('disk') if x.get('device') == 'disk']
 
+
+        domain_disks[0].find('source').attrib['file'] = '/var/lib/libvirt/images/' + disks[0]
         if disks[1]: 
             domain_disks[1].find('source').attrib['file'] = '/var/lib/libvirt/images/' + disks[1]
         else: 
