@@ -83,10 +83,10 @@ var HostStep = React.createClass({
             var formControl = null;
             var notAField = false;
             if(field.type === 'str') {
-                formControl = <Bootstrap.FormControl type='text' id={field.id} value={this.props.fieldValues[field.id]} onChange={this.onChange} />;
+                formControl = <Bootstrap.FormControl type='text' key={field.id} id={field.id} value={this.props.fieldValues[field.id]} onChange={this.onChange} />;
             } else if(field.type === 'options') {
                 formControl = (
-                    <Bootstrap.FormControl componentClass='select' id={field.id} onChange={this.onChange}>
+                    <Bootstrap.FormControl componentClass='select' key={field.id} id={field.id} onChange={this.onChange}>
                         <option key={-1} value=''>Choose</option>
                         {this.props.optionChoices[field.id].map(function(option, i) {
                             return <option key={i} value={option}>{option}</option>
@@ -96,7 +96,7 @@ var HostStep = React.createClass({
             } else if(field.type === 'description'){
                 notAField = true;
                 formControl = (
-                    <Bootstrap.FormGroup>
+                    <Bootstrap.FormGroup key={field.id}>
                         <br/>
                         <Bootstrap.Well>
                             <h4>
@@ -112,7 +112,7 @@ var HostStep = React.createClass({
                 fields.push(formControl);
             } else {
                 fields.push(
-                    <Bootstrap.FormGroup>
+                    <Bootstrap.FormGroup key={field.id}>
                         <Bootstrap.ControlLabel >{field.name}</Bootstrap.ControlLabel>
                         {formControl}
                     </Bootstrap.FormGroup>
@@ -173,30 +173,30 @@ var NewHostForm = React.createClass({
         this.setState({fieldValues: newFieldValues});
     },
     render: function () {
-        console.log(this.state);
         var steps = [];
-        var driverOptions = [<option value=''>Select driver</option>];
+        var driverOptions = [<option key="-1" value=''>Select driver</option>];
         for(var i = 0; i < this.state.drivers.length; i++) {
             var driver = this.state.drivers[i];
             driverOptions.push(
                 <option value={driver.id} key={driver.id}>{driver.friendly_name}</option>
             );
-            if(this.state.currentDriver !== null) {
-                for(var j = 0; j < this.state.currentDriver.steps.length; j++){
-                    var step = this.state.currentDriver.steps[j];
-                    if(j !== this.state.stepIndex){
-                        steps.push(
-                            <Bootstrap.Tab title={step.name} eventKey={j} key={j} />
-                        );
-                    }else{
-                        steps.push(
-                            <Bootstrap.Tab title={step.name} eventKey={j} key={j}>
-                                <HostStep fields={step.fields} optionChoices={this.state.optionChoices}
-                                    fieldValues={this.state.fieldValues}
-                                    onFieldChange={this.onFieldChange}/>
-                            </Bootstrap.Tab>
-                        );
-                    }
+        }
+        if(this.state.currentDriver !== null) {
+            console.log(this.state.currentDriver);
+            for(var j = 0; j < this.state.currentDriver.steps.length; j++){
+                var step = this.state.currentDriver.steps[j];
+                if(j !== this.state.stepIndex){
+                    steps.push(
+                        <Bootstrap.Tab title={step.name} eventKey={j} key={j} />
+                    );
+                }else{
+                    steps.push(
+                        <Bootstrap.Tab title={step.name} eventKey={j} key={j}>
+                            <HostStep fields={step.fields} optionChoices={this.state.optionChoices}
+                                fieldValues={this.state.fieldValues}
+                                onFieldChange={this.onFieldChange}/>
+                        </Bootstrap.Tab>
+                    );
                 }
             }
         }
@@ -205,7 +205,7 @@ var NewHostForm = React.createClass({
         for(var i = 0; i < this.state.errors.length; i++){
             var err = this.state.errors[i];
             errors.push(
-                <Bootstrap.Alert bsStyle='danger'>{err}</Bootstrap.Alert>
+                <Bootstrap.Alert key={i} bsStyle='danger'>{err}</Bootstrap.Alert>
             );
         }
 
@@ -218,7 +218,7 @@ var NewHostForm = React.createClass({
             <div style={{paddingTop: 10}}>
                 <Bootstrap.Panel header='Add host' bsStyle='primary'>
                     {progressBar}
-                    <Bootstrap.Tabs activeKey={this.state.stepIndex}>
+                    <Bootstrap.Tabs id="add-host" activeKey={this.state.stepIndex}>
                         <Bootstrap.Tab title='Choose host' eventKey={-1}>
                             <Bootstrap.FormGroup controlId="formControlsSelect">
                                 <Bootstrap.ControlLabel>Select host type</Bootstrap.ControlLabel>

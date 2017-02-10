@@ -129,7 +129,6 @@ ul.left-menu a.active{
     display: block;
     width: 80vw;
     left: 230px;
-    overflow:hidden;
     transition: left 350ms ease-in-out, width 350ms ease-in-out;
 }
 
@@ -274,4 +273,14 @@ ul.left-menu div{
 .log-block{
     width: 30%;
     float: left;
+}
+
+.messages {
+    position: fixed;
+    z-index: 9999;
+    top: 20px;
+    right: 20px;
+    width: 300px;
+    overflow: hidden;
+    max-height: 100px;
 }

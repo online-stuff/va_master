@@ -55,14 +55,17 @@ function table(state, action){
 
 function modal(state, action){
     if(typeof state === 'undefined'){
-        return {isOpen: false};
+        return {isOpen: false, template: { title: "", content: [], buttons: [], args: []}};
     }
 
     var newState = Object.assign({}, state);
     if(action.type == 'OPEN_MODAL'){
+        if("template" in action)
+            newState.template = action.template;
         newState.isOpen = true;
     }
     if(action.type == 'CLOSE_MODAL'){
+        newState.template = { title: "", content: [], buttons: [], args: []};
         newState.isOpen = false;
     }
 
@@ -98,7 +101,39 @@ function div(state, action){
     return newState;
 };
 
-var mainReducer = Redux.combineReducers({auth: auth, table: table, modal: modal, apps: apps, div: div});
+function panel(state, action){
+    if(typeof state === 'undefined'){
+        return {panel: '', instance: ''};
+    }
+
+    var newState = Object.assign({}, state);
+    if(action.type == 'CHANGE_PANEL'){
+        newState.panel = action.panel;
+        newState.instance = action.instance;
+    }
+
+    return newState;
+};
+
+function alert(state, action){
+    if(typeof state === 'undefined'){
+        return {msg: '', show: false};
+    }
+
+    var newState = Object.assign({}, state);
+    if(action.type == 'SHOW_ALERT'){
+        newState.msg = action.msg;
+        newState.show = true;
+    }
+    if(action.type == 'HIDE_ALERT'){
+        newState.msg = '';
+        newState.show = false;
+    }
+
+    return newState;
+};
+
+var mainReducer = Redux.combineReducers({auth: auth, table: table, modal: modal, apps: apps, div: div, panel: panel, alert: alert});
 var store = Redux.createStore(mainReducer);
 
 var Home = require('./tabs/home');
