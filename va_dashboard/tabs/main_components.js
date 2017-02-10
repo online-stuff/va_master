@@ -42,6 +42,19 @@ var Div = React.createClass({
 var Table = React.createClass({
     btn_clicked: function(id, evtKey){
         if(evtKey in this.props.modals){
+            if("readonly" in this.props){
+                var rows = this.props.table.tables[this.props.name].source.filter(function(row) {
+                    if(row[this.props.id] == id){
+                        return true;
+                    }
+                    return false;
+                }.bind(this));
+                var readonly = {};
+                for(key in this.props.readonly){
+                    readonly[this.props.readonly[key]] = rows[0][key];
+                }
+                this.props.dispatch({type: 'SET_READONLY', readonly: readonly});
+            }
             var modal = this.props.modals[evtKey];
             modal.args = [id];
             this.props.dispatch({type: 'OPEN_MODAL', template: modal});
@@ -52,12 +65,16 @@ var Table = React.createClass({
                 var msg = d[me.props.panel.instance];
                 if(msg){
                     me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
+                }else{
+                    data.action = me.props.source;
+                    data.args = []
+                    me.props.dispatch({type: 'REFRESH_DATA', data: data});
                 }
             });
         }
     },
     render: function () {
-        var cols = Object.keys(this.props.source[0]);
+        var cols = Object.keys(this.props.table.tables[this.props.name].source[0]);
         var action_col = false;
         if(this.props.hasOwnProperty('actions')){
             var actions = this.props.actions.map(function(action) {
@@ -71,7 +88,7 @@ var Table = React.createClass({
             });
             action_col = true;
         }
-        var rows = this.props.source.map(function(row) {
+        var rows = this.props.table.tables[this.props.name].source.map(function(row) {
             var columns = cols.map(function(col) {
                 return (
                     <Reactable.Td key={col} column={col}>
@@ -177,7 +194,14 @@ var Modal = React.createClass({
                 element.focus = this.state.focus;
             }
             redux[element.type] = connect(function(state){
-                return {auth: state.auth};
+                var newstate = {auth: state.auth};
+                if(typeof element.reducers !== 'undefined'){
+                    var r = element.reducers;
+                    for (var i = 0; i < r.length; i++) {
+                        newstate[r[i]] = state[r[i]];
+                    }
+                }
+                return newstate;
             })(Component);
             var Redux = redux[element.type];
             return React.createElement(Redux, element);
@@ -211,6 +235,15 @@ var Form = React.createClass({
             if(type.charAt(0) === type.charAt(0).toLowerCase()){
                 if(type == "checkbox"){
                     return ( <Bootstrap.Checkbox id={index} key={element.name} name={element.name} checked={this.props.data[index]} inline onChange={this.props.form_changed}>{element.label}</Bootstrap.Checkbox>);
+                }
+                if(type == "label"){
+                    return ( <label id={index} key={element.name} name={element.name} className="block">{element.name}</label>);
+                }
+                if(type == "multi_checkbox"){
+                    return ( <Bootstrap.Checkbox id={index} key={element.name} name={element.name} checked={this.props.data[index]} onChange={this.props.form_changed}>{element.label}</Bootstrap.Checkbox>);
+                }
+                if(type == "readonly_text"){
+                    return ( <Bootstrap.FormControl id={index} key={element.name} type={type} name={element.name} value={this.props.form.readonly[element.name]} disabled /> );
                 }
                 if(type == "dropdown"){
                     return ( <Bootstrap.FormControl id={index} key={element.name} name={element.name} componentClass="select" placeholder={element.value[0]}>

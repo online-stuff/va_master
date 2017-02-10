@@ -11,6 +11,7 @@ var Panel = React.createClass({
             template: {
                 "title": "",
                 "help_url": "",
+                "tbl_source": {},
                 "content": []
             }
         };
@@ -22,6 +23,8 @@ var Panel = React.createClass({
         console.log(data);
         this.props.dispatch({type: 'CHANGE_PANEL', panel: id, instance: instance});
         Network.get('/api/panels/get_panel', this.props.auth.token, data).done(function (data) {
+            console.log(data.tbl_source);
+            me.props.dispatch({type: 'ADD_DATA', tables: data.tbl_source});
             me.setState({template: data});
         });
     },
@@ -82,7 +85,7 @@ var Panel = React.createClass({
 });
 
 Panel = connect(function(state){
-    return {auth: state.auth, panel: state.panel, alert: state.alert};
+    return {auth: state.auth, panel: state.panel, alert: state.alert, table: state.table};
 })(Panel);
 
 module.exports = Panel;

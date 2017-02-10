@@ -3,6 +3,7 @@ var ReactDOM = require('react-dom');
 var Router = require('react-router');
 var Redux = require('redux');
 var ReactRedux = require('react-redux');
+var Network = require('./network');
 
 var connect = ReactRedux.connect;
 var Provider = ReactRedux.Provider;
@@ -39,7 +40,7 @@ function auth(state, action){
 
 function table(state, action){
     if(typeof state === 'undefined'){
-        return {filterBy: ""};
+        return {filterBy: "", tables: {}};
     }
 
     var newState = Object.assign({}, state);
@@ -48,6 +49,20 @@ function table(state, action){
     }
     if(action.type == 'RESET_FILTER'){
         newState.filterBy = "";
+    }
+    if(action.type == 'ADD_DATA'){
+        newState.tables = action.tables;
+    }
+    if(action.type == 'REFRESH_DATA'){
+        //var data = {"instance_name": action.instance, "action": newState.tables[action.table].action, "args": []};
+        Network.post('/api/panels/action', action.token, action.data).done(function(d) {
+            console.log('REFRESH_DATA');
+            console.log(d);
+            // var msg = d[action.instance];
+            // if(msg){
+            //     newState.tables = msg.tbl_source;
+            // }
+        });
     }
 
     return newState;
@@ -133,7 +148,23 @@ function alert(state, action){
     return newState;
 };
 
-var mainReducer = Redux.combineReducers({auth: auth, table: table, modal: modal, apps: apps, div: div, panel: panel, alert: alert});
+function form(state, action){
+    if(typeof state === 'undefined'){
+        return {readonly: {}};
+    }
+
+    var newState = Object.assign({}, state);
+    if(action.type == 'SET_READONLY'){
+        newState.readonly = action.readonly;
+    }
+    if(action.type == 'RESET_FORM'){
+        newState.readonly = {};
+    }
+
+    return newState;
+};
+
+var mainReducer = Redux.combineReducers({auth: auth, table: table, modal: modal, apps: apps, div: div, panel: panel, alert: alert, form: form});
 var store = Redux.createStore(mainReducer);
 
 var Home = require('./tabs/home');
