@@ -41,17 +41,15 @@ class ApiHandler(tornado.web.RequestHandler):
         except: 
             import traceback
             traceback.print_exc()
-        result = yield self.paths[method][path](self)
-        try:
-
-            if result.exception(): 
-                print ('exception: ', result.exception())
-                self.json({'success' : False, 'message' : 'Error accessing ' + path + ' : ' + result.exception().message, 'data' : {}}, 401)
-#            result = yield result
-            self.json({'success' : True, 'message' : '', 'data' : result})
-        except: 
+        try: 
+            result = yield self.paths[method][path](self)
+            result = {'success' : True, 'message' : '', 'data' : result}
+        except Exception as e: 
+            result = {'success' : True, 'message' : 'There was an error performing a request : ' + e.message, 'data' : {}}
             import traceback
             traceback.print_exc()
+        print ('Result is : ', result)
+        self.json(result)
 
     @tornado.gen.coroutine
     def get(self, path):
