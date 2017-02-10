@@ -13,7 +13,9 @@ from concurrent.futures import ProcessPoolExecutor
 
 
 class DeployHandler(object):
-    def __init__(self, datastore, deploy_pool_count):
+    def __init__(self, datastore, deploy_pool_count, ssh_key_name, ssh_key_path):
+        self.ssh_key_name = ssh_key_name
+        self.ssh_key_path = ssh_key_path
         self.datastore = datastore
         self.drivers = []
 
@@ -24,14 +26,12 @@ class DeployHandler(object):
     @tornado.gen.coroutine
     def init_vals(self, store, **kwargs):
         init_vars = {
-            'salt_key_path' : 'salt_key_path', 
-            'salt_key_name' : 'salt_key_name', 
-            'salt_master_fqdn' : 'salt_master_fqdn', 
             'va_flavours' : 'va_flavours', 
         }
         try: 
             store_values = yield self.datastore.get('init_vals')
         except:
+            store_values = {}
             print ('No store values found - probably initializing deploy_handler for the first time. Will initialize with cli arguments. ')
 
         for var in init_vars: 
@@ -67,14 +67,13 @@ class DeployHandler(object):
     def get_drivers(self):
         if not self.drivers: 
             init_vals = yield self.datastore.get('init_vals')
-            hosts_ip =  init_vals['ip'] 
+            host_ip =  init_vals['ip'] 
             va_flavours = init_vals['va_flavours']
-            salt_master_fqdn = init_vals['salt_master_fqdn']
 
             kwargs = {
-                'host_ip' : hosts_ip, 
-                'key_name' : self.salt_key_name, 
-                'key_path' : self.salt_key_path, 
+                'host_ip' : host_ip, 
+                'key_name' : self.ssh_key_name, 
+                'key_path' : self.ssh_key_path, 
             }
 
 
@@ -86,9 +85,8 @@ class DeployHandler(object):
             #Libvirt also needs these kwargs. 
 
             kwargs['flavours'] =  self.va_flavours
-            kwargs['salt_master_fqdn'] = salt_master_fqdn
 
-            self.drivers += [x(**kwargs) for x in century_link.CenturyLinkDriver, libvirt_driver.LibVirtDriver]
+            self.drivers += [x(**kwargs) for x in (century_link.CenturyLinkDriver, libvirt_driver.LibVirtDriver)]
 
         raise tornado.gen.Return(self.drivers)
 

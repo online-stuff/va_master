@@ -7,6 +7,7 @@ from watchdog.events import FileSystemEventHandler
 from tornado.httpclient import AsyncHTTPClient, HTTPRequest
 #from . import status, login, hosts, apps, panels
 from . import url_handler
+from login import get_current_user
 import json, datetime, syslog
 
 #This will probably not be used anymore, keeping it here for reasons. 
@@ -21,6 +22,7 @@ class ApiHandler(tornado.web.RequestHandler):
         self.paths = url_handler.gather_paths()
 
     def json(self, obj, status=200):
+        print ('I am in json')
         self.set_header('Content-Type', 'application/json')
         self.set_status(status)
         self.write(json.dumps(obj))
@@ -29,16 +31,30 @@ class ApiHandler(tornado.web.RequestHandler):
     @tornado.gen.coroutine
     def exec_method(self, method, path, data):
         self.data = data
-        try:
-            yield self.paths[method][path](self)
+        try: 
+            user = yield get_current_user(self)
+
+            if not user: 
+                self.json({'success' : False, 'message' : 'User not authenticated properly. ', 'data' : {}})
+            elif user['type'] == 'user' and 'user' not in self.paths.get('user_allowed', []): 
+                self.json({'success' : False, 'message' : 'User does not have appropriate privileges. ', 'data' : {}})
         except: 
             import traceback
             traceback.print_exc()
+        try: 
+            result = yield self.paths[method][path](self)
+            result = {'success' : True, 'message' : '', 'data' : result}
+        except Exception as e: 
+            result = {'success' : True, 'message' : 'There was an error performing a request : ' + e.message, 'data' : {}}
+            import traceback
+            traceback.print_exc()
+        print ('Result is : ', result)
+        self.json(result)
 
     @tornado.gen.coroutine
     def get(self, path):
         args = self.request.query_arguments
-        yield self.exec_method('get', path, {x : args[x][0] for x in args})
+        result = yield self.exec_method('get', path, {x : args[x][0] for x in args})
 
     @tornado.gen.coroutine
     def post(self, path):
@@ -74,9 +90,6 @@ class ApiHandler(tornado.web.RequestHandler):
             'data' : data, 
             'time' : str(datetime.datetime.now()),
         })
-#        message = '[info]Action:type=POST,user=' +  user['username'] + '|type=' +  user['type'] +'|path=' +  path + '|data=' + str(data) + '|time=' + str(datetime.datetime.now())
-
-#        print ('Logging: ', message)
         syslog.syslog(syslog.LOG_INFO | syslog.LOG_LOCAL0, message)
 
 

@@ -149,14 +149,13 @@ BASE_VOLUME_XML = """
 </volume>"""
 
 class LibVirtDriver(base.DriverBase):
-    def __init__(self, flavours, salt_master_fqdn, provider_name = 'libvirt_provider', profile_name = 'libvirt_profile', host_ip = '192.168.80.39', path_to_images = '/etc/libvirt/qemu/', config_path = '/etc/salt/libvirt_configs/', key_name = 'va_master_key', key_path = '/root/va_master_key'):
+    def __init__(self, flavours, provider_name = 'libvirt_provider', profile_name = 'libvirt_profile', host_ip = '192.168.80.39', path_to_images = '/etc/libvirt/qemu/', config_path = '/etc/salt/libvirt_configs/', key_name = 'va_master_key', key_path = '/root/va_master_key'):
         """
             Custom init for libvirt. Does not work with saltstack, so a lot of things have to be done manually. 
 
             Arguments
 
             flavours -- A list of "flavours" defined so it can work similar to OpenStack. A flavour is just a dictionary with some values which are used to create instances. Flavours are saved in the datastore, and the deploy_handler manages them. 
-            salt_master_fqdn -- The fqdn of the salt master, for instance 'my.domain'. 
 
             The rest are similar to the Base driver arguments. 
 
@@ -176,7 +175,6 @@ class LibVirtDriver(base.DriverBase):
         self.config_path = config_path
         self.path_to_images = path_to_images
         self.flavours = flavours
-        self.salt_master_fqdn = salt_master_fqdn
         self.config_drive = CONFIG_DRIVE
 
         self.libvirt_states = ['no_state', 'ACTIVE', 'blocked', 'PAUSED', 'shutdown', 'SHUTOFF', 'crashed', 'SUSPENDED']
@@ -465,7 +463,9 @@ class LibVirtDriver(base.DriverBase):
             devices.remove(devices[1])
 
         domain_iso_disk = [x for x in tree.find('devices').findall('disk') if x.get('device') == 'cdrom'][0]
-        domain_iso_disk.find('source').attrib['file'] = self.config_path  + iso_name
+
+        #Patekata mu e kaj pool-ot kaj sto e uploadiran volume 08.02.2017
+        domain_iso_disk.find('source').attrib['file'] = '/var/lib/libvirt/images/' + iso_name #self.config_path  + iso_name
 
 
         mac = tree.find('devices').find('interface').find('mac')
@@ -582,7 +582,7 @@ class LibVirtDriver(base.DriverBase):
             'VAR_PUBLIC_KEY' : '\n'.join([' ' * 4 + line for line in pub_key.split('\n')]),
             'VAR_PRIVATE_KEY' : '\n'.join([' ' * 4 + line for line in pri_key.split('\n')]),
             'VAR_INSTANCE_FQDN' : data['instance_name'],
-            'VAR_MASTER_FQDN' : self.salt_master_fqdn
+            'VAR_MASTER_FQDN' : self.host_ip
         }
 
         for key in config_dict:
@@ -599,7 +599,7 @@ class LibVirtDriver(base.DriverBase):
             }],
             'salt-minion' : {
                 'conf' : {
-                    'master' : self.salt_master_fqdn
+                    'master' : self.host_ip
                 },
                 'public_key' : pub_key,
                 'private_key' : pri_key,

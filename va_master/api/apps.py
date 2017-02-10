@@ -6,7 +6,7 @@ import requests
 import zipfile, tarfile
 
 from salt.client import Caller
-
+import panels
 
 
 def get_paths():
@@ -39,31 +39,31 @@ def add_app(handler):
     app = yield get_app_info(handler)
     yield handler.config.deploy_handler.store_app(app, handler.data['host'])
 
-#@auth_only
+##@auth_only
 @tornado.gen.coroutine
 def get_openvpn_users(handler):
     cl = Caller()
     users = cl.cmd('openvpn.list_users')
     users['active'] = [{'name' : x, 'check' : False, 'connected' : x in users['status']['client_list']} for x in users['active']]
-    handler.json(users)
+    raise tornado.gen.Return(users)
 
 @tornado.gen.coroutine
 def add_openvpn_user(handler):
     cl = Caller()
     success = cl.cmd('openvpn.add_user', username = handler.data['username'])
-    handler.json(success)
+    raise tornado.gen.Return(success)
 
 @tornado.gen.coroutine
 def revoke_openvpn_user(handler):
     cl = Caller()
     success = cl.cmd('openvpn.revoke_user', username = handler.data['username'])
-    handler.json(success)   
+    raise tornado.gen.Return(success)   
 
 @tornado.gen.coroutine
 def list_user_logins(handler): 
     cl = Caller()
     success = cl.cmd('openvpn.list_user_logins', user = handler.data['username'])
-    handler.json(success)
+    raise tornado.gen.Return(success)
 
 @tornado.gen.coroutine
 def download_vpn_cert(handler):
@@ -116,7 +116,7 @@ def manage_states(handler, action = 'append'):
 @tornado.gen.coroutine
 def get_states(handler):
     states_data = yield handler.config.deploy_handler.get_states()
-    handler.json(states_data)
+    raise tornado.gen.Return(states_data)
 
 
 @tornado.gen.coroutine
@@ -172,40 +172,34 @@ def get_app_info(handler):
     raise tornado.gen.Return(instance_info)
 
         
-#@auth_only
+##@auth_only
 @tornado.gen.coroutine
 def launch_app(handler):
-    try: 
-        data = handler.data
-        print ('My data is : ', data)
-        deploy_handler = handler.config.deploy_handler
-        store = deploy_handler.datastore
+    data = handler.data
+    print ('My data is : ', data)
+    deploy_handler = handler.config.deploy_handler
+    store = deploy_handler.datastore
 
 
-        hosts = yield store.get('hosts')
-        required_host = [host for host in hosts if host['hostname'] == data['hostname']][0]
+    hosts = yield store.get('hosts')
+    required_host = [host for host in hosts if host['hostname'] == data['hostname']][0]
 
-        driver = yield deploy_handler.get_driver_by_id(required_host['driver_name'])
-        yield driver.create_minion(required_host, data)
+    driver = yield deploy_handler.get_driver_by_id(required_host['driver_name'])
+    yield driver.create_minion(required_host, data)
 
-        panel = yield deploy_handler.get_states_data()
-        panel = [x for x in panel if x['name'] == data['role']][0]['panels']
-        yield deploy_handler.store_panel(panel['panels'])
-        
+    minion_info = yield get_app_info(handler)
 
+    states = yield store.get('states')
+    state = [x for x in states if x['name'] == data['role']][0]
 
-        minion_info = yield get_app_info(handler)
+    panel = {'panel_name' : handler.data['instance_name'], 'role' : minion_info['role']}
+    panel.update(state['panels'])
+    yield handler.config.deploy_handler.store_panel(panel)
 
-        states = yield store.get('states')
-        state = [x for x in states if x['name'] == data['role']][0]
-
-        required_host['instances'].append(minion_info)
-        yield store.insert('hosts', hosts)
-    except: 
-        import traceback
-        traceback.print_exc()
+    required_host['instances'].append(minion_info)
+    yield store.insert('hosts', hosts)
 
 @tornado.gen.coroutine
 def get_user_actions(handler):
     actions = yield handler.config.deploy_handler.get_actions(int(handler.data.get('no_actions', 0)))
-    handler.json(actions)
+    raise tornado.gen.Return(actions)

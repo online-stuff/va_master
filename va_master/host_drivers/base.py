@@ -140,6 +140,7 @@ class DriverBase(object):
             for var_name in self.profile_vars: 
                 if not (base_profile and var_name == 'VAR_PROFILE_NAME') and self.profile_vars[var_name]: 
                     self.profile_template = self.profile_template.replace(var_name, self.profile_vars[var_name])
+
  
         if not skip_provider: 
             self.field_values['provider_conf'] = self.provider_vars['VAR_PROVIDER_NAME'] 
@@ -351,7 +352,6 @@ class DriverBase(object):
             self.field_values['defaults']['network'] = field_values['network']
             self.field_values['defaults']['sec_group'] = field_values['sec_group']
 
-            print ('My images are : ', self.field_values['images'], ' and my sizes : ', self.field_values['sizes'])
             raise tornado.gen.Return({
                 'errors':[], 'new_step_index':2, 'option_choices':{
                     'image': self.field_values['images'],
@@ -394,7 +394,6 @@ class DriverBase(object):
 
         with open(profile_dir) as f: 
             profile_template = f.read()
-
 
         self.profile_vars['VAR_ROLE'] = data['role']
         self.profile_vars['VAR_IMAGE'] = data['image']

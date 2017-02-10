@@ -163,7 +163,13 @@ class OpenStackDriver(base.DriverBase):
     @tornado.gen.coroutine
     def get_networks(self):
         """ Gets the networks using the get_openstack_value() method. """
-        networks = yield self.get_openstack_value(self.token_data, 'network', 'v2.0/networks')
+
+        tenants = yield self.get_openstack_value(self.token_data, 'identity', 'tenants')
+        tenant = [x for x in tenants['tenants'] if x['name'] == self.field_values['tenant']][0]
+
+        tenant_id = tenant['id']
+
+        networks = yield self.get_openstack_value(self.token_data, 'network', 'v2.0/networks?tenant_id=%s'%(tenant_id))
         networks = ['|'.join([x['name'], x['id']]) for x in networks['networks']]
         raise tornado.gen.Return(networks)
 
@@ -343,14 +349,13 @@ class OpenStackDriver(base.DriverBase):
     def create_minion(self, host, data):
         """ Works properly with the base driver method, but overwritten for bug tracking. """
         try:
-            nova = client.Client('2.0', host['username'], host['password'], host['tenant'], 'http://' + host['host_ip'] + '/v2.0')
+#            nova = client.Client('2', host['username'], host['password'], host['tenant'], 'http://' + host['host_ip'] + '/v2.0')
 #            full_key_path = host['salt_key_path'] + ('/' * host['salt_key_path'][-1] != '/') + host['salt_key_name'] + '.pub'
-            print ('Full path is : ', self.key_path)
-            f = ''
-            with open(self.key_path) as f: 
-                key = f.read()
-            print ('Got key! ', key)
-            keypair = nova.keypairs.create(self.key_name, key)
+#            f = ''
+#            with open(self.key_path + '.pub') as f: 
+#                key = f.read()
+#            keypair = nova.keypairs.create(name = self.key_name, public_key = key)
+#            print ('Creating instance!')
             yield super(OpenStackDriver, self).create_minion(host, data)
         except:
             import traceback

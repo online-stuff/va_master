@@ -15,7 +15,7 @@ PROVIDER_TEMPLATE = ""
 PROFILE_TEMPLATE = "" 
 
 class CenturyLinkDriver(base.DriverBase):
-    def __init__(self, flavours, salt_master_fqdn, provider_name = 'century_link_provider', profile_name = 'century_link__profile', host_ip = '192.168.80.39', key_name = 'va_master_key', key_path = '/root/va_master/va_master_key/'):
+    def __init__(self, flavours, provider_name = 'century_link_provider', profile_name = 'century_link__profile', host_ip = '192.168.80.39', key_name = 'va_master_key', key_path = '/root/va_master/va_master_key/'):
         """
             Works ok atm but needs more stuff in the future. Namely, we need the following: 
                 - A way to get usage statistics. No option for this yet in the python API, so I may need to check out the REST API. 
@@ -108,7 +108,7 @@ class CenturyLinkDriver(base.DriverBase):
 
         servers_list = self.datacenter.Groups().Get(host['defaults']['sec_group']).Servers().Servers()
         print [x.data['details']['hostName'] for x in servers_list]
-        server = [x for x in servers_list if x.data['details']['hostName'] == instance_name] or [None]
+        server = [x for x in servers_list if x.data['details']['hostName'] == instance_name or x.id == instance_name] or [None]
         server = server[0]
         if not server: 
             print ('Did not find serverw with name: ', instance_name)
@@ -133,6 +133,16 @@ class CenturyLinkDriver(base.DriverBase):
 #        success = instance_action[action](instance_name)
         raise tornado.gen.Return({'success' : True, 'message' : ''})
 
+    @tornado.gen.coroutine
+    def get_host_billing(self, host):
+        get_datacenter(self, location)
+        group = self.datacenter.Groups().Get(host['defaults']['sec_group'])
+
+        billing_link = [x for x in clc.v2.API.Call(group.data['links']) if 'billing' in x['rel']]
+        billing_info = clc.v2.API.Call('get', billing_link['href'])
+        bililng_info = billing_info['groups'].values()[0]
+
+        raise tornado.gen.Return({'success' : True, 'message' : billing_info})
 
     @tornado.gen.coroutine
     def get_instances(self, host):
@@ -167,6 +177,12 @@ class CenturyLinkDriver(base.DriverBase):
         try:
             clc.v2.SetCredentials(host['username'], host['password'])
             self.get_datacenter(host['location'])
+            group = self.datacenter.Groups().Get(host['defaults']['sec_group'])
+
+            group_stats_link = [x for x in group.data['links'] if x['rel'] == 'statistics'][0]
+            group_stats = clc.v2.API.Call('get', group_stats_link['href'] + '?type=latest')
+            #TODO do stuff with group_stats
+
             self.account = clc.v2.Account()
             instances = yield self.get_instances(host)
             host_data = {
@@ -302,8 +318,6 @@ class CenturyLinkDriver(base.DriverBase):
               "type": "standard",
               "storageType": "standard",
             }
-            if data.get('primary_dns'): 
-                server_data['primaryDns'] = data['primary_dns']
             if data.get('storage'): 
                 server_data['additionalDisks'] = [
                     {
@@ -313,15 +327,10 @@ class CenturyLinkDriver(base.DriverBase):
                     }
                 ]
 
+            #Extra args are usually supplied by external applications. 
+            server_data.update(data.get('extra_args', {}))
+
             success = clc.v2.API.Call('post', 'servers/%s' % (self.account.alias), json.dumps(server_data), debug = True).WaitUntilComplete()
-#            success = clc.v2.Server.Create(
-#                name = data['instance_name'], 
-#                template = self.datacenter.Templates().Get(data['image']).id, 
-#                group_id = self.datacenter.Groups().Get(data['sec_group']).id,
-#                network_id = self.datacenter.Networks().Get(data['network']).id,
-#                cpu = flavour['num_cpus'], 
-#                memory = flavour['vol_capacity'], 
-#            )
             print ('Result was : ', success)
         except: 
             import traceback

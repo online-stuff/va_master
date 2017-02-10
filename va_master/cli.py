@@ -11,6 +11,7 @@ import subprocess
 import distutils
 import traceback
 import functools
+import imp
 
 consul_conf_path = '/etc/consul.json'
 
@@ -77,29 +78,24 @@ def handle_init(args):
     """Handles cli `start` command. Should write proper conf and start daemon."""
     # If optional arguments weren't specified, interactively ask.
     attrs = [
-        ('ip', 'Enter the IPv4 addr. of this machine'),
-        ('admin_user', 'Enter username for the first admin'),
-        ('admin_pass', 'Enter password for the first admin'), 
-        ('salt_master_fqdn', 'Enter the fqdn for the salt master'),
-        ('salt_key_path', 'Enter the path to the salt key. '), 
-        ('salt_key_name', 'Enter the name of the salt key. '), 
-        ('host_vpn_endpoint', 'Enter the VPN endpoint. Will default to vpn.<salt_master_fqdn>' ),
-        ('company_name', 'The name of Your company. It will be used in the VPN certifiates. ')
+        ('company-name', 'The name of Your company. It will be used in the VPN certifiates [VapourApps cloud] '),
+        ('domain_name', 'Enter the default domain name for this installation [va.mk]'),
+        ('ip', 'Enter an IP address of FQDN [master.va.mk]'),
+        ('admin-user', 'Enter username for the first admin [admin]'),
+        ('admin-pass', 'Enter password for the first admin [admin]'),
+        ('vpn-port', 'Enter the OpenVPN port accesible from Internet to this host [8443]'),
     ]
     values = {}
-    
-    if args.skip_args: 
+   
+    if args.get('skip_args'): 
         cli_info('Setting up the va_master module without prompting for arguments. If this is the first time you are setting up the environment, you might want to make sure you enter all arguments or run init again without skip_args. ')
 
     for attr in attrs:
         name = attr[0]
         cmdhelp = attr[1]
-        values[name] = getattr(args, name)
-        if (values[name] is None) and not args.skip_args: # The CLI `args` doesn't have it, ask.
+        values[name] = args.get(name)
+        if (values[name] is None) and not args.get('skip_args'): # The CLI `args` doesn't have it, ask.
             values[name] = raw_input('%s: ' % cmdhelp)
-
-    if not values['host_vpn_endpoint'] and values['salt_master_fqdn']: 
-        values['host_vpn_endpoint'] = 'vpn.' + values['salt_master_fqdn']
 
     values = {k: v for k, v in values.items() if v}
     result = True # If `result` is True, all actions completed successfully
@@ -134,11 +130,9 @@ def handle_init(args):
             traceback.print_exc()
             sys.exit(1)
 
-
         from .api import login
         cli_config = config.Config(init_vals = values)
 
-#        from . import datastore
         store = cli_config.datastore
         run_sync = tornado.ioloop.IOLoop.instance().run_sync
         attempts, failed = 1, True
@@ -156,69 +150,63 @@ def handle_init(args):
             cli_error('Store connection timeout after %i attempts.' \
                 % attempts)
             sys.exit(1)
-        else:
 
-            try:
-                cli_info('Trying to start VPN. ')
-                if values.get('host_vpn_endpoint'): 
-                    cli_environment.write_vpn_pillar(values['host_vpn_endpoint']) 
-                cli_success('VPN is running. ')
-            except: 
-                cli_error('Failed to start VPN. Error was : ')
-                import traceback
-                traceback.print_exc()
-
- 
-            # We have a connection, create an admin account
-            if values.get('admin_user') and values.get('admin_pass'): 
-                create_admin = functools.partial(login.create_admin,
-                    store, values['admin_user'], values['admin_pass'])
-                create_admin_run = run_sync(create_admin)
-
-            states_data = run_sync(functools.partial(cli_config.deploy_handler.get_states_data))
-            values.update({'states' : states_data})
+        try:
+            cli_info('Trying to start VPN. ')
+            cli_environment.write_vpn_pillar(values['ip']) 
+            cli_success('VPN is running. ')
+        except: 
+            cli_error('Failed to start VPN. Error was : ')
+            import traceback
+            traceback.print_exc()
 
 
-            try:
-                store_config = run_sync(functools.partial(store.get, 'init_vals')) or {}
-            except: 
-                store_config = {}
+        # We have a connection, create an admin account
+        if values.get('admin-user') and values.get('admin-pass'): 
+            create_admin = functools.partial(login.create_admin,
+                store, values['admin-user'], values['admin-pass'])
+            create_admin_run = run_sync(create_admin)
+            print create_admin_run
 
-            store_config.update(generate_store_config(values))
-            
+        states_data = run_sync(functools.partial(cli_config.deploy_handler.get_states_data))
+        values.update({'states' : states_data})
+
+
+        try:
+            store_config = run_sync(functools.partial(store.get, 'init_vals')) or {}
+        except: 
+            store_config = {}
+
+        store_config.update(generate_store_config(values))
+        
 #            store_config = run_sync(functools.partial(store.insert, 'init_vals', store_config))
-            run_sync(functools.partial(store.insert, 'init_vals', store_config))
+        run_sync(functools.partial(store.insert, 'init_vals', store_config))
 
-            try:
-                panels = run_sync(functools.partial(store.get, 'panels')) or {'admin' : [], 'user' : []}
+        try:
+            panels = run_sync(functools.partial(store.get, 'panels')) or {'admin' : [], 'user' : []}
+        except: 
+            run_sync(functools.partial(store.insert, 'panels', {'admin' : [], 'user' :[]}))
+
+
+        #Generate an ssh-key
+        try: 
+            try: 
+                os.mkdir(store_coonfig.ssh_key_path)
             except: 
-                run_sync(functools.partial(store.insert, 'panels', {'admin' : [], 'user' :[]}))
+                pass
+            key_full_path = cli_config.ssh_key_path + cli_config.ssh_key_name
 
+            ssh_cmd = ['ssh-keygen', '-t', 'rsa', '-f', key_full_path, '-N', '']
 
-            #Generate an ssh-key
-            if values.get('salt_key_path') and values.get('salt_key_name'): 
-                values['salt_key_path'] = values['salt_key_path'] + '/' * (values['salt_key_path'][-1] != '/')
-                try: 
-                    try: 
-                        os.mkdir(values['salt_key_path'])
-#                        os.mkdir('/root/va_master_key')
-                    except: 
-                        pass
-                    key_full_path = values['salt_key_path'] + values['salt_key_name']
+            subprocess.call(ssh_cmd)
+            subprocess.call(['mv', key_full_path, key_full_path + '.pem'])
+        except: 
+            import traceback
+            print ('Could not generate a key. Probably already exists. ')
+            traceback.print_exc()
 
-                    ssh_cmd = ['ssh-keygen', '-t', 'rsa', '-f', key_full_path, '-N', '']
-
-#                    ssh_cmd = ['ssh-keygen', '-t', 'rsa', '-f', '/root/va_master_key/va_master_key_name', '-N', '']
-
-                    subprocess.call(ssh_cmd)
-                    subprocess.call(['mv', key_full_path, key_full_path + '.pem'])
-                except: 
-                    import traceback
-                    print ('Could not generate a key. Probably already exists. ')
-                    traceback.print_exc()
-
-            cli_success('Created first account. Setup is finished.')
-            cli_config.init_handler(init_vals = values)
+        cli_success('Created first account. Setup is finished.')
+        cli_config.init_handler(init_vals = values)
 
 
 def handle_jsbuild(args):
@@ -235,21 +223,56 @@ def handle_jsbuild(args):
         cli_success(('Compiled JS using the command `node %s`, into `' + \
             'dashboard/static/*`') % build_path)
 
+
+def handle_add_module(args):
+    file_path = args.module_path
+    file_name = file_path.split('/')[-1]
+    file_contents = ''
+    with open(file_path, 'r') as f: 
+        file_contents = f.read()
+    cli_info('Read file ' + file_path)
+
+    try: 
+        new_module = imp.load_source(file_name, file_path)
+        cli_info('Imported module. Checking for get_paths()')
+        
+        paths = getattr(new_module, 'get_paths')()
+        paths_list = {}
+
+        for key in ['get', 'post', 'delete', 'put']: 
+            paths_list.update(paths.get(key, {}))
+
+        for path in paths_list: 
+            if not callable(paths_list[path]): 
+                raise Exception('Attribute ' +  str(paths_list[path]) + ' is not callable. ')
+    except Exception as e: 
+        cli_error('Error adding module: ' + e.message)
+        return
+        #TODO more checks. 
+    cli_success('Module looks fine. Adding to api. ')
+
+    va_path = '/'.join((os.path.realpath(__file__).split('/')[:-1]))
+    api_path = os.path.join(va_path, 'api/')
+    with open(api_path + file_name, 'w') as f: 
+        f.write(file_contents)
+    cli_success('Module copied to : ' + api_path + file_name)
+        
+    
+
+
+
 def entry():
     parser = argparse.ArgumentParser(description='A VapourApps client interface')
     subparsers = parser.add_subparsers(help='action')
 
     init_sub = subparsers.add_parser('init', help='Initializes and starts server')
-    
     expected_args = [
-        ('ip', 'Enter the IPv4 addr. of this machine'),
-        ('admin-user', 'Enter username for the first admin'),
-        ('admin-pass', 'Enter password for the first admin'), 
-        ('salt-master_fqdn', 'Enter the fqdn for the salt master'),
-        ('salt-key-path', 'Enter the path to the salt key. '), 
-        ('salt-key-name', 'Enter the name of the salt key. '), 
-        ('host-vpn-endpoint', 'Enter the VPN endpoint. Will default to vpn.<salt_master_fqdn>' ),
-        ('company-name', 'The name of Your company. It will be used in the VPN certifiates. ')
+        ('company-name', 'The name of Your company. It will be used in the VPN certifiates [VapourApps cloud] '),
+        ('domain_name', 'Enter the default domain name for this installation [va.mk]'),
+        ('ip', 'Enter an IP address of FQDN [master.va.mk]'),
+        ('admin-user', 'Enter username for the first admin [admin]'),
+        ('admin-pass', 'Enter password for the first admin [admin]'),
+        ('vpn-port', 'Enter the OpenVPN port accesible from Internet to this host [8443]'),
     ]
     for arg in expected_args: 
         init_sub.add_argument('--' + arg[0], help = arg[1])
@@ -265,15 +288,22 @@ def entry():
     stop_sub = subparsers.add_parser('stop', help='Stops the server')
     stop_sub.set_defaults(sub='stop')
 
+    add_module = subparsers.add_parser('add_module', help='Adds an api module. Check the documentation on how to write api modules. ')
+    add_module.add_argument('--module-path', help = 'Path to the python module. ')
+
+    add_module.set_defaults(sub='add_module')
+
+
     args = parser.parse_args()
     # Define handlers for each subparser
     handlers = {
         'init': handle_init,
         'jsbuild': handle_jsbuild,
+        'add_module' : handle_add_module,
         'stop': lambda x: None
     }
     # Call the proper handler based on the subparser argument
-    handlers[args.sub](args)
+    handlers[args.sub](vars(args))
 
 if __name__ == '__main__': 
     entry()
