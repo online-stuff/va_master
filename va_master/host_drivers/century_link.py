@@ -174,6 +174,9 @@ class CenturyLinkDriver(base.DriverBase):
     @tornado.gen.coroutine
     def get_host_data(self, host):
         """ Gets instances properly, but doesn't yet get host_usage. """
+        import time
+        print ('Century link timer started. ')
+        t0 = time.time()
         try:
             clc.v2.SetCredentials(host['username'], host['password'])
             self.get_datacenter(host['location'])
@@ -212,6 +215,7 @@ class CenturyLinkDriver(base.DriverBase):
                 'status' : {'success' : False, 'message' : 'Could not connect to the libvirt host. ' + e.message}
             }
             raise tornado.gen.Return(host_data)
+        print ('Century link took ', time.time() - t0)
         raise tornado.gen.Return(host_data)
 
     @tornado.gen.coroutine
