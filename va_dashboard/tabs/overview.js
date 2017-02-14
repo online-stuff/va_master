@@ -74,7 +74,7 @@ var Overview = React.createClass({
             return {auth: state.auth};
         })(Host);
         var LogRedux = connect(function(state){
-            return {auth: state.auth};
+            return {auth: state.auth, alert: state.alert};
         })(Log);
         var host_rows = this.state.hosts.map(function(host) {
             return <HostRedux key={host.hostname} title={host.hostname} chartData={host.instances} instances={host.instances.length} host_usage={host.host_usage} />;
@@ -177,9 +177,7 @@ var DoughnutComponent = React.createClass({
 
 var Log = React.createClass({
     getInitialState: function () {
-        return {logs: [
-            ]
-        }
+        return {logs: [{facility: '', host: '', message: '', severity: '', 'syslog-tag': '', timestamp: ''}] }
     },
     componentDidMount: function () {
         var host = window.location.host;
@@ -189,9 +187,28 @@ var Log = React.createClass({
             ws.send("Hello, world");
         };
         ws.onmessage = function (evt) {
-            var data = evt.data;
-            data.concat(me.state.logs);
-            me.setState({logs: data});
+            var data = JSON.parse(evt.data), result = [];
+            if(Array.isArray(data)){
+                result = data.filter(function(d) {
+                    if(d.length > 0){
+                        return true;
+                    }
+                    return false;
+                }).map(function(d) {
+                    return JSON.parse(d);
+                });
+            }else if(typeof data === "string"){
+                try {
+                    result = [JSON.parse(data)];
+                } catch(e) {
+                    me.props.dispatch({type: 'SHOW_ALERT', msg: "Log has invalid format."});
+                }
+            }else{
+                me.props.dispatch({type: 'SHOW_ALERT', msg: "Log has invalid format."});
+            }
+            console.log(result);
+            if(result.length > 0)
+                me.setState({logs: me.state.logs.concat(result)});
         };
         ws.onerror = function(evt){
             console.log(evt);
@@ -200,7 +217,7 @@ var Log = React.createClass({
     render: function() {
         var log_rows = this.state.logs.map(function(log, i) {
             return (
-                <div key={i}>{log}</div>
+                <div key={i} className="logs">{log.facility + " " + log.host + " " + log.message + " " + log.severity + " " + log['syslog-tag'] + " " + log.timestamp}</div>
             );
         });
         return (
