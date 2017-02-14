@@ -37,6 +37,8 @@ var Vpn = React.createClass({
         Network.get('/api/apps/vpn_users', this.props.auth.token).done(function (data) {
             me.setState({active: data.active});
             me.setState({revoked: data.revoked});
+        }).fail(function (msg) {
+            me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
         });
     },
 
@@ -50,6 +52,7 @@ var Vpn = React.createClass({
 
     btn_clicked: function(username, evtKey){
         var data = {username: username};
+        var me = this;
         switch (evtKey) {
             case "download":
                 Network.post("/api/apps/download_vpn_cert", this.props.auth.token, data).done(function(d) {
@@ -59,14 +62,18 @@ var Vpn = React.createClass({
                     tempLink.href = url;
                     tempLink.setAttribute('download', 'certificate.txt');
                     tempLink.click();
+                }).fail(function (msg) {
+                    me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
                 });
                 break;
             case "revoke":
                 Network.post("/api/apps/revoke_vpn_user", this.props.auth.token, data).done(function(d) {
                     if(d === true){
-                        this.setState({revoked: this.state.revoked.concat([username])});
+                        me.setState({revoked: me.state.revoked.concat([username])});
                     }
-                }.bind(this));
+                }).fail(function (msg) {
+                    me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
+                });
                 break;
             case "list":
                 Router.hashHistory.push('/vpn/list_logins/' + username);
@@ -125,7 +132,7 @@ var Vpn = React.createClass({
         });
 
         var ModalRedux = connect(function(state){
-            return {auth: state.auth, modal: state.modal};
+            return {auth: state.auth, modal: state.modal, alert: state.alert};
         })(Modal);
 
         return (
@@ -208,6 +215,8 @@ var Modal = React.createClass({
                 me.props.addVpn(data['username']);
             }
             me.props.dispatch({type: 'CLOSE_MODAL'});
+        }).fail(function (msg) {
+            me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
         });
     },
 
@@ -242,7 +251,7 @@ var Modal = React.createClass({
 });
 
 Vpn = connect(function(state){
-    return {auth: state.auth};
+    return {auth: state.auth, alert: state.alert};
 })(Vpn);
 
 module.exports = Vpn;

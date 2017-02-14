@@ -11,9 +11,12 @@ var Appp = React.createClass({
 
     getHostInfo: function() {
         var data = {hosts: []};
+        var me = this;
         Network.post('/api/hosts/info', this.props.auth.token, data).done(function(data) {
-            this.setState({hosts: data});
-        }.bind(this));
+            me.setState({hosts: data});
+        }).fail(function (msg) {
+            me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
+        });
     },
 
     componentDidMount: function () {
@@ -30,7 +33,11 @@ var Appp = React.createClass({
         Network.post('/api/apps/action', this.props.auth.token, data).done(function(d) {
             Network.post('/api/hosts/info', me.props.auth.token, {hosts: []}).done(function(data) {
                 me.setState({hosts: data});
+            }).fail(function (msg) {
+                me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
             });
+        }).fail(function (msg) {
+            me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
         });
     },
 
@@ -73,7 +80,7 @@ var Appp = React.createClass({
         }
 
         var AppFormRedux = connect(function(state){
-            return {auth: state.auth, apps: state.apps};
+            return {auth: state.auth, apps: state.apps, alert: state.alert};
         })(AppForm);
 
         return (
@@ -122,6 +129,8 @@ var AppForm = React.createClass({
                     me.setState({host_usage: {cpu: host_usage.used_cpus, maxCpu: host_usage.max_cpus, ram: host_usage.used_ram, maxRam: host_usage.max_ram, disk: host_usage.used_disk, maxDisk: host_usage.max_disk, instances: host_usage.used_instances, maxInstances: host_usage.max_instances}});
                 }
             }
+        }).fail(function (msg) {
+            me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
         });
         Network.get('/api/states', this.props.auth.token).done(function (data) {
             me.setState({states: data});
@@ -130,6 +139,8 @@ var AppForm = React.createClass({
             }else{
                 me.setState({role: data[0].name});
             }
+        }).fail(function (msg) {
+            me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
         });
     },
 
@@ -332,6 +343,8 @@ var AppForm = React.createClass({
                 me.setState({status: 'launched'});
                 me.props.getHostInfo();
             }, 2000);
+        }).fail(function (msg) {
+            me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
         });
     }
 });
@@ -352,7 +365,7 @@ var Stats = React.createClass({
 });
 
 Apps = connect(function(state){
-    return {auth: state.auth, apps: state.apps};
+    return {auth: state.auth, apps: state.apps, alert: state.alert};
 })(Appp);
 
 module.exports = Apps;

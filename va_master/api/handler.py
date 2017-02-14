@@ -43,7 +43,7 @@ class ApiHandler(tornado.web.RequestHandler):
                 traceback.print_exc()
         try: 
             result = yield api_func(self)
-#            result = {'success' : True, 'message' : '', 'data' : result}
+            result = {'success' : True, 'message' : '', 'data' : result}
         except Exception as e: 
             result = {'success' : True, 'message' : 'There was an error performing a request : ' + e.message, 'data' : {}}
             import traceback

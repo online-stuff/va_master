@@ -70,10 +70,14 @@ var Table = React.createClass({
                     data.args = []
                     me.props.dispatch({type: 'REFRESH_DATA', data: data});
                 }
+            }).fail(function (msg) {
+                me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
             });
         }
     },
     render: function () {
+        if(typeof this.props.table.tables[this.props.name] === 'undefined')
+            return null;
         var cols = Object.keys(this.props.table.tables[this.props.name].source[0]);
         var action_col = false;
         if(this.props.hasOwnProperty('actions')){
@@ -157,6 +161,8 @@ var Modal = React.createClass({
             }else{
                 me.props.dispatch({type: 'CLOSE_MODAL'});
             }
+        }).fail(function (msg) {
+            me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
         });
     },
 

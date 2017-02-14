@@ -26,6 +26,8 @@ var Panel = React.createClass({
             console.log(data.tbl_source);
             me.props.dispatch({type: 'ADD_DATA', tables: data.tbl_source});
             me.setState({template: data});
+        }).fail(function (msg) {
+            me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
         });
     },
 
@@ -41,10 +43,6 @@ var Panel = React.createClass({
 
     componentWillUnmount: function () {
         this.props.dispatch({type: 'RESET_FILTER'});
-    },
-
-    handleAlertDismiss() {
-        this.props.dispatch({type: 'HIDE_ALERT'});
     },
 
     render: function () {
@@ -77,7 +75,6 @@ var Panel = React.createClass({
                 <Bootstrap.PageHeader>{this.state.template.title} <small>{this.props.params.instance}</small></Bootstrap.PageHeader>
                 {elements}
                 <ModalRedux />
-                {this.props.alert.show && React.createElement(Bootstrap.Alert, {bsStyle: 'danger', onDismiss: this.handleAlertDismiss, className: "messages"}, this.props.alert.msg) }
             </div>
         );
     }

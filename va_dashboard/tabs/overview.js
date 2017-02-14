@@ -45,9 +45,12 @@ var Overview = React.createClass({
     },
     getHosts: function(){
         var data = {hosts: []};
+        var me = this;
         Network.post('/api/hosts/info', this.props.auth.token, data).done(function(data) {
-            this.setState({hosts: data});
-        }.bind(this));
+            me.setState({hosts: data});
+        }).fail(function (msg) {
+            me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
+        });
     },
     render: function() {
         var appblocks;
@@ -210,7 +213,7 @@ var Log = React.createClass({
 });
 
 Overview = connect(function(state) {
-    return {auth: state.auth};
+    return {auth: state.auth, alert: state.alert};
 })(Overview);
 
 module.exports = Overview;
