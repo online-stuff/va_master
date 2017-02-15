@@ -5,7 +5,7 @@ var Network = require('../network');
 var ReactDOM = require('react-dom');
 var widgets = require('./main_components');
 
-var Panel = React.createClass({
+var Subpanel = React.createClass({
     getInitialState: function () {
         return {
             template: {
@@ -22,8 +22,6 @@ var Panel = React.createClass({
         var me = this;
         var data = {'panel': id, 'instance_name': instance};
         console.log(data);
-        console.log('username');
-        console.log(username);
         this.props.dispatch({type: 'CHANGE_PANEL', panel: id, instance: instance});
         Network.get('/api/panels/get_panel', this.props.auth.token, data).done(function (data) {
             console.log(data.tbl_source);
@@ -80,8 +78,8 @@ var Panel = React.createClass({
 
 });
 
-Panel = connect(function(state){
+Subpanel = connect(function(state){
     return {auth: state.auth, panel: state.panel, alert: state.alert, table: state.table};
-})(Panel);
+})(Subpanel);
 
-module.exports = Panel;
+module.exports = Subpanel;
