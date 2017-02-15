@@ -38,7 +38,7 @@ Chart.pluginService.register({
 
 var Overview = React.createClass({
     getInitialState: function () {
-        return {hosts: []};
+        return {hosts: [], loading: true};
     },
     componentWillMount() {
         this.getHosts();
@@ -47,7 +47,7 @@ var Overview = React.createClass({
         var data = {hosts: []};
         var me = this;
         Network.post('/api/hosts/info', this.props.auth.token, data).done(function(data) {
-            me.setState({hosts: data});
+            me.setState({hosts: data, loading: false});
         }).fail(function (msg) {
             me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
         });
@@ -79,9 +79,13 @@ var Overview = React.createClass({
         var host_rows = this.state.hosts.map(function(host) {
             return <HostRedux key={host.hostname} title={host.hostname} chartData={host.instances} instances={host.instances.length} host_usage={host.host_usage} />;
         }.bind(this));
+        const spinnerStyle = {
+            display: this.state.loading ? "block": "none",
+        };
         return (
             <div>
                 <div className="graph-block">
+                    <span className="spinner" style={spinnerStyle} ><i className="fa fa-spinner fa-spin fa-3x" aria-hidden="true"></i></span>
                     {host_rows}
                 </div>
                 <LogRedux />
@@ -206,7 +210,6 @@ var Log = React.createClass({
             }else{
                 me.props.dispatch({type: 'SHOW_ALERT', msg: "Log has invalid format."});
             }
-            console.log(result);
             if(result.length > 0)
                 me.setState({logs: me.state.logs.concat(result)});
         };

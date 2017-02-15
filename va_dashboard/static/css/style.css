@@ -266,7 +266,10 @@ ul.left-menu div{
 }
 
 .graph-block{
+    min-width: 70%;
     width: 70%;
+    padding-right: 5px;
+    min-height: 1px;
     float: left;
 }
 
@@ -286,4 +289,8 @@ ul.left-menu div{
 }
 .logs{
     margin-bottom: 10px;
+}
+.spinner{
+    padding-top: 100px;
+    margin-left: 45%;
 }
