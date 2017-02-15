@@ -5,6 +5,7 @@ var Network = require('../network');
 var ReactDOM = require('react-dom');
 var components = require('./basic_components');
 var Reactable = require('reactable');
+var Router = require('react-router');
 
 var Div = React.createClass({
 
@@ -58,6 +59,8 @@ var Table = React.createClass({
             var modal = this.props.modals[evtKey];
             modal.args = [id];
             this.props.dispatch({type: 'OPEN_MODAL', template: modal});
+        }else if("panels" in this.props){
+            Router.hashHistory.push('/subpanel/' + this.props.panels[evtKey] + '/' + this.props.panel.instance + '/' + id);
         }else{
             var data = {"instance_name": this.props.panel.instance, "action": evtKey, "args": [id]};
             var me = this;

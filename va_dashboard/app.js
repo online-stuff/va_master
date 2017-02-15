@@ -173,6 +173,7 @@ var Hosts = require('./tabs/hosts');
 var Apps = require('./tabs/apps');
 var Store = require('./tabs/store');
 var Panel = require('./tabs/panel');
+var Subpanel = require('./tabs/subpanel');
 var Vpn = require('./tabs/vpn');
 var VpnLogins = require('./tabs/vpn_logins');
 
@@ -189,6 +190,7 @@ var App = React.createClass({
                 <Router.Route path='/vpn' component={Vpn} />
                 <Router.Route path='/vpn/list_logins/:username' component={VpnLogins} />
                 <Router.Route path='/panel/:id/:instance' component={Panel} />
+                <Router.Route path='/subpanel/:id/:instance/:username' component={Subpanel} />
             </Router.Route>
             <Router.Route path='/login' component={Login} />
         </Router.Router>
