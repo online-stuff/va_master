@@ -290,7 +290,18 @@ ul.left-menu div{
 .logs{
     margin-bottom: 10px;
 }
+.app-containter{
+    width: 100%;
+    min-height: 1px;
+    position: relative;
+}
 .spinner{
     padding-top: 100px;
     margin-left: 45%;
+}
+.spinner2{
+    position: absolute;
+    z-index: 1000;
+    top: 150px;
+    left: 45%;
 }

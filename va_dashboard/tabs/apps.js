@@ -6,14 +6,48 @@ var ReactDOM = require('react-dom');
 
 var Appp = React.createClass({
     getInitialState: function () {
-        return {hosts: []};
+        return {host_info: [],
+            loadedHosts: false,
+            loadedStates: false,
+            loadedHostInfo: false,
+            hosts: [],
+            states: [],
+            hostname: "",
+            role: "",
+            defaults: {image: "", network: "", sec_group: "", size: ""},
+            options: {sizes: [], networks: [], images: [], sec_groups: []},
+            host_usage: [{used_cpus: "", max_cpus: "", used_ram: "", max_ram: "", used_disk: "", max_disk: "", used_instances: "", max_instances: ""}]
+        };
     },
 
     getHostInfo: function() {
         var data = {hosts: []};
         var me = this;
         Network.post('/api/hosts/info', this.props.auth.token, data).done(function(data) {
-            me.setState({hosts: data});
+            var host_usage = data.map(function(host) {
+                return host.host_usage;
+            });
+            me.setState({host_info: data, host_usage: host_usage, loadedHostInfo: true});
+        }).fail(function (msg) {
+            me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
+        });
+
+        Network.get('/api/hosts', this.props.auth.token).done(function (data) {
+            var hosts = data.hosts;
+            if(hosts.length > 0){
+                var first_host = hosts[0];
+                me.setState({hosts: hosts, hostname: first_host.hostname, options: {sizes: first_host.sizes, networks: first_host.networks, images: first_host.images, sec_groups: first_host.sec_groups}, defaults: first_host.defaults, loadedHosts: true});
+            }
+        }).fail(function (msg) {
+            me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
+        });
+
+        Network.get('/api/states', this.props.auth.token).done(function (data) {
+            if(me.props.apps.select){
+                me.setState({states: data, role: me.props.apps.select, loadedStates: true});
+            }else{
+                me.setState({states: data, role: data[0].name, loadedStates: true});
+            }
         }).fail(function (msg) {
             me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
         });
@@ -83,9 +117,18 @@ var Appp = React.createClass({
             return {auth: state.auth, apps: state.apps, alert: state.alert};
         })(AppForm);
 
+        var loaded = this.state.loadedHosts && this.state.loadedStates && this.state.loadedHostInfo;
+        const spinnerStyle = {
+            display: loaded ? "none": "block",
+        };
+        const blockStyle = {
+            visibility: loaded ? "visible": "hidden",
+        };
+
         return (
-            <div>
-                <AppFormRedux hosts = {this.state.hosts} getHostInfo = {this.getHostInfo} />
+            <div className="app-containter">
+                <span className="spinner2" style={spinnerStyle} ><i className="fa fa-spinner fa-spin fa-3x"></i></span>
+                <AppFormRedux style={blockStyle} hosts = {this.state.hosts} states = {this.state.states} hostname = {this.state.hostname} role = {this.state.role} defaults = {this.state.defaults} options = {this.state.options} host_usage = {this.state.host_usage} getHostInfo = {this.getHostInfo} onChange = {this.onChange} onChangeRole = {this.onChangeRole} />
                 <Bootstrap.PageHeader>Current apps <small>All specified apps</small></Bootstrap.PageHeader>
                 <Bootstrap.Table striped bordered hover>
                     <thead>
@@ -109,58 +152,17 @@ var Appp = React.createClass({
 
 var AppForm = React.createClass({
     getInitialState: function () {
-        return {status: 'none', progress: 0, hosts: [], states: [], hostname: "", role: "", defaults: {image: "", network: "", sec_group: "", size: ""}, options: {sizes: [], networks: [], images: [], sec_groups: []}, host_usage: {cpu: "", maxCpu: "", ram: "", maxRam: "", disk: "", maxDisk: "", instances: "", maxInstances: ""}};
-    },
-
-    componentDidMount: function () {
-        var me = this;
-        Network.get('/api/hosts', this.props.auth.token).done(function (data) {
-            me.setState({hosts: data.hosts});
-            var host = data.hosts[0].hostname;
-            me.setState({hostname: host});
-            if(data.hosts.length > 0){
-                var first_host = data.hosts[0];
-                me.setState({options: {sizes: first_host.sizes, networks: first_host.networks, images: first_host.images, sec_groups: first_host.sec_groups}});
-                me.setState({defaults: first_host.defaults});
-            }
-            if(me.props.hosts.length > 0){
-                var host_usage = me.props.hosts[0].host_usage;
-                if(Object.keys(host_usage).length > 0){
-                    me.setState({host_usage: {cpu: host_usage.used_cpus, maxCpu: host_usage.max_cpus, ram: host_usage.used_ram, maxRam: host_usage.max_ram, disk: host_usage.used_disk, maxDisk: host_usage.max_disk, instances: host_usage.used_instances, maxInstances: host_usage.max_instances}});
-                }
-            }
-        }).fail(function (msg) {
-            me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
-        });
-        Network.get('/api/states', this.props.auth.token).done(function (data) {
-            me.setState({states: data});
-            if(me.props.apps.select){
-                me.setState({role: me.props.apps.select});
-            }else{
-                me.setState({role: data[0].name});
-            }
-        }).fail(function (msg) {
-            me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
-        });
+        return {status: 'none', progress: 0, hostname: this.props.hostname, options: this.props.options, defaults: this.props.defaults, role: this.props.role, index: 0};
     },
 
     onChange: function(e) {
-        value = e.target.value;
-        this.setState({hostname: value});
-        var i;
-        for(i=0; i < this.state.hosts.length; i++){
-            var host = this.state.hosts[i];
+        var value = e.target.value;
+        for(var i=0; i < this.props.hosts.length; i++){
+            var host = this.props.hosts[i];
             if(host.hostname === value){
-                this.setState({options: {sizes: host.sizes, networks: host.networks, images: host.images, sec_groups: host.sec_groups}});
-                this.setState({defaults: host.defaults});
+                this.setState({hostname: value, options: {sizes: host.sizes, networks: host.networks, images: host.images, sec_groups: host.sec_groups}, defaults: host.defaults, index: i});
                 break;
             }
-        }
-        var host_usage = this.props.hosts[i].host_usage;
-        if(Object.keys(host_usage).length > 0){
-            this.setState({host_usage: {cpu: host_usage.used_cpus, maxCpu: host_usage.max_cpus, ram: host_usage.used_ram, maxRam: host_usage.max_ram, disk: host_usage.used_disk, maxDisk: host_usage.max_disk, instances: host_usage.used_instances, maxInstances: host_usage.max_instances}});
-        }else{
-            this.setState({host_usage: {cpu: "", maxCpu: "", ram: "", maxRam: "", disk: "", maxDisk: "", instances: "", maxInstances: ""}});
         }
     },
 
@@ -185,11 +187,11 @@ var AppForm = React.createClass({
 
         var me = this;
 
-        var host_rows = this.state.hosts.map(function(host, i) {
+        var host_rows = this.props.hosts.map(function(host, i) {
             return <option key = {i}>{host.hostname}</option>
         });
 
-        var state_rows = this.state.states.map(function(state) {
+        var state_rows = this.props.states.map(function(state) {
             if(state.name == me.props.apps.select){
                 return <option key = {state.name} selected>{state.name}</option>
             }else{
@@ -212,7 +214,7 @@ var AppForm = React.createClass({
         });
 
         var network_rows = this.state.options.networks.map(function(network) {
-            if(network.split("|")[1] == me.state.defaults.network){
+            if(network.split("|")[1] == me.props.defaults.network){
                 return <option key = {network} selected>{network}</option>
             }
             return <option key = {network}>{network}</option>
@@ -230,7 +232,7 @@ var AppForm = React.createClass({
         })(Stats);
 
         return (
-            <div className="container">
+            <div className="container" style={this.props.style}>
                 <Bootstrap.Col xs={12} sm={6} md={6} className="app-column">
                     <Bootstrap.PageHeader className="header">Launch new app</Bootstrap.PageHeader>
                     <Bootstrap.Form onSubmit={this.onSubmit} horizontal>
@@ -312,7 +314,7 @@ var AppForm = React.createClass({
                         </div>
                     </Bootstrap.Form>
                 </Bootstrap.Col>
-                <StatsRedux hostname = {this.state.hostname} stats = {this.state.stats} host_usage = {this.state.host_usage} />
+                <StatsRedux hostname = {this.state.hostname} host_usage = {this.props.host_usage[this.state.index]} />
             </div>
         );
     },
@@ -354,10 +356,10 @@ var Stats = React.createClass({
         return (
             <Bootstrap.Col xs={12} sm={6} md={6}>
                 <Bootstrap.PageHeader className="header">{this.props.hostname}</Bootstrap.PageHeader>
-                <label>CPU: </label>{this.props.host_usage.cpu} / {this.props.host_usage.maxCpu}<br/>
-                <label>RAM: </label>{this.props.host_usage.ram} / {this.props.host_usage.maxRam}<br/>
-                <label>DISK: </label>{this.props.host_usage.disk} / {this.props.host_usage.maxDisk}<br/>
-                <label>INSTANCES: </label>{this.props.host_usage.instances} / {this.props.host_usage.maxInstances}<br/>
+                <label>CPU: </label>{this.props.host_usage.used_cpus} / {this.props.host_usage.max_cpus}<br/>
+                <label>RAM: </label>{this.props.host_usage.used_ram} / {this.props.host_usage.max_ram}<br/>
+                <label>DISK: </label>{this.props.host_usage.used_disk} / {this.props.host_usage.max_disk}<br/>
+                <label>INSTANCES: </label>{this.props.host_usage.used_instances} / {this.props.host_usage.max_instances}<br/>
             </Bootstrap.Col>
         );
 
