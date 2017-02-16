@@ -44,9 +44,15 @@ class CenturyLinkDriver(base.DriverBase):
             }
         super(CenturyLinkDriver, self).__init__(**kwargs) 
 
-    def get_datacenter(self, location): 
-        self.datacenter = [x for x in clc.v2.Datacenter.Datacenters() if location in x.location][0]
+    def get_datacenter(self, host): 
+        clc.v2.SetCredentials(host['username'], host['password'])
+        self.datacenter = [x for x in clc.v2.Datacenter.Datacenters() if host['location'] in x.location][0]
         return self.datacenter
+
+    def get_servers_list(self, host):
+        servers_list = self.datacenter.Groups().Get(host['defaults']['sec_group']).Servers().Servers()
+        return servers_list
+       
 
     @tornado.gen.coroutine
     def driver_id(self):
@@ -104,9 +110,9 @@ class CenturyLinkDriver(base.DriverBase):
     def instance_action(self, host, instance_name, action):
         clc.v2.SetCredentials(host['username'], host['password'])
         self.account = clc.v2.Account()
-        self.get_datacenter(host['location'])
+        self.get_datacenter(host)
 
-        servers_list = self.datacenter.Groups().Get(host['defaults']['sec_group']).Servers().Servers()
+        servers_list = self.get_servers_list(host)
         print [x.data['details']['hostName'] for x in servers_list]
         server = [x for x in servers_list if x.data['details']['hostName'] == instance_name or x.id == instance_name] or [None]
         server = server[0]
@@ -135,7 +141,7 @@ class CenturyLinkDriver(base.DriverBase):
 
     @tornado.gen.coroutine
     def get_host_billing(self, host):
-        get_datacenter(self, location)
+        self.get_datacenter(self, host)
         group = self.datacenter.Groups().Get(host['defaults']['sec_group'])
 
         billing_link = [x for x in clc.v2.API.Call(group.data['links']) if 'billing' in x['rel']]
@@ -149,12 +155,11 @@ class CenturyLinkDriver(base.DriverBase):
         """ Gets instances from the group selected when adding the host. """
         try: 
             datacenter = self.datacenter
-        except: 
-            clc.v2.SetCredentials(host['username'], host['password'])
+        except:
             self.account = clc.v2.Account()
-            datacenter = self.datacenter = self.account.PrimaryDatacenter() 
+            datacenter = self.get_datacenter(host)
 
-        servers = datacenter.Groups().Get(host['defaults']['sec_group']).Servers().servers
+        servers = self.get_servers_list(host)
         servers = [x.data for x in servers]
 
         instances =  [{
@@ -179,7 +184,7 @@ class CenturyLinkDriver(base.DriverBase):
         t0 = time.time()
         try:
             clc.v2.SetCredentials(host['username'], host['password'])
-            self.get_datacenter(host['location'])
+            self.get_datacenter(host)
             group = self.datacenter.Groups().Get(host['defaults']['sec_group'])
 
             group_stats_link = [x for x in group.data['links'] if x['rel'] == 'statistics'][0]
@@ -228,6 +233,20 @@ class CenturyLinkDriver(base.DriverBase):
             raise tornado.gen.Return({'success' : False, 'message' : 'Could not connect to host: ' + e.message})
         raise tornado.gen.Return({'success' : True, 'message': ''})
 
+    @tornado.gen.coroutine
+    def server_action(self, host, server_id, action, kwargs):
+        self.get_datacenter(host)
+        servers = self.get_servers_list(host)
+        server = [x for x in servers if x.id == server_id] or [None]
+        server = server[0]
+
+        try: 
+            getattr(server, action)(**kwargs)
+            result = ''
+        except Exception as e: 
+            result = e.message
+        raise tornado.gen.Return({'success' : not result, 'message' : result, 'data' : {}})
+        
 
     @tornado.gen.coroutine
     def get_steps(self):
@@ -305,7 +324,7 @@ class CenturyLinkDriver(base.DriverBase):
         try: 
             clc.v2.SetCredentials(host['username'], host['password'])
             self.account = clc.v2.Account()
-            self.get_datacenter(host['location'])
+            self.get_datacenter(host)
 
             flavour = self.flavours[data['size']]
 

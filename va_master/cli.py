@@ -225,7 +225,7 @@ def handle_jsbuild(args):
 
 
 def handle_add_module(args):
-    file_path = args.module_path
+    file_path = args['module_path']
     file_name = file_path.split('/')[-1]
     file_contents = ''
     with open(file_path, 'r') as f: 
