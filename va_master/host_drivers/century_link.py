@@ -249,6 +249,22 @@ class CenturyLinkDriver(base.DriverBase):
         
 
     @tornado.gen.coroutine
+    def server_add_stats(self, host, server_id, cpu, memory):
+        self.get_datacenter(host)
+        servers = self.get_servers_list(host)
+        server = [x for x in servers if x.id == server_id] or [None]
+        server = server[0]
+        
+
+        try: 
+            server.Change(cpu = server.cpu + cpu, memory = server.memory + memory)
+            result = ''
+        except Exception as e: 
+            result = e.message
+        raise tornado.gen.Return({'success' : not result, 'message' : result, 'data' : {}})
+
+
+    @tornado.gen.coroutine
     def get_steps(self):
         """ Uses the generic get_steps """
         steps = yield super(CenturyLinkDriver, self).get_steps()

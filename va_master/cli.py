@@ -163,10 +163,10 @@ def handle_init(args):
 
         # We have a connection, create an admin account
         if values.get('admin-user') and values.get('admin-pass'): 
-            create_admin = functools.partial(login.create_admin,
-                store, values['admin-user'], values['admin-pass'])
-            create_admin_run = run_sync(create_admin)
-            print create_admin_run
+            create_user = functools.partial(login.create_user,
+                store, values['admin-user'], values['admin-pass'], 'admin')
+            create_user_run = run_sync(create_user)
+#            print create_admin_run
 
         states_data = run_sync(functools.partial(cli_config.deploy_handler.get_states_data))
         values.update({'states' : states_data})
