@@ -7,9 +7,7 @@ var ReactDOM = require('react-dom');
 var Appp = React.createClass({
     getInitialState: function () {
         return {host_info: [],
-            loadedHosts: false,
-            loadedStates: false,
-            loadedHostInfo: false,
+            loaded: false,
             hosts: [],
             states: [],
             hostname: "",
@@ -20,41 +18,35 @@ var Appp = React.createClass({
         };
     },
 
-    getHostInfo: function() {
+    getData: function() {
         var data = {hosts: []};
         var me = this;
-        Network.post('/api/hosts/info', this.props.auth.token, data).done(function(data) {
-            var host_usage = data.map(function(host) {
+        var n1 = Network.post('/api/hosts/info', this.props.auth.token, data).fail(function (msg) {
+            me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
+        });
+        var n2 = Network.get('/api/hosts', this.props.auth.token).fail(function (msg) {
+            me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
+        });
+        var n3 = Network.get('/api/states', this.props.auth.token).fail(function (msg) {
+            me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
+        });
+
+        $.when( n1, n2, n3 ).done(function ( resp1, resp2, resp3 ) {
+            var host_usage = resp1.map(function(host) {
                 return host.host_usage;
             });
-            me.setState({host_info: data, host_usage: host_usage, loadedHostInfo: true});
-        }).fail(function (msg) {
-            me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
-        });
-
-        Network.get('/api/hosts', this.props.auth.token).done(function (data) {
-            var hosts = data.hosts;
-            if(hosts.length > 0){
-                var first_host = hosts[0];
-                me.setState({hosts: hosts, hostname: first_host.hostname, options: {sizes: first_host.sizes, networks: first_host.networks, images: first_host.images, sec_groups: first_host.sec_groups}, defaults: first_host.defaults, loadedHosts: true});
-            }
-        }).fail(function (msg) {
-            me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
-        });
-
-        Network.get('/api/states', this.props.auth.token).done(function (data) {
+            var hosts = resp2.hosts;
+            var first_host = hosts[0];
+            var role = resp3[0].name;
             if(me.props.apps.select){
-                me.setState({states: data, role: me.props.apps.select, loadedStates: true});
-            }else{
-                me.setState({states: data, role: data[0].name, loadedStates: true});
+                role = me.props.apps.select;
             }
-        }).fail(function (msg) {
-            me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
+            me.setState({host_info: resp1, host_usage: host_usage, hosts: hosts, hostname: first_host.hostname, options: {sizes: first_host.sizes, networks: first_host.networks, images: first_host.images, sec_groups: first_host.sec_groups}, defaults: first_host.defaults, states: resp3, role: role, loaded: true});
         });
     },
 
     componentDidMount: function () {
-        this.getHostInfo();
+        this.getData();
     },
 
     componentWillUnmount: function () {
@@ -117,7 +109,7 @@ var Appp = React.createClass({
             return {auth: state.auth, apps: state.apps, alert: state.alert};
         })(AppForm);
 
-        var loaded = this.state.loadedHosts && this.state.loadedStates && this.state.loadedHostInfo;
+        var loaded = this.state.loaded;
         const spinnerStyle = {
             display: loaded ? "none": "block",
         };
@@ -127,8 +119,8 @@ var Appp = React.createClass({
 
         return (
             <div className="app-containter">
-                <span className="spinner2" style={spinnerStyle} ><i className="fa fa-spinner fa-spin fa-3x"></i></span>
-                <AppFormRedux style={blockStyle} hosts = {this.state.hosts} states = {this.state.states} hostname = {this.state.hostname} role = {this.state.role} defaults = {this.state.defaults} options = {this.state.options} host_usage = {this.state.host_usage} getHostInfo = {this.getHostInfo} onChange = {this.onChange} onChangeRole = {this.onChangeRole} />
+                <span className="spinner" style={spinnerStyle} ><i className="fa fa-spinner fa-spin fa-3x"></i></span>
+                <AppFormRedux style={blockStyle} hosts = {this.state.hosts} states = {this.state.states} hostname = {this.state.hostname} role = {this.state.role} defaults = {this.state.defaults} options = {this.state.options} host_usage = {this.state.host_usage} getData = {this.getData} onChange = {this.onChange} onChangeRole = {this.onChangeRole} />
                 <Bootstrap.PageHeader>Current apps <small>All specified apps</small></Bootstrap.PageHeader>
                 <Bootstrap.Table striped bordered hover>
                     <thead>
@@ -343,7 +335,7 @@ var AppForm = React.createClass({
         Network.post('/api/apps', this.props.auth.token, data).done(function(data) {
             setTimeout(function(){
                 me.setState({status: 'launched'});
-                me.props.getHostInfo();
+                me.props.getData();
             }, 2000);
         }).fail(function (msg) {
             me.props.dispatch({type: 'SHOW_ALERT', msg: msg});

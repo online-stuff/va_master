@@ -268,8 +268,9 @@ ul.left-menu div{
 .graph-block{
     min-width: 70%;
     width: 70%;
+    position: relative;
     padding-right: 5px;
-    min-height: 1px;
+    min-height: 300px;
     float: left;
 }
 
@@ -296,12 +297,8 @@ ul.left-menu div{
     position: relative;
 }
 .spinner{
-    padding-top: 100px;
-    margin-left: 45%;
-}
-.spinner2{
     position: absolute;
     z-index: 1000;
-    top: 150px;
+    top: 30%;
     left: 45%;
 }
