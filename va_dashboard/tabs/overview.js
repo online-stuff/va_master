@@ -214,13 +214,14 @@ var Log = React.createClass({
                 me.setState({logs: me.state.logs.concat(result)});
         };
         ws.onerror = function(evt){
-            console.log(evt);
+            me.props.dispatch({type: 'SHOW_ALERT', msg: "Socket error."});
         };
     },
     render: function() {
         var log_rows = this.state.logs.map(function(log, i) {
+            var logClass = log.severity == "warning" ? "text-warning" : (log.severity == "error" || log.severity == "critical" || log.severity == "emergency") ? "text-danger" : "text-info";
             return (
-                <div key={i} className="logs">{log.facility + " " + log.host + " " + log.message + " " + log.severity + " " + log['syslog-tag'] + " " + log.timestamp}</div>
+                <div key={i} className={"logs " + logClass}>{log.facility + " " + log.host + " " + log.message + " " + log.severity + " " + log['syslog-tag'] + " " + log.timestamp}</div>
             );
         });
         return (
