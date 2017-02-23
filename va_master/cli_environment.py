@@ -67,7 +67,7 @@ def write_consul_conf(ip):
     json_conf = {
         'datacenter': 'dc1',
         'data_dir': '/usr/share/consul',
-        'advertise_addr': ip,
+#        'advertise_addr': ip,
         'bootstrap_expect': 1,
         'server': True
     }
