@@ -31,6 +31,7 @@ class ApiHandler(tornado.web.RequestHandler):
     def exec_method(self, method, path, data):
         self.data = data
         api_func = self.paths[method][path]
+        print ('Function is : ', api_func)
         if api_func != user_login: 
             try: 
                 user = yield get_current_user(self)
