@@ -187,7 +187,7 @@ var Log = React.createClass({
         return {logs: [], category: ['info', 'warning', 'danger'] }
     },
     componentDidMount: function () {
-        var host = window.location.host;
+        var host = window.location.hostname;
         var ws = new WebSocket("ws://"+ host +":80/log");
         var me = this;
         ws.onopen = function() {
