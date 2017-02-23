@@ -188,25 +188,21 @@ class DeployHandler(object):
 
     @tornado.gen.coroutine
     def store_panel(self, panel):
-        try: 
-            panels = yield self.datastore.get('panels')
+        panels = yield self.datastore.get('panels')
 
-            
-            role_user_panels = filter(lambda x: x['name'] == panel['role'], panels['user'])[0]
-            if panel['panel_name'] in role_user_panels['instances']: raise tornado.gen.Return()
+        
+        role_user_panels = filter(lambda x: x['name'] == panel['role'], panels['user'])[0]
+        if panel['panel_name'] in role_user_panels['instances']: raise tornado.gen.Return()
 
-            role_user_panels['instances'].append(panel['panel_name'])
+        role_user_panels['instances'].append(panel['panel_name'])
 
-            role_admin_panels = filter(lambda x: x['name'] == panel['role'], panels['admin'])[0]
-            role_admin_panels['instances'].append(panel['panel_name'])
+        role_admin_panels = filter(lambda x: x['name'] == panel['role'], panels['admin'])[0]
+        role_admin_panels['instances'].append(panel['panel_name'])
 
 #            panels['user'][panel['role']] = role_user_panels
 #            panels['admin'][panel['role']] = role_admin_panels
-            print ('New panels are : ', panels)
-            yield self.datastore.insert('panels', panels)
-        except: 
-            import traceback
-            traceback.print_exc()
+        print ('New panels are : ', panels)
+        yield self.datastore.insert('panels', panels)
 
 
     @tornado.gen.coroutine

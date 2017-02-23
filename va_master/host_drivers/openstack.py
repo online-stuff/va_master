@@ -248,6 +248,9 @@ class OpenStackDriver(base.DriverBase):
     @tornado.gen.coroutine
     def get_host_data(self, host):
         """ Gets various data about the host and all the instances using the get_openstack_value() method. Returns the data in the same format as defined in the base driver. """
+        import time
+        print ('Starting timer for OpenStack. ')
+        t0 = time.time()
         try:
             self.token_data = yield self.get_token(host)
 
@@ -295,6 +298,7 @@ class OpenStackDriver(base.DriverBase):
             'host_usage' : host_usage,
             'status' : {'success' : True, 'message': ''}
         }
+        print ('Timer for OpenStack is : ', time.time() - t0)
         raise tornado.gen.Return(host_data)
 
 

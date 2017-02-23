@@ -124,6 +124,9 @@ def create_host(handler):
 
 @tornado.gen.coroutine
 def get_host_info(handler):
+    from time import time
+    print ('Starting timer. ')
+    t0 = time()
     data = handler.data
     deploy_handler = handler.config.deploy_handler
     store = deploy_handler.datastore
@@ -134,14 +137,15 @@ def get_host_info(handler):
     if required_hosts: 
         hosts = [host for host in hosts if host['hostname'] in required_hosts]
 
-    hosts_info = []
-    for host in hosts: 
-        driver = yield deploy_handler.get_driver_by_id(host['driver_name'])
+    host_drivers = yield [deploy_handler.get_driver_by_id(x['driver_name']) for x in hosts]
 
-        info = yield driver.get_host_data(host)
-        info['hostname'] = host['hostname']
+    hosts_data = [x[0].get_host_data(x[1]) for x in zip(host_drivers, hosts)]
+    print ('Yielding data: ', hosts_data)
+    hosts_info = yield hosts_data
+    
+    for info in zip(hosts_info, hosts): 
+        info[0]['hostname'] = info[1]['hostname']
 
-        hosts_info.append(info)
-
+    print ('Info takes : ', time() - t0)
     raise tornado.gen.Return(hosts_info)
 

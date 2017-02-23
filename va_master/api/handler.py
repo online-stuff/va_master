@@ -21,7 +21,7 @@ class ApiHandler(tornado.web.RequestHandler):
         self.paths = url_handler.gather_paths()
 
     def json(self, obj, status=200):
-        print ('I am in json with ', obj)
+#        print ('I am in json with ', obj)
         self.set_header('Content-Type', 'application/json')
         self.set_status(status)
         self.write(json.dumps(obj))
@@ -31,6 +31,7 @@ class ApiHandler(tornado.web.RequestHandler):
     def exec_method(self, method, path, data):
         self.data = data
         api_func = self.paths[method][path]
+        print ('Function is : ', api_func)
         if api_func != user_login: 
             try: 
                 user = yield get_current_user(self)

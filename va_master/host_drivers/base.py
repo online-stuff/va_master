@@ -83,6 +83,8 @@ class DriverBase(object):
             }
            
 
+        self.host_ip = host_ip
+
         self.key_path = key_path + ('/' * (not key_path[-1] == '/')) + key_name
         self.key_name = key_name
 
