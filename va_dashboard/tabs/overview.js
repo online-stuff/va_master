@@ -3,6 +3,7 @@ var connect = require('react-redux').connect;
 var Network = require('../network');
 var Chart = require("react-chartjs-2").Chart;
 var DoughnutChart = require("react-chartjs-2").Doughnut;
+var BarChart = require("react-chartjs-2").Bar;
 var defaults = require("react-chartjs-2").defaults;
 var Bootstrap = require('react-bootstrap');
 
@@ -10,29 +11,31 @@ defaults.global.legend.display = false;
 
 Chart.pluginService.register({
     beforeDraw: function(chart) {
-        var width = chart.chart.width,
-            height = chart.chart.height,
-            ctx = chart.chart.ctx;
+        if(chart.config.type === "doughnut"){
+            var width = chart.chart.width,
+                height = chart.chart.height,
+                ctx = chart.chart.ctx;
 
-        ctx.restore();
-        var fontSize = (height / 114).toFixed(2);
-        ctx.font = fontSize + "em sans-serif";
-        ctx.textBaseline = "middle";
+            ctx.restore();
+            var fontSize = (height / 114).toFixed(2);
+            ctx.font = fontSize + "em sans-serif";
+            ctx.textBaseline = "middle";
 
-        var allData = chart.data.datasets[0].data;
-        var total = 0;
+            var allData = chart.data.datasets[0].data;
+            var total = 0;
 
-        for (var i in allData) {
-            total += allData[i];
+            for (var i in allData) {
+                total += allData[i];
+            }
+            var percentage = Math.round(((total - allData[allData.length-1]) / total) * 100);
+
+            var text = percentage.toString() + "%",
+                textX = Math.round((width - ctx.measureText(text).width) / 2),
+                textY = height / 1.2;
+
+            ctx.fillText(text, textX, textY);
+            ctx.save();
         }
-        var percentage = Math.round(((total - allData[allData.length-1]) / total) * 100);
-
-        var text = percentage.toString() + "%",
-            textX = Math.round((width - ctx.measureText(text).width) / 2),
-            textY = height / 1.2;
-
-        ctx.fillText(text, textX, textY);
-        ctx.save();
     }
 });
 
@@ -181,7 +184,7 @@ var DoughnutComponent = React.createClass({
 
 var Log = React.createClass({
     getInitialState: function () {
-        return {logs: [{facility: '', host: '', message: '', severity: '', 'syslog-tag': '', timestamp: ''}] }
+        return {logs: [], category: ['info', 'warning', 'danger'] }
     },
     componentDidMount: function () {
         var host = window.location.host;
@@ -210,24 +213,146 @@ var Log = React.createClass({
             }else{
                 me.props.dispatch({type: 'SHOW_ALERT', msg: "Log has invalid format."});
             }
-            if(result.length > 0)
-                me.setState({logs: me.state.logs.concat(result)});
+            if(result.length > 0){
+                var logs = result.reverse().concat(me.state.logs);
+                me.setState({logs: logs});
+            }
         };
         ws.onerror = function(evt){
             me.props.dispatch({type: 'SHOW_ALERT', msg: "Socket error."});
         };
     },
     render: function() {
-        var log_rows = this.state.logs.map(function(log, i) {
-            var logClass = log.severity == "warning" ? "text-warning" : (log.severity == "error" || log.severity == "critical" || log.severity == "emergency") ? "text-danger" : "text-info";
+        var times = [], currentDate = new Date(); //"2017-02-21T14:00:14+00:00"
+        var prevHourTs = currentDate.setHours(currentDate.getHours()-1);
+        var logs = this.state.logs;
+        var datasets = [{
+            label: 'info',
+            data: [],
+            backgroundColor: "#31708f",
+            borderColor: "#31708f"
+        }, {
+            label: 'warning',
+            data: [],
+            backgroundColor: "#ffa726",
+            borderColor: "#ffa726"
+        }, {
+            label: 'danger',
+            data: [],
+            backgroundColor: "#a94442",
+            borderColor: "#a94442"
+        }];
+        if(logs.length > 0){
+            var prev_log = logs[0];
+        }
+        var log_rows = logs.map(function(log, i) {
+            var logClass = log.severity == "warning" ? "text-warning" : (log.severity == "err" || log.severity == "critical" || log.severity == "emergency") ? "text-danger" : "text-info";
+            var timestamp = new Date(log.timestamp);
+            if(timestamp.getTime() > prevHourTs){
+                var logLabel = logClass.split('-')[1];
+                var prevTimestamp = new Date(prev_log.timestamp);
+                var category = this.state.category;
+                // groups logs with same hh:mm for the graph
+                if(i > 0 && timestamp.getHours() == prevTimestamp.getHours() && timestamp.getMinutes() == prevTimestamp.getMinutes()){
+                    var index = category.indexOf(logLabel);
+                    datasets[index].data[datasets[index].data.length - 1] += 1;
+                }else{
+                    times.push(timestamp);
+                    for(j=0; j<category.length; j++){
+                        if(category[j] == logLabel){
+                            datasets[j].data.push(1);
+                        }else{
+                            datasets[j].data.push(0);
+                        }
+                    }
+                }
+                if(i > 0){
+                    prev_log = log;
+                }
+            }
+            var hour = timestamp.getHours();
+            var min = timestamp.getMinutes();
+            var sec = timestamp.getSeconds();
             return (
-                <div key={i} className={"logs " + logClass}>{log.facility + " " + log.host + " " + log.message + " " + log.severity + " " + log['syslog-tag'] + " " + log.timestamp}</div>
+                <div key={i} className={"logs " + logClass}>{timestamp.toISOString().slice(0, 10) + " " + hour + ":" + min + ":" + sec + ", " + log.severity + ", " + log.host + ", " + log.message}</div>
             );
-        });
+        }.bind(this));
+        var LogChartRedux = connect(function(state){
+            return {auth: state.auth};
+        })(LogChart);
         return (
             <div className="log-block">
                 <Bootstrap.PageHeader>Log</Bootstrap.PageHeader>
+                <LogChartRedux datasets={datasets} labels={times} minDate={currentDate} />
                 {log_rows}
+            </div>
+        );
+    }
+});
+
+var LogChart = React.createClass({
+    getInitialState: function () {
+        var maxDate = new Date();
+        var maxDateTs = maxDate.setMinutes(maxDate.getMinutes() + 1);
+        return {chartOptions: {
+                    maintainAspectRatio: false,
+                    responsive: true,
+                    scales: {
+                        xAxes: [{
+                            type: 'time',
+                            stacked: true,
+                            display: false,
+                            categoryPercentage: 1.0,
+                            barPercentage: 1.0,
+                            time: {
+                                displayFormats: {
+                                    minute: 'HH:mm',
+                                    hour: 'HH:mm',
+                                    second: 'HH:mm:ss',
+                                },
+                                tooltipFormat: 'DD/MM/YYYY HH:mm',
+                                unit: 'minute',
+                                unitStepSize: 0.5,
+                                min: this.props.minDate,
+                                max: maxDateTs
+                            },
+                            gridLines: {
+                                display:false
+                            }
+                        }],
+                        yAxes: [{
+                            display: false,
+                            stacked: true,
+                            gridLines: {
+                                display:false
+                            }
+                        }]
+                    }
+                }, chartData: {
+                    labels: this.props.labels,
+                    datasets: this.props.datasets
+                }};
+    },
+    componentDidMount: function () {
+        var me = this;
+        this.intervalId = setInterval(function(){
+            var chartOptions = me.state.chartOptions;
+            var mindate = new Date(chartOptions.scales.xAxes[0].time.min);
+            var maxdate = new Date(chartOptions.scales.xAxes[0].time.max);
+            mindate.setMinutes(mindate.getMinutes() + 1);
+            maxdate.setMinutes(maxdate.getMinutes() + 1);
+            chartOptions.scales.xAxes[0].time.min = mindate;
+            chartOptions.scales.xAxes[0].time.max = maxdate;
+            me.setState({chartOptions: chartOptions});
+        }, 60000);
+    },
+    componentWillUnmount: function() {
+        clearInterval(this.intervalId);
+    },
+    render: function() {
+        return (
+            <div>
+                <BarChart data={this.state.chartData} options={this.state.chartOptions} redraw />
             </div>
         );
     }
