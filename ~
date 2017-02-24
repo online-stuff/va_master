@@ -33,28 +33,6 @@ users_dict = {
     }
 }
 
-
-BASE_CONFIG_DRIVE="""#cloud-config
-hostname: VAR_INSTANCE_NAME
-users:
-  - name: root
-    ssh-authorized-keys:
-      - VAR_SSH_KEY
-
-salt_minion:
-  conf:
-    master: VAR_IP
-    grains:
-      role: VAR_ROLE
-  private_key: |
-VAR_PRIVATE_KEY
-  public_key: |
-VAR_PUBLIC_KEY
-"""
-
-
-
-
 PROVIDER_TEMPLATE = ''
 
 PROFILE_TEMPLATE = ''
@@ -197,7 +175,7 @@ class LibVirtDriver(base.DriverBase):
         self.config_path = config_path
         self.path_to_images = path_to_images
         self.flavours = flavours
-        self.config_drive = BASE_CONFIG_DRIVE
+        self.config_drive = CONFIG_DRIVE
 
         self.libvirt_states = ['no_state', 'ACTIVE', 'blocked', 'PAUSED', 'shutdown', 'SHUTOFF', 'crashed', 'SUSPENDED']
 
@@ -283,7 +261,6 @@ class LibVirtDriver(base.DriverBase):
 
         instances = []
         for x in conn.listAllDomains():
-            print ('Trying to get ', x.name)
             instance =  {            
                 'hostname' : x.name(), 
                 'ip' : 'n/a', 
@@ -298,11 +275,9 @@ class LibVirtDriver(base.DriverBase):
             try: 
                 instance['used_disk'] = x.blockInfo('hda')[1] / 2.0**30
             except: 
-                instance['used_disk'] = 0
-#                import traceback
-#                print ('Cannot get used disk for instance : ', x.name())
-#                traceback.print_exc()
-            instances.append(instance)
+                import traceback
+                print ('Cannot get used disk for instance : ', x.name())
+                traceback.print_exc()
 
         raise tornado.gen.Return(instances)
 
@@ -482,17 +457,13 @@ class LibVirtDriver(base.DriverBase):
         devices = tree.find('devices')
         domain_disks = [x for x in devices.findall('disk') if x.get('device') == 'disk']
 
-
-        domain_disks[0].find('source').attrib['file'] = '/var/lib/libvirt/images/' + disks[0]
         if disks[1]: 
             domain_disks[1].find('source').attrib['file'] = '/var/lib/libvirt/images/' + disks[1]
         else: 
             devices.remove(devices[1])
 
         domain_iso_disk = [x for x in tree.find('devices').findall('disk') if x.get('device') == 'cdrom'][0]
-
-        #Patekata mu e kaj pool-ot kaj sto e uploadiran volume 08.02.2017
-        domain_iso_disk.find('source').attrib['file'] = '/var/lib/libvirt/images/' + iso_name #self.config_path  + iso_name
+        domain_iso_disk.find('source').attrib['file'] = self.config_path  + iso_name
 
 
         mac = tree.find('devices').find('interface').find('mac')
@@ -583,8 +554,13 @@ class LibVirtDriver(base.DriverBase):
         config_dir = minion_dir + '/config_drive'
         instance_dir = config_dir + '/openstack/2012-08-10'
 
-        os.makedirs(config_dir)
-        os.makedirs(instance_dir)
+        try: 
+            os.makedirs(config_dir)
+            os.makedirs(instance_dir)
+        except: 
+            print ('Could not create directories. Probably already exist. ')
+            import traceback
+            traceback.print_exc()
 
         yield self.create_salt_key(data['instance_name'], minion_dir)
 
@@ -603,14 +579,13 @@ class LibVirtDriver(base.DriverBase):
         with open(self.key_path + '.pub') as f:
             auth_key = f.read()
 
+
         config_dict = {
-            'VAR_INSTANCE_NAME' : data['instance_name'],
-            'VAR_IP' : self.host_ip, 
-            'VAR_SSH_KEY' : auth_key,
+            'VAR_SSH_AUTH' : auth_key,
             'VAR_PUBLIC_KEY' : '\n'.join([' ' * 4 + line for line in pub_key.split('\n')]),
             'VAR_PRIVATE_KEY' : '\n'.join([' ' * 4 + line for line in pri_key.split('\n')]),
-            'VAR_ROLE' : data['role'],
-#            'VAR_INSTANCE_FQDN' : data['instance_name'],
+            'VAR_INSTANCE_FQDN' : data['instance_name'],
+            'VAR_MASTER_FQDN' : self.host_ip
         }
 
         for key in config_dict:
@@ -633,7 +608,7 @@ class LibVirtDriver(base.DriverBase):
                 'private_key' : pri_key,
             }
         }
-#        self.config_drive = yaml.safe_dump(users_dict)
+        self.config_drive = yaml.safe_dump(users_dict)
 
         with open(instance_dir + '/meta_data.json', 'w') as f:
             f.write(json.dumps({'uuid' : data['instance_name']}))
