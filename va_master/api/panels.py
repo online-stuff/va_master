@@ -53,7 +53,7 @@ def panel_action_execute(handler):
 
     args = handler.data.get('args', [])
 
-    states = yield handler.config.deploy_handler.datastore.get('states')
+    states = yield handler.config.deploy_handler.get_states()
     state = [x for x in states if x['name'] == state][0]
 
     result = cl.cmd(instance, state['module'] + '.' + action , args)
