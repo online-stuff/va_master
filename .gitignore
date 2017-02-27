@@ -10,3 +10,4 @@ aws_images
 openstack_env_vars.sh
 dist/
 build/
+va_master/api/evo.py

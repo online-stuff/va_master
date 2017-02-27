@@ -30,6 +30,9 @@ class ApiHandler(tornado.web.RequestHandler):
     @tornado.gen.coroutine
     def exec_method(self, method, path, data):
         self.data = data
+        print ('my data is : ', self.data)
+        self.data['method'] = method
+        print ('my data is now : ', self.data)
         api_func = self.paths[method][path]
         print ('Function is : ', api_func)
         if api_func != user_login: 
@@ -44,7 +47,7 @@ class ApiHandler(tornado.web.RequestHandler):
                 traceback.print_exc()
         try: 
             result = yield api_func(self)
-#            result = {'success' : True, 'message' : '', 'data' : result}
+            result = {'success' : True, 'message' : '', 'data' : result}
         except Exception as e: 
             result = {'success' : True, 'message' : 'There was an error performing a request : ' + e.message, 'data' : {}}
             import traceback
@@ -54,6 +57,7 @@ class ApiHandler(tornado.web.RequestHandler):
     @tornado.gen.coroutine
     def get(self, path):
         args = self.request.query_arguments
+        print ('My args are : ', args)
         result = yield self.exec_method('get', path, {x : args[x][0] for x in args})
 
     @tornado.gen.coroutine
