@@ -176,6 +176,7 @@ var Panel = require('./tabs/panel');
 var Subpanel = require('./tabs/subpanel');
 var Vpn = require('./tabs/vpn');
 var VpnLogins = require('./tabs/vpn_logins');
+var ChartPanel = require('./tabs/chart_panel');
 
 var Login = require('./login');
 var App = React.createClass({
@@ -191,6 +192,7 @@ var App = React.createClass({
                 <Router.Route path='/vpn/list_logins/:username' component={VpnLogins} />
                 <Router.Route path='/panel/:id/:instance' component={Panel} />
                 <Router.Route path='/subpanel/:id/:instance/:username' component={Subpanel} />
+                <Router.Route path='/chart_panel/:instance/:host/:service' component={ChartPanel} />
             </Router.Route>
             <Router.Route path='/login' component={Login} />
         </Router.Router>

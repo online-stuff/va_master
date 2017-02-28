@@ -23,8 +23,9 @@ var Panel = React.createClass({
         console.log(data);
         this.props.dispatch({type: 'CHANGE_PANEL', panel: id, instance: instance});
         Network.get('/api/panels/get_panel', this.props.auth.token, data).done(function (data) {
-            console.log(data.tbl_source);
-            me.props.dispatch({type: 'ADD_DATA', tables: data.tbl_source});
+            if(typeof data.tbl_source !== 'undefined'){
+                me.props.dispatch({type: 'ADD_DATA', tables: data.tbl_source});
+            }
             me.setState({template: data});
         }).fail(function (msg) {
             me.props.dispatch({type: 'SHOW_ALERT', msg: msg});

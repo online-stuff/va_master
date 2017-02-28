@@ -6,6 +6,7 @@ var ReactDOM = require('react-dom');
 var components = require('./basic_components');
 var Reactable = require('reactable');
 var Router = require('react-router');
+var LineChart = require("react-chartjs-2").Line;
 
 var Div = React.createClass({
 
@@ -40,9 +41,131 @@ var Div = React.createClass({
     }
 });
 
+var MultiTable = React.createClass({
+
+    render: function () {
+        var redux = {}, tables = [];
+        for(x in this.props.table.tables){
+            var elements = this.props.elements.map(function(element) {
+                element.name = x;
+                element.key = element.type + element.name;
+                var Component = components[element.type];
+                redux[element.type] = connect(function(state){
+                    var newstate = {auth: state.auth};
+                    if(typeof element.reducers !== 'undefined'){
+                        var r = element.reducers;
+                        for (var i = 0; i < r.length; i++) {
+                            newstate[r[i]] = state[r[i]];
+                        }
+                    }
+                    return newstate;
+                })(Component);
+                var Redux = redux[element.type];
+                return React.createElement(Redux, element);
+            }.bind(this));
+            tables.push(elements);
+        }
+        return (
+            <div className="multi">
+                {tables}
+            </div>
+        );
+    }
+});
+
+var Chart = React.createClass({
+    getInitialState: function () {
+        var chartData = this.getData(this.props.data);
+        return {chartOptions: {
+                    maintainAspectRatio: false,
+                    responsive: true,
+                    scales: {
+                        xAxes: [{
+                            type: 'time',
+                            stacked: true,
+                            time: {
+                                displayFormats: {
+                                    minute: 'HH:mm',
+                                    hour: 'HH:mm',
+                                    second: 'HH:mm:ss',
+                                },
+                                tooltipFormat: 'DD/MM/YYYY HH:mm',
+                                unit: 'minute',
+                                unitStepSize: 5
+                            }
+                        }],
+                        yAxes: [{
+                            stacked: true
+                        }]
+                    }
+                }, chartData: chartData};
+    },
+    getData: function(data) {
+        var datasets = [], times = [], chartData = {};
+        for(var key in data){
+            var obj = {};
+            var color = this.getRandomColor();
+            obj.label = key;
+            obj.data = [];
+            var chart_data = data[key];
+            for(var i=0; i<chart_data.length; i++){
+                obj.data.push(chart_data[i].y);
+            }
+            obj.backgroundColor = color;
+            obj.borderColor = color;
+            datasets.push(obj);
+        }
+        for(var i=0; i<data[key].length; i++){
+            times.push(data[key][i].x * 1000);
+        }
+        chartData.labels = times;
+        chartData.datasets = datasets;
+        return chartData;
+    },
+    getRandomColor: function() {
+        var letters = '0123456789ABCDEF'.split('');
+        var color = '#';
+        for (var i = 0; i < 6; i++ ) {
+            color += letters[Math.floor(Math.random() * 16)];
+        }
+        return color;
+    },
+    btn_click: function(period, interval, unit, step) {
+        var instance_name = this.props.panel.instance;
+        var data = {"instance_name": instance_name, "args": [this.props.host, this.props.service, period, interval]};
+        var me = this;
+        Network.post('/api/panels/chart_data', this.props.auth.token, data).done(function(d) {
+            var chartOptions = Object.assign({}, me.state.chartOptions);
+            chartOptions.scales.xAxes[0].time.unit = unit;
+            chartOptions.scales.xAxes[0].time.unitStepSize = step;
+            me.setState({chartData: me.getData(d[instance_name]), chartOptions: chartOptions});
+        }).fail(function (msg) {
+            me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
+        });
+    },
+    render: function () {
+        return (
+            <div>
+                <div className="panel_chart">
+                    <LineChart name="chart" height={200} data={this.state.chartData} options={this.state.chartOptions} redraw />
+                </div>
+                <div id="chartBtns">
+                  <button className='btn btn-primary bt-sm chartBtn' onClick = {this.btn_click.bind(this, "-1h", "300", 'minute', 5)}>Last hour</button>
+                  <button className='btn btn-primary bt-sm chartBtn' onClick = {this.btn_click.bind(this, "-5h", "1500", 'hour', 1)}>Last 5 hours</button>
+                  <button className='btn btn-primary bt-sm chartBtn' onClick = {this.btn_click.bind(this, "-1d", "7200", 'hour', 4)}>Last day</button>
+                  <button className='btn btn-primary bt-sm chartBtn' onClick = {this.btn_click.bind(this, "-7d", "86400", 'day', 1)}>Last week</button>
+                  <button className='btn btn-primary bt-sm chartBtn' onClick = {this.btn_click.bind(this, "-1m", "86400", 'day', 5)}>Last month</button>
+                </div>
+            </div> 
+        );
+    }
+});
+
 var Table = React.createClass({
     btn_clicked: function(id, evtKey){
-        if(evtKey in this.props.modals){
+        if(evtKey == 'chart'){
+            Router.hashHistory.push('/chart_panel/' + this.props.panel.instance + '/' + this.props.name + '/' + id);
+        }else if(evtKey in this.props.modals){
             if("readonly" in this.props){
                 var rows = this.props.table.tables[this.props.name].source.filter(function(row) {
                     if(row[this.props.id] == id){
@@ -293,6 +416,8 @@ var Form = React.createClass({
 });
 
 components.Div = Div;
+components.MultiTable = MultiTable;
+components.Chart = Chart;
 components.Table = Table;
 components.Form = Form;
 components.Modal = Modal;
