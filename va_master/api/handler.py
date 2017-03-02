@@ -30,9 +30,7 @@ class ApiHandler(tornado.web.RequestHandler):
     @tornado.gen.coroutine
     def exec_method(self, method, path, data):
         self.data = data
-        print ('my data is : ', self.data)
         self.data['method'] = method
-        print ('my data is now : ', self.data)
         api_func = self.paths[method][path]
         print ('Function is : ', api_func)
         if api_func != user_login: 
