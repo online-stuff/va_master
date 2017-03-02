@@ -341,17 +341,15 @@ class CenturyLinkDriver(base.DriverBase):
             success = clc.v2.API.Call('post', 'servers/%s' % (self.account.alias), json.dumps(server_data), debug = True)
             if data.get('wait_for_finish'): 
                 status_url = [x for x in success['links'] if x.get('rel') == 'status'][0]['href']
-#                status_url = '/'.join(status_url.split('/')[1:])
-                print ('My status url is : ', status_url)
                 status = 'unknown'
                 while status not in ['succeeded', 'failed']:
-                    print ('Trying for status!')
+                    print ('Status is : ', status)
                     status = clc.v2.API.Call('get', status_url)
-                    print ('Got new status : ', status)
-                    if status in ['succeeded', 'failed']: break
+                    status = status['status']
                     yield tornado.gen.sleep(5)
             print ('Result was : ', success)
-            raise tornado.gen.Return(success)
         except: 
             import traceback
             traceback.print_exc()
+        raise tornado.gen.Return(success)
+

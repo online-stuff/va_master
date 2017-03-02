@@ -40,7 +40,7 @@ class ApiHandler(tornado.web.RequestHandler):
                 user = yield get_current_user(self)
                 if not user: 
                     self.json({'success' : False, 'message' : 'User not authenticated properly. ', 'data' : {}})
-                elif user['type'] == 'user' and 'user' not in self.paths.get('user_allowed', []): 
+                elif user['type'] == 'user' and path not in self.paths.get('user_allowed', {}).get(method, []): 
                     self.json({'success' : False, 'message' : 'User does not have appropriate privileges. ', 'data' : {}})
             except: 
                 import traceback
