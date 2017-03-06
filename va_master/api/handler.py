@@ -19,6 +19,7 @@ class ApiHandler(tornado.web.RequestHandler):
         self.data = {}
 
         self.paths = url_handler.gather_paths()
+        print (self.paths)
 
     def json(self, obj, status=200):
 #        print ('I am in json with ', obj)
@@ -29,6 +30,7 @@ class ApiHandler(tornado.web.RequestHandler):
 
     @tornado.gen.coroutine
     def exec_method(self, method, path, data):
+        print ('Execing method : ', method)
         self.data = data
         self.data['method'] = method
         api_func = self.paths[method][path]
@@ -47,7 +49,7 @@ class ApiHandler(tornado.web.RequestHandler):
             result = yield api_func(self)
             result = {'success' : True, 'message' : '', 'data' : result}
         except Exception as e: 
-            result = {'success' : True, 'message' : 'There was an error performing a request : ' + e.message, 'data' : {}}
+            result = {'success' : False, 'message' : 'There was an error performing a request : ' + e.message, 'data' : {}}
             import traceback
             traceback.print_exc()
         self.json(result)
@@ -57,6 +59,17 @@ class ApiHandler(tornado.web.RequestHandler):
         args = self.request.query_arguments
         print ('My args are : ', args)
         result = yield self.exec_method('get', path, {x : args[x][0] for x in args})
+
+
+    @tornado.gen.coroutine
+    def delete(self, path):
+        print ('Deleting ts. ')
+        try: 
+            data = json.loads(self.request.body)
+            result = yield self.exec_method('delete', path, data)
+        except: 
+            import traceback
+            traceback.print_exc()
 
     @tornado.gen.coroutine
     def post(self, path):

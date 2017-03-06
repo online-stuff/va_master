@@ -49,10 +49,14 @@ class CenturyLinkDriver(base.DriverBase):
         self.datacenter = [x for x in clc.v2.Datacenter.Datacenters() if host['location'] in x.location][0]
         return self.datacenter
 
+
+    def get_servers(self, host):
+        servers = self.datacenter.Groups().Get(host['defaults']['sec_group']).Servers()
+        return servers
+
     def get_servers_list(self, host):
-        servers_list = self.datacenter.Groups().Get(host['defaults']['sec_group']).Servers().Servers()
-        return servers_list
-       
+        servers_list = self.get_servers(host).Servers()
+        return servers_list      
 
     @tornado.gen.coroutine
     def driver_id(self):
@@ -206,6 +210,16 @@ class CenturyLinkDriver(base.DriverBase):
             result = e.message
         raise tornado.gen.Return({'success' : not result, 'message' : result, 'data' : {}})
         
+    @tornado.gen.coroutine
+    def api_call(self, host, data):
+        clc.v2.SetCredentials(host['username'], host['password'])
+
+        method = data['method']
+        url = data['url']
+        kwargs = data.get('kwargs', {})
+
+        result = clc.v2.API.Call(method, url, kwargs)
+        raise tornado.gen.Return(result)
 
     @tornado.gen.coroutine
     def server_add_stats(self, host, server_id, cpu, memory):
@@ -266,15 +280,28 @@ class CenturyLinkDriver(base.DriverBase):
         sizes = self.flavours.keys()
         raise tornado.gen.Return(sizes)
 
-
     @tornado.gen.coroutine
-    def get_server_data(self, host, server_name):
+    def get_server(self, host, server_name):
         """ Gets the server by the server name, for instance, TS011, instead of the full id. """
         self.get_datacenter(host)
         servers = self.get_servers_list(host)
         server = [x for x in servers if server_name in x.id] or [None]
         server = server[0]
-        return server.data
+        return server
+
+
+    @tornado.gen.coroutine
+    def get_server_data(self, host, server_name):
+        server = yield self.get_server(host, server_name)
+        raise tornado.gen.Return(server.data)
+
+
+    @tornado.gen.coroutine
+    def delete_server(self, host, server_name):
+        """ Deletes a server, passed to the function via name (not ID).  """
+        server = yield self.get_server(host, server_name)
+        success = server.Delete()
+        raise tornado.gen.Return(True)
 
     @tornado.gen.coroutine
     def validate_field_values(self, step_index, field_values):
@@ -335,8 +362,11 @@ class CenturyLinkDriver(base.DriverBase):
                     }
                 ]
 
+            print ('Extra args are : ',data.get('extra_kwargs'))
             #Extra args are usually supplied by external applications. 
-            server_data.update(data.get('extra_args', {}))
+            server_data.update(data.get('extra_kwargs', {}))
+
+            print ('Creating instance with data : ', server_data)
 
             success = clc.v2.API.Call('post', 'servers/%s' % (self.account.alias), json.dumps(server_data), debug = True)
             if data.get('wait_for_finish'): 
