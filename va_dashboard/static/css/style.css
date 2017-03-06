@@ -311,20 +311,17 @@ ul.left-menu div{
     width: 60%;
 }
 #chartBtns{
-
   display: inline-block;
-
   vertical-align: top;
-
   margin: 0 0 0 10px;
-
 }
 .chartBtn{
-
   margin: 5px;
-
   display: block;
-
   width: 100px;
 
+}
+.iframe{
+    width: 100%;
+    height: 70vh;
 }

@@ -89,10 +89,20 @@ var Paragraph = React.createClass({
     }
 });
 
+var Frame = React.createClass({
+
+    render: function () {
+        return (
+            <iframe key={this.props.name} src={this.props.src} className="iframe"></iframe>
+        );
+    }
+});
+
 
 module.exports = {
     "Filter": Filter,
     "Button": Button,
     "Heading": Heading,
-    "Paragraph": Paragraph
+    "Paragraph": Paragraph,
+    "Frame": Frame
 }
