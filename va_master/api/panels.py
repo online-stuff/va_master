@@ -15,7 +15,8 @@ def get_paths():
             'panels/get_panel' : get_panel_for_user, 
         },
         'post' : {
-            'panels/action' : panel_action #must have instance_name and action in data, ex: panels/action instance_name=nino_dir action=list_users
+            'panels/action' : panel_action, #must have instance_name and action in data, ex: panels/action instance_name=nino_dir action=list_users
+            'panels/chart_data' : get_chart_data,
         }
     }
     return paths
@@ -59,6 +60,19 @@ def panel_action_execute(handler):
     result = cl.cmd(instance, state['module'] + '.' + action , args)
     raise tornado.gen.Return(result)
 
+@tornado.gen.coroutine
+def get_chart_data(handler):
+    cl = salt.client.LocalClient()
+
+
+    instance = handler.data['instance_name']
+    print ('instance_name ', instance)
+
+
+    args = handler.data.get('args', ['va-directory', 'Ping'])
+
+    result = cl.cmd(instance, 'monitoring_stats.parse' , args)
+    raise tornado.gen.Return(result)
 
 ##@auth_only
 @tornado.gen.coroutine
@@ -90,7 +104,11 @@ def get_panel_for_user(handler):
     if handler.data['instance_name'] in state['instances']:
 #            panel = panel[0]
         handler.data['action'] = 'get_panel'
-        handler.data['args'] = [panel]
+        if 'host' in handler.data:
+            args = [handler.data['host'], handler.data['service']]
+            handler.data['args'] = [panel] + args
+        else:
+            handler.data['args'] = [panel]
         try: 
             print ('Executing. ')
             panel = yield panel_action_execute(handler)

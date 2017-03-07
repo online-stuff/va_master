@@ -15,8 +15,9 @@ var Home = React.createClass({
     getPanels: function() {
         var me = this;
         Network.get('/api/panels', this.props.auth.token).done(function (data) {
-            if(data)
-                me.setState({data: data});
+            me.setState({data: data});
+        }).fail(function (msg) {
+            me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
         });
     },
     componentDidMount: function() {
@@ -37,6 +38,9 @@ var Home = React.createClass({
     },
     collapse: function () {
         this.setState({collapse: !this.state.collapse});
+    },
+    handleAlertDismiss() {
+        this.props.dispatch({type: 'HIDE_ALERT'});
     },
     render: function () {
         var panels = this.state.data.filter(function(panel) {
@@ -121,6 +125,7 @@ var Home = React.createClass({
                 <div className="page-content" style={this.state.collapse?{'left': '15px', 'width': '95vw'}:{'left': '230px', 'width': '80vw'}}>
                     {this.props.children}
                 </div>
+                {this.props.alert.show && React.createElement(Bootstrap.Alert, {bsStyle: 'danger', onDismiss: this.handleAlertDismiss, className: "messages"}, this.props.alert.msg) }
             </div>
         </div>
         );
@@ -128,7 +133,7 @@ var Home = React.createClass({
 });
 
 Home = connect(function(state) {
-    return {auth: state.auth}
+    return {auth: state.auth, alert: state.alert}
 })(Home);
 
 module.exports = Home;

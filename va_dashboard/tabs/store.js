@@ -14,6 +14,8 @@ var Store = React.createClass({
         var me = this;
         Network.get('/api/states', this.props.auth.token).done(function (data) {
             me.setState({states: data});
+        }).fail(function (msg) {
+            me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
         });
     },
 
@@ -41,7 +43,7 @@ var Store = React.createClass({
         }.bind(this));
 
         var NewStateFormRedux = connect(function(state){
-            return {auth: state.auth};
+            return {auth: state.auth, alert: state.alert};
         })(NewStateForm);
 
         return (
@@ -123,12 +125,14 @@ var NewStateForm = React.createClass({
         var me = this;
         Network.post_file('/api/state/add', this.props.auth.token, fd).done(function(data) {
             me.props.getStates();
+        }).fail(function (msg) {
+            me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
         });
     }
 });
 
 Store = connect(function(state){
-    return {auth: state.auth, apps: state.apps};
+    return {auth: state.auth, apps: state.apps, alert: state.alert};
 })(Store);
 
 module.exports = Store;

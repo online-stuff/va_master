@@ -11,6 +11,8 @@ var Hosts = React.createClass({
         var me = this;
         Network.get('/api/hosts', this.props.auth.token).done(function (data) {
             me.setState({hosts: data.hosts});
+        }).fail(function (msg) {
+            me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
         });
     },
     componentDidMount: function () {
@@ -18,9 +20,12 @@ var Hosts = React.createClass({
     },
     deleteHost: function (e){
         var data = {"hostname": e.target.value};
+        var me = this;
         Network.post('/api/hosts/delete', this.props.auth.token, data).done(function(data) {
-            this.getCurrentHosts();
-        }.bind(this));
+            me.getCurrentHosts();
+        }).fail(function (msg) {
+            me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
+        });
     },
     render: function() {
         var host_rows = this.state.hosts.map(function(host) {
@@ -50,7 +55,7 @@ var Hosts = React.createClass({
             );
         }.bind(this));
         var NewHostFormRedux = connect(function(state){
-            return {auth: state.auth};
+            return {auth: state.auth, alert: state.alert};
         })(NewHostForm);
 
         return (<div>
@@ -140,6 +145,8 @@ var NewHostForm = React.createClass({
         Network.get('/api/drivers', this.props.auth.token).done(function(data) {
             var newState = {drivers: data.drivers};
             me.setState(newState);
+        }).fail(function (msg) {
+            me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
         });
     },
     onDriverSelect: function (e) {
@@ -245,6 +252,8 @@ var NewHostForm = React.createClass({
             var data = {driver_id: this.state.currentDriver.id, step_index: -1, field_values: {}};
             Network.post('/api/hosts/new/validate_fields', this.props.auth.token, data).done(function(d) {
                 me.setState({stepIndex: d.new_step_index, optionChoices: d.option_choices});
+            }).fail(function (msg) {
+                me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
             });
         } else {
             var me = this;
@@ -263,6 +272,8 @@ var NewHostForm = React.createClass({
                 }else{
                     me.setState({stepIndex: d.new_step_index, optionChoices: mergeChoices, errors: d.errors, isLoading: false});
                 }
+            }).fail(function (msg) {
+                me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
             });
             //var data = {driver_id: this.state.currentDriver.id, current_index: this.state.stepIndex,
             //}
@@ -274,12 +285,14 @@ var NewHostForm = React.createClass({
         var me = this;
         Network.post('/api/hosts', this.props.auth.token, data).done(function(data) {
             me.props.changeHosts();
+        }).fail(function (msg) {
+            me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
         });
     }
 });
 
 Hosts = connect(function(state){
-    return {auth: state.auth};
+    return {auth: state.auth, alert: state.alert};
 })(Hosts);
 
 module.exports = Hosts;

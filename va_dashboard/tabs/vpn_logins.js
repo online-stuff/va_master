@@ -17,14 +17,17 @@ var VpnLogins = React.createClass({
 
     get_logins: function() {
         var data = {username: this.props.params.username};
+        var me = this;
         Network.post("/api/apps/list_user_logins", this.props.auth.token, data).done(function(d) {
             console.log(d);
             if(Array.isArray(d) && d.length > 0){
-                this.setState({logins: d});
+                me.setState({logins: d});
             }else{
-                this.setState({logins: [{date: '10.01.2017', ip: '192.168.80.60'}, {date: '11.01.2017', ip: '192.168.80.70'}]});
+                me.setState({logins: [{date: '10.01.2017', ip: '192.168.80.60'}, {date: '11.01.2017', ip: '192.168.80.70'}]});
             }
-        }.bind(this));
+        }).fail(function (msg) {
+            me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
+        });
     },
 
     render: function () {
@@ -56,7 +59,7 @@ var VpnLogins = React.createClass({
 });
 
 VpnLogins = connect(function(state){
-    return {auth: state.auth};
+    return {auth: state.auth, alert: state.alert};
 })(VpnLogins);
 
 module.exports = VpnLogins;

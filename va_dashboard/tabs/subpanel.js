@@ -5,7 +5,7 @@ var Network = require('../network');
 var ReactDOM = require('react-dom');
 var widgets = require('./main_components');
 
-var Panel = React.createClass({
+var Subpanel = React.createClass({
     getInitialState: function () {
         return {
             template: {
@@ -13,32 +13,32 @@ var Panel = React.createClass({
                 "help_url": "",
                 "tbl_source": {},
                 "content": []
-            }
+            },
+            username: ""
         };
     },
 
-    getPanel: function (id, instance) {
+    getPanel: function (id, instance, username) {
         var me = this;
         var data = {'panel': id, 'instance_name': instance};
         console.log(data);
         this.props.dispatch({type: 'CHANGE_PANEL', panel: id, instance: instance});
         Network.get('/api/panels/get_panel', this.props.auth.token, data).done(function (data) {
-            if(typeof data.tbl_source !== 'undefined'){
-                me.props.dispatch({type: 'ADD_DATA', tables: data.tbl_source});
-            }
-            me.setState({template: data});
+            console.log(data.tbl_source);
+            me.props.dispatch({type: 'ADD_DATA', tables: data.tbl_source});
+            me.setState({template: data, username: username});
         }).fail(function (msg) {
             me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
         });
     },
 
     componentDidMount: function () {
-        this.getPanel(this.props.params.id, this.props.params.instance);
+        this.getPanel(this.props.params.id, this.props.params.instance, this.props.params.username);
     },
 
     componentWillReceiveProps: function (nextProps) {
-        if (nextProps.params.id !== this.props.params.id || nextProps.params.instance !== this.props.params.instance) {
-            this.getPanel(nextProps.params.id, nextProps.params.instance);
+        if (nextProps.params.id !== this.props.params.id || nextProps.params.instance !== this.props.params.instance || nextProps.params.username !== this.props.params.username) {
+            this.getPanel(nextProps.params.id, nextProps.params.instance, nextProps.params.username);
         }
     },
 
@@ -48,9 +48,6 @@ var Panel = React.createClass({
 
     render: function () {
         var redux = {};
-        var ModalRedux = connect(function(state){
-            return {auth: state.auth, modal: state.modal, panel: state.panel, alert: state.alert};
-        })(widgets.Modal);
 
         var elements = this.state.template.content.map(function(element) {
             element.key = element.name;
@@ -73,17 +70,16 @@ var Panel = React.createClass({
 
         return (
             <div key={this.props.params.id}>
-                <Bootstrap.PageHeader>{this.state.template.title} <small>{this.props.params.instance}</small></Bootstrap.PageHeader>
+                <Bootstrap.PageHeader>{this.state.template.title + " for " + this.state.username} <small>{this.props.params.instance}</small></Bootstrap.PageHeader>
                 {elements}
-                <ModalRedux />
             </div>
         );
     }
 
 });
 
-Panel = connect(function(state){
+Subpanel = connect(function(state){
     return {auth: state.auth, panel: state.panel, alert: state.alert, table: state.table};
-})(Panel);
+})(Subpanel);
 
-module.exports = Panel;
+module.exports = Subpanel;
