@@ -334,3 +334,6 @@ table tr.row-state-Warning{
 table tr.row-state-Critical{
   border-left: 5px solid #de4040;
 }
+.reactable-pagination a{
+    margin-right: 5px;
+}
