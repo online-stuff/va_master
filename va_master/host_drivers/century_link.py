@@ -77,10 +77,10 @@ class CenturyLinkDriver(base.DriverBase):
 
         servers_list = self.get_servers_list(host)
         print [x.data['details']['hostName'] for x in servers_list]
-        server = [x for x in servers_list if x.data['details']['hostName'] == instance_name or x.id == instance_name] or [None]
+        server = [x for x in servers_list if instance_name in x.data['details']['hostName']  or instance_name in x.id] or [None]
         server = server[0]
         if not server: 
-            print ('Did not find serverw with name: ', instance_name)
+            print ('Did not find server with name: ', instance_name)
             raise tornado.gen.Return({'success' : False, 'message' : 'Did not find server with name: ' + instance_name})
 
         #post_arg is simply to cut down on code; it creates a tuple of arguments ready to be sent to the API. 
