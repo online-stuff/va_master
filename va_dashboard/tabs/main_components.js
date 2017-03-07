@@ -182,7 +182,7 @@ var Table = React.createClass({
             var modal = this.props.modals[evtKey];
             modal.args = [id];
             this.props.dispatch({type: 'OPEN_MODAL', template: modal});
-        }else if("panels" in this.props){
+        }else if("panels" in this.props && evtKey in this.props.panels){
             Router.hashHistory.push('/subpanel/' + this.props.panels[evtKey] + '/' + this.props.panel.instance + '/' + id);
         }else{
             var data = {"instance_name": this.props.panel.instance, "action": evtKey, "args": [id]};
@@ -204,7 +204,16 @@ var Table = React.createClass({
     render: function () {
         if(typeof this.props.table.tables[this.props.name] === 'undefined')
             return null;
-        var cols = Object.keys(this.props.table.tables[this.props.name].source[0]);
+        var cols = [], tbl_cols = this.props.columns.slice(0), tbl_id = this.props.id;
+        for(var i=0; i<tbl_cols.length; i++){
+            if(tbl_cols[i].key === ""){
+                tbl_cols[i] = {key: this.props.name, label: this.props.name};
+            }
+            cols.push(tbl_cols[i].key);
+        }
+        if(!tbl_id){
+            tbl_id = this.props.name;
+        }
         var action_col = false;
         if(this.props.hasOwnProperty('actions')){
             var actions = this.props.actions.map(function(action) {
@@ -226,7 +235,7 @@ var Table = React.createClass({
                     </Reactable.Td>
                 );
             });
-            var key = row[this.props.id];
+            var key = row[tbl_id];
             if(action_col){
                 action_col = <Reactable.Td column="action">
                     <Bootstrap.DropdownButton bsStyle='primary' title="Choose" onSelect = {this.btn_clicked.bind(this, key)}>
@@ -242,7 +251,7 @@ var Table = React.createClass({
             )
         }.bind(this));
         return (
-            <Reactable.Table className="table striped" columns={this.props.columns} itemsPerPage={5} pageButtonLimit={10} noDataText="No matching records found." sortable={true} filterable={cols} filterBy={this.props.table.filterBy} hideFilterInput >
+            <Reactable.Table className="table striped" columns={tbl_cols} itemsPerPage={5} pageButtonLimit={10} noDataText="No matching records found." sortable={true} filterable={cols} filterBy={this.props.table.filterBy} hideFilterInput >
                 {rows}
             </Reactable.Table>
         );
@@ -389,7 +398,18 @@ var Form = React.createClass({
             element.key = element.name;
             if(Object.keys(redux).indexOf(type) < 0){
                 if(type == "Button" && element.action == "modal"){
-                    element.modalTemplate = element.modal;
+                    var modalTemplate = Object.assign({}, element.modal), args = [];
+                    if('args' in this.props){
+                        for(var key in this.props.args){
+                            val = this.props.args[key]
+                            if(!val){
+                                val = this.props.name;
+                            }
+                            args.push(val);
+                        }
+                    }
+                    modalTemplate.args = args;
+                    element.modalTemplate = modalTemplate;
                 }
                 var Component = components[type];
                 redux[type] = connect(function(state){

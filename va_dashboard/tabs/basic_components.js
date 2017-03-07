@@ -30,7 +30,6 @@ var Button = React.createClass({
 
     openModal: function() {
         var modal = this.props.modalTemplate;
-        modal.args = [];
         this.props.dispatch({type: 'OPEN_MODAL', template: modal});
     },
 
