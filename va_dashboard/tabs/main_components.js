@@ -243,8 +243,12 @@ var Table = React.createClass({
                     </Bootstrap.DropdownButton>
                 </Reactable.Td>
             }
+            var rowClass = "";
+            if(typeof this.props.rowStyleCol !== 'undefined'){
+                rowClass = "row-" + this.props.rowStyleCol + "-" + row[this.props.rowStyleCol];
+            }
             return (
-                <Reactable.Tr key={key}>
+                <Reactable.Tr className={rowClass} key={key}>
                     {columns}
                     {action_col}
                 </Reactable.Tr>
