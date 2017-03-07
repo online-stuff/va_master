@@ -214,18 +214,20 @@ var Table = React.createClass({
         if(!tbl_id){
             tbl_id = this.props.name;
         }
-        var action_col = false;
+        var action_col = false, action_length = 0;
         if(this.props.hasOwnProperty('actions')){
-            var actions = this.props.actions.map(function(action) {
-                var className = "";
-                if(typeof action.class !== 'undefined'){
-                    className = action.class;
-                }
-                return (
-                    <Bootstrap.MenuItem key={action.name} eventKey={action.action} className={className}>{action.name}</Bootstrap.MenuItem>
-                );
-            });
-            action_col = true;
+            var action_col = true, action_length = this.props.actions.length;
+            if(action_length > 1){
+                var actions = this.props.actions.map(function(action) {
+                    var className = "";
+                    if(typeof action.class !== 'undefined'){
+                        className = action.class;
+                    }
+                    return (
+                        <Bootstrap.MenuItem key={action.name} eventKey={action.action} className={className}>{action.name}</Bootstrap.MenuItem>
+                    );
+                });
+            }
         }
         var rows = this.props.table.tables[this.props.name].source.map(function(row) {
             var columns = cols.map(function(col) {
@@ -237,11 +239,19 @@ var Table = React.createClass({
             });
             var key = row[tbl_id];
             if(action_col){
-                action_col = <Reactable.Td column="action">
-                    <Bootstrap.DropdownButton bsStyle='primary' title="Choose" onSelect = {this.btn_clicked.bind(this, key)}>
-                        {actions}
-                    </Bootstrap.DropdownButton>
-                </Reactable.Td>
+                action_col = (
+                    <Reactable.Td column="action">
+                        {action_length > 1 ? (
+                            <Bootstrap.DropdownButton bsStyle='primary' title="Choose" onSelect = {this.btn_clicked.bind(this, key)}>
+                                {actions}
+                            </Bootstrap.DropdownButton>
+                        ) : (
+                            <Bootstrap.Button bsStyle='primary' onClick={this.btn_clicked.bind(this, key, this.props.actions[0].action)}>
+                                {this.props.actions[0].name}
+                            </Bootstrap.Button>
+                        )}
+                    </Reactable.Td>
+                );
             }
             var rowClass = "";
             if(typeof this.props.rowStyleCol !== 'undefined'){
