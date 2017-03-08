@@ -7,8 +7,6 @@ var BarChart = require("react-chartjs-2").Bar;
 var defaults = require("react-chartjs-2").defaults;
 var Bootstrap = require('react-bootstrap');
 
-defaults.global.legend.display = false;
-
 Chart.pluginService.register({
     beforeDraw: function(chart) {
         if(chart.config.type === "doughnut"){
@@ -41,6 +39,7 @@ Chart.pluginService.register({
 
 var Overview = React.createClass({
     getInitialState: function () {
+        defaults.global.legend.display = false;
         return {hosts: [], loading: true};
     },
     componentWillMount() {

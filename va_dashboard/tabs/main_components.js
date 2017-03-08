@@ -9,9 +9,6 @@ var Router = require('react-router');
 var LineChart = require("react-chartjs-2").Line;
 var defaults = require("react-chartjs-2").defaults;
 
-defaults.global.legend.display = true;
-defaults.global.legend.position = 'right';
-
 var Div = React.createClass({
 
     render: function () {
@@ -79,6 +76,8 @@ var MultiTable = React.createClass({
 
 var Chart = React.createClass({
     getInitialState: function () {
+        defaults.global.legend.display = true;
+        defaults.global.legend.position = 'right';
         var chartData = this.getData(this.props.data, false);
         return {chartOptions: {
                     maintainAspectRatio: false,
