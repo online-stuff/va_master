@@ -139,15 +139,12 @@ var Host = React.createClass({
             return {auth: state.auth};
         })(DoughnutComponent);
         return (
-            <div>
-                <Bootstrap.PageHeader>{this.props.title}</Bootstrap.PageHeader>
-                <div>
-                    <DoughnutRedux data={this.state.chartData[0]} labels={this.state.labels} colors={this.state.colors} title="CPU" />
-                    <DoughnutRedux data={this.state.chartData[1]} labels={this.state.labels} colors={this.state.colors} title="MEMORY"  />
-                    <DoughnutRedux data={this.state.chartData[2]} labels={this.state.labels} colors={this.state.colors} title="STORAGE"  />
-                    <label>Instances: {this.props.instances}</label>
-                </div>
-            </div>
+            <Bootstrap.Panel header={this.props.title} bsStyle='primary'>
+                <DoughnutRedux data={this.state.chartData[0]} labels={this.state.labels} colors={this.state.colors} title="CPU" />
+                <DoughnutRedux data={this.state.chartData[1]} labels={this.state.labels} colors={this.state.colors} title="MEMORY"  />
+                <DoughnutRedux data={this.state.chartData[2]} labels={this.state.labels} colors={this.state.colors} title="STORAGE"  />
+                <label>Instances: {this.props.instances}</label>
+            </Bootstrap.Panel>
         );
     }
 });
@@ -283,11 +280,10 @@ var Log = React.createClass({
             return {auth: state.auth};
         })(LogChart);
         return (
-            <div className="log-block">
-                <Bootstrap.PageHeader>Log</Bootstrap.PageHeader>
+            <Bootstrap.Panel header='Logs' bsStyle='primary' className="log-block">
                 <LogChartRedux datasets={datasets} labels={times} minDate={currentDate} />
                 {log_rows}
-            </div>
+            </Bootstrap.Panel>
         );
     }
 });
@@ -353,7 +349,7 @@ var LogChart = React.createClass({
     },
     render: function() {
         return (
-            <div>
+            <div className="log-chart">
                 <BarChart data={this.state.chartData} options={this.state.chartOptions} redraw />
             </div>
         );

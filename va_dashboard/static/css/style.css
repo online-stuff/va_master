@@ -269,7 +269,8 @@ ul.left-menu div{
     min-width: 70%;
     width: 70%;
     position: relative;
-    padding-right: 5px;
+    padding-right: 20px;
+    padding-top: 10px;
     min-height: 300px;
     float: left;
 }
@@ -277,6 +278,10 @@ ul.left-menu div{
 .log-block{
     width: 30%;
     float: left;
+    margin-top: 10px;
+}
+.log-chart{
+    height: 100px;
 }
 
 .messages {
