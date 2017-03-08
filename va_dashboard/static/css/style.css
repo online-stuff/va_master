@@ -110,7 +110,7 @@ ul.left-menu a.active{
     display: flex;
     background-color: #f5f5f5;
     border-right: 1px solid #dddddd;
-    min-height: 100vh;
+    min-height: calc(100vh - 50px);
     height: 100%;
     width: 210px;
     left: 0px;
