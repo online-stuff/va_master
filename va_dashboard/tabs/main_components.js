@@ -75,7 +75,7 @@ var MultiTable = React.createClass({
 
 var Chart = React.createClass({
     getInitialState: function () {
-        var chartData = this.getData(this.props.data);
+        var chartData = this.getData(this.props.data, false);
         return {chartOptions: {
                     maintainAspectRatio: false,
                     responsive: true,
@@ -100,11 +100,17 @@ var Chart = React.createClass({
                     }
                 }, chartData: chartData};
     },
-    getData: function(data) {
-        var datasets = [], times = [], chartData = {};
+    getData: function(data, check) {
+        var datasets = [], times = [], chartData = {}, prevColors = {};
+        if(check){
+            for(var i=0; i < this.state.chartData.datasets.length; i++) {
+                dataset = this.state.chartData.datasets[i];
+                prevColors[dataset.label] = dataset.backgroundColor;
+            }
+        }
         for(var key in data){
-            var obj = {};
-            var color = this.getRandomColor();
+            var obj = {}, prevColor = prevColors[key];
+            var color = prevColor || this.getRandomColor();
             obj.label = key;
             obj.data = [];
             var chart_data = data[key];
@@ -138,7 +144,7 @@ var Chart = React.createClass({
             var chartOptions = Object.assign({}, me.state.chartOptions);
             chartOptions.scales.xAxes[0].time.unit = unit;
             chartOptions.scales.xAxes[0].time.unitStepSize = step;
-            me.setState({chartData: me.getData(d[instance_name]), chartOptions: chartOptions});
+            me.setState({chartData: me.getData(d[instance_name], true), chartOptions: chartOptions});
         }).fail(function (msg) {
             me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
         });
