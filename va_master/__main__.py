@@ -1,5 +1,8 @@
+import tornado.httpserver
+import tornado.ioloop
 import cli
 import sys
+import ssl
 
 def bootstrap():
     """Starts the master with all its components, and provides the configuration
@@ -12,17 +15,13 @@ def bootstrap():
     my_config.logger.info('Starting deploy handler...')
 
     app = server.get_app(my_config)
-    app.listen(my_config.server_port)
+    ssl_ctx = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
+    ssl_ctx.load_cert_chain("/root/keys/fortornado/evo-master.crt", "/root/keys/fortornado/evo-master.key")
 
-    def say_hello():
-        print("Hello, it's me.")
-    from tornado.ioloop import PeriodicCallback, IOLoop
-    ioloop = IOLoop.instance()
-
-    cb = PeriodicCallback(say_hello, 60000, ioloop)
-    cb.start()
-
-    ioloop.start()
+    http_server = tornado.httpserver.HTTPServer(app, ssl_options=ssl_ctx)
+    http_server.listen(443)
+    tornado.ioloop.IOLoop.instance().start()
+#    app.listen(my_config.server_port)
 
 if __name__ == '__main__':
     if 'start' in sys.argv: 
