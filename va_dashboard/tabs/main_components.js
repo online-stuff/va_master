@@ -7,6 +7,10 @@ var components = require('./basic_components');
 var Reactable = require('reactable');
 var Router = require('react-router');
 var LineChart = require("react-chartjs-2").Line;
+var defaults = require("react-chartjs-2").defaults;
+
+defaults.global.legend.display = true;
+defaults.global.legend.position = 'right';
 
 var Div = React.createClass({
 
