@@ -9,17 +9,18 @@ from . import url_handler
 from login import get_current_user, user_login
 import json, datetime, syslog
 
+
 #This will probably not be used anymore, keeping it here for reasons. 
 
 
 class ApiHandler(tornado.web.RequestHandler):
-    def initialize(self, config):
+    def initialize(self, config, include_version=False):
         self.config = config
         self.datastore = config.datastore
         self.data = {}
 
         self.paths = url_handler.gather_paths()
-        print (self.paths)
+        self.salt_client = None
 
     def json(self, obj, status=200):
 #        print ('I am in json with ', obj)
@@ -30,7 +31,7 @@ class ApiHandler(tornado.web.RequestHandler):
 
     @tornado.gen.coroutine
     def exec_method(self, method, path, data):
-        print ('Execing method : ', method)
+        print ('My caller is now : ', self.salt_client)
         self.data = data
         self.data['method'] = method
         api_func = self.paths[method][path]
@@ -40,7 +41,7 @@ class ApiHandler(tornado.web.RequestHandler):
                 user = yield get_current_user(self)
                 if not user: 
                     self.json({'success' : False, 'message' : 'User not authenticated properly. ', 'data' : {}})
-                elif user['type'] == 'user' and path not in self.paths.get('user_allowed', {}).get(method, []): 
+                elif user['type'] == 'user' and path not in self.paths.get('user_allowed', {}).get(path, []): 
                     self.json({'success' : False, 'message' : 'User does not have appropriate privileges. ', 'data' : {}})
             except: 
                 import traceback
