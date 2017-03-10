@@ -188,8 +188,10 @@ var Table = React.createClass({
                 }
                 this.props.dispatch({type: 'SET_READONLY', readonly: readonly});
             }
-            var modal = this.props.modals[evtKey];
+            var modal = Object.assign({}, this.props.modals[evtKey]);
             modal.args = [id];
+            modal.table_name = this.props.name;
+            modal.refresh_action = this.props.source;
             this.props.dispatch({type: 'OPEN_MODAL', template: modal});
         }else if("panels" in this.props && evtKey in this.props.panels){
             Router.hashHistory.push('/subpanel/' + this.props.panels[evtKey] + '/' + this.props.panel.instance + '/' + id);
@@ -327,6 +329,15 @@ var Modal = React.createClass({
                 me.props.dispatch({type: 'CLOSE_MODAL'});
             }else{
                 me.props.dispatch({type: 'CLOSE_MODAL'});
+                if('refresh_action' in me.props.modal.template){
+                    var data = {"instance_name": me.props.panel.instance, "action": me.props.modal.template.refresh_action, "args": []};
+                    Network.post('/api/panels/action', me.props.auth.token, data).done(function(d) {
+                        var msg = d[data.instance_name];
+                        if(msg){
+                            me.props.dispatch({type: 'CHANGE_DATA', data: msg, name: me.props.modal.template.table_name});
+                        }
+                    });
+                }
             }
         }).fail(function (msg) {
             me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
