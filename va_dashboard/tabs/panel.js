@@ -38,6 +38,7 @@ var Panel = React.createClass({
 
     componentWillReceiveProps: function (nextProps) {
         if (nextProps.params.id !== this.props.params.id || nextProps.params.instance !== this.props.params.instance) {
+            this.props.dispatch({type: 'RESET_FILTER'});
             this.getPanel(nextProps.params.id, nextProps.params.instance);
         }
     },
