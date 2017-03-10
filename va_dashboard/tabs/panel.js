@@ -83,7 +83,7 @@ var Panel = React.createClass({
 });
 
 Panel = connect(function(state){
-    return {auth: state.auth, panel: state.panel, alert: state.alert, table: state.table};
+    return {auth: state.auth, panel: state.panel, alert: state.alert, table: state.table, filter: state.filter};
 })(Panel);
 
 module.exports = Panel;

@@ -14,7 +14,7 @@ var Filter = React.createClass({
                 <Bootstrap.FormControl
                     type="text"
                     placeholder="Filter"
-                    value={this.props.table.filterBy}
+                    value={this.props.filter.filterBy}
                     onChange={this.filter}
                     autoFocus
                 />

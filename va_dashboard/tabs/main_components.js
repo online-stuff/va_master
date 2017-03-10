@@ -46,7 +46,7 @@ var MultiTable = React.createClass({
 
     render: function () {
         var redux = {}, tables = [];
-        for(x in this.props.table.tables){
+        for(x in this.props.table){
             var elements = this.props.elements.map(function(element) {
                 element.name = x;
                 element.key = element.type + element.name;
@@ -174,9 +174,9 @@ var Table = React.createClass({
     btn_clicked: function(id, evtKey){
         if(evtKey == 'chart'){
             Router.hashHistory.push('/chart_panel/' + this.props.panel.instance + '/' + this.props.name + '/' + id);
-        }else if(evtKey in this.props.modals){
+        }else if('modals' in this.props && evtKey in this.props.modals){
             if("readonly" in this.props){
-                var rows = this.props.table.tables[this.props.name].source.filter(function(row) {
+                var rows = this.props.table[this.props.name].filter(function(row) {
                     if(row[this.props.id] == id){
                         return true;
                     }
@@ -202,8 +202,13 @@ var Table = React.createClass({
                     me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
                 }else{
                     data.action = me.props.source;
-                    data.args = []
-                    me.props.dispatch({type: 'REFRESH_DATA', data: data});
+                    data.args = [];
+                    Network.post('/api/panels/action', me.props.auth.token, data).done(function(d) {
+                        var msg = d[data.instance_name];
+                        if(msg){
+                            me.props.dispatch({type: 'CHANGE_DATA', data: msg, name: me.props.name});
+                        }
+                    });
                 }
             }).fail(function (msg) {
                 me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
@@ -211,7 +216,7 @@ var Table = React.createClass({
         }
     },
     render: function () {
-        if(typeof this.props.table.tables[this.props.name] === 'undefined')
+        if(typeof this.props.table[this.props.name] === 'undefined')
             return null;
         var cols = [], tbl_cols = this.props.columns.slice(0), tbl_id = this.props.id;
         for(var i=0; i<tbl_cols.length; i++){
@@ -238,7 +243,7 @@ var Table = React.createClass({
                 });
             }
         }
-        var rows = this.props.table.tables[this.props.name].source.map(function(row) {
+        var rows = this.props.table[this.props.name].map(function(row) {
             var columns = cols.map(function(col) {
                 return (
                     <Reactable.Td key={col} column={col}>
@@ -273,8 +278,12 @@ var Table = React.createClass({
                 </Reactable.Tr>
             )
         }.bind(this));
+        var filterBy = "";
+        if('filter' in this.props){
+            filterBy = this.props.filter.filterBy;
+        }
         return (
-            <Reactable.Table className="table striped" columns={tbl_cols} itemsPerPage={5} pageButtonLimit={10} noDataText="No matching records found." sortable={true} filterable={cols} filterBy={this.props.table.filterBy} hideFilterInput >
+            <Reactable.Table className="table striped" columns={tbl_cols} itemsPerPage={5} pageButtonLimit={10} noDataText="No matching records found." sortable={true} filterable={cols} filterBy={filterBy} hideFilterInput >
                 {rows}
             </Reactable.Table>
         );
