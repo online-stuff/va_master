@@ -356,7 +356,7 @@ class CenturyLinkDriver(base.DriverBase):
             if data.get('storage'): 
                 server_data['additionalDisks'] = [
                     {
-                        'path' : 'data', 
+#                        'path' : 'data', 
                         'sizeGB' : data['storage'], 
                         'type' : 'raw'
                     }
