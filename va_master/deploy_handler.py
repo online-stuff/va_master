@@ -156,7 +156,6 @@ class DeployHandler(object):
         try: 
             states_data = yield self.datastore.get('init_vals')
             states_data = states_data['states']
-            print ('Got states data : ', states_data)
         except self.datastore.KeyNotFound:
             states_data = yield self.get_states_data()
             yield self.datastore.insert('states', states_data)

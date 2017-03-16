@@ -96,7 +96,6 @@ def validate_newhost_fields(handler):
                 except Exception as e:
                     raise tornado.gen.Return({'success' : False, 'message' : 'Could not validate field values. Error was : ' + e.message, 'data' : {}})
                 if result.new_step_index == -1:
-                    print ('Adding new host')
                     handler.config.deploy_handler.create_host(found_driver)
                 raise tornado.gen.Return(result.serialize())
             else:
@@ -124,9 +123,6 @@ def create_host(handler):
 
 @tornado.gen.coroutine
 def get_host_info(handler):
-    from time import time
-    print ('Starting timer. ')
-    t0 = time()
     data = handler.data
     deploy_handler = handler.config.deploy_handler
     store = deploy_handler.datastore
@@ -140,12 +136,10 @@ def get_host_info(handler):
     host_drivers = yield [deploy_handler.get_driver_by_id(x['driver_name']) for x in hosts]
 
     hosts_data = [x[0].get_host_data(x[1]) for x in zip(host_drivers, hosts)]
-    print ('Yielding data: ', hosts_data)
     hosts_info = yield hosts_data
     
     for info in zip(hosts_info, hosts): 
         info[0]['hostname'] = info[1]['hostname']
 
-    print ('Info takes : ', time() - t0)
     raise tornado.gen.Return(hosts_info)
 

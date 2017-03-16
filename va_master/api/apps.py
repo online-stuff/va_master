@@ -84,8 +84,6 @@ def perform_instance_action(handler):
         store = handler.config.deploy_handler.datastore
         hosts = yield store.get('hosts')
 
-        print ('Hosts are : ', hosts)
-        print ('Data is : ', data)
         host = [x for x in hosts if x['hostname'] == data['hostname']][0]
         driver = yield handler.config.deploy_handler.get_driver_by_id(host['driver_name'])
         success = yield driver.instance_action(host, data['instance_name'], data['action'])
@@ -155,7 +153,6 @@ def create_new_state(handler):
 
     tar_ref = tarfile.TarFile(tmp_archive)
     tar_ref.extractall(salt_path)
-    print ('Names are : ', tar_ref.getnames())
 
 #    zip_ref.close()
     tar_ref.close()
@@ -176,7 +173,6 @@ def get_app_info(handler):
 @tornado.gen.coroutine
 def launch_app(handler):
     data = handler.data
-    print ('My data is : ', data)
     deploy_handler = handler.config.deploy_handler
     store = deploy_handler.datastore
 

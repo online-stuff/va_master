@@ -31,7 +31,6 @@ def evo_manager_api(handler):
     if handler.data.get('args'): 
         for x in handler.data.get('args'): salt_args.append(x)
 
-    print ('Calling with args: ', evo_target, salt_args)
     result = cl.cmd(evo_target, handler.data['function'], handler.data['args'])['EVO-MASTER']
 
     raise tornado.gen.Return(result)
@@ -61,7 +60,7 @@ def delete_server(handler):
         server = yield driver.delete_server(host, handler.data['server_id'])
     except: 
         import traceback
-        print traceback.print_exc()
+        traceback.print_exc()
     raise tornado.gen.Return(server)
    
 
@@ -83,9 +82,7 @@ def get_auth(handler):
     from salt.client import LocalClient 
     cl = LocalClient()
     try:
-        print ('Calling evo_utils.get_user_auth with ', handler.data['user_email'])
         user_auth = cl.cmd('EVO-MASTER', 'evo_utils.get_user_auth', [handler.data['user_email']])['EVO-MASTER']
-        print ('Got result : ', user_auth)
         user_auth['ip'] = '206.142.244.70'
     except: 
         import traceback
