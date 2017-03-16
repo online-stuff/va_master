@@ -40,29 +40,30 @@ function auth(state, action){
 
 function table(state, action){
     if(typeof state === 'undefined'){
-        return {filterBy: "", tables: {}};
+        return {};
+    }
+    var newState = Object.assign({}, state);
+
+    if(action.type == 'ADD_DATA'){
+        newState = action.tables;
+    }
+    if(action.type == 'CHANGE_DATA'){
+        newState[action.name] = action.data;
+    }
+    return newState;
+}
+
+function filter(state, action){
+    if(typeof state === 'undefined'){
+        return {filterBy: ""};
     }
 
-    var newState = Object.assign({}, state);
+    var newState = Object.assign({}, state); 
     if(action.type == 'FILTER'){
         newState.filterBy = action.filterBy;
     }
     if(action.type == 'RESET_FILTER'){
         newState.filterBy = "";
-    }
-    if(action.type == 'ADD_DATA'){
-        newState.tables = action.tables;
-    }
-    if(action.type == 'REFRESH_DATA'){
-        //var data = {"instance_name": action.instance, "action": newState.tables[action.table].action, "args": []};
-        Network.post('/api/panels/action', action.token, action.data).done(function(d) {
-            console.log('REFRESH_DATA');
-            console.log(d);
-            // var msg = d[action.instance];
-            // if(msg){
-            //     newState.tables = msg.tbl_source;
-            // }
-        });
     }
 
     return newState;
@@ -164,7 +165,7 @@ function form(state, action){
     return newState;
 };
 
-var mainReducer = Redux.combineReducers({auth: auth, table: table, modal: modal, apps: apps, div: div, panel: panel, alert: alert, form: form});
+var mainReducer = Redux.combineReducers({auth: auth, table: table, filter: filter, modal: modal, apps: apps, div: div, panel: panel, alert: alert, form: form});
 var store = Redux.createStore(mainReducer);
 
 var Home = require('./tabs/home');

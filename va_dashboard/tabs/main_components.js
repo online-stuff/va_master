@@ -7,6 +7,7 @@ var components = require('./basic_components');
 var Reactable = require('reactable');
 var Router = require('react-router');
 var LineChart = require("react-chartjs-2").Line;
+var defaults = require("react-chartjs-2").defaults;
 
 var Div = React.createClass({
 
@@ -45,7 +46,7 @@ var MultiTable = React.createClass({
 
     render: function () {
         var redux = {}, tables = [];
-        for(x in this.props.table.tables){
+        for(x in this.props.table){
             var elements = this.props.elements.map(function(element) {
                 element.name = x;
                 element.key = element.type + element.name;
@@ -75,7 +76,9 @@ var MultiTable = React.createClass({
 
 var Chart = React.createClass({
     getInitialState: function () {
-        var chartData = this.getData(this.props.data);
+        defaults.global.legend.display = true;
+        defaults.global.legend.position = 'right';
+        var chartData = this.getData(this.props.data, false);
         return {chartOptions: {
                     maintainAspectRatio: false,
                     responsive: true,
@@ -100,11 +103,17 @@ var Chart = React.createClass({
                     }
                 }, chartData: chartData};
     },
-    getData: function(data) {
-        var datasets = [], times = [], chartData = {};
+    getData: function(data, check) {
+        var datasets = [], times = [], chartData = {}, prevColors = {};
+        if(check){
+            for(var i=0; i < this.state.chartData.datasets.length; i++) {
+                dataset = this.state.chartData.datasets[i];
+                prevColors[dataset.label] = dataset.backgroundColor;
+            }
+        }
         for(var key in data){
-            var obj = {};
-            var color = this.getRandomColor();
+            var obj = {}, prevColor = prevColors[key];
+            var color = prevColor || this.getRandomColor();
             obj.label = key;
             obj.data = [];
             var chart_data = data[key];
@@ -138,7 +147,7 @@ var Chart = React.createClass({
             var chartOptions = Object.assign({}, me.state.chartOptions);
             chartOptions.scales.xAxes[0].time.unit = unit;
             chartOptions.scales.xAxes[0].time.unitStepSize = step;
-            me.setState({chartData: me.getData(d[instance_name]), chartOptions: chartOptions});
+            me.setState({chartData: me.getData(d[instance_name], true), chartOptions: chartOptions});
         }).fail(function (msg) {
             me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
         });
@@ -165,9 +174,9 @@ var Table = React.createClass({
     btn_clicked: function(id, evtKey){
         if(evtKey == 'chart'){
             Router.hashHistory.push('/chart_panel/' + this.props.panel.instance + '/' + this.props.name + '/' + id);
-        }else if(evtKey in this.props.modals){
+        }else if('modals' in this.props && evtKey in this.props.modals){
             if("readonly" in this.props){
-                var rows = this.props.table.tables[this.props.name].source.filter(function(row) {
+                var rows = this.props.table[this.props.name].filter(function(row) {
                     if(row[this.props.id] == id){
                         return true;
                     }
@@ -179,10 +188,12 @@ var Table = React.createClass({
                 }
                 this.props.dispatch({type: 'SET_READONLY', readonly: readonly});
             }
-            var modal = this.props.modals[evtKey];
+            var modal = Object.assign({}, this.props.modals[evtKey]);
             modal.args = [id];
+            modal.table_name = this.props.name;
+            modal.refresh_action = this.props.source;
             this.props.dispatch({type: 'OPEN_MODAL', template: modal});
-        }else if("panels" in this.props){
+        }else if("panels" in this.props && evtKey in this.props.panels){
             Router.hashHistory.push('/subpanel/' + this.props.panels[evtKey] + '/' + this.props.panel.instance + '/' + id);
         }else{
             var data = {"instance_name": this.props.panel.instance, "action": evtKey, "args": [id]};
@@ -193,8 +204,13 @@ var Table = React.createClass({
                     me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
                 }else{
                     data.action = me.props.source;
-                    data.args = []
-                    me.props.dispatch({type: 'REFRESH_DATA', data: data});
+                    data.args = [];
+                    Network.post('/api/panels/action', me.props.auth.token, data).done(function(d) {
+                        var msg = d[data.instance_name];
+                        if(msg){
+                            me.props.dispatch({type: 'CHANGE_DATA', data: msg, name: me.props.name});
+                        }
+                    });
                 }
             }).fail(function (msg) {
                 me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
@@ -202,23 +218,34 @@ var Table = React.createClass({
         }
     },
     render: function () {
-        if(typeof this.props.table.tables[this.props.name] === 'undefined')
+        if(typeof this.props.table[this.props.name] === 'undefined')
             return null;
-        var cols = Object.keys(this.props.table.tables[this.props.name].source[0]);
-        var action_col = false;
-        if(this.props.hasOwnProperty('actions')){
-            var actions = this.props.actions.map(function(action) {
-                var className = "";
-                if(typeof action.class !== 'undefined'){
-                    className = action.class;
-                }
-                return (
-                    <Bootstrap.MenuItem key={action.name} eventKey={action.action} className={className}>{action.name}</Bootstrap.MenuItem>
-                );
-            });
-            action_col = true;
+        var cols = [], tbl_cols = this.props.columns.slice(0), tbl_id = this.props.id;
+        for(var i=0; i<tbl_cols.length; i++){
+            if(tbl_cols[i].key === ""){
+                tbl_cols[i] = {key: this.props.name, label: this.props.name};
+            }
+            cols.push(tbl_cols[i].key);
         }
-        var rows = this.props.table.tables[this.props.name].source.map(function(row) {
+        if(!tbl_id){
+            tbl_id = this.props.name;
+        }
+        var action_col = false, action_length = 0;
+        if(this.props.hasOwnProperty('actions')){
+            var action_col = true, action_length = this.props.actions.length;
+            if(action_length > 1){
+                var actions = this.props.actions.map(function(action) {
+                    var className = "";
+                    if(typeof action.class !== 'undefined'){
+                        className = action.class;
+                    }
+                    return (
+                        <Bootstrap.MenuItem key={action.name} eventKey={action.action} className={className}>{action.name}</Bootstrap.MenuItem>
+                    );
+                });
+            }
+        }
+        var rows = this.props.table[this.props.name].map(function(row) {
             var columns = cols.map(function(col) {
                 return (
                     <Reactable.Td key={col} column={col}>
@@ -226,23 +253,39 @@ var Table = React.createClass({
                     </Reactable.Td>
                 );
             });
-            var key = row[this.props.id];
+            var key = row[tbl_id];
             if(action_col){
-                action_col = <Reactable.Td column="action">
-                    <Bootstrap.DropdownButton bsStyle='primary' title="Choose" onSelect = {this.btn_clicked.bind(this, key)}>
-                        {actions}
-                    </Bootstrap.DropdownButton>
-                </Reactable.Td>
+                action_col = (
+                    <Reactable.Td column="action">
+                        {action_length > 1 ? (
+                            <Bootstrap.DropdownButton bsStyle='primary' title="Choose" onSelect = {this.btn_clicked.bind(this, key)}>
+                                {actions}
+                            </Bootstrap.DropdownButton>
+                        ) : (
+                            <Bootstrap.Button bsStyle='primary' onClick={this.btn_clicked.bind(this, key, this.props.actions[0].action)}>
+                                {this.props.actions[0].name}
+                            </Bootstrap.Button>
+                        )}
+                    </Reactable.Td>
+                );
+            }
+            var rowClass = "";
+            if(typeof this.props.rowStyleCol !== 'undefined'){
+                rowClass = "row-" + this.props.rowStyleCol + "-" + row[this.props.rowStyleCol];
             }
             return (
-                <Reactable.Tr key={key}>
+                <Reactable.Tr className={rowClass} key={key}>
                     {columns}
                     {action_col}
                 </Reactable.Tr>
             )
         }.bind(this));
+        var filterBy = "";
+        if('filter' in this.props){
+            filterBy = this.props.filter.filterBy;
+        }
         return (
-            <Reactable.Table className="table striped" columns={this.props.columns} itemsPerPage={5} pageButtonLimit={10} noDataText="No matching records found." sortable={true} filterable={cols} filterBy={this.props.table.filterBy} hideFilterInput >
+            <Reactable.Table className="table striped" columns={tbl_cols} itemsPerPage={5} pageButtonLimit={10} noDataText="No matching records found." sortable={true} filterable={cols} filterBy={filterBy} hideFilterInput >
                 {rows}
             </Reactable.Table>
         );
@@ -286,6 +329,15 @@ var Modal = React.createClass({
                 me.props.dispatch({type: 'CLOSE_MODAL'});
             }else{
                 me.props.dispatch({type: 'CLOSE_MODAL'});
+                if('refresh_action' in me.props.modal.template){
+                    var data = {"instance_name": me.props.panel.instance, "action": me.props.modal.template.refresh_action, "args": []};
+                    Network.post('/api/panels/action', me.props.auth.token, data).done(function(d) {
+                        var msg = d[data.instance_name];
+                        if(msg){
+                            me.props.dispatch({type: 'CHANGE_DATA', data: msg, name: me.props.modal.template.table_name});
+                        }
+                    });
+                }
             }
         }).fail(function (msg) {
             me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
@@ -389,7 +441,18 @@ var Form = React.createClass({
             element.key = element.name;
             if(Object.keys(redux).indexOf(type) < 0){
                 if(type == "Button" && element.action == "modal"){
-                    element.modalTemplate = element.modal;
+                    var modalTemplate = Object.assign({}, element.modal), args = [];
+                    if('args' in this.props){
+                        for(var key in this.props.args){
+                            val = this.props.args[key]
+                            if(!val){
+                                val = this.props.name;
+                            }
+                            args.push(val);
+                        }
+                    }
+                    modalTemplate.args = args;
+                    element.modalTemplate = modalTemplate;
                 }
                 var Component = components[type];
                 redux[type] = connect(function(state){

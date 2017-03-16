@@ -38,6 +38,7 @@ var Panel = React.createClass({
 
     componentWillReceiveProps: function (nextProps) {
         if (nextProps.params.id !== this.props.params.id || nextProps.params.instance !== this.props.params.instance) {
+            this.props.dispatch({type: 'RESET_FILTER'});
             this.getPanel(nextProps.params.id, nextProps.params.instance);
         }
     },
@@ -83,7 +84,7 @@ var Panel = React.createClass({
 });
 
 Panel = connect(function(state){
-    return {auth: state.auth, panel: state.panel, alert: state.alert, table: state.table};
+    return {auth: state.auth, panel: state.panel, alert: state.alert, table: state.table, filter: state.filter};
 })(Panel);
 
 module.exports = Panel;

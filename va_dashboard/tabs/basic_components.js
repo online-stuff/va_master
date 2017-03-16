@@ -14,7 +14,7 @@ var Filter = React.createClass({
                 <Bootstrap.FormControl
                     type="text"
                     placeholder="Filter"
-                    value={this.props.table.filterBy}
+                    value={this.props.filter.filterBy}
                     onChange={this.filter}
                     autoFocus
                 />
@@ -30,7 +30,6 @@ var Button = React.createClass({
 
     openModal: function() {
         var modal = this.props.modalTemplate;
-        modal.args = [];
         this.props.dispatch({type: 'OPEN_MODAL', template: modal});
     },
 
