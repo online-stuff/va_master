@@ -44,11 +44,15 @@ class CenturyLinkDriver(base.DriverBase):
             }
         super(CenturyLinkDriver, self).__init__(**kwargs) 
 
-    def get_datacenter(self, host): 
+    def set_credentials(self, host):
         clc.v2.SetCredentials(host['username'], host['password'])
+        self.account = clc.v2.Account()
+
+
+    def get_datacenter(self, host): 
+        self.set_credentials(host)
         self.datacenter = [x for x in clc.v2.Datacenter.Datacenters() if host['location'] in x.location][0]
         return self.datacenter
-
 
     def get_servers(self, host):
         servers = self.datacenter.Groups().Get(host['defaults']['sec_group']).Servers()
@@ -222,19 +226,42 @@ class CenturyLinkDriver(base.DriverBase):
         raise tornado.gen.Return(result)
 
     @tornado.gen.coroutine
-    def server_add_stats(self, host, server_id, cpu, memory):
+    def server_set_stats(self, host, server_id, cpu, memory, add = False):
         self.get_datacenter(host)
-        servers = self.get_servers_list(host)
-        server = [x for x in servers if x.id == server_id] or [None]
-        server = server[0]
         
+        if add: 
+            servers = self.get_servers_list(host)
+            server = [x for x in servers if x.id == server_id] or [None]
+            server = server[0]
 
-        try: 
-            server.Change(cpu = server.cpu + cpu, memory = server.memory + memory)
-            result = ''
-        except Exception as e: 
-            result = e.message
-        raise tornado.gen.Return({'success' : not result, 'message' : result, 'data' : {}})
+            cpu += server.cpu
+            memory += server.memory
+
+        print ('Setting cpu to ', cpu, ' and memory to : ', memory)
+        try:
+            data = [
+                {
+                   "op":"set",
+                   "member":"cpu",
+                   "value":cpu
+                },
+                {
+                   "op":"set",
+                   "member":"memory",
+                   "value":memory
+                }
+            ]
+
+            url = 'servers/%s/%s' % (self.account.alias, server_id)
+            print ('Calling ',url, ' with data ', data) 
+            clc.v2.API.Call('patch', url, json.dumps(data))
+
+        except: 
+            import traceback
+            traceback.print_exc()
+            raise
+        raise tornado.gen.Return(True)
+
 
 
     @tornado.gen.coroutine
@@ -339,6 +366,7 @@ class CenturyLinkDriver(base.DriverBase):
             self.get_datacenter(host)
 
             flavour = self.flavours[data['size']]
+            memory = flavour['memory'] / (2**30)
 
             server_data = {
               "name": data['instance_name'],
@@ -349,7 +377,7 @@ class CenturyLinkDriver(base.DriverBase):
               "isManagedOS": False,
               "networkId": self.datacenter.Networks().Get(data['network']).id,
               "cpu": flavour['num_cpus'],
-              "memoryGB": flavour['vol_capacity'],
+              "memoryGB": memory,
               "type": "standard",
               "storageType": "standard",
             }

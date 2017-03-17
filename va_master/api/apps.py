@@ -5,7 +5,8 @@ import subprocess
 import requests
 import zipfile, tarfile
 
-from salt.client import Caller
+from salt.client import Caller, LocalClient
+
 import panels
 
 
@@ -163,9 +164,10 @@ def create_new_state(handler):
 def get_app_info(handler):
     instance_name = handler.data['instance_name']
    
-    cl = Caller()
-    instance_info = cl.cmd('mine.get', instance_name, 'inventory') 
-
+    cl = LocalClient()
+    print ('Getting inventory for :', instance_name)
+    instance_info = cl.cmd('evo-master', 'mine.get', [instance_name, 'inventory'])['evo-master'] 
+    print ('Info is : ', instance_info)
     raise tornado.gen.Return(instance_info)
 
         

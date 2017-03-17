@@ -44,20 +44,26 @@ def list_panels(handler):
 
 @tornado.gen.coroutine
 def panel_action_execute(handler):
-    cl = salt.client.LocalClient()
+    try:
+        cl = salt.client.LocalClient()
 
-    instance = handler.data['instance_name']
-    instance_info = yield apps.get_app_info(handler)
-    state = instance_info[instance]['role']
-    action = handler.data['action']
+        instance = handler.data['instance_name']
+        instance_info = yield apps.get_app_info(handler)
+        state = instance_info[instance]['role']
+        action = handler.data['action']
 
 
-    args = handler.data.get('args', [])
+        args = handler.data.get('args', [])
 
-    states = yield handler.config.deploy_handler.get_states()
-    state = [x for x in states if x['name'] == state][0]
+        states = yield handler.config.deploy_handler.get_states()
+        state = [x for x in states if x['name'] == state][0]
 
-    result = cl.cmd(instance, state['module'] + '.' + action , args)
+        print ('Getting ', state['module'] + '.' + action, ' with args : ', args, ' for ', instance)
+        result = cl.cmd(instance, state['module'] + '.' + action , args)
+        print ('My result is : ', result)
+    except: 
+        import traceback 
+        traceback.print_exc()
     raise tornado.gen.Return(result)
 
 @tornado.gen.coroutine
@@ -99,7 +105,7 @@ def get_panel_for_user(handler):
     print ('Instance info is : ', instance_info)
     state = instance_info['role']
 
-    print ('Panel is : ', panel, 'and user panels are : ',  user_panels, 'with data : ', handler.data)
+    print ('Panel is : ', panel, 'and user panels are : ',  user_panels, 'with data : ', handler.data, ' and we are looking for ', state)
     state = filter(lambda x: x['name'] == state, user_panels)[0]
     if handler.data['instance_name'] in state['instances']:
 #            panel = panel[0]

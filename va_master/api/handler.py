@@ -41,7 +41,9 @@ class ApiHandler(tornado.web.RequestHandler):
             "The minion function caused an exception",
             "is not available",
         ]
-        return any([i in result for i in exceptions])
+        if type(result) == 'str': 
+            return any([i in result for i in exceptions])
+        else: return False
 
 
     def formatted_result(self, result):
@@ -56,8 +58,8 @@ class ApiHandler(tornado.web.RequestHandler):
 
     @tornado.gen.coroutine
     def exec_method(self, method, path, data):
+        print ('Getting a call at ', path, ' with data ', data)
         self.data = data
-        print ('My data is : ', data)
         self.data['method'] = method
         api_func = self.paths[method][path]
         if api_func != user_login: 

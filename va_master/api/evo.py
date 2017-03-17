@@ -14,7 +14,7 @@ def get_paths():
         },
         'post' : {
             'evo/api_call' : clc_api_call,
-            'evo/add_server_stats' : add_server_stats,
+            'evo/set_server_stats' : set_server_stats,
             'evo/evo_manager_api' : evo_manager_api,
         },
         'delete' : {
@@ -103,14 +103,14 @@ def clc_api_call(handler):
 
 
 @tornado.gen.coroutine
-def add_server_stats(handler):
+def set_server_stats(handler):
     store = handler.config.deploy_handler.datastore
 
     hosts = yield store.get('hosts')
     host = [x for x in hosts if x['hostname'] == handler.data['hostname']][0]
     driver = yield handler.config.deploy_handler.get_driver_by_id(host['driver_name'])
 
-    result = yield driver.server_add_stats(host = host, server_id = handler.data['server_id'], cpu = handler.data['cpu'], memory = handler.data['memory'])
+    result = yield driver.server_set_stats(host = host, server_id = handler.data['server_id'], cpu = handler.data['cpu'], memory = handler.data['memory'], add = handler.data.get('add', False))
     raise tornado.gen.Return(result)
 
 
