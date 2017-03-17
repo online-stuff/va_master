@@ -5,7 +5,7 @@ import tornado.gen
 import json
 import os
 from tornado import httpclient
-from bs4 import BeautifulSoup
+#from bs4 import BeautifulSoup
 
 
 

@@ -11,7 +11,7 @@ def imports():
 
 
 def gather_paths():
-    paths = {'get' : {}, 'post' : {}}
+    paths = {'get' : {}, 'post' : {}, 'delete' : {}, 'put' : {}}
 
     api_modules = [x for x in imports()]
     api_modules = [x for x in api_modules if getattr(x, 'get_paths', None)]

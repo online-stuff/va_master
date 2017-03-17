@@ -49,10 +49,14 @@ class CenturyLinkDriver(base.DriverBase):
         self.datacenter = [x for x in clc.v2.Datacenter.Datacenters() if host['location'] in x.location][0]
         return self.datacenter
 
+
+    def get_servers(self, host):
+        servers = self.datacenter.Groups().Get(host['defaults']['sec_group']).Servers()
+        return servers
+
     def get_servers_list(self, host):
-        servers_list = self.datacenter.Groups().Get(host['defaults']['sec_group']).Servers().Servers()
-        return servers_list
-       
+        servers_list = self.get_servers(host).Servers()
+        return servers_list      
 
     @tornado.gen.coroutine
     def driver_id(self):
@@ -64,47 +68,6 @@ class CenturyLinkDriver(base.DriverBase):
         """ Pretty simple. """
         raise tornado.gen.Return('Century Link')
 
-    #Untested; may be used instead of the python api in case we want to list blueprints. 
-    @tornado.gen.coroutine
-    def get_token(self, field_values):
-        """ A function not in use atm, but if we need to use the clc REST API, this is how we get the token. """
-        host, username, password, host_url = (field_values['host_ip'],
-            field_values['username'], field_values['password'],
-            field_values['host_url'])
-        url = 'https://' + host_url + '/v2/authentication/login'
-        data = {
-            'username': username,
-            'password': password
-        }
-        req = HTTPRequest(url, 'POST', body=json.dumps(data), headers={
-            'Content-Type': 'application/json', 
-            'Host': host_url,
-        })
-        try:
-            resp = yield self.client.fetch(req)
-        except:
-            import traceback
-            traceback.print_exc()
-            raise tornado.gen.Return((None, None))
-        raise tornado.gen.Return(resp['bearerToken'])
-
-    #Untested; may be used instead of the python api. 
-    @tornado.gen.coroutine
-    def get_url_value(self, url):
-        """ After getting the token, this is how we can get values. """
-        full_url = 'https://' + self.host_url + url
-        req = HTTPRequest(url, 'GET', body=json.dumps(data), headers={
-            'Content-Type': 'application/json', 
-            'Host': host_url,
-            'Authorization' : self.token
-        })
-        try:
-            resp = yield self.client.fetch(req)
-        except:
-            import traceback
-            traceback.print_exc()
-            raise tornado.gen.Return(None)
-        raise tornado.gen.Return(resp)
 
     @tornado.gen.coroutine
     def instance_action(self, host, instance_name, action):
@@ -114,10 +77,10 @@ class CenturyLinkDriver(base.DriverBase):
 
         servers_list = self.get_servers_list(host)
         print [x.data['details']['hostName'] for x in servers_list]
-        server = [x for x in servers_list if x.data['details']['hostName'] == instance_name or x.id == instance_name] or [None]
+        server = [x for x in servers_list if instance_name in x.data['details']['hostName']  or instance_name in x.id] or [None]
         server = server[0]
         if not server: 
-            print ('Did not find serverw with name: ', instance_name)
+            print ('Did not find server with name: ', instance_name)
             raise tornado.gen.Return({'success' : False, 'message' : 'Did not find server with name: ' + instance_name})
 
         #post_arg is simply to cut down on code; it creates a tuple of arguments ready to be sent to the API. 
@@ -247,6 +210,16 @@ class CenturyLinkDriver(base.DriverBase):
             result = e.message
         raise tornado.gen.Return({'success' : not result, 'message' : result, 'data' : {}})
         
+    @tornado.gen.coroutine
+    def api_call(self, host, data):
+        clc.v2.SetCredentials(host['username'], host['password'])
+
+        method = data['method']
+        url = data['url']
+        kwargs = data.get('kwargs', {})
+
+        result = clc.v2.API.Call(method, url, kwargs)
+        raise tornado.gen.Return(result)
 
     @tornado.gen.coroutine
     def server_add_stats(self, host, server_id, cpu, memory):
@@ -308,6 +281,29 @@ class CenturyLinkDriver(base.DriverBase):
         raise tornado.gen.Return(sizes)
 
     @tornado.gen.coroutine
+    def get_server(self, host, server_name):
+        """ Gets the server by the server name, for instance, TS011, instead of the full id. """
+        self.get_datacenter(host)
+        servers = self.get_servers_list(host)
+        server = [x for x in servers if server_name in x.id] or [None]
+        server = server[0]
+        return server
+
+
+    @tornado.gen.coroutine
+    def get_server_data(self, host, server_name):
+        server = yield self.get_server(host, server_name)
+        raise tornado.gen.Return(server.data)
+
+
+    @tornado.gen.coroutine
+    def delete_server(self, host, server_name):
+        """ Deletes a server, passed to the function via name (not ID).  """
+        server = yield self.get_server(host, server_name)
+        success = server.Delete()
+        raise tornado.gen.Return(True)
+
+    @tornado.gen.coroutine
     def validate_field_values(self, step_index, field_values):
         """ Authenticates via the python API. """
         if step_index < 0:
@@ -366,11 +362,24 @@ class CenturyLinkDriver(base.DriverBase):
                     }
                 ]
 
+            print ('Extra args are : ',data.get('extra_kwargs'))
             #Extra args are usually supplied by external applications. 
-            server_data.update(data.get('extra_args', {}))
+            server_data.update(data.get('extra_kwargs', {}))
 
-            success = clc.v2.API.Call('post', 'servers/%s' % (self.account.alias), json.dumps(server_data), debug = True).WaitUntilComplete()
+            print ('Creating instance with data : ', server_data)
+
+            success = clc.v2.API.Call('post', 'servers/%s' % (self.account.alias), json.dumps(server_data), debug = True)
+            if data.get('wait_for_finish'): 
+                status_url = [x for x in success['links'] if x.get('rel') == 'status'][0]['href']
+                status = 'unknown'
+                while status not in ['succeeded', 'failed']:
+                    print ('Status is : ', status)
+                    status = clc.v2.API.Call('get', status_url)
+                    status = status['status']
+                    yield tornado.gen.sleep(5)
             print ('Result was : ', success)
         except: 
             import traceback
             traceback.print_exc()
+        raise tornado.gen.Return(success)
+

@@ -185,19 +185,22 @@ def launch_app(handler):
     required_host = [host for host in hosts if host['hostname'] == data['hostname']][0]
 
     driver = yield deploy_handler.get_driver_by_id(required_host['driver_name'])
-    yield driver.create_minion(required_host, data)
+    result = yield driver.create_minion(required_host, data)
 
     minion_info = yield get_app_info(handler)
 
-    states = yield store.get('states')
-    state = [x for x in states if x['name'] == data['role']][0]
+    if data.get('role'):
 
-    panel = {'panel_name' : handler.data['instance_name'], 'role' : minion_info['role']}
-    panel.update(state['panels'])
-    yield handler.config.deploy_handler.store_panel(panel)
+        states = yield store.get('states')
+        state = [x for x in states if x['name'] == data['role']][0]
+
+        panel = {'panel_name' : handler.data['instance_name'], 'role' : minion_info['role']}
+        panel.update(state['panels'])
+        yield handler.config.deploy_handler.store_panel(panel)
 
     required_host['instances'].append(minion_info)
     yield store.insert('hosts', hosts)
+    raise tornado.gen.Return(result)
 
 @tornado.gen.coroutine
 def get_user_actions(handler):
