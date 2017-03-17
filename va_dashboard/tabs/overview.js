@@ -187,7 +187,8 @@ var Log = React.createClass({
         if(host.indexOf(":") == 0){
             host += ":80";
         }
-        var ws = new WebSocket("ws://"+ host +"/log");
+        var protocol =  window.location.protocol === "https:" ? "wss" : "ws";
+        var ws = new WebSocket(protocol  +"://"+ host +"/log");
         var me = this;
         ws.onopen = function() {
             ws.send("Hello, world");
