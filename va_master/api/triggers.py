@@ -43,7 +43,7 @@ def receive_trigger(handler):
     trigger = [x for x in triggers if x['service'] == handler.data['service'] and x['status'] == handler.data['status']]
 
     if not trigger: 
-        raise Exception('No trigger for service ' + handler.data['service'] + ' and status ' + handler.data['status']
+        raise Exception('No trigger for service ' + handler.data['service'] + ' and status ' + handler.data['status'])
 
     trigger = trigger[0]
 
