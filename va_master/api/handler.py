@@ -76,7 +76,9 @@ class ApiHandler(tornado.web.RequestHandler):
                 import traceback
                 traceback.print_exc()
         try: 
+            print ('Getting function:', api_func)
             result = yield api_func(self)
+            print ('result is : ', result)
             if self.formatted_result(result): raise tornado.gen.Return(result)
             if self.has_error(result): 
                 result = {'success' : False, 'message' : result, 'data' : {}} 
@@ -92,7 +94,11 @@ class ApiHandler(tornado.web.RequestHandler):
     @tornado.gen.coroutine
     def get(self, path):
         args = self.request.query_arguments
-        result = yield self.exec_method('get', path, {x : args[x][0] for x in args})
+        try:
+            result = yield self.exec_method('get', path, {x : args[x][0] for x in args})
+        except: 
+            import traceback
+            traceback.print_exc()
 
 
     @tornado.gen.coroutine

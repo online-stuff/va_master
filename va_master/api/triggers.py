@@ -1,38 +1,57 @@
 import tornado.gen
 
-@tornado.gen.coroutine
-def add_trigger(handler):
+def get_paths():
+    paths = {
+        'get' : {
+            'triggers' : list_triggers,
+        },
+        'post' : {
+            'triggers/add_trigger':  add_trigger,
+            'triggers/triggered': receive_trigger,
+        }
+    }
+    return paths
+
 #   Example trigger: 
 #    new_trigger = { 
 #        "service" : "CPU", 
 #        "status" : "OK", 
 #        "conditions" : [
-#        {
-#            "operand1" : "get_cpu", 
-#            "operand2" : 8, 
-#            "operator" : ">"
-#        }, 
-#        {
-#            "operand1" : "get_memory", 
-#            "operand2" : 8, 
-#            "operator" : ">=",
-#        }],
+#            {
+#                "func" : "stats_cmp", #driver function
+#                "kwargs" : {"cpu" : 8, "cpu_operator" : "lt", "memory" : 8, "memory_operator" : "ge"}
+#            }, {
+#                "func" : "domain_full", 
+#                "kwargs" : {}
+#            }
+#        ],
 #        "actions" : [
 #            {
-#                "func" : "evo_manager.add_stats", 
-#                "args" : [1]
+#                "func" : "add_stats", #driver function
+#                "kwargs" : {"cpu" : 1, "add" : True}
 #            },
 #        ]
 #    }
     
-    triggers = yield handler.config.deploy_handler.get_triggers(handler.data['hostname'])
-    triggers.append(handler.data['new_trigger'])
 
-    hosts = yield handler.config.deploy_handler.get_hosts()
+@tornado.gen.coroutine
+def add_trigger(handler):
+    hosts = yield handler.config.deploy_handler.list_hosts()
     host = [x for x in hosts if x['hostname'] == handler.data['hostname']][0]
-    host['triggers'] = triggers
+    if not host.get('triggers'): host['triggers'] = []
+
+    host['triggers'].append(handler.data['new_trigger'])
 
     yield handler.config.deploy_handler.datastore.insert('hosts', hosts)
+
+    raise tornado.gen.Return(True)
+
+@tornado.gen.coroutine
+def list_triggers(handler):
+    hosts = yield handler.config.deploy_handler.list_hosts()
+    triggers = {h['hostname'] : h.get('triggers', []) for h in hosts}
+    print ('Triggers are : ', triggers)
+    raise tornado.gen.Return(triggers)
 
 
 @tornado.gen.coroutine
@@ -47,10 +66,9 @@ def receive_trigger(handler):
 
     trigger = trigger[0]
 
-    cl = salt.client.LocalClient()
     results = {}
     for action in trigger['actions']:
-        result = cl.cmd('evo-master', action['func'], action['args'])
+        result = yield getattr(driver, action['func'])(**action['kwargs'])
         results.update(result)
 
     raise tornado.gen.Return(result)

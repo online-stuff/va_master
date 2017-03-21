@@ -108,6 +108,12 @@ class DeployHandler(object):
         raise tornado.gen.Return(host, driver)
 
     @tornado.gen.coroutine
+    def get_triggers(self, hostname):
+        hosts = yield self.list_hosts()
+        host = [x for x in hosts if x['hostname'] == hostname][0]
+        raise tornado.gen.Return(host['triggers'])
+
+    @tornado.gen.coroutine
     def list_hosts(self):
         try:
             hosts = yield self.datastore.get('hosts')

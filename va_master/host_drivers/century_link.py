@@ -226,6 +226,22 @@ class CenturyLinkDriver(base.DriverBase):
         raise tornado.gen.Return(result)
 
     @tornado.gen.coroutine
+    def stats_cmp(self, host ,server_id, cpu = 0, cpu_operator = '', memory = 0, memory_operator = ''):
+
+        servers = self.get_servers_list(host)
+        server = [x for x in servers if x.id == server_id] or [None]
+        server = server[0]
+
+        if cpu_operator: 
+            cpu_result = operator.getattr(cpu_operator)(cpu, server.cpu)
+        else: cpu_result = True
+        if memory_operator: 
+            memory_result = operator.getattr(memory_operator)(memory, server.memory)
+        else: memory_result = True
+
+        return cpu_result and memory_result
+
+    @tornado.gen.coroutine
     def server_set_stats(self, host, server_id, cpu, memory, add = False):
         self.get_datacenter(host)
         
