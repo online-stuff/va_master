@@ -23,12 +23,17 @@ Chart.pluginService.register({
             var total = 0;
 
             for (var i in allData) {
-                total += allData[i];
+                if(!isNaN(allData[i]))
+                    total += allData[i];
             }
-            var percentage = Math.round(((total - allData[allData.length-1]) / total) * 100);
+            if(isNaN(allData[allData.length-1])){
+                text = total.toString();
+            }else{
+                var percentage = Math.round(((total - allData[allData.length-1]) / total) * 100);
+                text = percentage.toString() + "%";
+            }
 
-            var text = percentage.toString() + "%",
-                textX = Math.round((width - ctx.measureText(text).width) / 2),
+            var textX = Math.round((width - ctx.measureText(text).width) / 2),
                 textY = height / 1.2;
 
             ctx.fillText(text, textX, textY);
