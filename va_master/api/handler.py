@@ -194,7 +194,7 @@ class LogMessagingSocket(tornado.websocket.WebSocketHandler):
     #Socket gets messages when opened
     @tornado.web.asynchronous
     @tornado.gen.engine
-    def open(self, no_messages = 5, logfile = '/var/log/vapourapps/va-master.log'):
+    def open(self, no_messages = 100, logfile = '/var/log/vapourapps/va-master.log'):
         print ('Opened socket. ')
         self.logfile = logfile
         with open(logfile) as f: 
