@@ -5,6 +5,9 @@ from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 
 from tornado.httpclient import AsyncHTTPClient, HTTPRequest
+from tornado.concurrent import run_on_executor
+from concurrent.futures import ThreadPoolExecutor   # `pip install futures` for python2
+
 from . import url_handler
 from login import get_current_user, user_login
 import json, datetime, syslog
@@ -15,6 +18,8 @@ import json, datetime, syslog
 
 
 class ApiHandler(tornado.web.RequestHandler):
+    executor = ThreadPoolExecutor(max_workers= 4)
+
     def initialize(self, config, include_version=False):
         self.config = config
         self.datastore = config.datastore
@@ -28,9 +33,9 @@ class ApiHandler(tornado.web.RequestHandler):
         self.salt_client = None
 
     def json(self, obj, status=200):
-#        print ('I am in json with ', obj)
         self.set_header('Content-Type', 'application/json')
         self.set_status(status)
+#        print ('I am in json with ', json.dumps(obj))
         self.write(json.dumps(obj))
         self.finish()
 
@@ -78,9 +83,10 @@ class ApiHandler(tornado.web.RequestHandler):
         try: 
             print ('Getting function:', api_func)
             result = yield api_func(self)
-            print ('result is : ', result)
-            if self.formatted_result(result): raise tornado.gen.Return(result)
-            if self.has_error(result): 
+#            print ('result is : ', result)
+            if self.formatted_result(result): 
+                result = result
+            elif self.has_error(result): 
                 result = {'success' : False, 'message' : result, 'data' : {}} 
             else: 
                 result = {'success' : True, 'message' : '', 'data' : result}
@@ -89,6 +95,7 @@ class ApiHandler(tornado.web.RequestHandler):
             import traceback
             traceback.print_exc()
 
+        print ('gonna json result: ', result)
         self.json(result)
 
     @tornado.gen.coroutine

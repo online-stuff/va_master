@@ -4,6 +4,7 @@ def get_paths():
     paths = {
         'get' : {
             'triggers' : list_triggers,
+            'triggers/clear' : clear_triggers, #Just for resting!!!
         },
         'post' : {
             'triggers/add_trigger':  add_trigger,
@@ -35,6 +36,16 @@ def get_paths():
     
 
 @tornado.gen.coroutine
+def clear_triggers(handler):
+    hosts = yield handler.config.deploy_handler.list_hosts()
+    host = [x for x in hosts if x['hostname'] == handler.data['hostname']][0]
+
+    host['triggers'] = []
+    yield handler.config.deploy_handler.datastore.insert('hosts', hosts)
+
+    raise tornado.gen.Return(True)
+
+@tornado.gen.coroutine
 def add_trigger(handler):
     hosts = yield handler.config.deploy_handler.list_hosts()
     host = [x for x in hosts if x['hostname'] == handler.data['hostname']][0]
@@ -59,16 +70,33 @@ def receive_trigger(handler):
     host, driver = yield handler.config.deploy_handler.get_host_and_driver(handler.data['hostname'])
     
     triggers = yield handler.config.deploy_handler.get_triggers(handler.data['hostname'])
-    trigger = [x for x in triggers if x['service'] == handler.data['service'] and x['status'] == handler.data['status']]
+    triggers = [x for x in triggers if x['service'] == handler.data['event'] and x['status'] == handler.data['level']]
 
-    if not trigger: 
+    if not triggers: 
         raise Exception('No trigger for service ' + handler.data['service'] + ' and status ' + handler.data['status'])
 
-    trigger = trigger[0]
-
-    results = {}
-    for action in trigger['actions']:
-        result = yield getattr(driver, action['func'])(**action['kwargs'])
-        results.update(result)
-
-    raise tornado.gen.Return(result)
+    results = []
+    for trigger in triggers: 
+        conditions_satisfied = True
+        print ('Working with trigger: ', trigger)
+        for condition in trigger['conditions']:
+            condition['kwargs'].update({'host' : host, 'instance_name' : handler.data['instance_name']})
+            for kwarg in trigger['extra_kwargs']: 
+                condition['kwargs'][kwarg] = handler.data.get(kwarg)
+            result = yield getattr(driver, condition['func'])(**condition['kwargs'])
+            print ('Result from ', condition['func'], ' is ', result)
+            if not result: 
+                conditions_satisfied = False
+                break
+        if conditions_satisfied:
+            for action in trigger['actions']:
+                action['kwargs'].update({'instance_name' : handler.data['instance_name'], 'host' : host})
+                for kwarg in trigger['extra_kwargs'] : 
+                    action['kwargs'][kwarg] = handler.data.get(kwarg)
+                try:
+                    result = yield getattr(driver, action['func'])(**action['kwargs'])
+                except: 
+                    import traceback
+                    traceback.print_exc()
+                results.append(result)
+    raise tornado.gen.Return(results)

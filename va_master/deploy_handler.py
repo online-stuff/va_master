@@ -103,9 +103,9 @@ class DeployHandler(object):
     def get_host_and_driver(self, hostname):
         hosts = yield self.datastore.get('hosts')
         host = [x for x in hosts if x['hostname'] == hostname][0]
-        driver = yield self.deploy_handler.get_driver_by_id(host['driver_name'])
+        driver = yield self.get_driver_by_id(host['driver_name'])
 
-        raise tornado.gen.Return(host, driver)
+        raise tornado.gen.Return((host, driver))
 
     @tornado.gen.coroutine
     def get_triggers(self, hostname):

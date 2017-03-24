@@ -4,17 +4,26 @@ try:
 except: 
     import base
     from base import Step, StepResult
+import operator
+
+import sys
 from tornado.httpclient import AsyncHTTPClient, HTTPRequest
+from tornado.concurrent import run_on_executor
+from concurrent.futures import ThreadPoolExecutor   # `pip install futures` for python2
+
 import tornado.gen
+import tornado.ioloop
 import json
 import subprocess
 
+import salt.client
 import clc
 
 PROVIDER_TEMPLATE = "" 
 PROFILE_TEMPLATE = "" 
 
 class CenturyLinkDriver(base.DriverBase):
+    executor = ThreadPoolExecutor(max_workers=4)
     def __init__(self, flavours, provider_name = 'century_link_provider', profile_name = 'century_link__profile', host_ip = '192.168.80.39', key_name = 'va_master_key', key_path = '/root/va_master/va_master_key/'):
         """
             Works ok atm but needs more stuff in the future. Namely, we need the following: 
@@ -132,7 +141,7 @@ class CenturyLinkDriver(base.DriverBase):
         instances =  [{
                 'hostname' : x['name'],
                 'ip' : None if not x['details']['ipAddresses'] else x['details']['ipAddresses'][0]['internal'],
-                'size' : x['details']['storageGB'],
+                'size' : 'va-small',
                 'status' : x['status'],
                 'host' : host['hostname'],
                 'used_ram' : x['details']['memoryMB'],
@@ -216,38 +225,75 @@ class CenturyLinkDriver(base.DriverBase):
         
     @tornado.gen.coroutine
     def api_call(self, host, data):
-        clc.v2.SetCredentials(host['username'], host['password'])
+        print ('I am in api_call now!')
+        self.get_datacenter(host)
 
         method = data['method']
         url = data['url']
         kwargs = data.get('kwargs', {})
 
+        print ('Calling api with : ', method, url, kwargs)
         result = clc.v2.API.Call(method, url, kwargs)
+        print ('Driver api returned : ', result)
         raise tornado.gen.Return(result)
 
     @tornado.gen.coroutine
-    def stats_cmp(self, host ,server_id, cpu = 0, cpu_operator = '', memory = 0, memory_operator = ''):
+    def domain_full(self, domain, instance_name = '', host = {}):
+        cl = salt.client.LocalClient()
+        result = cl.cmd('evo-master', 'evo_utils.domain_full', [domain])
+        return result['evo-master']
+
+    @tornado.gen.coroutine
+    def stats_cmp(self, host, instance_name, domain = '' , cpu = 0, cpu_operator = '', memory = 0, memory_operator = ''):
+        instance_name = instance_name.upper()
+        self.get_datacenter(host)
 
         servers = self.get_servers_list(host)
-        server = [x for x in servers if x.id == server_id] or [None]
+        server = [x for x in servers if instance_name in x.id] or [None]
         server = server[0]
 
         if cpu_operator: 
-            cpu_result = operator.getattr(cpu_operator)(cpu, server.cpu)
+            cpu_result = getattr(operator, cpu_operator)(server.cpu, cpu)
+            print ('Compared ', server.cpu, cpu_operator, cpu,' got result ', cpu_result)
         else: cpu_result = True
         if memory_operator: 
-            memory_result = operator.getattr(memory_operator)(memory, server.memory)
+            memory_result = getattr(operator, memory_operator)(server.memory, memory)
+            print ('Compared ', server.memory, memory_operator, memory, ' and got result ', memory_result)
         else: memory_result = True
 
-        return cpu_result and memory_result
+        end_result = cpu_result and memory_result
+        print ('End result is : ', end_result)
+        return end_result 
 
     @tornado.gen.coroutine
-    def server_set_stats(self, host, server_id, cpu, memory, add = False):
+    def server_new_terminal(self, host, instance_name, domain):
+        print ('Starting new terminal for domain : ', domain)
+        sys.path.append('/srv/salt/_modules')
+        print ('Appended path ! now is : ', sys.path)
+        import evo_manager
+        print ('Imported evo_manager!')
+#        cl = salt.client.LocalClient(io_loop = tornado.ioloop.current())        
+#        job_id = cl.cmd_async('evo_manager.add_terminal', [domain])
+        print ('Yielding to add_terminal')
+        data = evo_manager.new_terminal_data(domain)[3]
+        print ('Creating minion with data : ', data)
+        new_minion = yield self.create_minion(host, data) 
+        result = evo_manager.add_terminal(domain, new_minion)
+        print ('Result is : ', result)
+#        print ('Job id is : ', job_id)
+        raise tornado.gen.Return(True)
+
+    @tornado.gen.coroutine
+    def server_add_stats(self, host, instance_name, cpu = 0, memory = 0, domain = ''):
+        yield self.server_set_stats(host, instance_name, cpu, memory, add = True)
+
+    @tornado.gen.coroutine
+    def server_set_stats(self, host, instance_name, cpu, memory, add = False, domain = ''):
         self.get_datacenter(host)
         
         if add: 
             servers = self.get_servers_list(host)
-            server = [x for x in servers if x.id == server_id] or [None]
+            server = [x for x in servers if x.id == instance_name] or [None]
             server = server[0]
 
             cpu += server.cpu
@@ -268,7 +314,7 @@ class CenturyLinkDriver(base.DriverBase):
                 }
             ]
 
-            url = 'servers/%s/%s' % (self.account.alias, server_id)
+            url = 'servers/%s/%s' % (self.account.alias, instance_name)
             print ('Calling ',url, ' with data ', data) 
             clc.v2.API.Call('patch', url, json.dumps(data))
 
@@ -413,17 +459,20 @@ class CenturyLinkDriver(base.DriverBase):
             print ('Creating instance with data : ', server_data)
 
             success = clc.v2.API.Call('post', 'servers/%s' % (self.account.alias), json.dumps(server_data), debug = True)
-            if data.get('wait_for_finish'): 
+            if data.get('wait_for_finish', True): 
                 status_url = [x for x in success['links'] if x.get('rel') == 'status'][0]['href']
                 status = 'unknown'
-                while status not in ['succeeded', 'failed']:
+                while status not in ['succeeded']:
                     print ('Status is : ', status)
                     status = clc.v2.API.Call('get', status_url)
                     status = status['status']
                     yield tornado.gen.sleep(5)
-            print ('Result was : ', success)
+
+                server_url = [x for x in success['links'] if x['rel'] == 'self'][0]['href']
+                success = clc.v2.API.Call('get', server_url)
         except: 
             import traceback
             traceback.print_exc()
+        print ('Returning: ', success)
         raise tornado.gen.Return(success)
 
