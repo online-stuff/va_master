@@ -138,15 +138,16 @@ class CenturyLinkDriver(base.DriverBase):
         servers = self.get_servers_list(host)
         servers = [x.data for x in servers]
 
+
         instances =  [{
                 'hostname' : x['name'],
                 'ip' : None if not x['details']['ipAddresses'] else x['details']['ipAddresses'][0]['internal'],
                 'size' : 'va-small',
                 'status' : x['status'],
                 'host' : host['hostname'],
-                'used_ram' : x['details']['memoryMB'],
+                'used_ram' : x['details']['memoryGB'],
                 'used_cpu': x['details']['cpu'],
-                'used_disk' : x['details']['diskCount'],
+                'used_disk' : x['details']['storageGB'],
 
         } for x in servers]
         raise tornado.gen.Return(instances)
@@ -238,9 +239,16 @@ class CenturyLinkDriver(base.DriverBase):
         raise tornado.gen.Return(result)
 
     @tornado.gen.coroutine
-    def domain_full(self, domain, instance_name = '', host = {}):
+    def domain_full(self, domain, host = '', instance_name = ''):
         cl = salt.client.LocalClient()
         result = cl.cmd('evo-master', 'evo_utils.domain_full', [domain])
+        return result['evo-master']
+
+    @tornado.gen.coroutine
+    def server_full_cmp(self, instance_name, acceptable_values, domain = '', host = ''):
+        cl = salt.client.LocalClient()
+        ts_name = instance_name.upper()[7:13]
+        result = cl.cmd('evo-master', 'evo_utils.server_full_cmp', [ts_name, acceptable_values])
         return result['evo-master']
 
     @tornado.gen.coroutine
@@ -266,6 +274,13 @@ class CenturyLinkDriver(base.DriverBase):
         return end_result 
 
     @tornado.gen.coroutine
+    def server_set_status(self, instance_name, status, domain = 0, host = ''):
+        cl = salt.client.LocalClient()
+        ts_name = instance_name.upper()[7:13]
+        print ('Setting status for : ', ts_name, ' to ', status)
+        result = cl.cmd('evo-master', 'evo_utils.server_set_status', [ts_name, status])
+
+    @tornado.gen.coroutine
     def server_new_terminal(self, host, instance_name, domain):
         print ('Starting new terminal for domain : ', domain)
         sys.path.append('/srv/salt/_modules')
@@ -288,12 +303,26 @@ class CenturyLinkDriver(base.DriverBase):
         yield self.server_set_stats(host, instance_name, cpu, memory, add = True)
 
     @tornado.gen.coroutine
+    def server_memory_status(self, instance_name, status, domain = '', host = ''): 
+        cl = salt.client.LocalClient()
+        ts_name = instance_name.upper()[7:13]
+        cl.cmd('evo-master', 'evo_utils.terminal_memory_status', [ts_name, status])
+
+    @tornado.gen.coroutine
+    def server_cpu_status(self, instance_name, status, host = '', domain = ''):
+        cl = salt.client.LocalClient()
+        ts_name = instance_name.upper[7:13]
+        cl.cmd('evo-master', 'evo_utils.terminal_cpu_status', [ts_namestatus])
+
+    @tornado.gen.coroutine
     def server_set_stats(self, host, instance_name, cpu, memory, add = False, domain = ''):
+        instance_name = instance_name.upper()
+
         self.get_datacenter(host)
         
         if add: 
             servers = self.get_servers_list(host)
-            server = [x for x in servers if x.id == instance_name] or [None]
+            server = [x for x in servers if x.name == instance_name] or [None]
             server = server[0]
 
             cpu += server.cpu
@@ -301,19 +330,19 @@ class CenturyLinkDriver(base.DriverBase):
 
         print ('Setting cpu to ', cpu, ' and memory to : ', memory)
         try:
-            data = [
-                {
+            data = []
+            if cpu: 
+                data.append({
                    "op":"set",
                    "member":"cpu",
                    "value":cpu
-                },
-                {
+                })
+            if memory: 
+                data.append({
                    "op":"set",
                    "member":"memory",
                    "value":memory
-                }
-            ]
-
+                })
             url = 'servers/%s/%s' % (self.account.alias, instance_name)
             print ('Calling ',url, ' with data ', data) 
             clc.v2.API.Call('patch', url, json.dumps(data))
@@ -428,6 +457,7 @@ class CenturyLinkDriver(base.DriverBase):
             self.get_datacenter(host)
 
             flavour = self.flavours[data['size']]
+            print ('Memory is : ', flavour['memory'])
             memory = flavour['memory'] / (2**30)
 
             server_data = {

@@ -70,10 +70,12 @@ def receive_trigger(handler):
     host, driver = yield handler.config.deploy_handler.get_host_and_driver(handler.data['hostname'])
     
     triggers = yield handler.config.deploy_handler.get_triggers(handler.data['hostname'])
-    triggers = [x for x in triggers if x['service'] == handler.data['event'] and x['status'] == handler.data['level']]
+    triggers = [x for x in triggers if x['service'] == handler.data['service'] and x['status'] == handler.data['level']]
 
     if not triggers: 
-        raise Exception('No trigger for service ' + handler.data['service'] + ' and status ' + handler.data['status'])
+        exception_text = 'No trigger for service ' + handler.data['service'] + ' and status ' + handler.data['status']
+        print (exception_text)
+        raise Exception(exception_text)
 
     results = []
     for trigger in triggers: 
@@ -94,7 +96,9 @@ def receive_trigger(handler):
                 for kwarg in trigger['extra_kwargs'] : 
                     action['kwargs'][kwarg] = handler.data.get(kwarg)
                 try:
+                    print ('Doing ', action['func'])
                     result = yield getattr(driver, action['func'])(**action['kwargs'])
+                    print ('Result is : ', result)
                 except: 
                     import traceback
                     traceback.print_exc()

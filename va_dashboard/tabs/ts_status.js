@@ -7,158 +7,87 @@ var BarChart = require("react-chartjs-2").Bar;
 var defaults = require("react-chartjs-2").defaults;
 var Bootstrap = require('react-bootstrap');
 
-Chart.pluginService.register({
-    beforeDraw: function(chart) {
-        if(chart.config.type === "doughnut"){
-            var width = chart.chart.width,
-                height = chart.chart.height,
-                ctx = chart.chart.ctx;
+var Ts_status = React.createClass({
 
-            ctx.restore();
-            var fontSize = (height / 114).toFixed(2);
-
-            var allData = chart.data.datasets[0].data;
-            if(chart.config.options.rotation == Math.PI){
-                var total = 0;
-                for (var i in allData) {
-                    if(!isNaN(allData[i]))
-                        total += allData[i];
-                }
-                if(isNaN(allData[allData.length-1])){
-                    unit = "";
-                    if(chart.titleBlock.options.text == "MEMORY"){
-                        unit = " GB";
-                    }else if(chart.titleBlock.options.text == "STORAGE"){
-                        unit = " GB";
-                    }
-                    text = total.toString() + unit;
-                }else{
-                    var percentage = Math.round(((total - allData[allData.length-1]) / total) * 100);
-                    text = percentage.toString() + "%";
-                }
-
-                var textX = Math.round((width - ctx.measureText(text).width) / 2),
-                    textY = height / 1.2;
-            }else{
-                fontSize = (height / 114).toFixed(2);
-                if(!allData[0])
-                    allData[0] = 0
-                var txt = Math.round(allData[0]).toString(), unit = "";
-                if(chart.titleBlock.options.text == "MEMORY"){
-                    unit = " GB";
-                }else if(chart.titleBlock.options.text == "USERS"){
-                    txt += "/" + Math.round(allData[1]).toString();
-                }
-                text = txt + unit;
-
-                var textX = Math.round((width - ctx.measureText(text).width) / 2),
-                    textY = height / 1.5;
-            }
-            ctx.font = fontSize + "em sans-serif";
-            ctx.textBaseline = "middle";
-
-            ctx.fillText(text, textX, textY);
-            ctx.save();
-        }
-    }
-});
-
-var Overview = React.createClass({
-    getInitialState: function () {
-        defaults.global.legend.display = false;
-        return {hosts: [], loading: true};
-    },
-    componentWillMount() {
-        this.getHosts();
-    },
-    getHosts: function(){
-        var data = {hosts: []};
-        var me = this;
-        Network.post('/api/hosts/info', this.props.auth.token, data).done(function(data) {
-            me.setState({hosts: data, loading: false});
-        }).fail(function (msg) {
-            me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
-        });
-    },
     render: function() {
-        var appblocks;
-        // var appblocks = [['Directory', 'fa-group'], ['Monitoring', 'fa-heartbeat'],
-        //     ['Backup', 'fa-database'], ['OwnCloud', 'fa-cloud'], ['Fileshare', 'fa-folder-open'],
-        //     ['Email', 'fa-envelope']];
-        // appblocks = appblocks.map(function(d){
-        //     return (
-        //         <div key={d[0]} className='app-block'>
-        //             <div className='icon-wrapper'>
-        //                 <i className={'fa ' + d[1]} />
-        //             </div>
-        //             <div className='name-wrapper'>
-        //                 <h1>{d[0]}</h1>
-        //             </div>
-        //             <div className='clearfix' />
-        //         </div>
-        //     );
-        // });
-        var HostRedux = connect(function(state){
-            return {auth: state.auth};
-        })(Host);
+        var TsBlockRedux = connect(function(state){
+            return {auth: state.auth, alert: state.alert};
+        })(Ts_block);
         var LogRedux = connect(function(state){
             return {auth: state.auth, alert: state.alert};
         })(Log);
-        var host_rows = this.state.hosts.map(function(host) {
-            return <HostRedux key={host.hostname} title={host.hostname} chartData={host.instances} instances={host.instances.length} host_usage={host.host_usage} />;
+        return (
+            <div>
+                <TsBlockRedux />
+                <LogRedux />
+            </div>
+        );
+    }
+});
+
+var Ts_block = React.createClass({
+    getInitialState: function () {
+        defaults.global.legend.display = false;
+        return {ts: [], loading: true};
+    },
+    componentWillMount() {
+        this.getTS();
+        var me = this;
+        this.interval = setInterval(function(){
+            me.getTS();
+        }, 1500000);
+    },
+    componentWillUnmount() {
+        clearInterval(this.interval);
+    },
+    getTS: function(){
+        var me = this;
+        Network.get('/api/panels/ts_data', this.props.auth.token).done(function(data) {
+            me.setState({ts: data['va-monitoring.evo.mk'], loading: false});
+        }).fail(function (msg) {
+            me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
+            //clearInterval(this.interval);
+        });
+    },
+    render: function() {
+        var TSRedux = connect(function(state){
+            return {auth: state.auth};
+        })(TS);
+        var ts_rows = Object.keys(this.state.ts).map(function(key) {
+            return <TSRedux key={key} title={key} chartData={this.state.ts[key]} />;
         }.bind(this));
         const spinnerStyle = {
             display: this.state.loading ? "block": "none",
         };
         return (
-            <div>
                 <div className="graph-block">
                     <span className="spinner" style={spinnerStyle} ><i className="fa fa-spinner fa-spin fa-3x" aria-hidden="true"></i></span>
-                    {host_rows}
+                    {ts_rows}
                 </div>
-                <LogRedux />
-                <div className="appblock">
-                    {appblocks}
-                    <div style={{clear: 'both'}} />
-                </div>
-            </div>);
+            );
     }
 });
 
-var Host = React.createClass({
+var TS = React.createClass({
     getInitialState: function () {
-        var cpuData = [], ramData = [], diskData = [];
-        var instances = this.props.chartData.map(function(instance) {
-            cpuData.push(instance.used_cpu);
-            ramData.push(instance.used_ram);
-            diskData.push(instance.used_disk);
-            return instance.hostname;
-        });
-        instances.push("Free");
-        var usage = this.props.host_usage;
-        cpuData.push(usage.free_cpus);
-        ramData.push(usage.free_ram);
-        diskData.push(usage.free_disk);
-        var data = [cpuData, ramData, diskData];
-        var colors = this.getRandomColors(instances.length+1);
+        var colors1 = this.getColors(1, 'cpu');
+        var colors2 = this.getColors(1, 'memory');
+        var colors3 = this.getColors(2, 'users');
         return {
-            chartData: data,
-            labels: instances,
-            colors: colors,
+            colors: [colors1, colors2, colors3]
         };
     },
-
-    getRandomColors: function(count) {
-        var letters = '0123456789ABCDEF'.split('');
-        var colors = [];
-        for(var j = 0; j < count; j++){
-            var color = '#';
-            for (var i = 0; i < 6; i++ ) {
-                color += letters[Math.floor(Math.random() * 16)];
-            }
-            colors.push(color);
+    getColors: function(count, type) {
+        var colors = {'green': '#4bae4f','greenDark': '#378d3b','red': '#fe5151', 'redDark': '#9a0a11'};
+        var resColors = [];
+        if(this.props.chartData['status'][type]['state'] == "OK"){
+            resColors.push(colors.green);
+            count > 1 && resColors.push(colors.greenDark);
+        }else{
+            resColors.push(colors.red);
+            count > 1 && resColors.push(colors.redDark);
         }
-        return colors;
+        return resColors;
     },
     render: function() {
         var DoughnutRedux = connect(function(state){
@@ -166,10 +95,11 @@ var Host = React.createClass({
         })(DoughnutComponent);
         return (
             <Bootstrap.Panel header={this.props.title} bsStyle='primary'>
-                <DoughnutRedux data={this.state.chartData[0]} labels={this.state.labels} colors={this.state.colors} title="CPU" />
-                <DoughnutRedux data={this.state.chartData[1]} labels={this.state.labels} colors={this.state.colors} title="MEMORY"  />
-                <DoughnutRedux data={this.state.chartData[2]} labels={this.state.labels} colors={this.state.colors} title="STORAGE"  />
-                <label>Instances: {this.props.instances}</label>
+                <div className="flex-box">
+                <DoughnutRedux height={200} data={[this.props.chartData['data']['CPU Count']]} status={this.props.chartData['status']['cpu']['output']} labels={['CPU Count']} colors={this.state.colors[0]} title="CPU" />
+                <DoughnutRedux height={200} data={[this.props.chartData['data']['TotalPhysicalMemory']]} status={this.props.chartData['status']['memory']['output']} labels={['TotalPhysicalMemory']} colors={this.state.colors[1]} title="MEMORY"  />
+                <DoughnutRedux height={200} data={[this.props.chartData['data']['ActiveSessions'], this.props.chartData['data']['InactiveSessions']]} status={this.props.chartData['status']['users']['output']} labels={['ActiveSessions', 'InactiveSessions']} colors={this.state.colors[2]} title="USERS"  />
+                </div>
             </Bootstrap.Panel>
         );
     }
@@ -178,13 +108,11 @@ var Host = React.createClass({
 var DoughnutComponent = React.createClass({
     getInitialState: function () {
         return {chartOptions: {
-                    maintainAspectRatio: false, title: {
+                    title: {
                         display: true,
                         text: this.props.title
                     },
-                    cutoutPercentage: 70,
-                    rotation: 1 * Math.PI,
-                    circumference: 1 * Math.PI
+                    cutoutPercentage: 70
                 }, chartData: {
                     labels: this.props.labels,
                     datasets: [
@@ -197,8 +125,9 @@ var DoughnutComponent = React.createClass({
             },
     render: function() {
         return (
-            <div className="chart">
+            <div className="chart1">
                 <DoughnutChart data={this.state.chartData} options={this.state.chartOptions}/>
+                <div className="chart-status">{this.props.status}</div>
             </div>
         );
     }
@@ -214,12 +143,9 @@ var Log = React.createClass({
             host += ":80";
         }
         var protocol =  window.location.protocol === "https:" ? "wss" : "ws";
-        var ws = new WebSocket(protocol  +"://"+ host +"/log");
+        this.ws = new WebSocket(protocol  +"://"+ host +"/log");
         var me = this;
-        ws.onopen = function() {
-            ws.send("Hello, world");
-        };
-        ws.onmessage = function (evt) {
+        this.ws.onmessage = function (evt) {
             var data = JSON.parse(evt.data), result = [];
             if(Array.isArray(data)){
                 result = data.filter(function(d) {
@@ -240,14 +166,22 @@ var Log = React.createClass({
                 me.props.dispatch({type: 'SHOW_ALERT', msg: "Log has invalid format."});
             }
             if(result.length > 0){
-                var logs = result.reverse().concat(me.state.logs);
+                var logs = result.reverse().concat(me.state.logs).filter(function(log){
+                    var msg = JSON.parse(log.message);
+                    console.log(msg.path);
+                    console.log(typeof msg.path);
+                    return false;
+                });
                 me.setState({logs: logs});
             }
         };
-        ws.onerror = function(evt){
+        this.ws.onerror = function(evt){
             me.props.dispatch({type: 'SHOW_ALERT', msg: "Socket error."});
-            ws.close();
+            this.close_socket();
         };
+    },
+    close_socket: function () {
+        this.ws.close();
     },
     render: function() {
         var times = [], currentDate = new Date(); //"2017-02-21T14:00:14+00:00"
@@ -272,9 +206,7 @@ var Log = React.createClass({
         if(logs.length > 0){
             var prev_log = logs[0];
         }
-        var logs_limit = 10, brojac=0, log_rows = [];
-        for(var i=0; i<logs.length; i++){
-            log = logs[i];
+        var log_rows = logs.map(function(log, i) {
             var logClass = log.severity == "warning" ? "text-warning" : (log.severity == "err" || log.severity == "critical" || log.severity == "emergency") ? "text-danger" : "text-info";
             var timestamp = new Date(log.timestamp);
             if(timestamp.getTime() > prevHourTs){
@@ -299,7 +231,6 @@ var Log = React.createClass({
                     prev_log = log;
                 }
             }
-            if(brojac < logs_limit){
             var hour = timestamp.getHours();
             var min = timestamp.getMinutes();
             var sec = timestamp.getSeconds();
@@ -311,12 +242,10 @@ var Log = React.createClass({
                     msg += message[key] + " ";
                 }
             }
-            log_rows.push (
+            return (
                 <div key={i} className={"logs " + logClass}>{timestamp.toISOString().slice(0, 10) + " " + hour + ":" + min + ":" + sec + ", " + message.user + ", " + log.host + ", " + log.severity + ", " + message.path + ", " + msg}</div>
             );
-            }
-            brojac++;
-        }
+        }.bind(this));
         var LogChartRedux = connect(function(state){
             return {auth: state.auth};
         })(LogChart);
@@ -397,8 +326,9 @@ var LogChart = React.createClass({
     }
 });
 
-Overview = connect(function(state) {
-    return {auth: state.auth, alert: state.alert};
-})(Overview);
+Ts_status = connect(function(state) {
+    return {auth: state.auth};
+})(Ts_status);
 
-module.exports = Overview;
+module.exports = Ts_status;
+

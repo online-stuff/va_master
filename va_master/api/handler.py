@@ -95,7 +95,7 @@ class ApiHandler(tornado.web.RequestHandler):
             import traceback
             traceback.print_exc()
 
-        print ('gonna json result: ', result)
+#        print ('gonna json result: ', result)
         self.json(result)
 
     @tornado.gen.coroutine
@@ -186,7 +186,10 @@ class LogHandler(FileSystemEventHandler):
         with open(log_file) as f: 
             log_file = [x for x in f.read().split('\n') if x]
         last_line = log_file[-1]
-        self.socket.write_message(json.dumps(last_line))
+        try:
+            self.socket.write_message(json.dumps(last_line))
+        except: 
+            pass
 
 
 class LogMessagingSocket(tornado.websocket.WebSocketHandler):
@@ -224,6 +227,6 @@ class LogMessagingSocket(tornado.websocket.WebSocketHandler):
             }[message['action']]
         except: 
             import traceback
-            traceback.print_exc()
+#            traceback.print_exc()
         self.write_message(reply(message))
 

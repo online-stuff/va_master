@@ -18,40 +18,9 @@ var Triggers = React.createClass({
     componentDidMount: function () {
         this.getCurrentTriggers();
     },
-    executeAction: function (rowNum, evtKey) {
-        if(typeof evtKey !== 'undefined'){
-            evtKey = 0;
-        }
-        var action = this.state.triggers[rowNum].actions[evtKey];
-        var me = this;
-        Network.post('/api/' + action.func, this.props.auth.token, action.kwargs).done(function(data) {
-            console.log(data);
-        }).fail(function (msg) {
-            me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
-        });
-    },
     render: function () {
         var me = this;
         var trigger_rows = this.state.triggers.map(function(trigger, i) {
-            var action;
-            if(trigger.actions.length > 1){
-                var actions = trigger.actions.map(function(a, j) {
-                    return (
-                        <Bootstrap.MenuItem key={j} eventKey={j}>{a.func}</Bootstrap.MenuItem>
-                    );
-                });
-                action = (
-                    <Bootstrap.DropdownButton bsStyle='primary' title="Choose" onSelect = {me.executeAction.bind(me, i)}>
-                        {actions}
-                    </Bootstrap.DropdownButton>
-                );
-            }else{
-                action = (
-                    <Bootstrap.Button type="button" bsStyle='primary' onClick={me.executeAction.bind(me, i)}>
-                        {trigger.actions[0].func}
-                    </Bootstrap.Button>
-                );
-            }
             var conditions = trigger.conditions.map(function(c, j) {
                 var kwargs = c.kwargs;
                 var all_keys = Object.keys(kwargs);
@@ -68,12 +37,18 @@ var Triggers = React.createClass({
                 });
                 return c_divs;
             });
+            var actions = trigger.actions.map(function(a, j) {
+                return (
+                    <div>{a.func}</div>
+                );
+            });
             return (
                 <tr key={i}>
                     <td>{trigger.service}</td>
                     <td>{trigger.status}</td>
                     <td>{conditions}</td>
-                    <td>{action}</td>
+                    <td>Terminal</td>
+                    <td>{actions}</td>
                 </tr>
             );
         });
@@ -87,6 +62,7 @@ var Triggers = React.createClass({
                         <td>Service</td>
                         <td>Status</td>
                         <td>Conditions</td>
+                        <td>Target</td>
                         <td>Actions</td>
                         </tr>
                     </thead>

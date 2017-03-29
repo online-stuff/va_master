@@ -101,7 +101,9 @@ class DeployHandler(object):
 
     @tornado.gen.coroutine
     def get_host_and_driver(self, hostname):
+        print ('Getting hosts')
         hosts = yield self.datastore.get('hosts')
+        print ('Got hosts!')
         host = [x for x in hosts if x['hostname'] == hostname][0]
         driver = yield self.get_driver_by_id(host['driver_name'])
 
@@ -159,6 +161,7 @@ class DeployHandler(object):
         try: 
             panels = yield self.datastore.get('panels')
         except: 
+            print ('States data is : ', states_data)
             user_panels, admin_panels = ([{'name' : x['name'], 'icon' : x['icon'], 'instances' : [], 'panels' : x.get('panels', {'admin' : [], 'user' : []}[type])} for x in states_data] for type in ['user', 'admin'])
             panels = {'user' : user_panels, 'admin' : admin_panels}
             yield self.datastore.insert('panels', panels)
@@ -204,10 +207,10 @@ class DeployHandler(object):
     @tornado.gen.coroutine
     def store_panel(self, panel):
         panels = yield self.datastore.get('panels')
-
+        print ('Panels are : ', panels)
         
         role_user_panels = filter(lambda x: x['name'] == panel['role'], panels['user'])[0]
-        if panel['panel_name'] in role_user_panels['instances']: raise tornado.gen.Return()
+#        if panel['panel_name'] in role_user_panels['instances']: raise tornado.gen.Return()
 
         role_user_panels['instances'].append(panel['panel_name'])
 

@@ -173,7 +173,10 @@ var Chart = React.createClass({
 var Table = React.createClass({
     btn_clicked: function(id, evtKey){
         if(evtKey == 'chart'){
-            Router.hashHistory.push('/chart_panel/' + this.props.panel.instance + '/' + this.props.name + '/' + id);
+            var newName = this.props.name.replace(/\s/g, "_");
+            var newId = id.replace(/:/g, "_");
+            var newId = newId.replace(/\s/g, "_");
+            Router.hashHistory.push('/chart_panel/' + this.props.panel.instance + '/' + newName + '/' + newId);
         }else if('modals' in this.props && evtKey in this.props.modals){
             if("readonly" in this.props){
                 var rows = this.props.table[this.props.name].filter(function(row) {
@@ -218,6 +221,7 @@ var Table = React.createClass({
         }
     },
     render: function () {
+        var pagination = "pagination" in this.props ? this.props.pagination : true;
         if(typeof this.props.table[this.props.name] === 'undefined')
             return null;
         var cols = [], tbl_cols = this.props.columns.slice(0), tbl_id = this.props.id;
@@ -285,9 +289,14 @@ var Table = React.createClass({
             filterBy = this.props.filter.filterBy;
         }
         return (
-            <Reactable.Table className="table striped" columns={tbl_cols} itemsPerPage={5} pageButtonLimit={10} noDataText="No matching records found." sortable={true} filterable={cols} filterBy={filterBy} hideFilterInput >
+            <div>
+            { pagination ? ( <Reactable.Table className="table striped" columns={tbl_cols} itemsPerPage={10} pageButtonLimit={10} noDataText="No matching records found." sortable={true} filterable={cols} filterBy={filterBy} hideFilterInput >
                 {rows}
-            </Reactable.Table>
+            </Reactable.Table> ) :
+            ( <Reactable.Table className="table striped" columns={tbl_cols} noDataText="No matching records found." sortable={true} hideFilterInput >
+                {rows}
+            </Reactable.Table> )}
+            </div>
         );
     }
 });

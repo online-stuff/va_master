@@ -194,6 +194,12 @@ ul.left-menu a.active{
     width: 25%;
 }
 
+.chart1{
+    display: inline-block;
+    margin-left: 20px;
+    width: 30%;
+}
+
 .appblock{
     margin-top: 30px;
     clear: 'both';
@@ -274,6 +280,15 @@ ul.left-menu div{
     min-height: 300px;
     float: left;
 }
+.tbl-block{
+display: table;
+}
+.tbl-row{
+display: table-row;
+}
+.tbl-cell{
+display: table-cell;
+}
 
 .log-block{
     width: 30%;
@@ -341,4 +356,14 @@ table tr.row-state-Critical{
 }
 .reactable-pagination a{
     margin-right: 5px;
+}
+.chart-status{
+    height: 80px;
+    overflow: hidden;
+}
+.flex-box{
+    display: -ms-flexbox;
+    display: -webkit-flex;
+    display: flex;
+    align-items: center;
 }
