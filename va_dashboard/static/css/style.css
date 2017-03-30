@@ -310,6 +310,7 @@ display: table-cell;
 }
 .logs{
     margin-bottom: 10px;
+    font-size: 11px;
 }
 .app-containter{
     width: 100%;
@@ -358,8 +359,9 @@ table tr.row-state-Critical{
     margin-right: 5px;
 }
 .chart-status{
-    height: 80px;
+    height: 30px;
     overflow: hidden;
+    font-size: 11px;
 }
 .flex-box{
     display: -ms-flexbox;

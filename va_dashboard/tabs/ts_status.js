@@ -8,18 +8,20 @@ var defaults = require("react-chartjs-2").defaults;
 var Bootstrap = require('react-bootstrap');
 
 var Ts_status = React.createClass({
-
+    componentWillUnmount: function () {
+        this.refs.log.getWrappedInstance().close_socket();
+    },
     render: function() {
         var TsBlockRedux = connect(function(state){
             return {auth: state.auth, alert: state.alert};
         })(Ts_block);
         var LogRedux = connect(function(state){
             return {auth: state.auth, alert: state.alert};
-        })(Log);
+        }, null, null, { withRef: true })(Log);
         return (
             <div>
                 <TsBlockRedux />
-                <LogRedux />
+                <LogRedux ref="log" />
             </div>
         );
     }
@@ -35,7 +37,7 @@ var Ts_block = React.createClass({
         var me = this;
         this.interval = setInterval(function(){
             me.getTS();
-        }, 1500000);
+        }, 15000);
     },
     componentWillUnmount() {
         clearInterval(this.interval);
@@ -70,8 +72,8 @@ var Ts_block = React.createClass({
 
 var TS = React.createClass({
     getInitialState: function () {
-        var colors1 = this.getColors(1, 'cpu');
-        var colors2 = this.getColors(1, 'memory');
+        var colors1 = this.getColors(2, 'cpu');
+        var colors2 = this.getColors(2, 'memory');
         var colors3 = this.getColors(2, 'users');
         return {
             colors: [colors1, colors2, colors3]
@@ -93,11 +95,13 @@ var TS = React.createClass({
         var DoughnutRedux = connect(function(state){
             return {auth: state.auth};
         })(DoughnutComponent);
+        mem_util = this.props.chartData['data']['Physical Memory Utilisation'];
+        cpu_util = this.props.chartData['data']['Avg Utilisation CPU_Total'];
         return (
             <Bootstrap.Panel header={this.props.title} bsStyle='primary'>
                 <div className="flex-box">
-                <DoughnutRedux height={200} data={[this.props.chartData['data']['CPU Count']]} status={this.props.chartData['status']['cpu']['output']} labels={['CPU Count']} colors={this.state.colors[0]} title="CPU" />
-                <DoughnutRedux height={200} data={[this.props.chartData['data']['TotalPhysicalMemory']]} status={this.props.chartData['status']['memory']['output']} labels={['TotalPhysicalMemory']} colors={this.state.colors[1]} title="MEMORY"  />
+                <DoughnutRedux height={200} data={[cpu_util, 100-cpu_util]} innerData={this.props.chartData['data']['CPU Count']} status={this.props.chartData['status']['cpu']['output']} labels={['Avg Utilisation CPU_Total', 'Free CPU']} colors={this.state.colors[0]} title="CPU" />
+                <DoughnutRedux height={200} data={[mem_util, 100-mem_util]} innerData={this.props.chartData['data']['Physical Memory Total']} status={this.props.chartData['status']['memory']['output']} labels={['Physical Memory Utilisation', 'Free Memory']} colors={this.state.colors[1]} title="MEMORY"  />
                 <DoughnutRedux height={200} data={[this.props.chartData['data']['ActiveSessions'], this.props.chartData['data']['InactiveSessions']]} status={this.props.chartData['status']['users']['output']} labels={['ActiveSessions', 'InactiveSessions']} colors={this.state.colors[2]} title="USERS"  />
                 </div>
             </Bootstrap.Panel>
@@ -107,7 +111,7 @@ var TS = React.createClass({
 
 var DoughnutComponent = React.createClass({
     getInitialState: function () {
-        return {chartOptions: {
+        var data = {chartOptions: {
                     title: {
                         display: true,
                         text: this.props.title
@@ -122,7 +126,11 @@ var DoughnutComponent = React.createClass({
                             hoverBackgroundColor: this.props.colors
                         }]
                 }};
-            },
+        if('innerData' in this.props){
+            data.chartOptions.customInnerData = this.props.innerData;
+        }
+        return data;
+    },
     render: function() {
         return (
             <div className="chart1">
@@ -168,8 +176,9 @@ var Log = React.createClass({
             if(result.length > 0){
                 var logs = result.reverse().concat(me.state.logs).filter(function(log){
                     var msg = JSON.parse(log.message);
-                    console.log(msg.path);
-                    console.log(typeof msg.path);
+                    if(typeof msg.path === 'string' && (msg.path.indexOf('apps') > -1 || msg.path.indexOf('triggers') > -1 && msg.data.method == 'post')){
+                        return true;
+                    }
                     return false;
                 });
                 me.setState({logs: logs});
@@ -206,7 +215,9 @@ var Log = React.createClass({
         if(logs.length > 0){
             var prev_log = logs[0];
         }
-        var log_rows = logs.map(function(log, i) {
+        var logs_limit = 10, brojac=0, log_rows = [];
+        for(var i=0; i<logs.length; i++){
+            log = logs[i];
             var logClass = log.severity == "warning" ? "text-warning" : (log.severity == "err" || log.severity == "critical" || log.severity == "emergency") ? "text-danger" : "text-info";
             var timestamp = new Date(log.timestamp);
             if(timestamp.getTime() > prevHourTs){
@@ -231,6 +242,7 @@ var Log = React.createClass({
                     prev_log = log;
                 }
             }
+            if(brojac < logs_limit){
             var hour = timestamp.getHours();
             var min = timestamp.getMinutes();
             var sec = timestamp.getSeconds();
@@ -242,10 +254,12 @@ var Log = React.createClass({
                     msg += message[key] + " ";
                 }
             }
-            return (
+            log_rows.push (
                 <div key={i} className={"logs " + logClass}>{timestamp.toISOString().slice(0, 10) + " " + hour + ":" + min + ":" + sec + ", " + message.user + ", " + log.host + ", " + log.severity + ", " + message.path + ", " + msg}</div>
             );
-        }.bind(this));
+            }
+            brojac++;
+        }
         var LogChartRedux = connect(function(state){
             return {auth: state.auth};
         })(LogChart);

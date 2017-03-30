@@ -43,13 +43,13 @@ Chart.pluginService.register({
                 fontSize = (height / 114).toFixed(2);
                 if(!allData[0])
                     allData[0] = 0
-                var txt = Math.round(allData[0]).toString(), unit = "";
                 if(chart.titleBlock.options.text == "MEMORY"){
-                    unit = " GB";
+                    text = chart.config.options.customInnerData + " GB";
                 }else if(chart.titleBlock.options.text == "USERS"){
-                    txt += "/" + Math.round(allData[1]).toString();
+                    text = allData[0] + "/" + allData[1];
+                }else{
+                    text = chart.config.options.customInnerData;
                 }
-                text = txt + unit;
 
                 var textX = Math.round((width - ctx.measureText(text).width) / 2),
                     textY = height / 1.5;
@@ -80,6 +80,9 @@ var Overview = React.createClass({
             me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
         });
     },
+    componentWillUnmount: function () {
+        this.refs.log.getWrappedInstance().close_socket();
+    },
     render: function() {
         var appblocks;
         // var appblocks = [['Directory', 'fa-group'], ['Monitoring', 'fa-heartbeat'],
@@ -103,7 +106,7 @@ var Overview = React.createClass({
         })(Host);
         var LogRedux = connect(function(state){
             return {auth: state.auth, alert: state.alert};
-        })(Log);
+        }, null, null, { withRef: true })(Log);
         var host_rows = this.state.hosts.map(function(host) {
             return <HostRedux key={host.hostname} title={host.hostname} chartData={host.instances} instances={host.instances.length} host_usage={host.host_usage} />;
         }.bind(this));
@@ -116,7 +119,7 @@ var Overview = React.createClass({
                     <span className="spinner" style={spinnerStyle} ><i className="fa fa-spinner fa-spin fa-3x" aria-hidden="true"></i></span>
                     {host_rows}
                 </div>
-                <LogRedux />
+                <LogRedux ref="log" />
                 <div className="appblock">
                     {appblocks}
                     <div style={{clear: 'both'}} />
@@ -214,12 +217,9 @@ var Log = React.createClass({
             host += ":80";
         }
         var protocol =  window.location.protocol === "https:" ? "wss" : "ws";
-        var ws = new WebSocket(protocol  +"://"+ host +"/log");
+        this.ws = new WebSocket(protocol  +"://"+ host +"/log");
         var me = this;
-        ws.onopen = function() {
-            ws.send("Hello, world");
-        };
-        ws.onmessage = function (evt) {
+        this.ws.onmessage = function (evt) {
             var data = JSON.parse(evt.data), result = [];
             if(Array.isArray(data)){
                 result = data.filter(function(d) {
@@ -244,10 +244,13 @@ var Log = React.createClass({
                 me.setState({logs: logs});
             }
         };
-        ws.onerror = function(evt){
+        this.ws.onerror = function(evt){
             me.props.dispatch({type: 'SHOW_ALERT', msg: "Socket error."});
-            ws.close();
+            this.ws.close();
         };
+    },
+    close_socket: function () {
+        this.ws.close();
     },
     render: function() {
         var times = [], currentDate = new Date(); //"2017-02-21T14:00:14+00:00"

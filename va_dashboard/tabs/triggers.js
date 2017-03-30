@@ -32,14 +32,14 @@ var Triggers = React.createClass({
                 });
                 var c_divs = main_keys.map(function(t){
                     return (
-                        <div>{c.func + ": " + t + " " + me.state.operators[kwargs[t + "_operator"]] + " " + kwargs[t]}</div>
+                        <div key={j}>{c.func + ": " + t + " " + me.state.operators[kwargs[t + "_operator"]] + " " + kwargs[t]}</div>
                     );
                 });
                 return c_divs;
             });
             var actions = trigger.actions.map(function(a, j) {
                 return (
-                    <div>{a.func}</div>
+                    <div key={j}>{a.func}</div>
                 );
             });
             return (
