@@ -205,9 +205,28 @@ var App = React.createClass({
   }
 });
 
-document.addEventListener('DOMContentLoaded', function() {
-  var el = document.getElementById('body-wrapper');
-  ReactDOM.render(<Provider store={store}>
-        <App/>
-      </Provider>, el);
-});
+var activeCallback = $.Callbacks();
+
+WebFontConfig = {
+    custom: {
+        families: ['Glyphicons Halflings', 'FontAwesome'],
+        urls: ['static/css/bootstrap.min.css', 'static/css/font-awesome.min.css', 'static/css/style.css']
+    },
+    active: function () { activeCallback.fire(); },
+    inactive: function () { console.log("inactive fonts"); }
+};
+(function() {
+    var el = document.getElementById('body-wrapper');
+    activeCallback.add(function (){
+        ReactDOM.render(<Provider store={store}>
+              <App/>
+            </Provider>, el);
+    });
+    var wf = document.createElement('script');
+    wf.src = ('https:' == document.location.protocol ? 'https' : 'http') +
+      '://ajax.googleapis.com/ajax/libs/webfont/1.6.26/webfont.js';
+    wf.type = 'text/javascript';
+    wf.async = 'true';
+    var s = document.getElementsByTagName('script')[0];
+    s.parentNode.insertBefore(wf, s);
+})();
