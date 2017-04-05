@@ -45,7 +45,25 @@ var Ts_block = React.createClass({
     getTS: function(){
         var me = this;
         Network.get('/api/panels/ts_data', this.props.auth.token).done(function(data) {
-            me.setState({ts: data['va-monitoring.evo.mk'], loading: false});
+            data = data['va-monitoring.evo.mk'];
+            var prev_state = Object.assign({}, me.state.ts);
+            for(var host in data){
+                var check = false, h = data[host];
+                for(var service in h['status']){
+                    if(h['status'][service]['state'] == '' && typeof prev_state[host] !== 'undefined'){
+                        data[host]['status'][service] = prev_state[host]['status'][service];
+                        check = true;
+                    }
+                }
+                if(check){
+                    for(var k in prev_state[host]['data']){
+                        if(!(k in h['data'])){
+                            data[host]['data'][k] = prev_state[host]['data'][k];
+                        }
+                    }
+                }
+            }
+            me.setState({ts: data, loading: false});
         }).fail(function (msg) {
             me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
             //clearInterval(this.interval);
