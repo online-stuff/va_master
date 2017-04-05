@@ -72,23 +72,22 @@ var Ts_block = React.createClass({
 
 var TS = React.createClass({
     getInitialState: function () {
-        var colors1 = this.getColors(2, 'cpu');
-        var colors2 = this.getColors(2, 'memory');
-        var colors3 = this.getColors(2, 'users');
+        var colors1 = this.getColors('cpu');
+        var colors2 = this.getColors('memory');
+        var colors3 = this.getColors('users');
         return {
             colors: [colors1, colors2, colors3]
         };
     },
-    getColors: function(count, type) {
-        var colors = {'green': '#4bae4f','greenDark': '#378d3b','red': '#fe5151', 'redDark': '#9a0a11'};
+    getColors: function(type) {
+        var colors = {'green': '#4bae4f','red': '#fe5151','free': '#d3d3d3'};
         var resColors = [];
         if(this.props.chartData['status'][type]['state'] == "OK"){
             resColors.push(colors.green);
-            count > 1 && resColors.push(colors.greenDark);
         }else{
             resColors.push(colors.red);
-            count > 1 && resColors.push(colors.redDark);
         }
+        resColors.push(colors.free);
         return resColors;
     },
     render: function() {
