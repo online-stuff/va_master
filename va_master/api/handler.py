@@ -69,7 +69,7 @@ class ApiHandler(tornado.web.RequestHandler):
         api_func = self.paths[method][path]
         if api_func != user_login: 
             try: 
-                yield self.log_message(path, data)
+                yield self.log_message(path, data, func = api_func)
 
                 user = yield get_current_user(self)
 
@@ -139,11 +139,12 @@ class ApiHandler(tornado.web.RequestHandler):
 
 
     @tornado.gen.coroutine
-    def log_message(self, path, data):
+    def log_message(self, path, data, func):
 
         user = yield url_handler.login.get_current_user(self)
         message = json.dumps({
-            'type' : 'POST', 
+            'type' : data['method'], 
+            'function' : func.func_name,
             'user' : user['username'], 
             'user_type' : user['type'], 
             'path' : path, 

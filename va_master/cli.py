@@ -258,6 +258,16 @@ def handle_add_module(args):
     cli_success('Module copied to : ' + api_path + file_name)
         
     
+def handle_new_admin(args):
+    from .api import login
+    cli_config = config.Config()
+
+    store = cli_config.datastore
+
+    run_sync = tornado.ioloop.IOLoop.instance().run_sync
+    create_user = functools.partial(login.create_user, store, args['username'], args['password'], 'admin')
+    create_user_run = run_sync(create_user)
+   
 
 
 
@@ -293,6 +303,13 @@ def entry():
 
     add_module.set_defaults(sub='add_module')
 
+    new_admin = subparsers.add_parser('new_admin', help='Creates a new admin user.  ')
+    new_admin.add_argument('--username', help = 'The username for the admin. ')
+    new_admin.add_argument('--password', help = 'The password. Will be hashed in the datastore.  ')
+
+
+    new_admin.set_defaults(sub='new_admin')
+
 
     args = parser.parse_args()
     # Define handlers for each subparser
@@ -300,6 +317,7 @@ def entry():
         'init': handle_init,
         'jsbuild': handle_jsbuild,
         'add_module' : handle_add_module,
+        'new_admin' : handle_new_admin,
         'stop': lambda x: None
     }
     # Call the proper handler based on the subparser argument
