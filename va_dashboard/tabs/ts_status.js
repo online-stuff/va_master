@@ -203,7 +203,7 @@ var Log = React.createClass({
         };
         this.ws.onerror = function(evt){
             me.props.dispatch({type: 'SHOW_ALERT', msg: "Socket error."});
-            this.close_socket();
+            //me.close_socket();
         };
     },
     close_socket: function () {

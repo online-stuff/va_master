@@ -355,6 +355,9 @@ table tr.row-state-Warning{
 table tr.row-state-Critical{
   border-left: 5px solid #de4040;
 }
+table tr.row-state-Pending{
+  border-left: 5px solid #d3d3d3;
+}
 .reactable-pagination a{
     margin-right: 5px;
 }
