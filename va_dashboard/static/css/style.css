@@ -358,6 +358,9 @@ table tr.row-state-Critical{
 table tr.row-state-Pending{
   border-left: 5px solid #d3d3d3;
 }
+table tr.row-state-Down{
+  border-left: 5px solid #d3d3d3;
+}
 .reactable-pagination a{
     margin-right: 5px;
 }

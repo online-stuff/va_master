@@ -83,6 +83,22 @@ class CenturyLinkDriver(base.DriverBase):
 
 
     @tornado.gen.coroutine
+    def wait_for_clc_action(self, success):
+        print ('Initial success is : ', success)
+        status_url = [x for x in success['links'] if x.get('rel') == 'status'][0]['href']
+        status = 'unknown'
+        while status not in ['failed']:
+            print ('Status is : ', status)
+            result = clc.v2.API.Call('get', status_url)
+            print ('Result is : ', result)
+            status = result['status']
+            if status == 'succeeded': raise tornado.gen.Return(result)
+            yield tornado.gen.sleep(5)
+
+        raise tornado.gen.Return(False)
+    
+
+    @tornado.gen.coroutine
     def instance_action(self, host, instance_name, action):
         instance_name = instance_name.upper()
         clc.v2.SetCredentials(host['username'], host['password'])
@@ -112,15 +128,8 @@ class CenturyLinkDriver(base.DriverBase):
             raise tornado.gen.Return({'success' : False, 'message' : 'Action not supported : ' + action})
         success = clc.v2.API.Call(*action_map[action], debug = True)[0]
         print ('Success is : ', success)
-        status_url = [x for x in success['links'] if x.get('rel') == 'status'][0]['href']
-        status = 'unknown'
-        while status not in ['succeeded']:
-            print ('Status is : ', status)
-            status = clc.v2.API.Call('get', status_url)
-            status = status['status']
-            yield tornado.gen.sleep(5)
+        yield self.wait_for_clc_action(success)
 
-#        success = instance_action[action](instance_name)
         raise tornado.gen.Return({'success' : True, 'message' : ''})
 
     @tornado.gen.coroutine
@@ -352,7 +361,7 @@ class CenturyLinkDriver(base.DriverBase):
 
         self.get_datacenter(host)
         servers = self.get_servers_list(host)
-        server = [x for x in servers if instance_name in x.name] or [None]
+        server = [x for x in servers if instance_name in x.name and x.status == 'active'] or [None]
         server = server[0]
        
         if add: 
@@ -376,7 +385,8 @@ class CenturyLinkDriver(base.DriverBase):
                 })
             url = 'servers/%s/%s' % (self.account.alias, server.name)
             print ('Calling ',url, ' with data ', data) 
-            clc.v2.API.Call('patch', url, json.dumps(data))
+            result = clc.v2.API.Call('patch', url, json.dumps(data))
+            yield self.wait_for_clc_action({'links' : [result]})
 
         except: 
             import traceback
@@ -520,14 +530,10 @@ class CenturyLinkDriver(base.DriverBase):
             print ('Creating instance with data : ', server_data)
 
             success = clc.v2.API.Call('post', 'servers/%s' % (self.account.alias), json.dumps(server_data), debug = True)
+
+
             if data.get('wait_for_finish', True): 
-                status_url = [x for x in success['links'] if x.get('rel') == 'status'][0]['href']
-                status = 'unknown'
-                while status not in ['succeeded']:
-                    print ('Status is : ', status)
-                    status = clc.v2.API.Call('get', status_url)
-                    status = status['status']
-                    yield tornado.gen.sleep(5)
+                yield self.wait_for_clc_action(success)
 
                 server_url = [x for x in success['links'] if x['rel'] == 'self'][0]['href']
                 success = clc.v2.API.Call('get', server_url)
