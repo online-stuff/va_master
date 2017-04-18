@@ -170,13 +170,6 @@ ul.left-menu a.active{
     margin-bottom: 10px;
 }
 
-.tile{
-    border-radius: 15px;
-    border: 1px solid black;
-    text-align: center;
-    min-height: 160px;
-}
-
 .title{
     font-weight: bold;
     font-size: 16px;
@@ -186,6 +179,8 @@ ul.left-menu a.active{
 .description {
     height: 60px;
     overflow: auto;
+    margin: 10px 0;
+    font-size: 12px;
 }
 
 .chart{
