@@ -46,7 +46,7 @@ class ApiHandler(tornado.web.RequestHandler):
             "The minion function caused an exception",
             "is not available",
         ]
-        if type(result) == 'str': 
+        if type(result) == str: 
             return any([i in result for i in exceptions])
         else: return False
 
