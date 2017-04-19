@@ -87,7 +87,7 @@ class CenturyLinkDriver(base.DriverBase):
         print ('Initial success is : ', success)
         status_url = [x for x in success['links'] if x.get('rel') == 'status'][0]['href']
         status = 'unknown'
-        while status not in ['failed']:
+        while status not in ['failed', 'underConstruction']:
             print ('Status is : ', status)
             result = clc.v2.API.Call('get', status_url)
             print ('Result is : ', result)

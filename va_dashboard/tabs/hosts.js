@@ -5,12 +5,12 @@ var connect = require('react-redux').connect;
 
 var Hosts = React.createClass({
     getInitialState: function () {
-        return {hosts: []};
+        return {hosts: [], loading: true};
     },
     getCurrentHosts: function () {
         var me = this;
         Network.get('/api/hosts', this.props.auth.token).done(function (data) {
-            me.setState({hosts: data.hosts});
+            me.setState({hosts: data.hosts, loading: false});
         }).fail(function (msg) {
             me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
         });
@@ -57,9 +57,18 @@ var Hosts = React.createClass({
         var NewHostFormRedux = connect(function(state){
             return {auth: state.auth, alert: state.alert};
         })(NewHostForm);
-
+        var loading = this.state.loading;
+        const spinnerStyle = {
+            display: loading ? "block": "none",
+        };
+        const blockStyle = {
+            visibility: loading ? "hidden": "visible",
+        };
         return (<div>
             <NewHostFormRedux changeHosts = {this.getCurrentHosts} />
+            <div className="app-containter">
+            <span className="spinner" style={spinnerStyle} ><i className="fa fa-spinner fa-spin fa-3x" aria-hidden="true"></i></span>
+            <div style={blockStyle}>
             <Bootstrap.PageHeader>Current hosts <small>All specified hosts</small></Bootstrap.PageHeader>
             <Bootstrap.Table striped bordered hover>
                 <thead>
@@ -76,6 +85,8 @@ var Hosts = React.createClass({
                     {host_rows}
                 </tbody>
             </Bootstrap.Table>
+            </div>
+            </div>
         </div>);
     }
 });

@@ -31,13 +31,14 @@ var Store = React.createClass({
     render: function () {
         var states_rows = this.state.states.map(function(state) {
             return (
-                <Bootstrap.Col xs={12} sm={6} md={3} key={state.name} className="tile">
-                    <div className="title">{state.name}</div>
-                    <div>Version: {state.version}</div>
-                    <div className="description">{state.description}</div>
-                    <Bootstrap.Button bsStyle='primary' onClick={this.launchApp} value={state.name}>
-                        Launch
-                    </Bootstrap.Button>
+                <Bootstrap.Col xs={12} sm={6} md={3} key={state.name}>
+                    <Bootstrap.Panel header={state.name} bsStyle='primary'>
+                        <div>Version: {state.version}</div>
+                        <div className="description">{state.description}</div>
+                        <Bootstrap.Button bsStyle='primary' onClick={this.launchApp} value={state.name}>
+                            Launch
+                        </Bootstrap.Button>
+                    </Bootstrap.Panel>
                 </Bootstrap.Col>
             )
         }.bind(this));
