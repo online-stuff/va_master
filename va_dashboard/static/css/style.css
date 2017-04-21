@@ -370,3 +370,16 @@ table tr.row-state-Down{
     display: flex;
     align-items: center;
 }
+.threshold-tbl{
+    border-spacing: 0 20px;
+    border-collapse: separate;
+}
+.threshold-tbl th{
+    width: 120px;
+    text-align: center;
+}
+.threshold-tbl input{
+    width: 100px;
+    margin: 0 20px;
+    text-align: center;
+}

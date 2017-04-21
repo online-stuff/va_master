@@ -2,7 +2,9 @@ import tornado.gen
 import clc
 import salt.client
 from tornado.concurrent import run_on_executor
+
 evo_target = 'evo-master'
+monitoring_target = 'va-monitoring.evo.mk'
 
 def get_paths():
     return {
@@ -11,11 +13,14 @@ def get_paths():
             'evo/get_server': get_server_data,
             'evo/get_users' : get_users,
             'evo/get_server_auth' : get_auth,
+            'evo/get_all_icinga_services' : get_icinga_services, 
         },
         'post' : {
             'evo/api_call' : clc_api_call,
             'evo/set_server_stats' : set_server_stats,
             'evo/evo_manager_api' : evo_manager_api,
+            'evo/change_icinga_service': change_icinga_service,
+            'evo/change_icinga_services' : change_all_icinga_services,
         },
         'delete' : {
             'evo/delete_ts' : delete_server,
@@ -23,6 +28,27 @@ def get_paths():
         'user_allowed' : ['evo/get_server_auth'],
     }
 
+@tornado.gen.coroutine
+def change_all_icinga_services(handler):
+    cl = salt.client.LocalClient()
+    result = cl.cmd(monitoring_target, 'monitoring.change_all_icinga_services', [handler.data['services']])
+    result = result[monitoring_target]
+    raise tornado.gen.Return(result)
+
+@tornado.gen.coroutine
+def get_icinga_services(handler):
+    cl = salt.client.LocalClient()
+    result = cl.cmd(monitoring_target, 'monitoring.get_all_icinga_services')
+    result = result[monitoring_target]
+    raise tornado.gen.Return(result)
+
+@tornado.gen.coroutine
+def change_icinga_service(handler):
+    cl = salt.client.LocalClient()
+    result = cl.cmd('va-monitoring.evo.mk', 'monitoring.change_icinga_service', [handler.data['service'], handler.data['severity'], handler.data['value']])
+    result = result[monitoring_target]
+    if result: raise Exception('Result is not None, instead is : ', result)
+    raise tornado.gen.Return(True)
 
 @tornado.gen.coroutine
 def evo_manager_api(handler):

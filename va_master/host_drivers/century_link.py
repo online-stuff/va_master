@@ -134,11 +134,15 @@ class CenturyLinkDriver(base.DriverBase):
 
     @tornado.gen.coroutine
     def get_host_billing(self, host):
-        self.get_datacenter(self, host)
+        self.get_datacenter(host)
         group = self.datacenter.Groups().Get(host['defaults']['sec_group'])
+        group_links = group.data['links']
+#        group_links = clc.v2.API.Call('get', group.data['links'])
 
-        billing_link = [x for x in clc.v2.API.Call(group.data['links']) if 'billing' in x['rel']]
-        billing_info = clc.v2.API.Call('get', billing_link['href'])
+        print ('Group links are : ', group_links)
+        billing_link = [x for x in group_links if 'billing' in x['rel']][0]['href']
+        print ('Billing link is : ', billing_link)
+        billing_info = clc.v2.API.Call('get', billing_link)
         bililng_info = billing_info['groups'].values()[0]
 
         raise tornado.gen.Return({'success' : True, 'message' : billing_info})
@@ -255,6 +259,12 @@ class CenturyLinkDriver(base.DriverBase):
         raise tornado.gen.Return(result)
 
     @tornado.gen.coroutine
+    def get_driver_trigger_functions(self):
+        conditions = ['domain_full', 'server_can_add_hardware', 'server_cpu_full', 'server_cpu_ok', 'server_memory_full', 'server_memory_ok', 'server_check_hardware']
+        actions = ['server_add_hardware', 'server_set_hardware', 'server_new_terminal', 'server_set_status']
+        return {'conditions' : conditions, 'actions' : actions}
+
+    @tornado.gen.coroutine
     def domain_full(self, domain, host = '', instance_name = ''):
         cl = salt.client.LocalClient()
         result = cl.cmd('evo-master', 'evo_utils.domain_full', [domain])
@@ -296,7 +306,7 @@ class CenturyLinkDriver(base.DriverBase):
         raise tornado.gen.Return(result)
 
     @tornado.gen.coroutine
-    def stats_cmp(self, host, instance_name, domain = '' , cpu = 0, cpu_operator = '', memory = 0, memory_operator = ''):
+    def server_check_hardware(self, host, instance_name, domain = '' , cpu = 0, cpu_operator = '', memory = 0, memory_operator = ''):
         instance_name = instance_name.upper()
         self.get_datacenter(host)
 
@@ -340,7 +350,7 @@ class CenturyLinkDriver(base.DriverBase):
         raise tornado.gen.Return(True)
 
     @tornado.gen.coroutine
-    def server_add_stats(self, host, instance_name, cpu = 0, memory = 0, domain = ''):
+    def server_add_hardware(self, host, instance_name, cpu = 0, memory = 0, domain = ''):
         yield self.server_set_stats(host, instance_name, cpu, memory, add = True)
 
     @tornado.gen.coroutine
@@ -356,7 +366,7 @@ class CenturyLinkDriver(base.DriverBase):
         cl.cmd('evo-master', 'evo_utils.terminal_cpu_status', [ts_name, status])
 
     @tornado.gen.coroutine
-    def server_set_stats(self, host, instance_name, cpu = 0, memory = 0, add = False, domain = ''):
+    def server_set_hardware(self, host, instance_name, cpu = 0, memory = 0, add = False, domain = ''):
         instance_name = instance_name.upper()
 
         self.get_datacenter(host)
@@ -367,6 +377,9 @@ class CenturyLinkDriver(base.DriverBase):
         if add: 
             if cpu: cpu += server.cpu
             if memory: memory += server.memory
+
+        if cpu == server.cpu and memory == server.memory: 
+            raise tornado.gen.Return(True)
 
         print ('Setting cpu to ', cpu, ' and memory to : ', memory)
         try:

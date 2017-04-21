@@ -12,7 +12,8 @@ def get_paths():
             'hosts' : list_hosts, 
             'hosts/reset' : reset_hosts, 
             'drivers' : list_drivers, 
-
+            'hosts/get_trigger_functions': get_hosts_triggers,
+            'hosts/get_host_billing' : get_host_billing, 
         },
         'post' : {
             'hosts/info' : get_host_info, 
@@ -22,7 +23,18 @@ def get_paths():
     }
     return paths
 
-##@auth_only(user_allowed = True)
+@tornado.gen.coroutine
+def get_host_billing(handler):
+    host, driver = yield handler.config.deploy_handler.get_host_and_driver(handler.data['hostname'])
+    result = yield driver.get_host_billing(host)
+    raise tornado.gen.Return(result)
+
+@tornado.gen.coroutine
+def get_hosts_triggers(handler):
+    host, driver = yield handler.config.deploy_handler.get_host_and_driver(handler.data['hostname'])
+    result = yield driver.get_driver_trigger_functions()
+    raise tornado.gen.Return(result)
+
 @tornado.gen.coroutine
 def list_hosts(handler):
     hosts = yield handler.config.deploy_handler.list_hosts()
