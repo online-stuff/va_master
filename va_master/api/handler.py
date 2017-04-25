@@ -56,18 +56,21 @@ class ApiHandler(tornado.web.RequestHandler):
         """ Returns True if the result is formatted properly. The format for now is : {'data' : {'field' : []}, 'success' : :True/False, 'message' : 'Information. Usually empty if successful. '} """
         try: 
             result_fields = ['data', 'success', 'message']
-            return set(result.keys()) == set(result_fields)
+            result = (set (result.keys()) == set(result_fields))
+#            print ('Formatted correctly: ', result, ' because : ', result.keys())
+            return result
         except: 
-            print ('Error with testing formatted result - probably is ok. ')
+#            print ('Error with testing formatted result - probably is ok. ')
             return False
 
 
     @tornado.gen.coroutine
     def exec_method(self, method, path, data):
-        print ('Getting a call at ', path, ' with data ', data)
         self.data = data
         self.data['method'] = method
         api_func = self.paths[method][path]
+        print ('Getting a call at ', path, ' with data ', data, ' and will call function: ', api_func)
+
         if api_func != user_login: 
             try: 
                 yield self.log_message(path, data, func = api_func)
@@ -82,11 +85,10 @@ class ApiHandler(tornado.web.RequestHandler):
                 import traceback
                 traceback.print_exc()
         try: 
-            print ('Getting function:', api_func)
             result = yield api_func(self)
 #            print ('result is : ', result)
             if self.formatted_result(result): 
-                result = result
+                pass 
             elif self.has_error(result): 
                 result = {'success' : False, 'message' : result, 'data' : {}} 
             else: 
@@ -96,7 +98,6 @@ class ApiHandler(tornado.web.RequestHandler):
             import traceback
             traceback.print_exc()
 
-#        print ('gonna json result: ', result)
         self.json(result)
 
     @tornado.gen.coroutine
@@ -107,7 +108,6 @@ class ApiHandler(tornado.web.RequestHandler):
         except: 
             import traceback
             traceback.print_exc()
-
 
     @tornado.gen.coroutine
     def delete(self, path):
@@ -152,7 +152,6 @@ class ApiHandler(tornado.web.RequestHandler):
             'data' : data, 
             'time' : str(datetime.datetime.now()),
         })
-        print ('Logging message: ', message)
         try:
             syslog.syslog(syslog.LOG_INFO | syslog.LOG_LOCAL0, message)
         except: 
@@ -200,7 +199,6 @@ class LogMessagingSocket(tornado.websocket.WebSocketHandler):
     @tornado.web.asynchronous
     @tornado.gen.engine
     def open(self, no_messages = 100, logfile = '/var/log/vapourapps/va-master.log'):
-        print ('Opened socket. ')
         self.logfile = logfile
         with open(logfile) as f: 
             self.messages = f.read().split('\n')
@@ -210,7 +208,6 @@ class LogMessagingSocket(tornado.websocket.WebSocketHandler):
         log_handler = LogHandler(self)
         observer = Observer()
         observer.schedule(log_handler, path = '/var/log/vapourapps/')
-        print ('Started log handler.')
         observer.start()
         
     def get_messages(message):
@@ -221,7 +218,6 @@ class LogMessagingSocket(tornado.websocket.WebSocketHandler):
 
     @tornado.gen.coroutine
     def on_message(self, message): 
-        print ('Something happened with the log!')
         try:
             message = json.loads(message)
             reply = {

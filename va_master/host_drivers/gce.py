@@ -56,7 +56,6 @@ class OpenStackDriver(base.DriverBase):
             'key_name' : key_name,
             'key_path' : key_path
             }
-        self.regions = ['RegionOne', ]
         super(OpenStackDriver, self).__init__(**kwargs)
 
     @tornado.gen.coroutine
@@ -68,16 +67,6 @@ class OpenStackDriver(base.DriverBase):
     def friendly_name(self):
         """ Pretty simple """
         raise tornado.gen.Return('OpenStack')
-
-
-    @tornado.gen.coroutine
-    def export_env_variables(self, username, tenant, url, password):
-        """ A method I made to help call nova commands, but not being used actively. Keeping it here in case it's needed some time. """
-
-        os.environ['OS_USERNAME'] = self.provider_vars['VAR_USERNAME']
-        os.environ['OS_PROJECT_NAME'] = self.provider_vars['VAR_TENANT']
-        os.environ['OS_AUTH_URL'] = self.provider_vars['VAR_IDENTITY_URL']
-        os.environ['PASSWORD'] = self.provider_vars['VAR_PASSWORD']
 
     @tornado.gen.coroutine
     def get_steps(self):
@@ -93,138 +82,41 @@ class OpenStackDriver(base.DriverBase):
         raise tornado.gen.Return(steps)
 
     @tornado.gen.coroutine
-    def get_token(self, field_values):
-        """ 
-            Gets a token from an OpenStack server which is used to get OpenStack values 
-
-            Arguments: 
-            field_values -- A dictionary containing information about the host. It must have a host_ip, username, password and tenant value. The host_ip should be the base ip with the port, for instance 192.168.80.16:5000. 
-        """
-
-        host, username, password, tenant = (field_values['host_ip'],
-            field_values['username'], field_values['password'],
-            field_values['tenant'])
-        url = 'http://%s/v2.0/tokens' % host
-        data = {
-            'auth': {
-                'tenantName': tenant,
-                'passwordCredentials': {
-                    'username': username,
-                    'password': password
-                }
-            }
-        }
-        req = HTTPRequest(url, 'POST', body=json.dumps(data), headers={
-            'Content-Type': 'application/json'
-        })
-        try:
-            resp = yield self.client.fetch(req)
-        except:
-            import traceback
-            traceback.print_exc()
-            raise tornado.gen.Return((None, None))
-        body = json.loads(resp.body)
-        token = body['access']['token']['id']
-        services = {}
-        for serv in body['access']['serviceCatalog']:
-            for endpoint in serv['endpoints']:
-                if 'publicURL' not in endpoint: continue
-                services[serv['type']] = endpoint['publicURL']
-        raise tornado.gen.Return((token, services))
-
-
-    @tornado.gen.coroutine
-    def get_openstack_value(self, token_data, token_value, url_endpoint):
-        """
-            Gets a specified value by using the OpenStack REST api. 
-
-            Arguments: 
-            token_data -- The token data from which we can extract the URLs for various resources. This is the data received with the get_token() method. 
-            token_value -- The resource that we need to take. Check the OpenStack REST API documentation for reference, or some of this driver's methods which use this (get_networks, get_images etc. )
-            url_endpoint -- The specific values we want to get. It varies from resource to resource so again, check the OpenStack documentation, or the other methods. 
-        """
-
-        url = token_data[1][token_value]
-        req = HTTPRequest('%s/%s' % (url, url_endpoint), 'GET', headers={
-            'X-Auth-Token': token_data[0],
-            'Accept': 'application/json'
-        })
-        try:
-            resp = yield self.client.fetch(req)
-        except:
-            print ('Exception!')
-            import traceback; traceback.print_exc()
-            raise tornado.gen.Return([])
-
-        result = json.loads(resp.body)
-        raise tornado.gen.Return(result)
-
-
-    @tornado.gen.coroutine
     def get_networks(self):
-        """ Gets the networks using the get_openstack_value() method. """
-
-        tenants = yield self.get_openstack_value(self.token_data, 'identity', 'tenants')
-        tenant = [x for x in tenants['tenants'] if x['name'] == self.field_values['tenant']][0]
-
-        tenant_id = tenant['id']
-
-        networks = yield self.get_openstack_value(self.token_data, 'network', 'v2.0/networks?tenant_id=%s'%(tenant_id))
-        networks = ['|'.join([x['name'], x['id']]) for x in networks['networks']]
+        networks = ['list', 'of', 'networks']
         raise tornado.gen.Return(networks)
 
     @tornado.gen.coroutine
     def get_sec_groups(self):
-        """ Gets the security groups using the get_openstack_value() method. """
-       	sec_groups = yield self.get_openstack_value(self.token_data, 'compute', 'os-security-groups')
-        sec_groups = ['|'.join([x['name'], x['id']]) for x in sec_groups['security_groups']]
+        sec_groups = ['list', 'of', 'security', 'groups']
         raise tornado.gen.Return(sec_groups)
 
     @tornado.gen.coroutine
     def get_images(self):
-        """ Gets the images using the get_openstack_value() method. """
-        images = yield self.get_openstack_value(self.token_data, 'image', 'v2.0/images')
-        images = [x['name'] for x in images['images']]
+        images = ['list', 'of', 'images']
         raise tornado.gen.Return(images)
 
     @tornado.gen.coroutine
     def get_sizes(self):
-        """ Gets the sizes using the get_openstack_value() method. """
-        sizes = yield self.get_openstack_value(self.token_data, 'compute', 'flavors')
-        sizes = [x['name'] for x in sizes['flavors']]
+        sizes = ['list', 'of', 'sizes']
         raise tornado.gen.Return(sizes)
 
 
     @tornado.gen.coroutine
     def get_instances(self, host):
-        """ Gets various information about the instances so it can be returned to host_data. The format of the data for each instance follows the same format as in the base driver description """
         try:
-            self.token_data = yield self.get_token(host)
-
-            flavors = yield self.get_openstack_value(self.token_data, 'compute', 'flavors/detail')
-            flavors = flavors['flavors']
-
-            servers = yield self.get_openstack_value(self.token_data, 'compute', 'servers/detail')
-            servers = servers['servers']
-
-            tenants = yield self.get_openstack_value(self.token_data, 'identity', 'tenants')
-            tenant = [x for x in tenants['tenants'] if x['name'] == host['tenant']][0]
-
-            tenant_id = tenant['id']
-            tenant_usage = yield self.get_openstack_value(self.token_data, 'compute', 'os-simple-tenant-usage/' + tenant_id)
-
-            tenant_usage = tenant_usage['tenant_usage']
+            servers = []
             instances = [
                 {
-                    'hostname' : x['name'], 
-                    'ip' : x['addresses'].get('private', x['addresses'].get('public', [{'addr':'n/a'}]))[0]['addr'], #[x['addresses'].keys()[0]], 
-                    'size' : f['name'],
-                    'used_disk' : y['local_gb'], 
-                    'used_ram' : y['memory_mb'], 
-                    'used_cpu' : y['vcpus'],
-                    'status' : x['status'], 
+                    'hostname' : 'hostname', 
+                    'ip' : 'ip', 
+                    'size' : 'size',
+                    'used_disk' : 'used_disk', 
+                    'used_ram' : 'used_ram', 
+                    'used_cpu' : 'used_cpu',
+                    'status' : 'status', 
                     'host' : host['hostname'], 
-                } for x in servers for y in tenant_usage['server_usages'] for f in flavors if y['name'] == x['name'] and f['id'] == x['flavor']['id']
+                } for x in servers 
             ]
         except Exception as e: 
             print ('Cannot get instances. ')
@@ -238,32 +130,22 @@ class OpenStackDriver(base.DriverBase):
     @tornado.gen.coroutine
     def get_host_status(self, host):
         """ Tries to get the token for the host. If not successful, returns an error message. """
-        try:
-            self.token_data = yield self.get_token(host)
-        except Exception as e:
-            raise tornado.gen.Return({'success' : False, 'message' : 'Error connecting to libvirt host. ' + e.message})
-
-        raise tornado.gen.Return({'success' : True, 'message' : ''})
+        raise tornado.gen.Return(True)
 
     @tornado.gen.coroutine
     def get_host_data(self, host):
         """ Gets various data about the host and all the instances using the get_openstack_value() method. Returns the data in the same format as defined in the base driver. """
-        import time
-        print ('Starting timer for OpenStack. ')
-        t0 = time.time()
         try:
-            self.token_data = yield self.get_token(host)
-
-            tenants = yield self.get_openstack_value(self.token_data, 'identity', 'tenants')
-            tenant = [x for x in tenants['tenants'] if x['name'] == host['tenant']][0]
-
-            tenant_id = tenant['id']
-
-            limits = yield self.get_openstack_value(self.token_data, 'compute', 'limits')
-            tenant_limits = yield self.get_openstack_value(self.token_data, 'volumev2', 'limits')
-
-            limits = limits['limits']['absolute']
-            tenant_limits = tenant_limits['limits']['absolute']
+            limits = {
+                'maxTotalCores' : 0, 
+                'totalCoresUsed' : 0,
+                'maxTotalRAMSize' : 0,  
+                'totalRAMUsed' : 0, 
+                'maxTotalVolumeGigabytes' : 0, 
+                'totalGigabytesUsed' : 0, 
+                'maxTotalInstances' : 0,
+                'totalInstancesUsed' : 0
+            }
         except Exception as e: 
             import traceback
             print traceback.print_exc()
@@ -298,33 +180,25 @@ class OpenStackDriver(base.DriverBase):
             'host_usage' : host_usage,
             'status' : {'success' : True, 'message': ''}
         }
-        print ('Timer for OpenStack is : ', time.time() - t0)
         raise tornado.gen.Return(host_data)
 
 
     @tornado.gen.coroutine
     def instance_action(self, host, instance_name, action):
-        """ Performs instance actions using a nova client. """
-        try:
-            nova = client.Client('2.0', host['username'], host['password'], host['tenant'], 'http://' + host['host_ip'] + '/v2.0')
-            instance = [x for x in nova.servers.list() if x.name == instance_name][0]
-        except Exception as e:
-            import traceback
-            traceback.print_exc()
-            raise tornado.gen.Return({'success' : False, 'message' : 'Could not get instance. ' + e.message})
-        try:
-            success = getattr(instance, action)()
-            print ('Made action : ', success)
-        except Exception as e:
-            raise tornado.gen.Return({'success' : False, 'message' : 'Action was not performed. ' + e.message})
-
-        raise tornado.gen.Return({'success' : True, 'message' : ''})
+        instance_action = {
+            'delete' : 'delete_action',
+            'reboot' : 'reboot_action',
+            'start' : 'start_action',
+            'stop' : 'stop_action',
+            'suspend' : 'suspend_action',
+            'resume' : 'resume_action,
+        }
+        raise tornado.gen.Return(True)
 
 
 
     @tornado.gen.coroutine
     def validate_field_values(self, step_index, field_values):
-        """ Uses the base driver method, but adds the region tenant and identity_url variables, used in the configurations. """
         if step_index < 0:
     	    raise tornado.gen.Return(StepResult(
         		errors=[], new_step_index=0, option_choices={'region' : self.regions,}

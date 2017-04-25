@@ -143,9 +143,9 @@ class CenturyLinkDriver(base.DriverBase):
         billing_link = [x for x in group_links if 'billing' in x['rel']][0]['href']
         print ('Billing link is : ', billing_link)
         billing_info = clc.v2.API.Call('get', billing_link)
-        bililng_info = billing_info['groups'].values()[0]
+        bililng_info = billing_info['groups'].values()[0].get('message')
 
-        raise tornado.gen.Return({'success' : True, 'message' : billing_info})
+        raise tornado.gen.Return(billing_info)
 
     @tornado.gen.coroutine
     def get_instances(self, host):
@@ -260,8 +260,8 @@ class CenturyLinkDriver(base.DriverBase):
 
     @tornado.gen.coroutine
     def get_driver_trigger_functions(self):
-        conditions = ['domain_full', 'server_can_add_hardware', 'server_cpu_full', 'server_cpu_ok', 'server_memory_full', 'server_memory_ok', 'server_check_hardware']
-        actions = ['server_add_hardware', 'server_set_hardware', 'server_new_terminal', 'server_set_status']
+        conditions = ['domain_full', 'server_can_add_memory', 'server_can_add_cpu']
+        actions = ['server_add_hardware', 'server_set_hardware', 'server_new_terminal', 'server_cpu_full', 'server_memory_full', 'server_set_status', 'server_cpu_critical', 'server_cpu_warning', 'server_cpu_ok', 'server_memory_ok', 'server_memory_warning', 'server_memory_critical', 'server_cpu_full_ok', 'server_memory_full_ok']
         return {'conditions' : conditions, 'actions' : actions}
 
     @tornado.gen.coroutine
@@ -278,6 +278,16 @@ class CenturyLinkDriver(base.DriverBase):
         raise tornado.gen.Return(result['evo-master'])
 
     @tornado.gen.coroutine
+    def server_can_add_memory(self, instance_name, domain = '', host = ''):
+        result = yield self.server_full_cmp(instance_name, [0,2], domain, host)
+        raise tornado.gen.Return(result)
+
+    @tornado.gen.coroutine
+    def server_can_add_cpu(self, instance_name, domain = '', host = ''):
+        result = yield self.server_full_cmp(instance_name, [0, 1], domain, host)
+        raise tornado.gen.Return(result)
+
+    @tornado.gen.coroutine
     def server_cpu_full(self, instance_name, domain = '', host = ''):
         cl = salt.client.LocalClient()
         ts_name = instance_name.upper()[7:13]
@@ -285,7 +295,7 @@ class CenturyLinkDriver(base.DriverBase):
         raise tornado.gen.Return(result)
 
     @tornado.gen.coroutine
-    def server_cpu_ok(self, instance_name, domain = '', host = ''):
+    def server_cpu_full_ok(self, instance_name, domain = '', host = ''):
         cl = salt.client.LocalClient()
         ts_name = instance_name.upper()[7:13]
         result = cl.cmd('evo-master', 'evo_utils.server_cpu_ok', [ts_name])
@@ -299,7 +309,7 @@ class CenturyLinkDriver(base.DriverBase):
         raise tornado.gen.Return(result)
 
     @tornado.gen.coroutine
-    def server_memory_ok(self, instance_name, domain = '', host = ''):
+    def server_memory_full_ok(self, instance_name, domain = '', host = ''):
         cl = salt.client.LocalClient()
         ts_name = instance_name.upper()[7:13]
         result = cl.cmd('evo-master', 'evo_utils.server_memory_ok', [ts_name])
@@ -351,7 +361,15 @@ class CenturyLinkDriver(base.DriverBase):
 
     @tornado.gen.coroutine
     def server_add_hardware(self, host, instance_name, cpu = 0, memory = 0, domain = ''):
-        yield self.server_set_stats(host, instance_name, cpu, memory, add = True)
+        yield self.server_set_hardware(host, instance_name, cpu = cpu, memory = memory, add = True)
+
+    @tornado.gen.coroutine
+    def server_add_cpu(self, host, instance_name, domain = ''): 
+        yield self.server_add_hardware(host, instance_name, cpu = 1, memory = 0, domain = domain)
+
+    @tornado.gen.coroutine
+    def server_add_memory(self, host, instance_name, domain = ''): 
+        yield self.server_add_hardware(host, instance_name, cpu = 0, memory = 1, domain = domain)
 
     @tornado.gen.coroutine
     def server_memory_status(self, instance_name, status, domain = '', host = ''): 
@@ -360,14 +378,40 @@ class CenturyLinkDriver(base.DriverBase):
         cl.cmd('evo-master', 'evo_utils.terminal_memory_status', [ts_name, status])
 
     @tornado.gen.coroutine
+    def server_memory_ok(self, instance_name, domain = '', host = ''):
+        yield self.server_memory_status(instance_name, 'OK', domain, host)
+
+    @tornado.gen.coroutine
+    def server_memory_warning(self, instance_name, domain = '', host = ''):
+        yield self.server_memory_status(instance_name, 'WARNING', domain, host)
+
+    @tornado.gen.coroutine
+    def server_memory_critical(self, instance_name, domain = '', host = ''):
+        yield self.server_memory_status(instance_name, 'CRITICAL', domain, host)
+
+    @tornado.gen.coroutine
     def server_cpu_status(self, instance_name, status, host = '', domain = ''):
         cl = salt.client.LocalClient()
         ts_name = instance_name.upper()[7:13]
         cl.cmd('evo-master', 'evo_utils.terminal_cpu_status', [ts_name, status])
 
     @tornado.gen.coroutine
+    def server_cpu_ok(self, instance_name, host = '', domain = ''):
+        yield self.server_cpu_status(instance_name, 'OK', host, domain)
+
+    @tornado.gen.coroutine
+    def server_cpu_warning(self, instance_name, host = '', domain = ''):
+        yield self.server_cpu_status(instance_name, 'WARNING', host, domain)
+
+    @tornado.gen.coroutine
+    def server_cpu_critical(self, instance_name, host = '', domain = ''):
+        yield self.server_cpu_status(instance_name, 'CRITICAL', host, domain)
+
+    @tornado.gen.coroutine
     def server_set_hardware(self, host, instance_name, cpu = 0, memory = 0, add = False, domain = ''):
         instance_name = instance_name.upper()
+
+        print ('From args : memory = ', memory)
 
         self.get_datacenter(host)
         servers = self.get_servers_list(host)
@@ -397,7 +441,7 @@ class CenturyLinkDriver(base.DriverBase):
                    "value":memory
                 })
             url = 'servers/%s/%s' % (self.account.alias, server.name)
-            print ('Calling ',url, ' with data ', data) 
+            print ('Adding hardware at :  ',url, ' with data ', data) 
             result = clc.v2.API.Call('patch', url, json.dumps(data))
             yield self.wait_for_clc_action({'links' : [result]})
 

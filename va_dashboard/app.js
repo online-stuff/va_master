@@ -71,7 +71,7 @@ function filter(state, action){
 
 function modal(state, action){
     if(typeof state === 'undefined'){
-        return {isOpen: false, template: { title: "", content: [], buttons: [], args: []}, args: {}};
+        return {isOpen: false, template: { title: "", content: [], buttons: [], args: []}, args: {}, modalType: ""};
     }
 
     var newState = Object.assign({}, state);
@@ -81,12 +81,16 @@ function modal(state, action){
         if("args" in action){
             newState.args = action.args;
         }
+        if("modalType" in action){
+            newState.modalType = action.modalType;
+        }
         newState.isOpen = true;
     }
     if(action.type == 'CLOSE_MODAL'){
         newState.template = { title: "", content: [], buttons: [], args: []};
         newState.args = {};
         newState.isOpen = false;
+        newState.modalType = "";
     }
 
     return newState;

@@ -383,3 +383,7 @@ table tr.row-state-Down{
     margin: 0 20px;
     text-align: center;
 }
+#action-status{
+    color: red;
+    margin-top: 20px;
+}

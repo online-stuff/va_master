@@ -2,15 +2,17 @@ var React = require('react');
 var Bootstrap = require('react-bootstrap');
 var Network = require('../network');
 var connect = require('react-redux').connect;
+var ReactDOM = require('react-dom');
 
 var Triggers = React.createClass({
     getInitialState: function () {
-        return {triggers: [], operators: {'lt': '<', 'gt': '>', 'ge': '>=', 'le': '<='}};
+        return {triggers: [], operators: {'lt': '<', 'gt': '>', 'ge': '>=', 'le': '<='}, conditions: [], actions: [], icinga_status: ""};
     },
     getCurrentTriggers: function () {
         var me = this;
         Network.get('/api/triggers', this.props.auth.token).done(function (data) {
-            me.setState({triggers: data["va-clc"]});
+            var d = data["va-clc"];
+            me.setState({triggers: d.triggers, conditions: d.functions.conditions, actions: d.functions.actions});
         }).fail(function (msg) {
             me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
         });
@@ -19,11 +21,11 @@ var Triggers = React.createClass({
         this.getCurrentTriggers();
     },
     executeAction: function (rowNum, evtKey) {
-        var trigger = this.state.triggers[rowNum];
+        var trigger = Object.assign({}, this.state.triggers[rowNum]);
         var me = this;
         switch (evtKey) {
             case "edit":
-                this.props.dispatch({type: 'OPEN_MODAL', args: trigger});
+                this.props.dispatch({type: 'OPEN_MODAL', args: trigger, modalType: "EDIT"});
                 break;
             case "delete":
                 break;
@@ -32,22 +34,31 @@ var Triggers = React.createClass({
         }
     },
     openModal: function() {
-        this.props.dispatch({type: 'OPEN_MODAL'});
+        this.props.dispatch({type: 'OPEN_MODAL', modalType: "CREATE"});
     },
     addTrigger: function (service, status, conditions, target, actions) {
         this.setState({active: this.state.triggers.concat([{"service": service, "status": status, "conditions": conditions, "target": target, "actions": actions}])});
+    },
+    updateTriggerVals: function (data) {
+        var me = this;
+        Network.post('/api/evo/change_icinga_services', this.props.auth.token, data).done(function (data) {
+            me.setState({icinga_status: "Thresholds are updated."});
+
+        }).fail(function (msg) {
+            me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
+        });
     },
     render: function () {
         var me = this;
         var trigger_rows = this.state.triggers.map(function(trigger, i) {
             var conditions = trigger.conditions.map(function(c, j) {
                 return (
-                    <div key={j}>{c.func}</div>
+                    <div key={j}>{c}</div>
                 );
             });
             var actions = trigger.actions.map(function(a, j) {
                 return (
-                    <div key={j}>{a.func}</div>
+                    <div key={j}>{a}</div>
                 );
             });
             var actionBtn = (
@@ -76,13 +87,14 @@ var Triggers = React.createClass({
 
         return (
             <div>
-                <TriggerFormRedux />
+                <TriggerFormRedux updateTriggerVals={this.updateTriggerVals} />
+                <span id="action-status">{this.state.icinga_status}</span>
                 <Bootstrap.PageHeader>List triggers</Bootstrap.PageHeader>
                 <Bootstrap.Button type="button" bsStyle='default' className="pull-right margina" onClick={this.openModal}>
                     <Bootstrap.Glyphicon glyph='plus' />
                     Add trigger
                 </Bootstrap.Button>
-                <ModalRedux addTrigger = {this.addTrigger} />
+                <ModalRedux addTrigger = {this.addTrigger} conditions = {this.state.conditions} actions = {this.state.actions} getCurrentTriggers = {this.getCurrentTriggers} />
                 <Bootstrap.Table striped bordered hover>
                     <thead>
                         <tr>
@@ -128,58 +140,61 @@ var Modal = React.createClass({
         console.log(this.refs.forma);
         console.log(ReactDOM.findDOMNode(this.refs.forma).elements);
         var elements = ReactDOM.findDOMNode(this.refs.forma).elements;
-        var data = {};
+        var data = {conditions: [], actions: []};
         for(i=0; i<elements.length; i++){
-            data[elements[i].name] = elements[i].value;
+            if(elements[i].name == "conditions" || elements[i].name == "actions") {
+                console.log(this.refs[elements[i].id]);
+                console.log(ReactDOM.findDOMNode(this.refs[elements[i].id]));
+                if(this.refs[elements[i].id].checked)
+                    data[elements[i].name].push(elements[i].id);
+            }else{
+                data[elements[i].name] = elements[i].value;
+            }
         }
         console.log(data);
-        var me = this;
-        Network.post("/api/apps/add_trigger", this.props.auth.token, data).done(function(d) {
-            if(d === true){
-                me.props.addTrigger(data['service'], data['status'], data['conditions'], data['target'], data['actions']);
-            }
-            me.props.dispatch({type: 'CLOSE_MODAL'});
-        }).fail(function (msg) {
-            me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
-        });
     },
 
     render: function () {
+        var me = this;
         return (
             <Bootstrap.Modal show={this.props.modal.isOpen} onHide={this.close}>
             <Bootstrap.Modal.Header closeButton>
-              <Bootstrap.Modal.Title>Create Trigger</Bootstrap.Modal.Title>
+              <Bootstrap.Modal.Title>{this.props.modal.modalType === "CREATE" ? "Create Trigger" : "Edit Trigger"}</Bootstrap.Modal.Title>
             </Bootstrap.Modal.Header>
 
             <Bootstrap.Modal.Body>
                 <div className="left">
                     <Bootstrap.Form ref="forma">
-                        <Bootstrap.FormControl id="service" key="service" name="service" componentClass="select" value={this.state["service"]}>
+                        <Bootstrap.FormControl id="service" key="service" name="service" componentClass="select" defaultValue={this.state["service"]}>
                             <option value="CPU">CPU</option>
                             <option value="Memory">Memory</option>
                             <option value="CPUSize">CPUSize</option>
                             <option value="MemorySize">MemorySize</option>
                             <option value="Memory">Memory</option>
                         </Bootstrap.FormControl>
-                        <Bootstrap.FormControl id="status" key="status" name="status" componentClass="select" value={this.state["status"]}>
+                        <Bootstrap.FormControl id="status" key="status" name="status" componentClass="select" defaultValue={this.state["status"]}>
                             <option value="CRITICAL">CRITICAL</option>
                             <option value="OK">OK</option>
                             <option value="WARNING">WARNING</option>
                         </Bootstrap.FormControl>
-                        <Bootstrap.FormControl type='text' name="conditions" placeholder="Conditions" value={this.state["conditions"]} />
+                        {this.props.conditions.map(function(option, i) {
+                            return <input type="checkbox" id={option} key={option} ref={option} name="conditions" defaultChecked={me.state["conditions"].indexOf(option) > -1 ? true:false} />{option}
+                        })}
                         <Bootstrap.FormControl type='text' name="target" value="Terminal" disabled />
-                        <Bootstrap.FormControl type='text' name="actions" placeholder="Actions" value={this.state["actions"]} />
+                        {this.props.actions.map(function(option, i) {
+                            return <input type="checkbox" id={option} key={option} ref={option} name="actions" defaultChecked={me.state["actions"].indexOf(option) > -1 ? true:false} />{option}
+                        })}
                     </Bootstrap.Form>
                 </div>
                 <div className="right">
-                    <h3>Fill the form to add new trigger</h3>
+                    <h3>{this.props.modal.modalType === "CREATE" ? "Fill the form to add new trigger" : "Fill the form to edit existing trigger"}</h3>
                     <div></div>
                 </div>
             </Bootstrap.Modal.Body>
 
             <Bootstrap.Modal.Footer>
               <Bootstrap.Button onClick={this.close}>Cancel</Bootstrap.Button>
-              <Bootstrap.Button onClick={this.action} bsStyle = "primary">Add trigger</Bootstrap.Button>
+              <Bootstrap.Button onClick={this.action} bsStyle = "primary">{this.props.modal.modalType === "CREATE" ? "Add trigger" : "Apply change"}</Bootstrap.Button>
             </Bootstrap.Modal.Footer>
 
         </Bootstrap.Modal>
@@ -189,15 +204,16 @@ var Modal = React.createClass({
 
 var TriggerForm = React.createClass({
     getInitialState: function () {
-        return {CPU: {name: 'CPU', min: 50, max: 100, min_size: 2, max_size: 8, w_val: 0, c_val: 0, size: 0}, Memory: {name: 'Memory', min: 50, max: 100, min_size: 3000, max_size: 16000, w_val: 0, c_val: 0, size: 0}, TotalUsers: {name: 'Users', min: 0, max: 200, min_size: 50, max_size: 200, w_val: 0, c_val: 0, size: 0}, severity: ['w_val', 'c_val', 'size']};
+        return {services: {CPU: {name: 'CPU', min: 50, max: 100, min_size: 2, max_size: 8, w_val: 0, c_val: 0, size: 0}, Memory: {name: 'Memory', min: 50, max: 100, min_size: 3000, max_size: 16000, w_val: 0, c_val: 0, size: 0}, TotalUsers: {name: 'Users', min: 0, max: 200, min_size: 50, max_size: 200, w_val: 0, c_val: 0, size: 0}}, severity: ['w_val', 'c_val', 'size']};
     },
     getTriggerVals: function () {
         var me = this;
         Network.get('/api/evo/get_all_icinga_services', this.props.auth.token).done(function (data) {
-            var cpu = Object.assign({}, me.state.CPU, data.CPU);
-            var mem = Object.assign({}, me.state.Memory, data.Memory);
-            var usr = Object.assign({}, me.state.TotalUsers, data.TotalUsers);
-            me.setState({CPU: cpu, Memory: mem, TotalUsers: usr});
+            var services = me.state.services;
+            var cpu = Object.assign({}, services.CPU, data.CPU);
+            var mem = Object.assign({}, services.Memory, data.Memory);
+            var usr = Object.assign({}, services.TotalUsers, data.TotalUsers);
+            me.setState({services: {CPU: cpu, Memory: mem, TotalUsers: usr}});
         }).fail(function (msg) {
             me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
         });
@@ -207,29 +223,25 @@ var TriggerForm = React.createClass({
     },
     onChange: function(e) {
         var arr = e.target.id.split("_");
-        var service = Object.assign({}, this.state[arr[0]]);
-        service[this.state.severity[arr[1]]] = e.target.value;
-        this.setState({[arr[0]]: service});
+        var services = Object.assign({}, this.state.services);
+        services[arr[0]][this.state.severity[arr[1]]] = e.target.value;
+        this.setState({services: services});
     },
     updateTriggerVals: function (e) {
         e.preventDefault();
         var me = this;
         var data = [];
-        for(var key in this.state){
-            if(key !== 'severity'){
-                data.push({service: key, severity : "WARNING", value: this.state[key].w_val});
-                data.push({service: key, severity : "CRITICAL", value: this.state[key].c_val});
-                data.push({service: key, severity : "MAXIMUM", value: this.state[key].size});
-            }
+        for(var key in this.state.services){
+            var service = this.state.services[key];
+            data.push({service: key, severity : "WARNING", value: service.w_val});
+            data.push({service: key, severity : "CRITICAL", value: service.c_val});
+            data.push({service: key, severity : "MAXIMUM", value: service.size});
         }
         console.log(data);
-        Network.post('/api/evo/change_icinga_services', this.props.auth.token, {services: data}).done(function (data) {
-            console.log("success");
-        }).fail(function (msg) {
-            me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
-        });
+        this.props.updateTriggerVals({services: data});
     },
     render: function () {
+        var s = this.state.services;
         return (
             <div>
                 <Bootstrap.PageHeader>Change thresholds</Bootstrap.PageHeader>
@@ -243,21 +255,21 @@ var TriggerForm = React.createClass({
                         </tr>
                         <tr>
                             <td>CPU</td>
-                            <td><input type='number' min={this.state.CPU.min} max={this.state.CPU.max} id="CPU_0" key="CPU_0" value={this.state.CPU.w_val} onChange={this.onChange} /></td>
-                            <td><input type='number' min={this.state.CPU.min} max={this.state.CPU.max} id="CPU_1" key="CPU_1" value={this.state.CPU.c_val} onChange={this.onChange} /></td>
-                            <td><input type='number' min={this.state.CPU.min_size} max={this.state.CPU.max_size} id="CPU_2" key="CPU_2" value={this.state.CPU.size} onChange={this.onChange} /></td>
+                            <td><input type='number' min={s.CPU.min} max={s.CPU.max} id="CPU_0" key="CPU_0" value={s.CPU.w_val} onChange={this.onChange} /></td>
+                            <td><input type='number' min={s.CPU.min < s.CPU.w_val ? s.CPU.w_val : s.CPU.min} max={s.CPU.max} id="CPU_1" key="CPU_1" value={s.CPU.c_val} onChange={this.onChange} /></td>
+                            <td><input type='number' min={s.CPU.min_size} max={s.CPU.max_size} id="CPU_2" key="CPU_2" value={s.CPU.size} onChange={this.onChange} /></td>
                         </tr>
                         <tr>
                             <td>Memory</td>
-                            <td><input type='number' min={this.state.Memory.min} max={this.state.Memory.max} id="Memory_0" key="Memory_0" value={this.state.Memory.w_val} onChange={this.onChange} /></td>
-                            <td><input type='number' min={this.state.Memory.min} max={this.state.Memory.max} id="Memory_1" key="Memory_1" value={this.state.Memory.c_val} onChange={this.onChange} /></td>
-                            <td><input type='number' min={this.state.Memory.min_size} max={this.state.Memory.max_size} id="Memory_2" key="Memory_2" value={this.state.Memory.size} onChange={this.onChange} /></td>
+                            <td><input type='number' min={s.Memory.min} max={s.Memory.max} id="Memory_0" key="Memory_0" value={s.Memory.w_val} onChange={this.onChange} /></td>
+                            <td><input type='number' min={s.Memory.min < s.Memory.w_val ? s.Memory.w_val : s.Memory.min} max={s.Memory.max} id="Memory_1" key="Memory_1" value={s.Memory.c_val} onChange={this.onChange} /></td>
+                            <td><input type='number' min={s.Memory.min_size} max={s.Memory.max_size} id="Memory_2" key="Memory_2" value={s.Memory.size} onChange={this.onChange} /></td>
                         </tr>
                         <tr>
                             <td>Users</td>
-                            <td><input type='number' min={this.state.TotalUsers.min} max={this.state.TotalUsers.max} id="TotalUsers_0" key="TotalUsers_0" value={this.state.TotalUsers.w_val} onChange={this.onChange} /></td>
-                            <td><input type='number' min={this.state.TotalUsers.min} max={this.state.TotalUsers.max} id="TotalUsers_1" key="TotalUsers_1" value={this.state.TotalUsers.c_val} onChange={this.onChange} /></td>
-                            <td><input type='number' min={0} max={this.state.TotalUsers.max_size} id="TotalUsers_2" key="TotalUsers_2" value={this.state.TotalUsers.size} onChange={this.onChange} /></td>
+                            <td><input type='number' min={s.TotalUsers.min} max={s.TotalUsers.max} id="TotalUsers_0" key="TotalUsers_0" value={s.TotalUsers.w_val} onChange={this.onChange} /></td>
+                            <td><input type='number' min={s.TotalUsers.min < s.TotalUsers.w_val ? s.TotalUsers.w_val : s.TotalUsers.min} max={s.TotalUsers.max} id="TotalUsers_1" key="TotalUsers_1" value={s.TotalUsers.c_val} onChange={this.onChange} /></td>
+                            <td><input type='number' min={s.TotalUsers.min_size} max={s.TotalUsers.max_size} id="TotalUsers_2" key="TotalUsers_2" value={s.TotalUsers.size} onChange={this.onChange} /></td>
                         </tr>
                     </table>
                     <input type="submit" className="btn btn-primary" value="Apply changes" />
