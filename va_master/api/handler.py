@@ -13,9 +13,9 @@ from login import get_current_user, user_login
 import json, datetime, syslog
 
 
-#This will probably not be used anymore, keeping it here for reasons. 
 
-
+def invalid_url(handler):
+    raise Exception('Invalid URL : ' + handler.data['path'] +' with method : ' + handler.data['method'])
 
 class ApiHandler(tornado.web.RequestHandler):
     executor = ThreadPoolExecutor(max_workers= 4)
@@ -63,15 +63,17 @@ class ApiHandler(tornado.web.RequestHandler):
 #            print ('Error with testing formatted result - probably is ok. ')
             return False
 
-
     @tornado.gen.coroutine
     def exec_method(self, method, path, data):
         self.data = data
         self.data['method'] = method
-        api_func = self.paths[method][path]
+        api_func = self.paths[method].get(path)
         print ('Getting a call at ', path, ' with data ', data, ' and will call function: ', api_func)
 
-        if api_func != user_login: 
+        if not api_func: 
+            api_func = invalid_url 
+            self.data = {'path' : path, 'method' : method}
+        elif api_func != user_login: 
             try: 
                 yield self.log_message(path, data, func = api_func)
 
@@ -94,7 +96,7 @@ class ApiHandler(tornado.web.RequestHandler):
             else: 
                 result = {'success' : True, 'message' : '', 'data' : result}
         except Exception as e: 
-            result = {'success' : False, 'message' : 'There was an error performing a request : ' + e.message, 'data' : {}}
+            result = {'success' : False, 'message' : 'There was an error performing a request : ' + str(e.message), 'data' : {}}
             import traceback
             traceback.print_exc()
 

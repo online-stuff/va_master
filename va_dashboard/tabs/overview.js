@@ -130,11 +130,13 @@ var Overview = React.createClass({
 
 var Host = React.createClass({
     getInitialState: function () {
-        var cpuData = [], ramData = [], diskData = [];
+        var cpuData = [], ramData = [], diskData = [], cost = 0, e_cost = 0;
         var instances = this.props.chartData.map(function(instance) {
             cpuData.push(instance.used_cpu);
             ramData.push(instance.used_ram);
             diskData.push(instance.used_disk);
+            cost += instance.month_to_date;
+            e_cost += instance.monthly_estimate;
             return instance.hostname;
         });
         instances.push("Free");
@@ -148,6 +150,8 @@ var Host = React.createClass({
             chartData: data,
             labels: instances,
             colors: colors,
+            cost: cost,
+            e_cost: e_cost
         };
     },
 
@@ -167,11 +171,18 @@ var Host = React.createClass({
         var DoughnutRedux = connect(function(state){
             return {auth: state.auth};
         })(DoughnutComponent);
+        var divStyle = {
+            display: 'inline-block'
+        };
         return (
             <Bootstrap.Panel header={this.props.title + " / Instances: " + this.props.instances} bsStyle='primary'>
                 <DoughnutRedux data={this.state.chartData[0]} labels={this.state.labels} colors={this.state.colors} title="CPU" />
                 <DoughnutRedux data={this.state.chartData[1]} labels={this.state.labels} colors={this.state.colors} title="MEMORY"  />
                 <DoughnutRedux data={this.state.chartData[2]} labels={this.state.labels} colors={this.state.colors} title="STORAGE"  />
+                <div style={divStyle}>
+                    <div>Current cost: {this.state.cost}</div>
+                    <div>Monthly estimated cost: {this.state.e_cost}</div>
+                </div>
             </Bootstrap.Panel>
         );
     }

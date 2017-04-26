@@ -20,14 +20,25 @@ var Triggers = React.createClass({
     componentDidMount: function () {
         this.getCurrentTriggers();
     },
-    executeAction: function (rowNum, evtKey) {
-        var trigger = Object.assign({}, this.state.triggers[rowNum]);
-        var me = this;
+    executeAction: function (rowId, evtKey) {
         switch (evtKey) {
             case "edit":
+                var trigger = {};
+                for(var i=0; i < this.state.triggers.length; i++){
+                    if(this.state.triggers[i].id === rowId){
+                        trigger = Object.assign({}, this.state.triggers[i]);
+                        break;
+                    }
+                }
                 this.props.dispatch({type: 'OPEN_MODAL', args: trigger, modalType: "EDIT"});
                 break;
             case "delete":
+                var data = {"hostname": "va-clc", "trigger_id": rowId}, me = this;
+                Network.delete("/api/triggers/delete_trigger", this.props.auth.token, data).done(function(d) {
+                    me.getCurrentTriggers();
+                }).fail(function (msg) {
+                    me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
+                });
                 break;
             default:
                 break;
@@ -36,8 +47,32 @@ var Triggers = React.createClass({
     openModal: function() {
         this.props.dispatch({type: 'OPEN_MODAL', modalType: "CREATE"});
     },
-    addTrigger: function (service, status, conditions, target, actions) {
-        this.setState({active: this.state.triggers.concat([{"service": service, "status": status, "conditions": conditions, "target": target, "actions": actions}])});
+    addTrigger: function (t_data) {
+        t_data.extra_kwargs = ["domain"];
+        var me = this, data = {hostname: "va-clc", new_trigger: t_data};
+        Network.post('/api/triggers/add_trigger', this.props.auth.token, data).done(function (data) {
+            me.getCurrentTriggers();
+            me.props.dispatch({type: 'CLOSE_MODAL'});
+        }).fail(function (msg) {
+            me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
+        });
+    },
+    editTrigger: function (id, t_data) {
+        t_data.extra_kwargs = ["domain"];
+        var me = this, data = {hostname: "va-clc", trigger_id: id, trigger: t_data};
+        Network.post('/api/triggers/edit_trigger', this.props.auth.token, data).done(function (data) {
+            var triggers = Object.assign([], me.state.triggers);
+            for(var i=0; i < triggers.length; i++){
+                if(triggers[i].id === id){
+                    triggers[i] = {service: service, status: status, conditions: conditions, actions: actions, extra_kwargs: ["domain"], id: id};
+                    break;
+                }
+            }
+            me.setState({triggers: triggers});
+            me.props.dispatch({type: 'CLOSE_MODAL'});
+        }).fail(function (msg) {
+            me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
+        });
     },
     updateTriggerVals: function (data) {
         var me = this;
@@ -50,7 +85,7 @@ var Triggers = React.createClass({
     },
     render: function () {
         var me = this;
-        var trigger_rows = this.state.triggers.map(function(trigger, i) {
+        var trigger_rows = this.state.triggers.map(function(trigger) {
             var conditions = trigger.conditions.map(function(c, j) {
                 return (
                     <div key={j}>{c}</div>
@@ -62,13 +97,13 @@ var Triggers = React.createClass({
                 );
             });
             var actionBtn = (
-                <Bootstrap.DropdownButton bsStyle='primary' title="Choose" onSelect = {me.executeAction.bind(me, i)}>
+                <Bootstrap.DropdownButton bsStyle='primary' title="Choose" onSelect = {me.executeAction.bind(me, trigger.id)}>
                     <Bootstrap.MenuItem key="edit" eventKey="edit">Edit</Bootstrap.MenuItem>
                     <Bootstrap.MenuItem key="delete" eventKey="delete">Delete</Bootstrap.MenuItem>
                 </Bootstrap.DropdownButton>
             );
             return (
-                <tr key={i}>
+                <tr key={trigger.id}>
                     <td>{trigger.service}</td>
                     <td>{trigger.status}</td>
                     <td>{conditions}</td>
@@ -94,7 +129,7 @@ var Triggers = React.createClass({
                     <Bootstrap.Glyphicon glyph='plus' />
                     Add trigger
                 </Bootstrap.Button>
-                <ModalRedux addTrigger = {this.addTrigger} conditions = {this.state.conditions} actions = {this.state.actions} getCurrentTriggers = {this.getCurrentTriggers} />
+                <ModalRedux addTrigger = {this.addTrigger} editTrigger = {this.editTrigger} conditions = {this.state.conditions} actions = {this.state.actions} getCurrentTriggers = {this.getCurrentTriggers} />
                 <Bootstrap.Table striped bordered hover>
                     <thead>
                         <tr>
@@ -117,12 +152,20 @@ var Triggers = React.createClass({
 
 var Modal = React.createClass({
     getInitialState: function () {
-        var values = {"service": "", "status": "", "conditions": "", "target": "", "actions": ""};
+        var values = {"service": "", "status": "", "conditions": "", "target": "", "actions": "", checkboxes: {}};
         var args = this.props.modal.args;
         if('service' in args){
             for(var key in args){
                 values[key] = args[key];
             }
+            var conditions = {}, actions = {};
+            for(var i=0; i < args.conditions.length; i++){
+                conditions[args.conditions[i]] = true;
+            }
+            for(var i=0; i < args.actions.length; i++){
+                conditions[args.actions[i]] = true;
+            }
+            values.checkboxes = Object.assign({}, conditions, actions);
         }
         return values;
     },
@@ -135,6 +178,12 @@ var Modal = React.createClass({
         this.props.dispatch({type: 'CLOSE_MODAL'});
     },
 
+    toggleCheckbox: function(e) {
+        var checkboxes = Object.assign({}, this.state.checkboxes);
+        checkboxes[e.target.id] = !checkboxes[e.target.id]
+        this.setState({checkboxes: checkboxes});
+    },
+
     action: function(e) {
         console.log(e.target);
         console.log(this.refs.forma);
@@ -143,15 +192,18 @@ var Modal = React.createClass({
         var data = {conditions: [], actions: []};
         for(i=0; i<elements.length; i++){
             if(elements[i].name == "conditions" || elements[i].name == "actions") {
-                console.log(this.refs[elements[i].id]);
-                console.log(ReactDOM.findDOMNode(this.refs[elements[i].id]));
-                if(this.refs[elements[i].id].checked)
+                if(this.state.checkboxes[elements[i].id])
                     data[elements[i].name].push(elements[i].id);
             }else{
                 data[elements[i].name] = elements[i].value;
             }
         }
         console.log(data);
+        if(this.props.modal.modalType === "CREATE"){
+            this.props.addTrigger(data);
+        }else{
+            this.props.editTrigger(this.state.id, data);
+        }
     },
 
     render: function () {
@@ -178,11 +230,11 @@ var Modal = React.createClass({
                             <option value="WARNING">WARNING</option>
                         </Bootstrap.FormControl>
                         {this.props.conditions.map(function(option, i) {
-                            return <input type="checkbox" id={option} key={option} ref={option} name="conditions" defaultChecked={me.state["conditions"].indexOf(option) > -1 ? true:false} />{option}
+                            return <Bootstrap.Checkbox id={option} key={option} name="conditions" onChange={me.toggleCheckbox} defaultChecked={me.state["conditions"].indexOf(option) > -1 ? true:false}>{option}</Bootstrap.Checkbox>
                         })}
                         <Bootstrap.FormControl type='text' name="target" value="Terminal" disabled />
                         {this.props.actions.map(function(option, i) {
-                            return <input type="checkbox" id={option} key={option} ref={option} name="actions" defaultChecked={me.state["actions"].indexOf(option) > -1 ? true:false} />{option}
+                            return <Bootstrap.Checkbox id={option} key={option} name="actions" onChange={me.toggleCheckbox} defaultChecked={me.state["actions"].indexOf(option) > -1 ? true:false}>{option}</Bootstrap.Checkbox>
                         })}
                     </Bootstrap.Form>
                 </div>

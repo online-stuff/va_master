@@ -90,7 +90,6 @@ class CenturyLinkDriver(base.DriverBase):
         while status not in ['failed', 'underConstruction']:
             print ('Status is : ', status)
             result = clc.v2.API.Call('get', status_url)
-            print ('Result is : ', result)
             status = result['status']
             if status == 'succeeded': raise tornado.gen.Return(result)
             yield tornado.gen.sleep(5)
@@ -127,7 +126,6 @@ class CenturyLinkDriver(base.DriverBase):
         if action not in action_map: 
             raise tornado.gen.Return({'success' : False, 'message' : 'Action not supported : ' + action})
         success = clc.v2.API.Call(*action_map[action], debug = True)[0]
-        print ('Success is : ', success)
         yield self.wait_for_clc_action(success)
 
         raise tornado.gen.Return({'success' : True, 'message' : ''})
@@ -137,18 +135,17 @@ class CenturyLinkDriver(base.DriverBase):
         self.get_datacenter(host)
         group = self.datacenter.Groups().Get(host['defaults']['sec_group'])
         group_links = group.data['links']
-#        group_links = clc.v2.API.Call('get', group.data['links'])
 
-        print ('Group links are : ', group_links)
         billing_link = [x for x in group_links if 'billing' in x['rel']][0]['href']
-        print ('Billing link is : ', billing_link)
         billing_info = clc.v2.API.Call('get', billing_link)
-        bililng_info = billing_info['groups'].values()[0].get('message')
+        billing_info = billing_info['groups'][group.id]['servers']
+
+        billing_info = [{'hostname' : x.upper(), 'monthly_estimate' : billing_info[x]['monthlyEstimate'], 'month_to_date' : billing_info[x]['monthToDate'], 'current_hour' : billing_info[x]['currentHour']} for x in billing_info]
 
         raise tornado.gen.Return(billing_info)
 
     @tornado.gen.coroutine
-    def get_instances(self, host):
+    def get_instances(self, host, get_billing = True):
         """ Gets instances from the group selected when adding the host. """
         try: 
             datacenter = self.datacenter
@@ -170,11 +167,20 @@ class CenturyLinkDriver(base.DriverBase):
                 'used_disk' : x['details']['storageGB'],
 
         } for x in servers]
+
+        if get_billing: 
+            instances_billing = yield self.get_host_billing(host)
+            for x in instances: 
+                instance_billing = [i for i in instances_billing if x['hostname'] == i['hostname']] or [{}]
+                instance_billing = instance_billing[0]
+
+                x.update(instance_billing)
+
         raise tornado.gen.Return(instances)
 
 
     @tornado.gen.coroutine
-    def get_host_data(self, host):
+    def get_host_data(self, host, get_instances = True, get_billing = True):
         """ Gets instances properly, but doesn't yet get host_usage. """
         import time
         print ('Century link timer started. ')
@@ -189,7 +195,10 @@ class CenturyLinkDriver(base.DriverBase):
             #TODO do stuff with group_stats
 
             self.account = clc.v2.Account()
-            instances = yield self.get_instances(host)
+            if get_instances: 
+                instances = yield self.get_instances(host, get_billing)
+            else: 
+                instances = []
             host_data = {
                 'instances' : instances, 
                 'host_usage' : {
@@ -203,7 +212,7 @@ class CenturyLinkDriver(base.DriverBase):
                     'used_disk' : sum([x['used_disk'] for x in instances]),
                     'free_disk' : 'n/a',
                     'max_instances' : 'n/a',
-                    'used_instances' : len(instances),
+                    'used_instances' :  group.data['serversCount'],
                     'free_instances' :'n/a' 
                 },
             }
@@ -261,7 +270,7 @@ class CenturyLinkDriver(base.DriverBase):
     @tornado.gen.coroutine
     def get_driver_trigger_functions(self):
         conditions = ['domain_full', 'server_can_add_memory', 'server_can_add_cpu']
-        actions = ['server_add_hardware', 'server_set_hardware', 'server_new_terminal', 'server_cpu_full', 'server_memory_full', 'server_set_status', 'server_cpu_critical', 'server_cpu_warning', 'server_cpu_ok', 'server_memory_ok', 'server_memory_warning', 'server_memory_critical', 'server_cpu_full_ok', 'server_memory_full_ok']
+        actions = ['server_new_terminal', 'server_cpu_full', 'server_memory_full', 'server_set_status', 'server_cpu_critical', 'server_cpu_warning', 'server_cpu_ok', 'server_memory_ok', 'server_memory_warning', 'server_memory_critical', 'server_cpu_full_ok', 'server_memory_full_ok']
         return {'conditions' : conditions, 'actions' : actions}
 
     @tornado.gen.coroutine

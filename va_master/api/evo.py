@@ -138,7 +138,7 @@ def set_server_stats(handler):
     host = [x for x in hosts if x['hostname'] == handler.data['hostname']][0]
     driver = yield handler.config.deploy_handler.get_driver_by_id(host['driver_name'])
 
-    result = yield driver.server_set_stats(host = host, instance_name = handler.data['server_id'], cpu = handler.data['cpu'], memory = handler.data['memory'], add = handler.data.get('add', False))
+    result = yield driver.server_set_hardware(host = host, instance_name = handler.data['server_id'], cpu = handler.data['cpu'], memory = handler.data['memory'], add = handler.data.get('add', False))
     raise tornado.gen.Return(result)
 
 

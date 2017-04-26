@@ -60,8 +60,8 @@ def add_trigger(deploy_handler, hostname, new_trigger):
 
 @tornado.gen.coroutine
 def add_trigger_api(handler):
-    new_trigger = data['new_trigger']
-    hostname = data['hostname']
+    new_trigger = handler.data['new_trigger']
+    hostname = handler.data['hostname']
 
     result = yield add_trigger(handler.config.deploy_handler, hostname, new_trigger)
     raise tornado.gen.Return(result)
@@ -80,10 +80,14 @@ def edit_trigger(handler):
     hosts = yield handler.config.deploy_handler.list_hosts()
     host = [x for x in hosts if x['hostname'] == handler.data['hostname']][0]
 
-    edited_trigger = [x for x in host['triggers'] if x['id'] == handler.data['trigger_id']][0]
-    edited_trigger = handler.data['trigger']
+    edited_trigger_index = host['triggers'].index([x for x in host['triggers'] if x['id'] == handler.data['trigger_id']][0])
+    
+    handler.data['trigger']['id'] = host['triggers'][edited_trigger_index]['id']
+    host['triggers'][edited_trigger_index] = handler.data['trigger']
+#    edited_trigger = handler.data['trigger']
 
     yield handler.config.deploy_handler.datastore.insert('hosts', hosts)
+
 @tornado.gen.coroutine
 def clear_triggers(handler):
     hosts = yield handler.config.deploy_handler.list_hosts()
