@@ -216,7 +216,10 @@ class DriverBase(object):
         """ 
             Gets a list of all the images used to create instances. This _needs_ to be overwritten. 
         """
-        images = []
+        cl = salt.cloud.CloudClient(path = '/etc/salt/cloud')
+        images = cl.list_images(provider = self.provider_name)[self.provider_name]
+        images = images[image.keys()[0]]
+        images = [x['name'] for x in images]
         raise tornado.gen.Return(images)
 
     @tornado.gen.coroutine
@@ -224,7 +227,10 @@ class DriverBase(object):
         """     
             Gets a list of all sizes (flavors) used to create instances. This _needs_ to be overwritten. 
         """
-        sizes = []
+        cl = salt.cloud.CloudClient(path = '/etc/salt/cloud')
+        sizes = cl.list_images(provider = self.provider_name)[self.provider_name]
+        sizes = images[image.keys()[0]]
+        sizes = [x['name'] for x in sizes]
         raise tornado.gen.Return(sizes)
 
     @tornado.gen.coroutine

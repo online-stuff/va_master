@@ -18,6 +18,7 @@ setuptools.setup(
     'gitpython',
     'watchdog', 
     'clc-sdk',
+    'google-api-python-client',
   ],
   zip_safe=False,
   entry_points = {
