@@ -7,10 +7,14 @@ def get_paths():
             'triggers/clear' : clear_triggers, #Just for resting!!!
         },
         'post' : {
-            'triggers/add_trigger':  add_trigger,
+            'triggers/add_trigger':  add_trigger_api,
             'triggers/triggered': receive_trigger,
             'triggers/load_triggers' : load_triggers,
-        }
+            'triggers/edit_trigger' : edit_trigger,
+        },
+        'delete' : {
+            'triggers/delete_trigger' : delete_trigger,
+        },
     }
     return paths
 
@@ -35,17 +39,54 @@ def get_paths():
 #        ]
 #    }
     
+@tornado.gen.coroutine
+def add_trigger(deploy_handler, hostname, new_trigger):
+
+    hosts = yield deploy_handler.list_hosts()
+    host = [x for x in hosts if x['hostname'] == hostname][0]
+
+    if not host.get('triggers'): host['triggers'] = []
+    triggers_ids = [x.get('id', -1) for x in host['triggers']] or [-1]
+    trigger_id = max(triggers_ids) + 1
+
+    new_trigger['id'] = trigger_id
+
+    host['triggers'].append(new_trigger)
+
+    yield deploy_handler.datastore.insert('hosts', hosts)
+
+    raise tornado.gen.Return(True)
+
 
 @tornado.gen.coroutine
-def load_triggers(handler):
+def add_trigger_api(handler):
+    new_trigger = handler.data['new_trigger']
+    hostname = handler.data['hostname']
+
+    result = yield add_trigger(handler.config.deploy_handler, hostname, new_trigger)
+    raise tornado.gen.Return(result)
+
+@tornado.gen.coroutine
+def delete_trigger(handler):
     hosts = yield handler.config.deploy_handler.list_hosts()
     host = [x for x in hosts if x['hostname'] == handler.data['hostname']][0]
 
-    host['triggers'] = handler.data['triggers']
-
+    host['triggers'] = [x for x in host['triggers'] if x['id'] != handler.data['trigger_id']]
     yield handler.config.deploy_handler.datastore.insert('hosts', hosts)
 
-    raise tornado.gen.Return(True)
+
+@tornado.gen.coroutine
+def edit_trigger(handler):
+    hosts = yield handler.config.deploy_handler.list_hosts()
+    host = [x for x in hosts if x['hostname'] == handler.data['hostname']][0]
+
+    edited_trigger_index = host['triggers'].index([x for x in host['triggers'] if x['id'] == handler.data['trigger_id']][0])
+    
+    handler.data['trigger']['id'] = host['triggers'][edited_trigger_index]['id']
+    host['triggers'][edited_trigger_index] = handler.data['trigger']
+#    edited_trigger = handler.data['trigger']
+
+    yield handler.config.deploy_handler.datastore.insert('hosts', hosts)
 
 @tornado.gen.coroutine
 def clear_triggers(handler):
@@ -58,21 +99,27 @@ def clear_triggers(handler):
     raise tornado.gen.Return(True)
 
 @tornado.gen.coroutine
-def add_trigger(handler):
-    hosts = yield handler.config.deploy_handler.list_hosts()
-    host = [x for x in hosts if x['hostname'] == handler.data['hostname']][0]
-    if not host.get('triggers'): host['triggers'] = []
+def load_triggers(handler):
+    hostname = handler.data['hostname']
+    triggers = handler.data['triggers']
 
-    host['triggers'].append(handler.data['new_trigger'])
+    yield clear_triggers(handler)
 
-    yield handler.config.deploy_handler.datastore.insert('hosts', hosts)
+    for trigger in triggers: 
+        yield add_trigger(handler.config.deploy_handler, hostname, trigger)
 
     raise tornado.gen.Return(True)
+
 
 @tornado.gen.coroutine
 def list_triggers(handler):
     hosts = yield handler.config.deploy_handler.list_hosts()
-    triggers = {h['hostname'] : h.get('triggers', []) for h in hosts}
+    drivers = []
+    for host in hosts: 
+        driver = yield handler.config.deploy_handler.get_driver_by_id(host['driver_name'])
+        host['functions'] = yield driver.get_driver_trigger_functions()
+
+    triggers = {h['hostname'] : {'triggers' : h.get('triggers', []), 'functions' : h.get('functions', [])} for h in hosts}
 #    print ('Triggers are : ', triggers)
     raise tornado.gen.Return(triggers)
 
@@ -95,23 +142,21 @@ def receive_trigger(handler):
         conditions_satisfied = True
         print ('Working with trigger: ', trigger)
         for condition in trigger['conditions']:
-            condition['kwargs'].update({'host' : host, 'instance_name' : handler.data['instance_name']})
+            condition_kwargs = {'host' : host, 'instance_name' : handler.data['instance_name']}
             for kwarg in trigger['extra_kwargs']: 
-                condition['kwargs'][kwarg] = handler.data.get(kwarg)
-            result = yield getattr(driver, condition['func'])(**condition['kwargs'])
-            print ('Result from ', condition['func'], ' is ', result)
+                condition_kwargs[kwarg] = handler.data.get(kwarg)
+            result = yield getattr(driver, condition)(**condition_kwargs)
+            print ('Result from ', condition, ' is ', result)
             if not result: 
                 conditions_satisfied = False
                 break
         if conditions_satisfied:
             for action in trigger['actions']:
-                action['kwargs'].update({'instance_name' : handler.data['instance_name'], 'host' : host})
+                action_kwargs = {'instance_name' : handler.data['instance_name'], 'host' : host}
                 for kwarg in trigger['extra_kwargs'] : 
-                    action['kwargs'][kwarg] = handler.data.get(kwarg)
+                    action_kwargs[kwarg] = handler.data.get(kwarg)
                 try:
-                    print ('Doing ', action['func'])
-                    result = yield getattr(driver, action['func'])(**action['kwargs'])
-                    print ('Result is : ', result)
+                    result = yield getattr(driver, action)(**action_kwargs)
                 except: 
                     import traceback
                     traceback.print_exc()

@@ -293,7 +293,7 @@ var Table = React.createClass({
             { pagination ? ( <Reactable.Table className="table striped" columns={tbl_cols} itemsPerPage={10} pageButtonLimit={10} noDataText="No matching records found." sortable={true} filterable={cols} filterBy={filterBy} hideFilterInput >
                 {rows}
             </Reactable.Table> ) :
-            ( <Reactable.Table className="table striped" columns={tbl_cols} noDataText="No matching records found." sortable={true} hideFilterInput >
+            ( <Reactable.Table className="table striped" columns={tbl_cols} filterable={cols} filterBy={filterBy} noDataText="No matching records found." sortable={true} hideFilterInput >
                 {rows}
             </Reactable.Table> )}
             </div>

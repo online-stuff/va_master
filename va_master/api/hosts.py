@@ -12,7 +12,8 @@ def get_paths():
             'hosts' : list_hosts, 
             'hosts/reset' : reset_hosts, 
             'drivers' : list_drivers, 
-
+            'hosts/get_trigger_functions': get_hosts_triggers,
+            'hosts/get_host_billing' : get_host_billing, 
         },
         'post' : {
             'hosts/info' : get_host_info, 
@@ -22,7 +23,18 @@ def get_paths():
     }
     return paths
 
-##@auth_only(user_allowed = True)
+@tornado.gen.coroutine
+def get_host_billing(handler):
+    host, driver = yield handler.config.deploy_handler.get_host_and_driver(handler.data['hostname'])
+    result = yield driver.get_host_billing(host)
+    raise tornado.gen.Return(result)
+
+@tornado.gen.coroutine
+def get_hosts_triggers(handler):
+    host, driver = yield handler.config.deploy_handler.get_host_and_driver(handler.data['hostname'])
+    result = yield driver.get_driver_trigger_functions()
+    raise tornado.gen.Return(result)
+
 @tornado.gen.coroutine
 def list_hosts(handler):
     hosts = yield handler.config.deploy_handler.list_hosts()
@@ -135,9 +147,11 @@ def get_host_info(handler):
 
     host_drivers = yield [deploy_handler.get_driver_by_id(x['driver_name']) for x in hosts]
 
-    hosts_data = [x[0].get_host_data(x[1]) for x in zip(host_drivers, hosts)]
+    hosts_data = [x[0].get_host_data(host = x[1], get_instances = data.get('get_instances', True), get_billing = data.get('get_billing', True)) for x in zip(host_drivers, hosts)]
     hosts_info = yield hosts_data
     
+
+
     for info in zip(hosts_info, hosts): 
         info[0]['hostname'] = info[1]['hostname']
 
