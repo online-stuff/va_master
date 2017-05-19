@@ -29,8 +29,7 @@ PROVIDER_TEMPLATE = '''VAR_PROVIDER_NAME:
   password: VAR_PASSWORD
   identity_url: VAR_IDENTITY_URL
   compute_region: VAR_REGION
-  networks:
-    - net-id: VAR_NETWORK_ID'''
+'''
 
 PROFILE_TEMPLATE = '''VAR_PROFILE_NAME:
     provider: VAR_PROVIDER_NAME
@@ -40,6 +39,8 @@ PROFILE_TEMPLATE = '''VAR_PROFILE_NAME:
     minion:
         grains:
             role: VAR_ROLE
+    networks:
+      - net-id: VAR_NETWORK_ID
 '''
 
 class OpenStackDriver(base.DriverBase):

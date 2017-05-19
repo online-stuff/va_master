@@ -1,3 +1,4 @@
+import salt.cloud
 import abc, subprocess
 import tornado.gen
 from tornado.httpclient import AsyncHTTPClient, HTTPRequest
@@ -136,6 +137,7 @@ class DriverBase(object):
         """
 
         if not (self.profile_template or self.provider_template): 
+            print ('There is no template! ')
             raise tornado.gen.Return(None)
         if not skip_profile: 
             self.field_values['profile_conf'] = self.profile_vars['VAR_PROFILE_NAME']
@@ -154,7 +156,9 @@ class DriverBase(object):
         """ 
             Writes the saved configurations. If any of the arguments are set, the corresponding configuration will not be written. Does not need to be overwritten 
         """
+        print 'Template is : ', self.provider_template
         if not skip_provider and self.provider_template: 
+            print ('Writing provider')
             with open('/etc/salt/cloud.providers.d/' + self.provider_vars['VAR_PROVIDER_NAME'] + '.conf', 'w') as f: 
                 f.write(self.provider_template)
         if not skip_profile and self.profile_template:
@@ -217,9 +221,12 @@ class DriverBase(object):
             Gets a list of all the images used to create instances. This _needs_ to be overwritten. 
         """
         cl = salt.cloud.CloudClient(path = '/etc/salt/cloud')
-        images = cl.list_images(provider = self.provider_name)[self.provider_name]
-        images = images[image.keys()[0]]
-        images = [x['name'] for x in images]
+        provider_name = self.provider_vars['VAR_PROVIDER_NAME']
+        images = cl.list_images(provider = provider_name)[provider_name]
+        images = images[images.keys()[0]]
+#        print ('Images are : ', images)
+#        print ('Image one is : ', images[0])
+        images = [images[x]['name'] for x in images]
         raise tornado.gen.Return(images)
 
     @tornado.gen.coroutine
@@ -228,8 +235,10 @@ class DriverBase(object):
             Gets a list of all sizes (flavors) used to create instances. This _needs_ to be overwritten. 
         """
         cl = salt.cloud.CloudClient(path = '/etc/salt/cloud')
-        sizes = cl.list_images(provider = self.provider_name)[self.provider_name]
-        sizes = images[image.keys()[0]]
+        provider_name = self.provider_vars['VAR_PROVIDER_NAME']
+        sizes = cl.list_sizes(provider = provider_name)[provider_name]
+        sizes = sizes[sizes.keys()[0]]
+#        print ('Sizes are : ', sizes)
         sizes = [x['name'] for x in sizes]
         raise tornado.gen.Return(sizes)
 
@@ -337,35 +346,40 @@ class DriverBase(object):
                 if field_values[key]: 
                     self.field_values[key] = field_values[key]
 
+            self.provider_vars['VAR_USERNAME'] = field_values['username']
+            self.provider_vars['VAR_PASSWORD'] = field_values['password']
+
+            yield self.get_salt_configs(skip_profile = True)
+            yield self.write_configs(skip_profile = True)	
+
+
     	    self.field_values['networks'] = yield self.get_networks()
             self.field_values['sec_groups'] = yield self.get_sec_groups()
             self.field_values['images'] = yield self.get_images()
             self.field_values['sizes']= yield self.get_sizes()
 
 
-            self.provider_vars['VAR_USERNAME'] = field_values['username']
-            self.provider_vars['VAR_PASSWORD'] = field_values['password']
-
-            raise tornado.gen.Return({'errors':[], 'new_step_index':1,
-                'option_choices':{
+            raise tornado.gen.Return(StepResult(
+                errors = [], new_step_index =1,
+                option_choices = {
                     'network': self.field_values['networks'],
                     'sec_group': self.field_values['sec_groups'],
                 }
-            })
+            ))
 
         elif step_index == 1:
-            self.provider_vars['VAR_NETWORK_ID'] = field_values['network']
+            self.profile_vars['VAR_NETWORK_ID'] = field_values['network']
             self.profile_vars['VAR_SEC_GROUP'] = field_values['sec_group']
 
             self.field_values['defaults']['network'] = field_values['network']
             self.field_values['defaults']['sec_group'] = field_values['sec_group']
 
-            raise tornado.gen.Return({
-                'errors':[], 'new_step_index':2, 'option_choices':{
+            raise tornado.gen.Return(StepResult(
+                errors =[], new_step_index =2, option_choices = {
                     'image': self.field_values['images'],
                     'size': self.field_values['sizes'],
                 }
-            })
+            ))
         else: 
             self.profile_vars['VAR_IMAGE'] = field_values['image']
             self.profile_vars['VAR_SIZE'] = field_values['size']
@@ -376,9 +390,9 @@ class DriverBase(object):
             yield self.get_salt_configs(base_profile = True)
             yield self.write_configs()	
 
-            raise tornado.gen.Return({
-                'errors' : [], 'new_step_index' : -1, 'option_choices':{}
-            })
+            raise tornado.gen.Return(StepResult(
+                errors = [], new_step_index = -1, option_choices = {}
+            ))
 
 
     @tornado.gen.coroutine
