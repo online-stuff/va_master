@@ -552,8 +552,8 @@ class CenturyLinkDriver(base.DriverBase):
 #            self.api = clc.v1.API #Needed for blueprints and other v1 actions
 #            self.token = yield self.get_token(field_values)
 
-      	step_kwargs = yield super(CenturyLinkDriver, self).validate_field_values(step_index, field_values)
-        raise tornado.gen.Return(StepResult(**step_kwargs))
+      	step_result = yield super(CenturyLinkDriver, self).validate_field_values(step_index, field_values)
+        raise tornado.gen.Return(step_result)
       
     @tornado.gen.coroutine
     def create_minion(self, host, data):
