@@ -272,7 +272,7 @@ class LibVirtDriver(base.DriverBase):
         raise tornado.gen.Return({'success' : True, 'message' : ''})
 
     @tornado.gen.coroutine
-    def get_instances(self, host):
+    def get_instances(self, host, get_instances = True, get_billing = True):
         """ Gets instances in the specified format so they can be used in get_host_data() """
         host_url = host['host_protocol'] + '://' + host['host_ip'] + '/system'
 
@@ -308,7 +308,7 @@ class LibVirtDriver(base.DriverBase):
 
 
     @tornado.gen.coroutine
-    def get_host_data(self, host):
+    def get_host_data(self, host, get_instances = True, get_billing = True):
         """ Gets host data as specified per the Base driver. """
         host_url = host['host_protocol'] + '://' + host['host_ip'] + '/system'
 
@@ -324,7 +324,10 @@ class LibVirtDriver(base.DriverBase):
             raise tornado.gen.Return(host_data)
 
 
-        instances = yield self.get_instances(host)
+        if get_instances: 
+            instances = yield self.get_instances(host)
+        else: 
+            instances = []
 
         storage = [x for x in conn.listAllStoragePools() if x.name() == 'default'][0]
 

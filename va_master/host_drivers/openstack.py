@@ -165,8 +165,8 @@ class OpenStackDriver(base.DriverBase):
     def get_networks(self):
         """ Gets the networks using the get_openstack_value() method. """
 
-        tenants = yield self.get_openstack_value(self.token_data, 'identity', 'tenants')
-        tenant = [x for x in tenants['tenants'] if x['name'] == self.field_values['tenant']][0]
+        tenants = yield self.get_openstack_value(self.token_data, 'identity', 'projects')
+        tenant = [x for x in tenants['projects'] if x['name'] == self.field_values['tenant']][0]
 
         tenant_id = tenant['id']
 
@@ -208,8 +208,10 @@ class OpenStackDriver(base.DriverBase):
             servers = yield self.get_openstack_value(self.token_data, 'compute', 'servers/detail')
             servers = servers['servers']
 
-            tenants = yield self.get_openstack_value(self.token_data, 'identity', 'tenants')
-            tenant = [x for x in tenants['tenants'] if x['name'] == host['tenant']][0]
+            tenants = yield self.get_openstack_value(self.token_data, 'identity', 'projects')
+
+#            tenants = yield self.get_openstack_value(self.token_data, 'identity', 'tenants')
+            tenant = [x for x in tenants['projects'] if x['name'] == host['tenant']][0]
 
             tenant_id = tenant['id']
             tenant_usage = yield self.get_openstack_value(self.token_data, 'compute', 'os-simple-tenant-usage/' + tenant_id)
@@ -247,7 +249,7 @@ class OpenStackDriver(base.DriverBase):
         raise tornado.gen.Return({'success' : True, 'message' : ''})
 
     @tornado.gen.coroutine
-    def get_host_data(self, host):
+    def get_host_data(self, host, get_instances = True, get_billing = True):
         """ Gets various data about the host and all the instances using the get_openstack_value() method. Returns the data in the same format as defined in the base driver. """
         import time
         print ('Starting timer for OpenStack. ')
@@ -255,8 +257,8 @@ class OpenStackDriver(base.DriverBase):
         try:
             self.token_data = yield self.get_token(host)
 
-            tenants = yield self.get_openstack_value(self.token_data, 'identity', 'tenants')
-            tenant = [x for x in tenants['tenants'] if x['name'] == host['tenant']][0]
+            tenants = yield self.get_openstack_value(self.token_data, 'identity', 'projects')
+            tenant = [x for x in tenants['projects'] if x['name'] == host['tenant']][0]
 
             tenant_id = tenant['id']
 
@@ -276,8 +278,10 @@ class OpenStackDriver(base.DriverBase):
             }
             raise tornado.gen.Return(host_data)
 
-
-        instances = yield self.get_instances(host)
+        if get_instances: 
+            instances = yield self.get_instances(host)
+        else: 
+            instances = []
 
         host_usage = {
             'max_cpus' : limits['maxTotalCores'],
@@ -343,11 +347,11 @@ class OpenStackDriver(base.DriverBase):
                 field_values[field] = field_values[field].split('|')[1]
 
         try:
-            step_kwargs = yield super(OpenStackDriver, self).validate_field_values(step_index, field_values)
+            step_result = yield super(OpenStackDriver, self).validate_field_values(step_index, field_values)
         except:
             import traceback
             traceback.print_exc()
-        raise tornado.gen.Return(StepResult(**step_kwargs))
+        raise tornado.gen.Return(step_result)
 
 
     @tornado.gen.coroutine
