@@ -43,7 +43,8 @@ PROFILE_TEMPLATE = '''VAR_PROFILE_NAME:
         grains:
             role: VAR_ROLE
     networks:
-      - net-id: VAR_NETWORK_ID
+      - fixed:
+          - VAR_NETWORK_ID 
 '''
 
 class OpenStackDriver(base.DriverBase):

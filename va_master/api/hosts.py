@@ -19,9 +19,24 @@ def get_paths():
             'hosts/info' : get_host_info, 
             'hosts/new/validate_fields' : validate_newhost_fields, 
             'hosts/delete' : delete_host, 
+            'hosts/add_host' : add_host,
         }
     }
     return paths
+
+
+@tornado.gen.coroutine
+def add_host(handler):
+    host_field_values = {"username": "user", "sizes": [], "images": [], "hostname": "sample_host", "instances": [], "driver_name": "generic_driver", "defaults": {}, "sec_groups": [], "password": "pass", "ip_address": "127.0.0.1", "networks": []}
+    host_field_values.update(handler.data['field_values'])
+
+    driver = yield handler.config.deploy_handler.get_driver_by_id(handler.data['driver_name'])
+    driver.field_values = host_field_values
+
+    yield handler.config.deploy_handler.create_host(driver)
+
+    raise tornado.gen.Return(True)
+
 
 @tornado.gen.coroutine
 def get_host_billing(handler):
