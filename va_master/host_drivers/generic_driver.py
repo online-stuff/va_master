@@ -11,28 +11,9 @@ import json
 import subprocess
 import os
 
-PROVIDER_TEMPLATE = '''VAR_PROVIDER_NAME:
-  auth_minion: VAR_THIS_IP
-  minion:
-    master: VAR_THIS_IP
-    master_type: str
-  # The name of the configuration profile to use on said minion
-  ssh_key_name: VAR_SSH_NAME
-  ssh_key_file: VAR_SSH_FILE
-  ssh_interface: private_ips
-  driver: ###INSERT DRIVER HERE###
-  ###INSERT OTHER VARIABLES HERE###
-'''
 
-PROFILE_TEMPLATE = '''VAR_PROFILE_NAME:
-    provider: VAR_PROVIDER_NAME
-    image: VAR_IMAGE
-    size: VAR_SIZE
-    securitygroups: VAR_SEC_GROUP
-    minion:
-        grains:
-            role: VAR_ROLE
-'''
+PROVIDER_TEMPLATE = ""
+PROFILE_TEMPLATE = ""
 
 class GenericDriver(base.DriverBase):
     def __init__(self, provider_name = 'generic_provider', profile_name = 'generic_profile', host_ip = '192.168.80.39', key_name = 'va_master_key', key_path = '/root/va_master_key'):
@@ -59,15 +40,20 @@ class GenericDriver(base.DriverBase):
 
       
     @tornado.gen.coroutine
+    def get_host_status(self, host = ''): 
+        raise tornado.gen.Return(True)
+
+    @tornado.gen.coroutine
     def get_steps(self):
         steps = yield super(GenericDriver, self).get_steps()
+        steps[0].add_fields([('ip_address', 'IP address', 'str')])
+        steps = [steps[0]]
         self.steps = steps
         raise tornado.gen.Return(steps)
 
 
     @tornado.gen.coroutine
     def get_networks(self):
-        
         networks = [] 
         raise tornado.gen.Return(networks)
 
@@ -155,18 +141,25 @@ class GenericDriver(base.DriverBase):
 
     @tornado.gen.coroutine
     def validate_field_values(self, step_index, field_values):
-        if step_index == 0:
-    	    self.field_values['networks'] = yield self.get_networks() 
-            self.field_values['sec_groups'] = yield self.get_sec_groups()
-            self.field_values['images'] = yield self.get_images()
-            self.field_values['sizes']= yield self.get_sizes()
-        step_kwargs = yield super(GenericDriver, self).validate_field_values(step_index, field_values)
-        raise tornado.gen.Return(StepResult(**step_kwargs))
+        step_result = yield super(GenericDriver, self).validate_field_values(step_index, field_values)
+        if step_index == 0: 
+            self.field_values.update({
+                'hostname' : field_values['hostname'], 
+                'username' : field_values['username'], 
+                'password' : field_values['password'],
+                'ip_address' : field_values['ip_address'],
+            })
+
+
+            raise tornado.gen.Return(StepResult(
+                errors = [], new_step_index = -1, option_choices = {}
+            ))
+        raise tornado.gen.Return(step_result)
        
       
     @tornado.gen.coroutine
     def create_minion(self, host, data):
-        
+        raise tornado.gen.Return(True)  
         try:
             yield super(GenericDriver, self).create_minion(host, data)
         except: 

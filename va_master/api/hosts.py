@@ -101,12 +101,8 @@ def validate_newhost_fields(handler):
             raise tornado.gen.Return({'error': 'bad_step'}, 400)
         else:
             if step_index < 0 or driver_steps[step_index].validate(field_values):
-                try: 
-                    result = yield found_driver.validate_field_values(step_index, field_values)
-                except tornado.gen.Return: 
-                    raise
-                except Exception as e:
-                    raise tornado.gen.Return({'success' : False, 'message' : 'Could not validate field values. Error was : ' + e.message, 'data' : {}})
+                result = yield found_driver.validate_field_values(step_index, field_values)
+                print 'Result is : ', result, ' with index : ', result.new_step_index
                 if result.new_step_index == -1:
                     handler.config.deploy_handler.create_host(found_driver)
                 raise tornado.gen.Return(result.serialize())

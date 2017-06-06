@@ -164,9 +164,9 @@ def create_new_state(handler):
 def get_app_info(handler):
     instance_name = handler.data['instance_name']
    
-    cl = LocalClient()
+    cl = Caller()
     print ('Getting inventory for :', instance_name)
-    instance_info = cl.cmd('evo-master', 'mine.get', [instance_name, 'inventory'])['evo-master'] 
+    instance_info = cl.cmd('mine.get', instance_name, 'inventory') 
     print ('Info is : ', instance_info)
     raise tornado.gen.Return(instance_info)
 
@@ -189,7 +189,8 @@ def launch_app(handler):
 
     if data.get('role'):
 
-        states = yield store.get('states')
+        init_vals = yield store.get('init_vals')
+        states = init_vals['states']
         state = [x for x in states if x['name'] == data['role']][0]
 
         panel = {'panel_name' : handler.data['instance_name'], 'role' : minion_info['role']}
