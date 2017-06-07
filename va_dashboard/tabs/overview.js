@@ -154,10 +154,12 @@ var Jointjs = React.createClass({
                 text: { text: "va-master", fill: 'white' }
             }
         });
-        var rect = [root_rect], links = [], h_trans = [{x: root_x+120, y: root_y}, {x: root_x-120, y: root_y}, {x: root_x, y: root_y-20}, {x: root_x, y: root_y+20}];
+        var rect = [root_rect], links = [], h_trans = [{x: root_x+120, y: root_y}, {x: root_x-120, y: root_y}, {x: root_x, y: root_y-50}, {x: root_x, y: root_y+50}];
         var i_trans = [
             [{x: 130, y: 45}, {x: 130, y: -45}, {x: 130, y: 0}, {x: 0, y: 45}, {x: 0, y: -45}, {x: -130, y: 45}, {x: -130, y: -45}],
-            [{x: -130, y: 45}, {x: -130, y: -45}, {x: -130, y: 0}, {x: 0, y: 45}, {x: 0, y: -45}, {x: 130, y: 45}, {x: 130, y: -45}]
+            [{x: -130, y: 45}, {x: -130, y: -45}, {x: -130, y: 0}, {x: 0, y: 45}, {x: 0, y: -45}, {x: 130, y: 45}, {x: 130, y: -45}],
+            [{x: -130, y: -45}, {x: 130, y: -45}, {x: 0, y: -45}, {x: -130, y: 0}, {x: 130, y: 0}, {x: -130, y: 45}, {x: 130, y: 45}],
+            [{x: -130, y: 45}, {x: 130, y: 45}, {x: 0, y: 45}, {x: -130, y: 0}, {x: 130, y: 0}, {x: -130, y: -45}, {x: 130, y: -45}]
         ];
         for(var i=0; i<props.length; i++){
             var host = props[i];
