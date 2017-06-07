@@ -95,7 +95,7 @@ var Overview = React.createClass({
         var diagram = [];
         var host_rows = this.state.hosts.map(function(host) {
             var host_instances = host.instances.map(function(i) {
-                return {name: i.hostname};
+                return {name: i.hostname, ip: i.ip};
             });
             diagram.push({name: host.hostname, instances: host_instances});
             return {hostname: host.hostname, instances: host.instances, host_usage: host.host_usage};
@@ -145,17 +145,20 @@ var Jointjs = React.createClass({
         return {};
     },
     changeDiagram: function (props){
-        var root_x = this.width/2 - 15, root_y = this.height/2 - 15;
+        var root_x = this.width/2 - 75, root_y = this.height/2 - 15;
         var root_rect = new joint.shapes.basic.Rect({
             position: { x: root_x, y: root_y},
             size: { width: 100, height: 30 },
             attrs: {
-                rect: { fill: 'red' },
+                rect: { fill: '#337ab7' },
                 text: { text: "va-master", fill: 'white' }
             }
         });
-        var rm_from_arr = [2, 0];
-        var rect = [root_rect], links = [], i_trans = [{x: -120, y: 0}, {x: 0, y: 40}, {x: 120, y: 0}, {x: 0, y: -40}, {x: 120, y: 40}, {x: 120, y: -40}, {x: -120, y: 40}, {x: -120, y: -40}], h_trans = [{x: root_x-120, y: root_y}, {x: root_x+120, y: root_y}, {x: root_x, y: root_y-20}, {x: root_x, y: root_y+20}];
+        var rect = [root_rect], links = [], h_trans = [{x: root_x+120, y: root_y}, {x: root_x-120, y: root_y}, {x: root_x, y: root_y-20}, {x: root_x, y: root_y+20}];
+        var i_trans = [
+            [{x: 130, y: 45}, {x: 130, y: -45}, {x: 130, y: 0}, {x: 0, y: 45}, {x: 0, y: -45}, {x: -130, y: 45}, {x: -130, y: -45}],
+            [{x: -130, y: 45}, {x: -130, y: -45}, {x: -130, y: 0}, {x: 0, y: 45}, {x: 0, y: -45}, {x: 130, y: 45}, {x: 130, y: -45}]
+        ];
         for(var i=0; i<props.length; i++){
             var host = props[i];
             var h_index = rect.length;
@@ -163,7 +166,7 @@ var Jointjs = React.createClass({
                 position: h_trans[i],
                 size: { width: 100, height: 30 },
                 attrs: {
-                    rect: { fill: 'green' },
+                    rect: { fill: 'gray' },
                     text: { text: host.name, fill: 'white' }
                 }
             }));
@@ -176,16 +179,14 @@ var Jointjs = React.createClass({
             for(var j=0; j<host.instances.length; j++){
                 rect.push(new joint.shapes.basic.Rect({
                     position: h_trans[i],
-                    size: { width: 100, height: 30 },
+                    size: { width: 120, height: 40 },
                     attrs: {
-                        rect: { fill: 'blue' },
-                        text: { text: host.instances[j].name, fill: 'white' }
+                        rect: { fill: 'green' },
+                        text: { text: host.instances[j].name + "\nIP: " + host.instances[j].ip , fill: 'white' }
                     }
                 }));
                 //link between host and instance
-                var new_i_trans = i_trans.slice(0);
-                new_i_trans.splice(rm_from_arr[i], 1);
-                rect[rect.length-1].translate(new_i_trans[j].x, new_i_trans[j].y);
+                rect[rect.length-1].translate(i_trans[i][j].x, i_trans[i][j].y);
 
                 links.push(new joint.dia.Link({
                     source: { id: rect[h_index].id },
