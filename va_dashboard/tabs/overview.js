@@ -328,7 +328,7 @@ var Host = React.createClass({
                 <div className="billing-info">
                     <div>
                         <div className="host-billing">{cost}</div>
-                        <div>Current cost</div>
+                        <div>Current monthly cost</div>
                     </div>
                     <div>
                         <div className="host-billing">{e_cost}</div>
