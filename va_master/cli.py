@@ -192,14 +192,15 @@ def handle_init(args):
         try: 
             try: 
                 os.mkdir(store_coonfig.ssh_key_path)
+                key_full_path = cli_config.ssh_key_path + cli_config.ssh_key_name
+    
+                ssh_cmd = ['ssh-keygen', '-t', 'rsa', '-f', key_full_path, '-N', '']
+    
+                subprocess.call(ssh_cmd)
+                subprocess.call(['mv', key_full_path, key_full_path + '.pem'])
+
             except: 
                 pass
-            key_full_path = cli_config.ssh_key_path + cli_config.ssh_key_name
-
-            ssh_cmd = ['ssh-keygen', '-t', 'rsa', '-f', key_full_path, '-N', '']
-
-            subprocess.call(ssh_cmd)
-            subprocess.call(['mv', key_full_path, key_full_path + '.pem'])
         except: 
             import traceback
             print ('Could not generate a key. Probably already exists. ')

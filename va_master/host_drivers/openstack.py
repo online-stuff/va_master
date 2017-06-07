@@ -14,16 +14,18 @@ import os
 from novaclient import client
 
 PROVIDER_TEMPLATE = '''VAR_PROVIDER_NAME:
-  auth_minion: VAR_THIS_IP
   minion:
     master: VAR_THIS_IP
     master_type: str
   # The name of the configuration profile to use on said minion
+  driver: openstack
+  auth_version: 2
+  compute_name: nova
+  protocol: ipv4
   ssh_key_name: VAR_SSH_NAME
   ssh_key_file: VAR_SSH_FILE
   ssh_interface: private_ips
   use_keystoneauth: True
-  driver: nova
   user: VAR_USERNAME
   tenant: VAR_TENANT
   password: VAR_PASSWORD
@@ -36,11 +38,13 @@ PROFILE_TEMPLATE = '''VAR_PROFILE_NAME:
     image: VAR_IMAGE
     size: VAR_SIZE
     securitygroups: VAR_SEC_GROUP
+    ssh_username: VAR_IMAGE_USERNAME
     minion:
         grains:
             role: VAR_ROLE
     networks:
-      - net-id: VAR_NETWORK_ID
+      - fixed:
+          - VAR_NETWORK_ID 
 '''
 
 class OpenStackDriver(base.DriverBase):

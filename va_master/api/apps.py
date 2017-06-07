@@ -189,7 +189,8 @@ def launch_app(handler):
 
     if data.get('role'):
 
-        states = yield store.get('states')
+        init_vals = yield store.get('init_vals')
+        states = init_vals['states']
         state = [x for x in states if x['name'] == data['role']][0]
 
         panel = {'panel_name' : handler.data['instance_name'], 'role' : minion_info['role']}

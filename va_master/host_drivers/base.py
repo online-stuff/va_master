@@ -142,8 +142,11 @@ class DriverBase(object):
         if not skip_profile: 
             self.field_values['profile_conf'] = self.profile_vars['VAR_PROFILE_NAME']
             for var_name in self.profile_vars: 
+                print 'Trying to write : ', var_name, ' with : ', self.profile_vars[var_name]
                 if not (base_profile and var_name == 'VAR_PROFILE_NAME') and self.profile_vars[var_name]: 
+                    print 'Writing the value. '
                     self.profile_template = self.profile_template.replace(var_name, self.profile_vars[var_name])
+                    print 'Now the template is : ', self.profile_template
 
  
         if not skip_provider: 
@@ -420,6 +423,8 @@ class DriverBase(object):
         self.profile_vars['VAR_ROLE'] = data['role']
         self.profile_vars['VAR_IMAGE'] = data['image']
         self.profile_vars['VAR_SIZE'] = data['size']
+        self.profile_vars['VAR_NETWORK_ID'] = data['network'].split('|')[1]
+
         new_profile = data['instance_name'] + '-profile'
         self.profile_vars['VAR_PROFILE_NAME'] = new_profile
         self.profile_vars['VAR_SEC_GROUP'] = 'default'

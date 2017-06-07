@@ -46,7 +46,6 @@ def list_panels(handler):
 @tornado.gen.coroutine
 def panel_action_execute(handler):
     try:
-        cl = salt.client.LocalClient()
 
         instance = handler.data['instance_name']
         instance_info = yield apps.get_app_info(handler)
@@ -58,8 +57,12 @@ def panel_action_execute(handler):
 
         states = yield handler.config.deploy_handler.get_states()
         state = [x for x in states if x['name'] == state][0]
+        module = handler.data.get('module', state['module'])
 
-        result = cl.cmd(instance, state['module'] + '.' + action , args)
+        print 'Trying to get client. '
+        cl = salt.client.LocalClient()
+        print 'Trying to get result'
+        result = cl.cmd(instance, module + '.' + action , args)
     except: 
         import traceback 
         traceback.print_exc()
@@ -82,9 +85,9 @@ def get_chart_data(handler):
     result = cl.cmd(instance, 'monitoring_stats.parse' , args)
     raise tornado.gen.Return(result)
 
-##@auth_only
 @tornado.gen.coroutine
 def panel_action(handler):
+    print 'In panel action/ '
     instance_result = yield panel_action_execute(handler)
     raise tornado.gen.Return(instance_result)
 
