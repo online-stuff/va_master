@@ -74,7 +74,7 @@ var Overview = React.createClass({
         this.getHosts();
     },
     getHosts: function(){
-        var data = {hosts: []};
+        var data = {hosts: [], filter_instances: ["va-backup-1", "va-monitoring-1"]};
         var me = this;
         Network.post('/api/hosts/info', this.props.auth.token, data).done(function(data) {
             me.setState({hosts: data, loading: false});

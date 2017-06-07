@@ -110,6 +110,7 @@ class OpenStackDriver(base.DriverBase):
             field_values['username'], field_values['password'],
             field_values['tenant'])
         url = 'http://%s/v2.0/tokens' % host
+        print 'Trying to get token with : ', url
         data = {
             'auth': {
                 'tenantName': tenant,
@@ -149,6 +150,7 @@ class OpenStackDriver(base.DriverBase):
             url_endpoint -- The specific values we want to get. It varies from resource to resource so again, check the OpenStack documentation, or the other methods. 
         """
 
+        print 'Endpoint is : ', url_endpoint
         url = token_data[1][token_value]
         req = HTTPRequest('%s/%s' % (url, url_endpoint), 'GET', headers={
             'X-Auth-Token': token_data[0],
@@ -168,9 +170,14 @@ class OpenStackDriver(base.DriverBase):
     @tornado.gen.coroutine
     def get_networks(self):
         """ Gets the networks using the get_openstack_value() method. """
+        try: 
+            tenants = yield self.get_openstack_value(self.token_data, 'identity', 'projects')
+            tenant = [x for x in tenants['projects'] if x['name'] == self.field_values['tenant']][0]
 
-        tenants = yield self.get_openstack_value(self.token_data, 'identity', 'projects')
-        tenant = [x for x in tenants['projects'] if x['name'] == self.field_values['tenant']][0]
+        except: 
+            tenants = yield self.get_openstack_value(self.token_data, 'identity', 'tenants')
+            tenant = [x for x in tenants['tenants'] if x['name'] == self.field_values['tenant']][0]
+          
 
         tenant_id = tenant['id']
 
@@ -212,19 +219,24 @@ class OpenStackDriver(base.DriverBase):
             servers = yield self.get_openstack_value(self.token_data, 'compute', 'servers/detail')
             servers = servers['servers']
 
-            tenants = yield self.get_openstack_value(self.token_data, 'identity', 'projects')
+            try: 
+                tenants = yield self.get_openstack_value(self.token_data, 'identity', 'projects')
+                tenant = [x for x in tenants['projects'] if x['name'] == host['tenant']][0]
 
-#            tenants = yield self.get_openstack_value(self.token_data, 'identity', 'tenants')
-            tenant = [x for x in tenants['projects'] if x['name'] == host['tenant']][0]
+            except: 
+                tenants = yield self.get_openstack_value(self.token_data, 'identity', 'tenants')
+                tenant = [x for x in tenants['tenants'] if x['name'] == host['tenant']][0]
+             
 
             tenant_id = tenant['id']
             tenant_usage = yield self.get_openstack_value(self.token_data, 'compute', 'os-simple-tenant-usage/' + tenant_id)
 
             tenant_usage = tenant_usage['tenant_usage']
+            print [x['addresses'] for x in servers]
             instances = [
                 {
                     'hostname' : x['name'], 
-                    'ip' : x['addresses'].get('private', x['addresses'].get('public', [{'addr':'n/a'}]))[0]['addr'], #[x['addresses'].keys()[0]], 
+                    'ip' : x['addresses'].get('private_vapps', x['addresses'].get('public', [{'addr':'n/a'}]))[0]['addr'], #[x['addresses'].keys()[0]], 
                     'size' : f['name'],
                     'used_disk' : y['local_gb'], 
                     'used_ram' : y['memory_mb'], 
@@ -261,8 +273,12 @@ class OpenStackDriver(base.DriverBase):
         try:
             self.token_data = yield self.get_token(host)
 
-            tenants = yield self.get_openstack_value(self.token_data, 'identity', 'projects')
-            tenant = [x for x in tenants['projects'] if x['name'] == host['tenant']][0]
+            try: 
+                tenants = yield self.get_openstack_value(self.token_data, 'identity', 'projects')
+                tenant = [x for x in tenants['projects'] if x['name'] == host['tenant']][0]
+            except: 
+                tenants = yield self.get_openstack_value(self.token_data, 'identity', 'tenants')
+                tenant = [x for x in tenants['tenants'] if x['name'] == host['tenant']][0]
 
             tenant_id = tenant['id']
 

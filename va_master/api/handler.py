@@ -88,6 +88,9 @@ class ApiHandler(tornado.web.RequestHandler):
                 traceback.print_exc()
         try: 
             result = yield api_func(self)
+            if type(result) == dict: 
+                if result.get('data_type', 'json') == 'file' : 
+                    raise tornado.gen.Return(None)
 #            print ('result is : ', result)
             if self.formatted_result(result): 
                 pass 
@@ -95,6 +98,8 @@ class ApiHandler(tornado.web.RequestHandler):
                 result = {'success' : False, 'message' : result, 'data' : {}} 
             else: 
                 result = {'success' : True, 'message' : '', 'data' : result}
+        except tornado.gen.Return: 
+            raise
         except Exception as e: 
             result = {'success' : False, 'message' : 'There was an error performing a request : ' + str(e.message), 'data' : {}}
             import traceback
@@ -105,8 +110,14 @@ class ApiHandler(tornado.web.RequestHandler):
     @tornado.gen.coroutine
     def get(self, path):
         args = self.request.query_arguments
+        t_args = args
+        for x in t_args: 
+            if len(t_args[x]) == 1: 
+                args[x] = args[x][0]
         try:
-            result = yield self.exec_method('get', path, {x : args[x][0] for x in args})
+#            result = yield self.exec_method('get', path, {x : args[x][0] for x in args})
+            result = yield self.exec_method('get', path, args)
+
         except: 
             import traceback
             traceback.print_exc()

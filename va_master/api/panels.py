@@ -56,7 +56,8 @@ def panel_action_execute(handler):
         args = handler.data.get('args', [])
 
         states = yield handler.config.deploy_handler.get_states()
-        state = [x for x in states if x['name'] == state][0]
+        state = [x for x in states if x['name'] == state] or [{'module' : 'openvpn'}]
+        state = state[0]
         module = handler.data.get('module', state['module'])
 
         print 'Trying to get client. '
