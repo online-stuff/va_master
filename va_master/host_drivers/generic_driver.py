@@ -93,7 +93,7 @@ class GenericDriver(base.DriverBase):
 
 
     @tornado.gen.coroutine
-    def get_host_data(self, host):
+    def get_host_data(self, host, get_instances = True, get_billing = True):
         
         try: 
             data = {
@@ -131,7 +131,7 @@ class GenericDriver(base.DriverBase):
 
         host_data = {
             'instances' : instances, #tenant_usage['server_usages'], 
-            'limits' : limits,
+            'limits' : {},
             'host_usage' : host_usage, 
             'status' : {'success' : True, 'message': ''}
         }
