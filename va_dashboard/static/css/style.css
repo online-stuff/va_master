@@ -397,13 +397,14 @@ table tr.row-state-Down{
 }
 .billing-info > div{
     display: inline-block;
+    float: left;
 }
 .billing-info > div:first-child {
-    margin-left: 20px;
+    margin-right: 5%;
+    margin-left: 20%;
 }
 .billing-info > div:last-child {
-    float: right;
-    margin-right: 40px;
+    margin-left: 5%;
 }
 .host-billing{
     text-align: center;
