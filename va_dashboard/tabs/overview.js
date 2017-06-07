@@ -183,7 +183,8 @@ var Jointjs = React.createClass({
                     }
                 }));
                 //link between host and instance
-                var new_i_trans = i_trans.splice(rm_from_arr[i], 1);
+                var new_i_trans = i_trans.slice(0);
+                new_i_trans.splice(rm_from_arr[i], 1);
                 rect[rect.length-1].translate(new_i_trans[j].x, new_i_trans[j].y);
 
                 links.push(new joint.dia.Link({
