@@ -6,6 +6,8 @@ var DoughnutChart = require("react-chartjs-2").Doughnut;
 var BarChart = require("react-chartjs-2").Bar;
 var defaults = require("react-chartjs-2").defaults;
 var Bootstrap = require('react-bootstrap');
+var joint = require('jointjs');
+var ReactDOM = require('react-dom');
 
 Chart.pluginService.register({
     beforeDraw: function(chart) {
@@ -66,7 +68,7 @@ Chart.pluginService.register({
 var Overview = React.createClass({
     getInitialState: function () {
         defaults.global.legend.display = false;
-        return {hosts: [], loading: true};
+        return {hosts: [], loading: true, index: 0};
     },
     componentWillMount() {
         this.getHosts();
@@ -84,47 +86,185 @@ var Overview = React.createClass({
         this.refs.log.getWrappedInstance().close_socket();
     },
     render: function() {
-        var appblocks;
-        // var appblocks = [['Directory', 'fa-group'], ['Monitoring', 'fa-heartbeat'],
-        //     ['Backup', 'fa-database'], ['OwnCloud', 'fa-cloud'], ['Fileshare', 'fa-folder-open'],
-        //     ['Email', 'fa-envelope']];
-        // appblocks = appblocks.map(function(d){
-        //     return (
-        //         <div key={d[0]} className='app-block'>
-        //             <div className='icon-wrapper'>
-        //                 <i className={'fa ' + d[1]} />
-        //             </div>
-        //             <div className='name-wrapper'>
-        //                 <h1>{d[0]}</h1>
-        //             </div>
-        //             <div className='clearfix' />
-        //         </div>
-        //     );
-        // });
-        var HostRedux = connect(function(state){
+        var HostRowsRedux = connect(function(state){
             return {auth: state.auth};
-        })(Host);
+        })(HostRows);
         var LogRedux = connect(function(state){
             return {auth: state.auth, alert: state.alert};
         }, null, null, { withRef: true })(Log);
+        var diagram = [];
         var host_rows = this.state.hosts.map(function(host) {
-            return <HostRedux key={host.hostname} title={host.hostname} chartData={host.instances} instances={host.instances.length} host_usage={host.host_usage} />;
+            var host_instances = host.instances.map(function(i) {
+                return {name: i.hostname};
+            });
+            diagram.push({name: host.hostname, instances: host_instances});
+            return {hostname: host.hostname, instances: host.instances, host_usage: host.host_usage};
         }.bind(this));
         const spinnerStyle = {
             display: this.state.loading ? "block": "none",
         };
+        var host_redux = null;
+        if(this.state.hosts.length > 0){
+            host_redux = <HostRowsRedux hosts={host_rows} />;
+        }
         return (
             <div>
+                <Diagram hosts={diagram} />
                 <div className="graph-block">
                     <span className="spinner" style={spinnerStyle} ><i className="fa fa-spinner fa-spin fa-3x" aria-hidden="true"></i></span>
-                    {host_rows}
+                    {host_redux}
                 </div>
                 <LogRedux ref="log" />
-                <div className="appblock">
-                    {appblocks}
-                    <div style={{clear: 'both'}} />
-                </div>
             </div>);
+    }
+});
+
+var conf = {
+    style: [{
+        selector: 'node',
+        style: {
+            shape: 'hexagon',
+            'background-color': 'red'
+        }
+    }],
+    elements: [
+        { data: { id: 'a' } },
+        { data: { id: 'b' } },
+        {
+            data: {
+            id: 'ab',
+            source: 'a',
+            target: 'b'
+            }
+    }]
+};
+
+var Jointjs = React.createClass({
+    getInitialState: function () {
+        this.graph = new joint.dia.Graph();
+        return {};
+    },
+    changeDiagram: function (props){
+        var root_x = this.width/2 - 15, root_y = this.height/2 - 15;
+        var root_rect = new joint.shapes.basic.Rect({
+            position: { x: root_x, y: root_y},
+            size: { width: 100, height: 30 },
+            attrs: {
+                rect: { fill: 'red' },
+                text: { text: "va-master", fill: 'white' }
+            }
+        });
+        var rm_from_arr = [2, 0];
+        var rect = [root_rect], links = [], i_trans = [{x: -120, y: 0}, {x: 0, y: 40}, {x: 120, y: 0}, {x: 0, y: -40}, {x: 120, y: 40}, {x: 120, y: -40}, {x: -120, y: 40}, {x: -120, y: -40}], h_trans = [{x: root_x-120, y: root_y}, {x: root_x+120, y: root_y}, {x: root_x, y: root_y-20}, {x: root_x, y: root_y+20}];
+        for(var i=0; i<props.length; i++){
+            var host = props[i];
+            var h_index = rect.length;
+            rect.push(new joint.shapes.basic.Rect({
+                position: h_trans[i],
+                size: { width: 100, height: 30 },
+                attrs: {
+                    rect: { fill: 'green' },
+                    text: { text: host.name, fill: 'white' }
+                }
+            }));
+
+            links.push(new joint.dia.Link({
+                source: { id: rect[0].id },
+                target: { id: rect[h_index].id }
+            }));
+
+            for(var j=0; j<host.instances.length; j++){
+                rect.push(new joint.shapes.basic.Rect({
+                    position: h_trans[i],
+                    size: { width: 100, height: 30 },
+                    attrs: {
+                        rect: { fill: 'blue' },
+                        text: { text: host.instances[j].name, fill: 'white' }
+                    }
+                }));
+                //link between host and instance
+                var new_i_trans = i_trans.splice(rm_from_arr[i], 1);
+                rect[rect.length-1].translate(new_i_trans[j].x, new_i_trans[j].y);
+
+                links.push(new joint.dia.Link({
+                    source: { id: rect[h_index].id },
+                    target: { id: rect[rect.length-1].id }
+                }));
+            }
+        }
+        this.graph.addCells(rect.concat(links));
+    },
+    componentDidMount(){
+        this.width = ReactDOM.findDOMNode(this.refs.diagram).parentNode.offsetWidth - 31;
+        this.height = 200;
+        this.paper = new joint.dia.Paper({
+            el: this.refs.diagram,
+            width: this.width,
+            height: this.height,
+            model: this.graph,
+            gridSize: 1,
+            interactive: false
+        });
+        this.changeDiagram(this.props.data);
+    },
+    shouldComponentUpdate(){
+        return false;
+    },
+    componentWillReceiveProps(nextProps){
+        if (nextProps.data !== this.props.data) {
+            this.graph.clear();
+            this.changeDiagram(nextProps.data);
+        }
+    },
+    componentWillUnmount(){
+        this.graph.clear();
+        this.paper.remove();
+    },
+    getGraph(){
+        return this.graph;
+    },
+    getPaper(){
+        return this.paper;
+    },
+    render(){
+        return <div ref="diagram" />
+    }
+});
+
+var Diagram = React.createClass({
+    getInitialState: function () {
+        return {hosts: [], loading: true};
+    },
+    componentWillMount() {
+        // this.getDiagram();
+        // var me = this;
+        // var data = [{
+        //     name: "Libvirt",
+        //     instances: [
+        //         {name: "va-backup"},
+        //         {name: "va-email"},
+        //         {name: "va-monitoring"},
+        //     ]
+        // }];
+        // setTimeout(function(){ me.setState({hosts: data}); }, 5000);
+    },
+    // getDiagram: function(){
+    //     var data = {hosts: []};
+    //     var me = this;
+    //     Network.post('/api/hosts/diagram', this.props.auth.token, data).done(function(data) {
+    //         me.setState({hosts: data, loading: false});
+    //     }).fail(function (msg) {
+    //         me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
+    //     });
+    // },
+    render: function() {
+        // const spinnerStyle = {
+        //     display: this.state.loading ? "block": "none",
+        // };
+        return (
+            <Bootstrap.Panel ref="panel" header="Diagram" bsStyle='primary'>
+                <Jointjs ref="graph" data={this.props.hosts} />
+            </Bootstrap.Panel>);
     }
 });
 
@@ -171,18 +311,55 @@ var Host = React.createClass({
         var DoughnutRedux = connect(function(state){
             return {auth: state.auth};
         })(DoughnutComponent);
-        var divStyle = {
-            display: 'inline-block'
-        };
+        var cost = this.state.cost, e_cost = this.state.e_cost;
+        if(!isNaN(cost)){
+            cost = Math.round(cost);
+        }
+        if(!isNaN(e_cost)){
+            e_cost = Math.round(e_cost);
+        }
         return (
-            <Bootstrap.Panel header={this.props.title + " / Instances: " + this.props.instances} bsStyle='primary'>
+            <div id="billing-panel-content">
                 <DoughnutRedux data={this.state.chartData[0]} labels={this.state.labels} colors={this.state.colors} title="CPU" />
                 <DoughnutRedux data={this.state.chartData[1]} labels={this.state.labels} colors={this.state.colors} title="MEMORY"  />
                 <DoughnutRedux data={this.state.chartData[2]} labels={this.state.labels} colors={this.state.colors} title="STORAGE"  />
-                <div style={divStyle}>
-                    <div>Current cost: {this.state.cost}</div>
-                    <div>Monthly estimated cost: {this.state.e_cost}</div>
+                <div className="billing-info">
+                    <div>
+                        <div className="host-billing">{cost}</div>
+                        <div>Current cost</div>
+                    </div>
+                    <div>
+                        <div className="host-billing">{e_cost}</div>
+                        <div>Monthly estimated cost</div>
+                    </div>
                 </div>
+            </div>
+        );
+    }
+});
+
+var HostRows = React.createClass({
+    getInitialState: function () {
+        return {index: 0};
+    },
+    nextHost: function () {
+        if(this.state.index < this.props.hosts.length-1)
+            this.setState({index: this.state.index + 1});
+    },
+    prevHost: function () {
+        if(this.state.index > 0)
+            this.setState({index: this.state.index - 1});
+    },
+    render: function() {
+        var HostRedux = connect(function(state){
+            return {auth: state.auth};
+        })(Host);
+        var host = this.props.hosts[this.state.index];
+        return (
+            <Bootstrap.Panel header={host.hostname + " / Instances: " + host.instances.length} bsStyle='primary' className="host-billing-block">
+                <Bootstrap.Glyphicon glyph='arrow-left' onClick={this.prevHost}></Bootstrap.Glyphicon>
+                <HostRedux key={host.hostname} title={host.hostname} chartData={host.instances} host_usage={host.host_usage} />
+                <Bootstrap.Glyphicon glyph='arrow-right' onClick={this.nextHost}></Bootstrap.Glyphicon>
             </Bootstrap.Panel>
         );
     }
@@ -285,7 +462,7 @@ var Log = React.createClass({
         if(logs.length > 0){
             var prev_log = logs[0];
         }
-        var logs_limit = 10, brojac=0, log_rows = [];
+        var logs_limit = 3, brojac=0, log_rows = [];
         for(var i=0; i<logs.length; i++){
             log = logs[i];
             var logClass = log.severity == "warning" ? "text-warning" : (log.severity == "err" || log.severity == "critical" || log.severity == "emergency") ? "text-danger" : "text-info";

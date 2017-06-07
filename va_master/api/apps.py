@@ -164,9 +164,9 @@ def create_new_state(handler):
 def get_app_info(handler):
     instance_name = handler.data['instance_name']
    
-    cl = LocalClient()
+    cl = Caller()
     print ('Getting inventory for :', instance_name)
-    instance_info = cl.cmd('evo-master', 'mine.get', [instance_name, 'inventory'])['evo-master'] 
+    instance_info = cl.cmd('mine.get', instance_name, 'inventory') 
     print ('Info is : ', instance_info)
     raise tornado.gen.Return(instance_info)
 

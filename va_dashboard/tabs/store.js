@@ -27,7 +27,9 @@ var Store = React.createClass({
         this.props.dispatch({type: 'LAUNCH', select: e.target.value});
         Router.hashHistory.push('/apps');
     },
-
+    openModal: function () {
+        this.props.dispatch({type: 'OPEN_MODAL'});
+    },
     render: function () {
         var states_rows = this.state.states.map(function(state) {
             return (
@@ -44,11 +46,15 @@ var Store = React.createClass({
         }.bind(this));
 
         var NewStateFormRedux = connect(function(state){
-            return {auth: state.auth, alert: state.alert};
+            return {auth: state.auth, alert: state.alert, modal: state.modal};
         })(NewStateForm);
 
         return (
             <div>
+                <Bootstrap.Button onClick={this.openModal}>
+                    <Bootstrap.Glyphicon glyph='plus' />
+                    Add state
+                </Bootstrap.Button>
                 <Bootstrap.PageHeader>Current states</Bootstrap.PageHeader>
                 <div className="container-fluid">
                     <Bootstrap.Row>
@@ -62,51 +68,58 @@ var Store = React.createClass({
 });
 
 var NewStateForm = React.createClass({
+    close: function() {
+        this.props.dispatch({type: 'CLOSE_MODAL'});
+    },
     render: function () {
         return (
-            <div>
-                <Bootstrap.PageHeader>Add new state</Bootstrap.PageHeader>
-                <form onSubmit={this.onSubmit} ref="uploadForm" encType="multipart/form-data">
-                    <Bootstrap.FormGroup>
-                        <Bootstrap.ControlLabel >State name</Bootstrap.ControlLabel>
-                        <Bootstrap.FormControl type='text' ref="name" />
-                    </Bootstrap.FormGroup>
-                    <Bootstrap.FormGroup>
-                        <Bootstrap.ControlLabel >Version</Bootstrap.ControlLabel>
-                        <Bootstrap.FormControl type='text' ref="version" />
-                    </Bootstrap.FormGroup>
-                    <Bootstrap.FormGroup>
-                        <Bootstrap.ControlLabel >Description</Bootstrap.ControlLabel>
-                        <Bootstrap.FormControl type='text' ref="description" />
-                    </Bootstrap.FormGroup>
-                    <Bootstrap.FormGroup>
-                        <Bootstrap.ControlLabel >Icon</Bootstrap.ControlLabel>
-                        <Bootstrap.FormControl type='text' ref="icon" />
-                    </Bootstrap.FormGroup>
-                    <Bootstrap.FormGroup>
-                        <Bootstrap.ControlLabel >Dependecy</Bootstrap.ControlLabel>
-                        <Bootstrap.FormControl type='text' ref="dependency" />
-                    </Bootstrap.FormGroup>
-                    <Bootstrap.FormGroup>
-                        <Bootstrap.ControlLabel >Path</Bootstrap.ControlLabel>
-                        <Bootstrap.FormControl type='text' ref="path" />
-                    </Bootstrap.FormGroup>
-                    <Bootstrap.FormGroup>
-                        <Bootstrap.ControlLabel >Substates</Bootstrap.ControlLabel>
-                        <Bootstrap.FormControl type='text' ref="substates" />
-                    </Bootstrap.FormGroup>
-                    <Bootstrap.FormGroup>
-                        <Bootstrap.ControlLabel >File</Bootstrap.ControlLabel>
-                        <Bootstrap.FormControl type='file' ref="file" />
-                    </Bootstrap.FormGroup>
-                    <Bootstrap.ButtonGroup>
-                        <Bootstrap.Button type="submit" bsStyle='primary'>
-                            Create
-                        </Bootstrap.Button>
-                    </Bootstrap.ButtonGroup>
-                </form>
-            </div>
-        );
+            <Bootstrap.Modal show={this.props.modal.isOpen} onHide={this.close}>
+                <Bootstrap.Modal.Header closeButton>
+                  <Bootstrap.Modal.Title>Add new state</Bootstrap.Modal.Title>
+                </Bootstrap.Modal.Header>
+
+                <Bootstrap.Modal.Body>
+                    <form onSubmit={this.onSubmit} ref="uploadForm" encType="multipart/form-data">
+                        <Bootstrap.FormGroup>
+                            <Bootstrap.ControlLabel >State name</Bootstrap.ControlLabel>
+                            <Bootstrap.FormControl type='text' ref="name" />
+                        </Bootstrap.FormGroup>
+                        <Bootstrap.FormGroup>
+                            <Bootstrap.ControlLabel >Version</Bootstrap.ControlLabel>
+                            <Bootstrap.FormControl type='text' ref="version" />
+                        </Bootstrap.FormGroup>
+                        <Bootstrap.FormGroup>
+                            <Bootstrap.ControlLabel >Description</Bootstrap.ControlLabel>
+                            <Bootstrap.FormControl type='text' ref="description" />
+                        </Bootstrap.FormGroup>
+                        <Bootstrap.FormGroup>
+                            <Bootstrap.ControlLabel >Icon</Bootstrap.ControlLabel>
+                            <Bootstrap.FormControl type='text' ref="icon" />
+                        </Bootstrap.FormGroup>
+                        <Bootstrap.FormGroup>
+                            <Bootstrap.ControlLabel >Dependecy</Bootstrap.ControlLabel>
+                            <Bootstrap.FormControl type='text' ref="dependency" />
+                        </Bootstrap.FormGroup>
+                        <Bootstrap.FormGroup>
+                            <Bootstrap.ControlLabel >Path</Bootstrap.ControlLabel>
+                            <Bootstrap.FormControl type='text' ref="path" />
+                        </Bootstrap.FormGroup>
+                        <Bootstrap.FormGroup>
+                            <Bootstrap.ControlLabel >Substates</Bootstrap.ControlLabel>
+                            <Bootstrap.FormControl type='text' ref="substates" />
+                        </Bootstrap.FormGroup>
+                        <Bootstrap.FormGroup>
+                            <Bootstrap.ControlLabel >File</Bootstrap.ControlLabel>
+                            <Bootstrap.FormControl type='file' ref="file" />
+                        </Bootstrap.FormGroup>
+                        <Bootstrap.ButtonGroup>
+                            <Bootstrap.Button type="submit" bsStyle='primary'>
+                                Create
+                            </Bootstrap.Button>
+                        </Bootstrap.ButtonGroup>
+                    </form>
+                </Bootstrap.Modal.Body>
+            </Bootstrap.Modal>);
 
     },
     onSubmit: function(e) {

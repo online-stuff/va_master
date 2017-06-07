@@ -115,12 +115,6 @@ var Home = React.createClass({
                             <span><i className='fa fa-lock' /> VPN</span>
                         </Router.Link>
                         </li>
-                        <Router.Link to='triggers' activeClassName='active'>
-                            <span><i className='fa fa-cog' /> Triggers</span>
-                        </Router.Link>
-                        <Router.Link to='ts_status' activeClassName='active'>
-                            <span><i className='fa fa-pie-chart' /> TS status</span>
-                        </Router.Link>
                         <li role="separator" className="divider-vertical"></li>
                         <li className="panels-title">Admin panels</li>
                         <li><Bootstrap.Accordion>

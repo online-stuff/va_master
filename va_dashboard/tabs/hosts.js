@@ -2,6 +2,7 @@ var React = require('react');
 var Bootstrap = require('react-bootstrap');
 var Network = require('../network');
 var connect = require('react-redux').connect;
+var Reactable = require('reactable');
 
 var Hosts = React.createClass({
     getInitialState: function () {
@@ -27,6 +28,9 @@ var Hosts = React.createClass({
             me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
         });
     },
+    addHost: function () {
+        this.props.dispatch({type: 'OPEN_MODAL'});
+    },
     render: function() {
         var host_rows = this.state.hosts.map(function(host) {
             var status = "", className = "";
@@ -42,20 +46,20 @@ var Hosts = React.createClass({
                 className = "danger";
             }
             return (
-                <tr key={host.hostname} className={className}>
-                    <td>{host.hostname}</td>
-                    <td>{host.host_ip}</td>
-                    <td>{host.instances.length}</td>
-                    <td>{host.driver_name}</td>
-                    <td>{status}</td>
-                    <td><Bootstrap.Button type="button" bsStyle='primary' onClick={this.deleteHost} value={host.hostname}>
+                <Reactable.Tr key={host.hostname} className={className}>
+                    <Reactable.Td column="Host name">{host.hostname}</Reactable.Td>
+                    <Reactable.Td column="IP">{host.host_ip}</Reactable.Td>
+                    <Reactable.Td column="Instances">{host.instances.length}</Reactable.Td>
+                    <Reactable.Td column="Driver">{host.driver_name}</Reactable.Td>
+                    <Reactable.Td column="Status">{status}</Reactable.Td>
+                    <Reactable.Td column="Actions"><Bootstrap.Button type="button" bsStyle='primary' onClick={this.deleteHost} value={host.hostname}>
                         Delete
-                    </Bootstrap.Button></td>
-                </tr>
+                    </Bootstrap.Button></Reactable.Td>
+                </Reactable.Tr>
             );
         }.bind(this));
         var NewHostFormRedux = connect(function(state){
-            return {auth: state.auth, alert: state.alert};
+            return {auth: state.auth, alert: state.alert, modal: state.modal};
         })(NewHostForm);
         var loading = this.state.loading;
         const spinnerStyle = {
@@ -64,28 +68,18 @@ var Hosts = React.createClass({
         const blockStyle = {
             visibility: loading ? "hidden": "visible",
         };
-        return (<div>
+        return (<div className="app-containter">
             <NewHostFormRedux changeHosts = {this.getCurrentHosts} />
-            <div className="app-containter">
             <span className="spinner" style={spinnerStyle} ><i className="fa fa-spinner fa-spin fa-3x" aria-hidden="true"></i></span>
             <div style={blockStyle}>
-            <Bootstrap.PageHeader>Current hosts <small>All specified hosts</small></Bootstrap.PageHeader>
-            <Bootstrap.Table striped bordered hover>
-                <thead>
-                    <tr>
-                    <td>Host name</td>
-                    <td>IP</td>
-                    <td>Instances</td>
-                    <td>Driver</td>
-                    <td>Status</td>
-                    <td>Actions</td>
-                    </tr>
-                </thead>
-                <tbody>
+                <Bootstrap.PageHeader>Current hosts <small>All specified hosts</small></Bootstrap.PageHeader>
+                <Bootstrap.Button onClick={this.addHost} className="tbl-btn">
+                    <Bootstrap.Glyphicon glyph='plus' />
+                    Add host
+                </Bootstrap.Button>
+                <Reactable.Table className="table striped" columns={['Host name', 'IP', 'Instances', 'Driver', 'Status', 'Actions']} itemsPerPage={10} pageButtonLimit={10} noDataText="No matching records found." sortable={true} filterable={['Host name', 'IP', 'Instances', 'Driver', 'Status']} >
                     {host_rows}
-                </tbody>
-            </Bootstrap.Table>
-            </div>
+                </Reactable.Table>
             </div>
         </div>);
     }
@@ -190,6 +184,9 @@ var NewHostForm = React.createClass({
         newFieldValues[id] = value;
         this.setState({fieldValues: newFieldValues});
     },
+    close: function() {
+        this.props.dispatch({type: 'CLOSE_MODAL'});
+    },
     render: function () {
         var steps = [];
         var driverOptions = [<option key="-1" value=''>Select driver</option>];
@@ -233,8 +230,12 @@ var NewHostForm = React.createClass({
         }
 
         return (
-            <div style={{paddingTop: 10}}>
-                <Bootstrap.Panel header='Add host' bsStyle='primary'>
+            <Bootstrap.Modal show={this.props.modal.isOpen} onHide={this.close}>
+                <Bootstrap.Modal.Header closeButton>
+                  <Bootstrap.Modal.Title>Add host</Bootstrap.Modal.Title>
+                </Bootstrap.Modal.Header>
+
+                <Bootstrap.Modal.Body>
                     {progressBar}
                     <Bootstrap.Tabs id="add-host" activeKey={this.state.stepIndex}>
                         <Bootstrap.Tab title='Choose host' eventKey={-1}>
@@ -245,16 +246,18 @@ var NewHostForm = React.createClass({
                                 </Bootstrap.FormControl>
                             </Bootstrap.FormGroup>
                         </Bootstrap.Tab>
+                        {errors}
                         {steps}
                     </Bootstrap.Tabs>
+                </Bootstrap.Modal.Body>
 
-                    {errors}
+                <Bootstrap.Modal.Footer>
                     <Bootstrap.ButtonGroup>
                         <Bootstrap.Button disabled={this.state.isLoading} bsStyle='primary' onClick={this.nextStep}>
                             <Bootstrap.Glyphicon glyph='menu-right'></Bootstrap.Glyphicon> Next step</Bootstrap.Button>
                     </Bootstrap.ButtonGroup>
-                </Bootstrap.Panel>
-        </div>);
+                </Bootstrap.Modal.Footer>
+            </Bootstrap.Modal>);
     },
     nextStep: function () {
         if(this.state.currentDriver === null) return;
