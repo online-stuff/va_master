@@ -10,7 +10,7 @@ var Hosts = React.createClass({
     },
     getCurrentHosts: function () {
         var me = this;
-        Network.get('/api/hosts', this.props.auth.token).done(function (data) {
+        Network.post('/api/hosts', this.props.auth.token, {}).done(function (data) {
             me.setState({hosts: data.hosts, loading: false});
         }).fail(function (msg) {
             me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
@@ -117,6 +117,9 @@ var HostStep = React.createClass({
                         </Bootstrap.Well>
                     </Bootstrap.FormGroup>
                 );
+            }
+            else if(field.type === 'file'){
+                formControl = <Bootstrap.FormControl type='file' key={field.id} id={field.id} value={this.props.fieldValues[field.id]} onChange={this.onChange} />;
             }
             if(notAField) {
                 fields.push(formControl);
