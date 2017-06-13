@@ -20,6 +20,7 @@ def get_paths():
             'hosts/new/validate_fields' : validate_newhost_fields, 
             'hosts/delete' : delete_host, 
             'hosts/add_host' : add_host,
+            'hosts/generic_add_instance' : add_generic_instance,
         }
     }
     return paths
@@ -37,6 +38,15 @@ def add_host(handler):
 
     raise tornado.gen.Return(True)
 
+
+@tornado.gen.coroutine
+def add_generic_instance(handler):
+    base_instance = {"hostname" : "", "ipv4" : "", "local_gb" : 0, "memory_mb" : 0, "status" : "n/a" }
+    base_instance.update(handler.data['instance'])
+
+    instances = yield handler.config.deploy_handler.datastore.get(handler.data['hostname'])
+    instances['instances'].append(base_instance)
+    yield handler.config.deploy_handler.datastore.insert(handler.data['hostname'], instances)
 
 @tornado.gen.coroutine
 def get_host_billing(handler):
