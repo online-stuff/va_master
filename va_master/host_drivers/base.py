@@ -53,7 +53,7 @@ class DriverBase(object):
     __metaclass__ = abc.ABCMeta
 
     @abc.abstractmethod
-    def  __init__(self, driver_name,  provider_template, profile_template, provider_name, profile_name, host_ip, key_name, key_path):
+    def  __init__(self, driver_name,  provider_template, profile_template, provider_name, profile_name, host_ip, key_name, key_path, datastore):
         """
             Initialize method for the base driver. Subclassing drivers should be overwriting this and calling it with custom arguments if they are needed. 
             Takes care of the salt key, writing salt provider and profile configurations and so on. 
@@ -75,6 +75,7 @@ class DriverBase(object):
             host_ip -- The host ip of the machine that this runs on. It can and should be taken from the datastore (the deploy_handler passes it as a default kwarg).
             key_name -- The name of the keypair that will be used to connect to created instances. Example: va_master_key
             key_path - The entire path minus the key name. Example: /root/va_master_key/, if the full path is /root/va_master_key/va_master_key.pem. 
+            datastore -- A Key/Value datastore. It can be None, but drivers that use it will misbehave. 
         """
 
         self.field_values = {
@@ -83,7 +84,7 @@ class DriverBase(object):
                 'defaults' : {},
             }
            
-
+        self.datastore = datastore
         self.host_ip = host_ip
 
         self.key_path = key_path + ('/' * (not key_path[-1] == '/')) + key_name

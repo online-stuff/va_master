@@ -16,16 +16,17 @@ PROVIDER_TEMPLATE = ""
 PROFILE_TEMPLATE = ""
 
 class GenericDriver(base.DriverBase):
-    def __init__(self, provider_name = 'generic_provider', profile_name = 'generic_profile', host_ip = '192.168.80.39', key_name = 'va_master_key', key_path = '/root/va_master_key'):
+    def __init__(self, provider_name = 'generic_provider', profile_name = 'generic_profile', host_ip = '192.168.80.39', key_name = 'va_master_key', key_path = '/root/va_master_key', datastore = None):
         kwargs = {
-            'driver_name' : 'driver_name', 
+            'driver_name' : 'generic_driver', 
             'provider_template' : PROVIDER_TEMPLATE, 
             'profile_template' : PROFILE_TEMPLATE, 
             'provider_name' : provider_name, 
             'profile_name' : profile_name, 
             'host_ip' : host_ip,
             'key_name' : key_name, 
-            'key_path' : key_path
+            'key_path' : key_path, 
+            'datastore' : datastore
             }
         super(GenericDriver, self).__init__(**kwargs) 
 
@@ -41,7 +42,7 @@ class GenericDriver(base.DriverBase):
       
     @tornado.gen.coroutine
     def get_host_status(self, host = ''): 
-        raise tornado.gen.Return(True)
+        raise tornado.gen.Return({'success' : True, 'message': ''})
 
     @tornado.gen.coroutine
     def get_steps(self):
@@ -93,6 +94,14 @@ class GenericDriver(base.DriverBase):
 
 
     @tornado.gen.coroutine
+    def get_instances(self, host):
+        instances = yield self.datastore.get(host['hostname'])
+        instances = instances['instances']
+        raise tornado.gen.Return(instances)
+        
+
+
+    @tornado.gen.coroutine
     def get_host_data(self, host, get_instances = True, get_billing = True):
         
         try: 
@@ -119,18 +128,20 @@ class GenericDriver(base.DriverBase):
             'cpus_usage' :0, 
         }
 
-        instances = [
-            {
-                'hostname' : 'name', 
-                'ipv4' : 'ipv4', 
-                'local_gb' : 0, 
-                'memory_mb' : 0, 
-                'status' : 'n/a', 
-            } for x in data['instances']
-        ]
+#        instances = [
+#            {
+#                'hostname' : 'name', 
+#                'ipv4' : 'ipv4', 
+#                'local_gb' : 0, 
+#                'memory_mb' : 0, 
+#                'status' : 'n/a', 
+#            } for x in data['instances']
+#        ]
+
+        instances = yield self.get_instances(host)
 
         host_data = {
-            'instances' : instances, #tenant_usage['server_usages'], 
+            'instances' : instances, 
             'limits' : {},
             'host_usage' : host_usage, 
             'status' : {'success' : True, 'message': ''}
@@ -151,6 +162,7 @@ class GenericDriver(base.DriverBase):
             })
 
 
+            self.datastore.insert(field_values['hostname'], {'instances' : []})
             raise tornado.gen.Return(StepResult(
                 errors = [], new_step_index = -1, option_choices = {}
             ))

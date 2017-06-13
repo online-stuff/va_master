@@ -56,7 +56,7 @@ nino-gce-profile:
 '''
 
 class GCEDriver(base.DriverBase):
-    def __init__(self, provider_name = 'gce-provider', profile_name = 'gce-profile', host_ip = '192.168.80.39', key_name = 'va_master_key', key_path = '/root/va_master_key'):
+    def __init__(self, provider_name = 'gce-provider', profile_name = 'gce-profile', host_ip = '192.168.80.39', key_name = 'va_master_key', key_path = '/root/va_master_key', datastore = None):
         """ The standard issue init method. Borrows most of the functionality from the BaseDriver init method, but adds a self.regions attribute, specific for OpenStack hosts. """
 
         kwargs = {
@@ -67,7 +67,8 @@ class GCEDriver(base.DriverBase):
             'profile_name' : profile_name,
             'host_ip' : host_ip,
             'key_name' : key_name,
-            'key_path' : key_path
+            'key_path' : key_path,
+            'datastore' : datastore
             }
         self.regions = ['RegionOne', ]
         super(GCEDriver, self).__init__(**kwargs)

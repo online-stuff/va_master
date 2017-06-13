@@ -62,7 +62,6 @@ class ApiHandler(tornado.web.RequestHandler):
         except: 
 #            print ('Error with testing formatted result - probably is ok. ')
             return False
-
     @tornado.gen.coroutine
     def exec_method(self, method, path, data):
         self.data = data
@@ -95,10 +94,12 @@ class ApiHandler(tornado.web.RequestHandler):
                 result = {'success' : False, 'message' : result, 'data' : {}} 
             else: 
                 result = {'success' : True, 'message' : '', 'data' : result}
+                print result
         except Exception as e: 
-            result = {'success' : False, 'message' : 'There was an error performing a request : ' + str(e.message), 'data' : {}}
             import traceback
             traceback.print_exc()
+
+            result = {'success' : False, 'message' : 'There was an error performing a request : ' + str(e.message), 'data' : {}}
 
         self.json(result)
 

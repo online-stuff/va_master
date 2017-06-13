@@ -74,18 +74,16 @@ class DeployHandler(object):
                 'host_ip' : host_ip, 
                 'key_name' : self.ssh_key_name, 
                 'key_path' : self.ssh_key_path, 
+                'datastore' : self.datastore
             }
-
 
             self.drivers = [x(**kwargs) for x in [
                 openstack.OpenStackDriver, 
-                generic_driver.GenericDriver,
                 gce.GCEDriver,
+                generic_driver.GenericDriver
             ]]
+            kwargs['flavours'] = va_flavours
 
-            #Libvirt also needs these kwargs. 
-
-            kwargs['flavours'] =  self.va_flavours
 
             self.drivers += [x(**kwargs) for x in (century_link.CenturyLinkDriver, libvirt_driver.LibVirtDriver)]
 

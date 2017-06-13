@@ -171,7 +171,7 @@ BASE_VOLUME_XML = """
 </volume>"""
 
 class LibVirtDriver(base.DriverBase):
-    def __init__(self, flavours, provider_name = 'libvirt_provider', profile_name = 'libvirt_profile', host_ip = '192.168.80.39', path_to_images = '/etc/libvirt/qemu/', config_path = '/etc/salt/libvirt_configs/', key_name = 'va_master_key', key_path = '/root/va_master_key'):
+    def __init__(self, flavours, provider_name = 'libvirt_provider', profile_name = 'libvirt_profile', host_ip = '192.168.80.39', path_to_images = '/etc/libvirt/qemu/', config_path = '/etc/salt/libvirt_configs/', key_name = 'va_master_key', key_path = '/root/va_master_key', datastore = None):
         """
             Custom init for libvirt. Does not work with saltstack, so a lot of things have to be done manually. 
 
@@ -192,6 +192,7 @@ class LibVirtDriver(base.DriverBase):
             'host_ip' : host_ip,
             'key_name' : key_name,
             'key_path' : key_path,
+            'datastore' : datastore
             }
         self.conn = None
         self.config_path = config_path
