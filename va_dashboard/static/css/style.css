@@ -433,3 +433,6 @@ table tr.row-state-Down{
     float: left;
     width: 97%;
 }
+.backup-tbl thead th:first-child{
+    width: 89%;
+}

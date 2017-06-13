@@ -9,13 +9,13 @@ import panels
 def get_paths():
     paths = {
         'get' : {
-            'hosts' : list_hosts, 
             'hosts/reset' : reset_hosts, 
             'drivers' : list_drivers, 
             'hosts/get_trigger_functions': get_hosts_triggers,
             'hosts/get_host_billing' : get_host_billing, 
         },
         'post' : {
+            'hosts' : list_hosts, 
             'hosts/info' : get_host_info, 
             'hosts/new/validate_fields' : validate_newhost_fields, 
             'hosts/delete' : delete_host, 

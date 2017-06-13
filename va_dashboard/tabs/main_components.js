@@ -174,13 +174,13 @@ var Table = React.createClass({
     btn_clicked: function(id, evtKey){
         if(evtKey == 'chart'){
             var newName = this.props.name.replace(/\s/g, "_");
-            var newId = id.replace(/:/g, "_");
+            var newId = id[0].replace(/:/g, "_");
             var newId = newId.replace(/\s/g, "_");
             Router.hashHistory.push('/chart_panel/' + this.props.panel.instance + '/' + newName + '/' + newId);
         }else if('modals' in this.props && evtKey in this.props.modals){
             if("readonly" in this.props){
                 var rows = this.props.table[this.props.name].filter(function(row) {
-                    if(row[this.props.id] == id){
+                    if(row[this.props.id] == id[0]){
                         return true;
                     }
                     return false;
@@ -192,12 +192,12 @@ var Table = React.createClass({
                 this.props.dispatch({type: 'SET_READONLY', readonly: readonly});
             }
             var modal = Object.assign({}, this.props.modals[evtKey]);
-            modal.args = [id];
+            modal.args = id;
             modal.table_name = this.props.name;
             modal.refresh_action = this.props.source;
             this.props.dispatch({type: 'OPEN_MODAL', template: modal});
         }else if("panels" in this.props && evtKey in this.props.panels){
-            Router.hashHistory.push('/subpanel/' + this.props.panels[evtKey] + '/' + this.props.panel.instance + '/' + id);
+            Router.hashHistory.push('/subpanel/' + this.props.panels[evtKey] + '/' + this.props.panel.instance + '/' + id[0]);
         }else{
             var data = {"instance_name": this.props.panel.instance, "action": evtKey, "args": id};
             var me = this;
@@ -298,12 +298,16 @@ var Table = React.createClass({
         if('filter' in this.props){
             filterBy = this.props.filter.filterBy;
         }
+        var className = "table striped";
+        if('class' in this.props){
+            className += " " + this.props.class;
+        }
         return (
             <div>
-            { pagination ? ( <Reactable.Table className="table striped" columns={tbl_cols} itemsPerPage={10} pageButtonLimit={10} noDataText="No matching records found." sortable={true} filterable={cols} filterBy={filterBy} hideFilterInput >
+            { pagination ? ( <Reactable.Table className={className} columns={tbl_cols} itemsPerPage={10} pageButtonLimit={10} noDataText="No matching records found." sortable={true} filterable={cols} filterBy={filterBy} hideFilterInput >
                 {rows}
             </Reactable.Table> ) :
-            ( <Reactable.Table className="table striped" columns={tbl_cols} filterable={cols} filterBy={filterBy} noDataText="No matching records found." sortable={true} hideFilterInput >
+            ( <Reactable.Table className={className} columns={tbl_cols} filterable={cols} filterBy={filterBy} noDataText="No matching records found." sortable={true} hideFilterInput >
                 {rows}
             </Reactable.Table> )}
             </div>
