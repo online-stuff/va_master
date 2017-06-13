@@ -283,6 +283,8 @@ class LibVirtDriver(base.DriverBase):
             raise tornado.gen.Return([])
 
         instances = []
+        if not get_instances: return instances
+
         for x in conn.listAllDomains():
             print ('Trying to get ', x.name)
             instance =  {            

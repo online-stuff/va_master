@@ -199,7 +199,7 @@ var Table = React.createClass({
         }else if("panels" in this.props && evtKey in this.props.panels){
             Router.hashHistory.push('/subpanel/' + this.props.panels[evtKey] + '/' + this.props.panel.instance + '/' + id);
         }else{
-            var data = {"instance_name": this.props.panel.instance, "action": evtKey, "args": [id]};
+            var data = {"instance_name": this.props.panel.instance, "action": evtKey, "args": id};
             var me = this;
             Network.post('/api/panels/action', this.props.auth.token, data).done(function(d) {
                 var msg = d[me.props.panel.instance];
@@ -250,14 +250,24 @@ var Table = React.createClass({
             }
         }
         var rows = this.props.table[this.props.name].map(function(row) {
-            var columns = cols.map(function(col) {
+            var columns, key;
+            if(typeof row === "string"){
+                key = [this.props.name, row];
+                columns = (
+                    <Reactable.Td key={cols[0]} column={cols[0]}>
+                        {row}
+                    </Reactable.Td>
+                );
+            }else{
+            key = [row[tbl_id]];
+            columns = cols.map(function(col) {
                 return (
                     <Reactable.Td key={col} column={col}>
                         {row[col]}
                     </Reactable.Td>
                 );
             });
-            var key = row[tbl_id];
+            }
             if(action_col){
                 action_col = (
                     <Reactable.Td column="action">

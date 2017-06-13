@@ -66,6 +66,9 @@ def list_hosts(handler):
     for host in hosts: 
         driver = yield handler.config.deploy_handler.get_driver_by_id(host['driver_name'])
         host['instances'] = yield driver.get_instances(host)
+        if handler.data.get('filter_instances'): 
+            host['instances'] = [x for x in host['instances'] if x['hostname'] in handler.data.get('filter_instances')]
+
     raise tornado.gen.Return({'hosts': hosts})
 
 
@@ -171,7 +174,9 @@ def get_host_info(handler):
     hosts_data = [x[0].get_host_data(host = x[1], get_instances = data.get('get_instances', True), get_billing = data.get('get_billing', True)) for x in zip(host_drivers, hosts)]
     hosts_info = yield hosts_data
     
-
+    if data.get('filter_instances'): 
+        for host in hosts_info:
+            host['instances'] = [x for x in host['instances'] if x['hostname'] in data.get('filter_instances')]
 
     for info in zip(hosts_info, hosts): 
         info[0]['hostname'] = info[1]['hostname']

@@ -76,6 +76,7 @@ def download_vpn_cert(handler):
         f.write(cert)
  
     handler.serve_file(vpn_cert_path)
+    raise tornado.gen.Return({'data_type' : 'file'})
 
 
 @tornado.gen.coroutine
