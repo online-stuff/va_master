@@ -74,7 +74,7 @@ var Overview = React.createClass({
         this.getHosts();
     },
     getHosts: function(){
-        var data = {hosts: [], filter_instances: ["va-backup-1", "va-monitoring-1"]};
+        var data = {hosts: [], filter_instances: ["va-backup", "va-monitoring", "winsrv1", "winsrv2", "winsrv3"]};
         var me = this;
         Network.post('/api/hosts/info', this.props.auth.token, data).done(function(data) {
             me.setState({hosts: data, loading: false});
@@ -154,7 +154,7 @@ var Jointjs = React.createClass({
                 text: { text: "va-master", fill: 'white' }
             }
         });
-        var rect = [root_rect], links = [], h_trans = [{x: root_x+120, y: root_y}, {x: root_x-120, y: root_y}, {x: root_x, y: root_y-50}, {x: root_x, y: root_y+50}];
+        var rect = [root_rect], links = [], h_trans = [{x: root_x+120, y: root_y}, {x: root_x-120, y: root_y}, {x: root_x, y: root_y-50}, {x: root_x, y: root_y+50}, {x: root_x-150, y: root_y-50}, {x: root_x-150, y: root_y+50}, {x: root_x+150, y: root_y-50}, {x: root_x+150, y: root_y+50}];
         var i_trans = [
             [{x: 130, y: 45}, {x: 130, y: -45}, {x: 130, y: 0}, {x: 0, y: 45}, {x: 0, y: -45}, {x: -130, y: 45}, {x: -130, y: -45}],
             [{x: -130, y: 45}, {x: -130, y: -45}, {x: -130, y: 0}, {x: 0, y: 45}, {x: 0, y: -45}, {x: 130, y: 45}, {x: 130, y: -45}],
@@ -402,7 +402,7 @@ var Log = React.createClass({
     getInitialState: function () {
         return {logs: [], category: ['info', 'warning', 'danger'] }
     },
-    componentDidMount: function () {
+    initLog: function () {
         var host = window.location.host;
         if(host.indexOf(":") == 0){
             host += ":80";
@@ -436,9 +436,13 @@ var Log = React.createClass({
             }
         };
         this.ws.onerror = function(evt){
+            me.ws.close();
             me.props.dispatch({type: 'SHOW_ALERT', msg: "Socket error."});
-            this.ws.close();
         };
+    },
+    componentDidMount: function () {
+        if(!this.props.alert.show)
+            this.initLog();
     },
     close_socket: function () {
         this.ws.close();
