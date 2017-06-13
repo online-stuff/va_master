@@ -165,7 +165,7 @@ var Chart = React.createClass({
                   <button className='btn btn-primary bt-sm chartBtn' onClick = {this.btn_click.bind(this, "-7d", "86400", 'day', 1)}>Last week</button>
                   <button className='btn btn-primary bt-sm chartBtn' onClick = {this.btn_click.bind(this, "-1m", "86400", 'day', 5)}>Last month</button>
                 </div>
-            </div> 
+            </div>
         );
     }
 });
@@ -227,9 +227,17 @@ var Table = React.createClass({
         var cols = [], tbl_cols = this.props.columns.slice(0), tbl_id = this.props.id;
         for(var i=0; i<tbl_cols.length; i++){
             if(tbl_cols[i].key === ""){
-                tbl_cols[i] = {key: this.props.name, label: this.props.name};
+                tbl_cols[i].key = this.props.name;
+                tbl_cols[i].label = this.props.name;
             }
             cols.push(tbl_cols[i].key);
+            var style = null;
+            if("width" in tbl_cols[i]){
+                style = {"width": tbl_cols[i].width};
+            }
+            tbl_cols[i] = (
+                <Reactable.Th key={tbl_cols[i].key} column={tbl_cols[i].key} style={style}>{tbl_cols[i].label}</Reactable.Th>
+            );
         }
         if(!tbl_id){
             tbl_id = this.props.name;
@@ -304,10 +312,16 @@ var Table = React.createClass({
         }
         return (
             <div>
-            { pagination ? ( <Reactable.Table className={className} columns={tbl_cols} itemsPerPage={10} pageButtonLimit={10} noDataText="No matching records found." sortable={true} filterable={cols} filterBy={filterBy} hideFilterInput >
+            { pagination ? ( <Reactable.Table className={className} itemsPerPage={10} pageButtonLimit={10} noDataText="No matching records found." sortable={true} filterable={cols} filterBy={filterBy} hideFilterInput >
+                <Reactable.Thead>
+                    {tbl_cols}
+                </Reactable.Thead>
                 {rows}
             </Reactable.Table> ) :
-            ( <Reactable.Table className={className} columns={tbl_cols} filterable={cols} filterBy={filterBy} noDataText="No matching records found." sortable={true} hideFilterInput >
+            ( <Reactable.Table className={className} filterable={cols} filterBy={filterBy} noDataText="No matching records found." sortable={true} hideFilterInput >
+                <Reactable.Thead>
+                    {tbl_cols}
+                </Reactable.Thead>
                 {rows}
             </Reactable.Table> )}
             </div>
