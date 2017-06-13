@@ -226,17 +226,18 @@ var Table = React.createClass({
             return null;
         var cols = [], tbl_cols = this.props.columns.slice(0), tbl_id = this.props.id;
         for(var i=0; i<tbl_cols.length; i++){
-            if(tbl_cols[i].key === ""){
-                tbl_cols[i].key = this.props.name;
-                tbl_cols[i].label = this.props.name;
+            var tmp = Object.assign({}, tbl_cols[i]);
+            if(tmp.key === ""){
+                tmp.key = this.props.name;
+                tmp.label = this.props.name;
             }
-            cols.push(tbl_cols[i].key);
+            cols.push(tmp.key);
             var style = null;
-            if("width" in tbl_cols[i]){
-                style = {"width": tbl_cols[i].width};
+            if("width" in tmp){
+                style = {"width": tmp.width};
             }
             tbl_cols[i] = (
-                <Reactable.Th key={tbl_cols[i].key} column={tbl_cols[i].key} style={style}>{tbl_cols[i].label}</Reactable.Th>
+                <Reactable.Th key={tmp.key} column={tmp.key} style={style}>{tmp.label}</Reactable.Th>
             );
         }
         if(!tbl_id){
