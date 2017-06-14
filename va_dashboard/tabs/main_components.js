@@ -268,14 +268,21 @@ var Table = React.createClass({
                     </Reactable.Td>
                 );
             }else{
-            key = [row[tbl_id]];
-            columns = cols.map(function(col) {
-                return (
-                    <Reactable.Td key={col} column={col}>
-                        {row[col]}
-                    </Reactable.Td>
-                );
-            });
+                if(tbl_id instanceof Array){
+                    key = [];
+                    for(var i=0; i<tbl_id.length; i++){
+                        key.push(row[tbl_id[i]]);
+                    }
+                }else{
+                    key = [row[tbl_id]];
+                }
+                columns = cols.map(function(col) {
+                    return (
+                        <Reactable.Td key={col} column={col}>
+                            {row[col]}
+                        </Reactable.Td>
+                    );
+                });
             }
             if(action_col){
                 action_col = (
@@ -361,21 +368,15 @@ var Modal = React.createClass({
         var data = {"instance_name": this.props.panel.instance, "action": action_name, "args": this.state.args.concat(this.state.data)};
         var me = this;
         Network.post("/api/panels/action", this.props.auth.token, data).done(function(d) {
-            var msg = d[me.props.panel.instance];
-            if(msg){
-                me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
-                me.props.dispatch({type: 'CLOSE_MODAL'});
-            }else{
-                me.props.dispatch({type: 'CLOSE_MODAL'});
-                if('refresh_action' in me.props.modal.template){
-                    var data = {"instance_name": me.props.panel.instance, "action": me.props.modal.template.refresh_action, "args": []};
-                    Network.post('/api/panels/action', me.props.auth.token, data).done(function(d) {
-                        var msg = d[data.instance_name];
-                        if(msg){
-                            me.props.dispatch({type: 'CHANGE_DATA', data: msg, name: me.props.modal.template.table_name});
-                        }
-                    });
-                }
+            me.props.dispatch({type: 'CLOSE_MODAL'});
+            if('refresh_action' in me.props.modal.template){
+                var data = {"instance_name": me.props.panel.instance, "action": me.props.modal.template.refresh_action, "args": []};
+                Network.post('/api/panels/action', me.props.auth.token, data).done(function(d) {
+                    var msg = d[data.instance_name];
+                    if(msg){
+                        me.props.dispatch({type: 'CHANGE_DATA', data: msg, name: me.props.modal.template.table_name});
+                    }
+                });
             }
         }).fail(function (msg) {
             me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
