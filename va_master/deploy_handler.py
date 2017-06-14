@@ -164,10 +164,12 @@ class DeployHandler(object):
         try: 
             panels = yield self.datastore.get('panels')
         except: 
-            print ('States data is : ', states_data)
-            user_panels, admin_panels = ([{'name' : x['name'], 'icon' : x['icon'], 'instances' : [], 'panels' : x.get('panels', {'admin' : [], 'user' : []}[type])} for x in states_data] for type in ['user', 'admin'])
-            panels = {'user' : user_panels, 'admin' : admin_panels}
-            yield self.datastore.insert('panels', panels)
+            panels = {}
+        print ('States data is : ', states_data)
+        get_panel_instances = lambda i, user_type: [x for x in panels.get(user_type) if x['name'] == i] or [{'instances' : []}]
+        user_panels, admin_panels = ([{'name' : x['name'], 'icon' : x['icon'], 'instances' : get_panel_instances(x, user_type)[0]['instances'], 'panels' : x.get('panels', {'admin' : [], 'user' : []}[user_type])} for x in states_data] for user_type in ['user', 'admin'])
+        panels = {'user' : user_panels, 'admin' : admin_panels}
+        yield self.datastore.insert('panels', panels)
         raise tornado.gen.Return(states_data)
 
 

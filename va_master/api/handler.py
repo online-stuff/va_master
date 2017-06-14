@@ -98,7 +98,7 @@ class ApiHandler(tornado.web.RequestHandler):
             else: 
                 result = {'success' : True, 'message' : '', 'data' : result}
         except tornado.gen.Return: 
-#            raise
+            raise
         except Exception as e: 
             import traceback
             traceback.print_exc()
