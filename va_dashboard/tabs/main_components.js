@@ -165,7 +165,7 @@ var Chart = React.createClass({
                   <button className='btn btn-primary bt-sm chartBtn' onClick = {this.btn_click.bind(this, "-7d", "86400", 'day', 1)}>Last week</button>
                   <button className='btn btn-primary bt-sm chartBtn' onClick = {this.btn_click.bind(this, "-1m", "86400", 'day', 5)}>Last month</button>
                 </div>
-            </div> 
+            </div>
         );
     }
 });
@@ -174,13 +174,13 @@ var Table = React.createClass({
     btn_clicked: function(id, evtKey){
         if(evtKey == 'chart'){
             var newName = this.props.name.replace(/\s/g, "_");
-            var newId = id.replace(/:/g, "_");
+            var newId = id[0].replace(/:/g, "_");
             var newId = newId.replace(/\s/g, "_");
             Router.hashHistory.push('/chart_panel/' + this.props.panel.instance + '/' + newName + '/' + newId);
         }else if('modals' in this.props && evtKey in this.props.modals){
             if("readonly" in this.props){
                 var rows = this.props.table[this.props.name].filter(function(row) {
-                    if(row[this.props.id] == id){
+                    if(row[this.props.id] == id[0]){
                         return true;
                     }
                     return false;
@@ -192,12 +192,12 @@ var Table = React.createClass({
                 this.props.dispatch({type: 'SET_READONLY', readonly: readonly});
             }
             var modal = Object.assign({}, this.props.modals[evtKey]);
-            modal.args = [id];
+            modal.args = id;
             modal.table_name = this.props.name;
             modal.refresh_action = this.props.source;
             this.props.dispatch({type: 'OPEN_MODAL', template: modal});
         }else if("panels" in this.props && evtKey in this.props.panels){
-            Router.hashHistory.push('/subpanel/' + this.props.panels[evtKey] + '/' + this.props.panel.instance + '/' + id);
+            Router.hashHistory.push('/subpanel/' + this.props.panels[evtKey] + '/' + this.props.panel.instance + '/' + id[0]);
         }else{
             var data = {"instance_name": this.props.panel.instance, "action": evtKey, "args": id};
             var me = this;
@@ -226,10 +226,19 @@ var Table = React.createClass({
             return null;
         var cols = [], tbl_cols = this.props.columns.slice(0), tbl_id = this.props.id;
         for(var i=0; i<tbl_cols.length; i++){
-            if(tbl_cols[i].key === ""){
-                tbl_cols[i] = {key: this.props.name, label: this.props.name};
+            var tmp = Object.assign({}, tbl_cols[i]);
+            if(tmp.key === ""){
+                tmp.key = this.props.name;
+                tmp.label = this.props.name;
             }
-            cols.push(tbl_cols[i].key);
+            cols.push(tmp.key);
+            var style = null;
+            if("width" in tmp){
+                style = {"width": tmp.width};
+            }
+            tbl_cols[i] = (
+                <Reactable.Th key={tmp.key} column={tmp.key} style={style}>{tmp.label}</Reactable.Th>
+            );
         }
         if(!tbl_id){
             tbl_id = this.props.name;
@@ -298,12 +307,22 @@ var Table = React.createClass({
         if('filter' in this.props){
             filterBy = this.props.filter.filterBy;
         }
+        var className = "table striped";
+        if('class' in this.props){
+            className += " " + this.props.class;
+        }
         return (
             <div>
-            { pagination ? ( <Reactable.Table className="table striped" columns={tbl_cols} itemsPerPage={10} pageButtonLimit={10} noDataText="No matching records found." sortable={true} filterable={cols} filterBy={filterBy} hideFilterInput >
+            { pagination ? ( <Reactable.Table className={className} itemsPerPage={10} pageButtonLimit={10} noDataText="No matching records found." sortable={true} filterable={cols} filterBy={filterBy} hideFilterInput >
+                <Reactable.Thead>
+                    {tbl_cols}
+                </Reactable.Thead>
                 {rows}
             </Reactable.Table> ) :
-            ( <Reactable.Table className="table striped" columns={tbl_cols} filterable={cols} filterBy={filterBy} noDataText="No matching records found." sortable={true} hideFilterInput >
+            ( <Reactable.Table className={className} filterable={cols} filterBy={filterBy} noDataText="No matching records found." sortable={true} hideFilterInput >
+                <Reactable.Thead>
+                    {tbl_cols}
+                </Reactable.Thead>
                 {rows}
             </Reactable.Table> )}
             </div>

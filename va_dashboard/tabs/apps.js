@@ -20,12 +20,12 @@ var Appp = React.createClass({
     },
 
     getData: function() {
-        var data = {hosts: [], filter_instances: ["va-backup", "va-monitoring"]};
+        var data = {hosts: [], filter_instances: ["va-backup", "va-monitoring", "winsrv1", "winsrv2", "winsrv3"]};
         var me = this;
         var n1 = Network.post('/api/hosts/info', this.props.auth.token, data).fail(function (msg) {
             me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
         });
-        var n2 = Network.get('/api/hosts', this.props.auth.token).fail(function (msg) {
+        var n2 = Network.post('/api/hosts', this.props.auth.token, {filter_instances: ["va-backup", "va-monitoring", "winsrv1", "winsrv2", "winsrv3"]}).fail(function (msg) {
             me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
         });
         var n3 = Network.get('/api/states', this.props.auth.token).fail(function (msg) {
@@ -364,7 +364,7 @@ var Stats = React.createClass({
     render: function () {
         return (
             <Bootstrap.Col xs={12} sm={5} md={5}>
-                <Bootstrap.PageHeader className="header">{this.props.hostname}</Bootstrap.PageHeader>
+                <h3>{this.props.hostname}</h3>
                 <label>CPU: </label>{this.props.host_usage.used_cpus} / {this.props.host_usage.max_cpus}<br/>
                 <label>RAM: </label>{this.props.host_usage.used_ram} / {this.props.host_usage.max_ram}<br/>
                 <label>DISK: </label>{this.props.host_usage.used_disk} / {this.props.host_usage.max_disk}<br/>
