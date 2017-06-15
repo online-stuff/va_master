@@ -203,14 +203,14 @@ var Table = React.createClass({
             var me = this;
             Network.post('/api/panels/action', this.props.auth.token, data).done(function(d) {
                 var msg = d[me.props.panel.instance];
-                if(msg){
+                if(typeof msg === 'string'){
                     me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
                 }else{
                     data.action = me.props.source;
                     data.args = [];
                     Network.post('/api/panels/action', me.props.auth.token, data).done(function(d) {
                         var msg = d[data.instance_name];
-                        if(msg){
+                        if(typeof msg === 'string'){
                             me.props.dispatch({type: 'CHANGE_DATA', data: msg, name: me.props.name});
                         }
                     });
@@ -373,7 +373,7 @@ var Modal = React.createClass({
                 var data = {"instance_name": me.props.panel.instance, "action": me.props.modal.template.refresh_action, "args": []};
                 Network.post('/api/panels/action', me.props.auth.token, data).done(function(d) {
                     var msg = d[data.instance_name];
-                    if(msg){
+                    if(typeof msg === 'string'){
                         me.props.dispatch({type: 'CHANGE_DATA', data: msg, name: me.props.modal.template.table_name});
                     }
                 });
@@ -450,6 +450,22 @@ var Modal = React.createClass({
 
 var Form = React.createClass({
 
+    onSelect: function (action) {
+        var host = ReactDOM.findDOMNode(this.refs.dropdown).value.trim();
+        var data = {"instance_name": this.props.panel.instance, "action": action, "args": [host]};
+        var me = this;
+        Network.post('/api/panels/action', this.props.auth.token, data).done(function(d) {
+            var msg = d[me.props.panel.instance];
+            if(typeof msg === 'string'){
+                me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
+            }else{
+                me.props.dispatch({type: 'CHANGE_DATA', data: msg, name: me.props.target});
+            }
+        }).fail(function (msg) {
+            me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
+        });
+    },
+
     render: function () {
         var redux = {};
 
@@ -469,11 +485,15 @@ var Form = React.createClass({
                     return ( <Bootstrap.FormControl id={index} key={element.name} type={type} name={element.name} value={this.props.form.readonly[element.name]} disabled /> );
                 }
                 if(type == "dropdown"){
-                    return ( <Bootstrap.FormControl id={index} key={element.name} name={element.name} componentClass="select" placeholder={element.value[0]}>
+                    var action = "";
+                    if("action" in element){
+                        action = this.onSelect.bind(this, element.action);
+                    }
+                    return ( <select ref="dropdown" id={index} key={element.name} onChange={action} name={element.name} placeholder={element.value[0]}>
                         {element.value.map(function(option, i) {
                             return <option key={i} value={option}>{option}</option>
                         })}
-                    </Bootstrap.FormControl> );
+                    </select> );
                 }
                 return ( <Bootstrap.FormControl id={index} key={element.name} type={type} name={element.name} value={this.props.data[index]} placeholder={element.label} onChange={this.props.form_changed} autoFocus={element.name == this.props.focus} /> );
             }
