@@ -49,7 +49,7 @@ output=json
 
 class AWSDriver(base.DriverBase):
 
-    def __init__(self, provider_name = 'aws_provider', profile_name = 'aws_profile', host_ip = '192.168.80.39'):
+    def __init__(self, provider_name = 'aws_provider', profile_name = 'aws_profile', host_ip = '192.168.80.39', datastore = None):
         kwargs = {
             'driver_name' : 'aws', 
             'provider_template' : PROVIDER_TEMPLATE, 

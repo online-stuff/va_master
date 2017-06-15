@@ -35,6 +35,9 @@ def add_host(handler):
     driver.field_values = host_field_values
 
     yield handler.config.deploy_handler.create_host(driver)
+    if host_field_values['driver_name'] == 'generic_driver' : 
+        handler.config.deploy_handler.datastore.insert(host_field_values['hostname'], {"instances" : []})
+
 
     raise tornado.gen.Return(True)
 
@@ -170,7 +173,6 @@ def get_host_info(handler):
         hosts = [host for host in hosts if host['hostname'] in required_hosts]
 
     host_drivers = yield [deploy_handler.get_driver_by_id(x['driver_name']) for x in hosts]
-
     hosts_data = [x[0].get_host_data(host = x[1], get_instances = data.get('get_instances', True), get_billing = data.get('get_billing', True)) for x in zip(host_drivers, hosts)]
     hosts_info = yield hosts_data
     

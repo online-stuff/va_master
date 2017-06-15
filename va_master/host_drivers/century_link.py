@@ -24,7 +24,7 @@ PROFILE_TEMPLATE = ""
 
 class CenturyLinkDriver(base.DriverBase):
     executor = ThreadPoolExecutor(max_workers=4)
-    def __init__(self, flavours, provider_name = 'century_link_provider', profile_name = 'century_link__profile', host_ip = '192.168.80.39', key_name = 'va_master_key', key_path = '/root/va_master/va_master_key/'):
+    def __init__(self, flavours, provider_name = 'century_link_provider', profile_name = 'century_link__profile', host_ip = '192.168.80.39', key_name = 'va_master_key', key_path = '/root/va_master/va_master_key/', datastore = None):
         """
             Works ok atm but needs more stuff in the future. Namely, we need the following: 
                 - A way to get usage statistics. No option for this yet in the python API, so I may need to check out the REST API. 
@@ -49,7 +49,8 @@ class CenturyLinkDriver(base.DriverBase):
             'profile_name' : profile_name, 
             'host_ip' : host_ip, 
             'key_name' : key_name, 
-            'key_path' : key_path
+            'key_path' : key_path, 
+            'datastore' : datastore
             }
         super(CenturyLinkDriver, self).__init__(**kwargs) 
 
