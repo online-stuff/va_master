@@ -433,3 +433,10 @@ table tr.row-state-Down{
     float: left;
     width: 97%;
 }
+.col-type-folder{
+    color: blue;
+    cursor: pointer;
+}
+.col-type-file{
+    color: black;
+}

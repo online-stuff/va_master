@@ -46,9 +46,15 @@ function table(state, action){
 
     if(action.type == 'ADD_DATA'){
         newState = action.tables;
+        newState.path = [];
     }
     if(action.type == 'CHANGE_DATA'){
         newState[action.name] = action.data;
+        if("passVal" in action){
+            newState["path"].push(action.passVal);
+        }else if("initVal" in action){
+            newState["path"] = [action.initVal];
+        }
     }
     return newState;
 }
@@ -58,7 +64,7 @@ function filter(state, action){
         return {filterBy: ""};
     }
 
-    var newState = Object.assign({}, state); 
+    var newState = Object.assign({}, state);
     if(action.type == 'FILTER'){
         newState.filterBy = action.filterBy;
     }
