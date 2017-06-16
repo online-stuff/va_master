@@ -13,6 +13,8 @@ def get_paths():
             'drivers' : list_drivers, 
             'hosts/get_trigger_functions': get_hosts_triggers,
             'hosts/get_host_billing' : get_host_billing, 
+            'hosts' : list_hosts, 
+
         },
         'post' : {
             'hosts' : list_hosts, 

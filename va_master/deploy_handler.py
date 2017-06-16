@@ -5,7 +5,7 @@ import traceback
 import functools
 import tornado
 import tornado.gen
-from host_drivers import openstack, aws, vcloud, libvirt_driver, generic_driver, century_link, gce
+from host_drivers import openstack, aws, vcloud, libvirt_driver, generic_driver, century_link, gce, vmware
 
 
 from Crypto.PublicKey import RSA
@@ -80,12 +80,17 @@ class DeployHandler(object):
             self.drivers = [x(**kwargs) for x in [
                 openstack.OpenStackDriver, 
                 gce.GCEDriver,
-                generic_driver.GenericDriver
+                generic_driver.GenericDriver,
+
             ]]
             kwargs['flavours'] = va_flavours
 
 
-            self.drivers += [x(**kwargs) for x in (century_link.CenturyLinkDriver, libvirt_driver.LibVirtDriver)]
+            self.drivers += [x(**kwargs) for x in (
+                century_link.CenturyLinkDriver, 
+                libvirt_driver.LibVirtDriver,
+                vmware.VMWareDriver
+            )]
 
         raise tornado.gen.Return(self.drivers)
 
