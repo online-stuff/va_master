@@ -174,7 +174,26 @@ var Chart = React.createClass({
 
 var Table = React.createClass({
     btn_clicked: function(id, evtKey){
-        if(evtKey == 'chart'){
+        if(this.props.table.path.length > 0){
+            var args = [this.props.table.path[0]]
+            if(this.props.table.path.length > 1){
+                args.push(this.props.table.path[1]);
+                var rest = this.props.table.path.slice(2,);
+                if(rest.length > 0) args.concat(rest);
+            }
+            args.push(id[0]);
+            var data = {"instance_name": this.props.panel.instance, "action": evtKey, "args": args};
+            console.log(data);
+            var me = this;
+            Network.post('/api/panels/action', this.props.auth.token, data).done(function(d) {
+                var msg = d[me.props.panel.instance];
+                if(typeof msg === 'string'){
+                    me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
+                }
+            }).fail(function (msg) {
+                me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
+            });
+        }else if(evtKey == 'chart'){
             var newName = this.props.name.replace(/\s/g, "_");
             var newId = id[0].replace(/:/g, "_");
             var newId = newId.replace(/\s/g, "_");
