@@ -182,7 +182,7 @@ var Table = React.createClass({
                 if(rest.length > 0) args.concat(rest);
             }
             args.push(id[0]);
-            var data = {"instance_name": this.props.panel.instance, "action": evtKey, "args": args};
+            var data = {"instance_name": this.props.panel.instance, "action": evtKey, "args": [args]};
             console.log(data);
             var me = this;
             Network.post('/api/panels/action', this.props.auth.token, data).done(function(d) {
