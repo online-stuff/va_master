@@ -11,7 +11,6 @@ import json
 import subprocess
 import os
 
-from novaclient import client
 #  location: VAR_LOCATION 
 
 PROVIDER_TEMPLATE = '''VAR_PROVIDER_NAME:
@@ -41,7 +40,6 @@ PROVIDER_TEMPLATE = '''VAR_PROVIDER_NAME:
 '''
 
 PROFILE_TEMPLATE = '''VAR_PROFILE_NAME:
-nino-gce-profile:
   use_persistent_disk: True
   delete_boot_pd: False
   deploy: True
@@ -156,7 +154,7 @@ class GCEDriver(base.DriverBase):
         raise tornado.gen.Return(True)
 
     @tornado.gen.coroutine
-    def get_host_data(self, host):
+    def get_host_data(self, host, get_instances = True, get_billing = True):
         """ Gets various data about the host and all the instances using the get_openstack_value() method. Returns the data in the same format as defined in the base driver. """
         import time
         print ('Starting timer for OpenStack. ')

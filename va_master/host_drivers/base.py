@@ -45,6 +45,9 @@ class StepResult(object):
         self.new_step_index = new_step_index
         self.option_choices = option_choices
 
+    def set_option_choices(self, options):
+        self.option_choices = options
+
     def serialize(self):
         return {'errors': self.errors, 'new_step_index': self.new_step_index,
             'option_choices': self.option_choices}
@@ -292,7 +295,7 @@ class DriverBase(object):
        
 
     @tornado.gen.coroutine
-    def get_host_data(self, host):
+    def get_host_data(self, host, get_instances = True, get_billing = True):
         """ 
             Returns information about usage for the host and instances. The format of the data is in this function. This should be overwritten so you can see this data on the overview.
          """
@@ -330,7 +333,7 @@ class DriverBase(object):
         raise tornado.gen.Return(host_data)
 
     @tornado.gen.coroutine
-    def validate_field_values(self, step_index, field_values):
+    def validate_field_values(self, step_index, field_values, options = {}):
         """ 
             Validates and saves field values entered when adding a new host. This does not need to be overwritten, but you may want to do so. 
 
@@ -342,7 +345,7 @@ class DriverBase(object):
         """
         if step_index < 0:
             raise tornado.gen.Return(StepResult(
-                errors=[], new_step_index=0, option_choices={}
+                errors=[], new_step_index=0, option_choices=options
             ))
 
         elif step_index == 0:
@@ -356,19 +359,20 @@ class DriverBase(object):
             yield self.get_salt_configs(skip_profile = True)
             yield self.write_configs(skip_profile = True)	
 
-
+            print ('Now trying to get field_values. ')
     	    self.field_values['networks'] = yield self.get_networks()
             self.field_values['sec_groups'] = yield self.get_sec_groups()
             self.field_values['images'] = yield self.get_images()
             self.field_values['sizes']= yield self.get_sizes()
 
+            options.update({
+                    'network': self.field_values['networks'],
+                    'sec_group': self.field_values['sec_groups'],
+                })
 
             raise tornado.gen.Return(StepResult(
                 errors = [], new_step_index =1,
-                option_choices = {
-                    'network': self.field_values['networks'],
-                    'sec_group': self.field_values['sec_groups'],
-                }
+                option_choices = options
             ))
 
         elif step_index == 1:
@@ -377,12 +381,14 @@ class DriverBase(object):
 
             self.field_values['defaults']['network'] = field_values['network']
             self.field_values['defaults']['sec_group'] = field_values['sec_group']
-
-            raise tornado.gen.Return(StepResult(
-                errors =[], new_step_index =2, option_choices = {
+            print ('Options are : ', options)
+            options.update({
                     'image': self.field_values['images'],
                     'size': self.field_values['sizes'],
-                }
+            })
+            print ('Options is now : ', options)
+            raise tornado.gen.Return(StepResult(
+                errors =[], new_step_index =2, option_choices = options
             ))
         else: 
             self.profile_vars['VAR_IMAGE'] = field_values['image']
@@ -395,7 +401,7 @@ class DriverBase(object):
             yield self.write_configs()	
 
             raise tornado.gen.Return(StepResult(
-                errors = [], new_step_index = -1, option_choices = {}
+                errors = [], new_step_index = -1, option_choices = options
             ))
 
 

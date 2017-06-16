@@ -111,7 +111,6 @@ class OpenStackDriver(base.DriverBase):
             field_values['username'], field_values['password'],
             field_values['tenant'])
         url = 'http://%s/v2.0/tokens' % host
-        print 'Trying to get token with : ', url
         data = {
             'auth': {
                 'tenantName': tenant,
@@ -151,7 +150,6 @@ class OpenStackDriver(base.DriverBase):
             url_endpoint -- The specific values we want to get. It varies from resource to resource so again, check the OpenStack documentation, or the other methods. 
         """
 
-        print 'Endpoint is : ', url_endpoint
         url = token_data[1][token_value]
         req = HTTPRequest('%s/%s' % (url, url_endpoint), 'GET', headers={
             'X-Auth-Token': token_data[0],
@@ -233,7 +231,6 @@ class OpenStackDriver(base.DriverBase):
             tenant_usage = yield self.get_openstack_value(self.token_data, 'compute', 'os-simple-tenant-usage/' + tenant_id)
 
             tenant_usage = tenant_usage['tenant_usage']
-            print [x['addresses'] for x in servers]
             instances = [
                 {
                     'hostname' : x['name'], 
@@ -268,9 +265,6 @@ class OpenStackDriver(base.DriverBase):
     @tornado.gen.coroutine
     def get_host_data(self, host, get_instances = True, get_billing = True):
         """ Gets various data about the host and all the instances using the get_openstack_value() method. Returns the data in the same format as defined in the base driver. """
-        import time
-        print ('Starting timer for OpenStack. ')
-        t0 = time.time()
         try:
             self.token_data = yield self.get_token(host)
 
@@ -324,7 +318,6 @@ class OpenStackDriver(base.DriverBase):
             'host_usage' : host_usage,
             'status' : {'success' : True, 'message': ''}
         }
-        print ('Timer for OpenStack is : ', time.time() - t0)
         raise tornado.gen.Return(host_data)
 
 
@@ -340,7 +333,6 @@ class OpenStackDriver(base.DriverBase):
             raise tornado.gen.Return({'success' : False, 'message' : 'Could not get instance. ' + e.message})
         try:
             success = getattr(instance, action)()
-            print ('Made action : ', success)
         except Exception as e:
             raise tornado.gen.Return({'success' : False, 'message' : 'Action was not performed. ' + e.message})
 
