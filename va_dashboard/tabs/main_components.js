@@ -47,24 +47,26 @@ var MultiTable = React.createClass({
     render: function () {
         var redux = {}, tables = [];
         for(x in this.props.table){
-            var elements = this.props.elements.map(function(element) {
-                element.name = x;
-                element.key = element.type + element.name;
-                var Component = components[element.type];
-                redux[element.type] = connect(function(state){
-                    var newstate = {auth: state.auth};
-                    if(typeof element.reducers !== 'undefined'){
-                        var r = element.reducers;
-                        for (var i = 0; i < r.length; i++) {
-                            newstate[r[i]] = state[r[i]];
+            if(x !== "path"){
+                var elements = this.props.elements.map(function(element) {
+                    element.name = x;
+                    element.key = element.type + element.name;
+                    var Component = components[element.type];
+                    redux[element.type] = connect(function(state){
+                        var newstate = {auth: state.auth};
+                        if(typeof element.reducers !== 'undefined'){
+                            var r = element.reducers;
+                            for (var i = 0; i < r.length; i++) {
+                                newstate[r[i]] = state[r[i]];
+                            }
                         }
-                    }
-                    return newstate;
-                })(Component);
-                var Redux = redux[element.type];
-                return React.createElement(Redux, element);
-            }.bind(this));
-            tables.push(elements);
+                        return newstate;
+                    })(Component);
+                    var Redux = redux[element.type];
+                    return React.createElement(Redux, element);
+                }.bind(this));
+                tables.push(elements);
+            }
         }
         return (
             <div className="multi">
@@ -220,6 +222,22 @@ var Table = React.createClass({
             });
         }
     },
+    linkClicked: function(action, event){
+        var folder = event.currentTarget.textContent;
+        var args = this.props.table.path.concat(folder);
+        var data = {"instance_name": this.props.panel.instance, "action": action, "args": args};
+        var me = this;
+        Network.post('/api/panels/action', this.props.auth.token, data).done(function(d) {
+            var msg = d[me.props.panel.instance];
+            if(typeof msg === 'string'){
+                me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
+            }else{
+                me.props.dispatch({type: 'CHANGE_DATA', data: msg, name: me.props.name, passVal: folder});
+            }
+        }).fail(function (msg) {
+            me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
+        });
+    },
     render: function () {
         var pagination = "pagination" in this.props ? this.props.pagination : true;
         if(typeof this.props.table[this.props.name] === 'undefined')
@@ -231,7 +249,11 @@ var Table = React.createClass({
                 tmp.key = this.props.name;
                 tmp.label = this.props.name;
             }
-            cols.push(tmp.key);
+            // if("action" in tmp){
+            //     cols.push(tmp);
+            // }else{
+            //     cols.push(tmp.key);
+            // }
             var style = null;
             if("width" in tmp){
                 style = {"width": tmp.width};
@@ -259,7 +281,7 @@ var Table = React.createClass({
             }
         }
         var rows = this.props.table[this.props.name].map(function(row) {
-            var columns, key;
+            var columns, key, me = this;
             if(typeof row === "string"){
                 key = [this.props.name, row];
                 columns = (
@@ -276,10 +298,20 @@ var Table = React.createClass({
                 }else{
                     key = [row[tbl_id]];
                 }
-                columns = cols.map(function(col) {
+                columns = this.props.columns.map(function(col, index) {
+                    var key = col.key, colClass = "", colText = row[key];
+                    if(typeof col.colClass !== 'undefined'){
+                        colClass = "col-" + col.colClass + "-" + row[col.colClass];
+                        colText = <span className={colClass}>{row[key]}</span>;
+                        if("action" in col){
+                            var col_arr = col['action'].split(':');
+                            if(col_arr[0] === row[col.colClass])
+                                colText = <span className={colClass} onClick={me.linkClicked.bind(this, col_arr[1])}>{row[key]}</span>
+                        }
+                    }
                     return (
-                        <Reactable.Td key={col} column={col}>
-                            {row[col]}
+                        <Reactable.Td key={key} column={key}>
+                            {colText}
                         </Reactable.Td>
                     );
                 });
@@ -448,6 +480,39 @@ var Modal = React.createClass({
     }
 });
 
+var Path = React.createClass({
+    onClick: function(evt){
+        // console.log(evt.currentTarget.id)
+        // console.log(evt.currentTarget.textContent);
+        var args = this.props.table.path.slice(0, parseInt(evt.currentTarget.id) + 1);
+        var data = {"instance_name": this.props.panel.instance, "action": this.props.action, "args": args};
+        var me = this;
+        Network.post('/api/panels/action', this.props.auth.token, data).done(function(d) {
+            var msg = d[me.props.panel.instance];
+            if(typeof msg === 'string'){
+                me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
+            }else{
+                me.props.dispatch({type: 'CHANGE_DATA', data: msg, name: me.props.target, initVal: args});
+            }
+        }).fail(function (msg) {
+            me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
+        });
+    },
+    render: function () {
+        var me = this;
+        var paths = this.props.table.path.map(function(path, i){
+            // <li className="breadcrumb-item"><a href="#">Home</a></li>
+            // <li className="breadcrumb-item active">Library</li>
+            return <li className="breadcrumb-item"><span id={i} className="link" onClick={me.onClick}>{path}</span></li>;
+        });
+        return (
+            <ol className="breadcrumb">
+                {paths}
+            </ol>
+        );
+    }
+});
+
 var Form = React.createClass({
 
     onSelect: function (action) {
@@ -459,7 +524,7 @@ var Form = React.createClass({
             if(typeof msg === 'string'){
                 me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
             }else{
-                me.props.dispatch({type: 'CHANGE_DATA', data: msg, name: me.props.target});
+                me.props.dispatch({type: 'CHANGE_DATA', data: msg, name: me.props.target, initVal: [host]});
             }
         }).fail(function (msg) {
             me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
@@ -485,11 +550,13 @@ var Form = React.createClass({
                     return ( <Bootstrap.FormControl id={index} key={element.name} type={type} name={element.name} value={this.props.form.readonly[element.name]} disabled /> );
                 }
                 if(type == "dropdown"){
-                    var action = "";
+                    var action = "", defaultValue = element.value[0];
                     if("action" in element){
                         action = this.onSelect.bind(this, element.action);
+                        if("table" in this.props && this.props.table.path.length > 0)
+                            defaultValue = this.props.table.path[0];
                     }
-                    return ( <select ref="dropdown" id={index} key={element.name} onChange={action} name={element.name} placeholder={element.value[0]}>
+                    return ( <select ref="dropdown" id={index} key={element.name} onChange={action} name={element.name} defaultValue={defaultValue}>
                         {element.value.map(function(option, i) {
                             return <option key={i} value={option}>{option}</option>
                         })}
@@ -543,5 +610,6 @@ components.Chart = Chart;
 components.Table = Table;
 components.Form = Form;
 components.Modal = Modal;
+components.Path = Path;
 
 module.exports = components;
