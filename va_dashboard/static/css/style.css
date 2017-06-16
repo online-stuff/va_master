@@ -440,3 +440,7 @@ table tr.row-state-Down{
 .col-type-file{
     color: black;
 }
+.link{
+    color: blue;
+    cursor: pointer;
+}

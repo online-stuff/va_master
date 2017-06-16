@@ -480,6 +480,39 @@ var Modal = React.createClass({
     }
 });
 
+var Path = React.createClass({
+    onClick: function(evt){
+        // console.log(evt.currentTarget.id)
+        // console.log(evt.currentTarget.textContent);
+        var args = this.props.table.path.slice(0, parseInt(evt.currentTarget.id) + 1);
+        var data = {"instance_name": this.props.panel.instance, "action": this.props.action, "args": args};
+        var me = this;
+        Network.post('/api/panels/action', this.props.auth.token, data).done(function(d) {
+            var msg = d[me.props.panel.instance];
+            if(typeof msg === 'string'){
+                me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
+            }else{
+                me.props.dispatch({type: 'CHANGE_DATA', data: msg, name: me.props.target, initVal: args});
+            }
+        }).fail(function (msg) {
+            me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
+        });
+    },
+    render: function () {
+        var me = this;
+        var paths = this.props.table.path.map(function(path, i){
+            // <li className="breadcrumb-item"><a href="#">Home</a></li>
+            // <li className="breadcrumb-item active">Library</li>
+            return <li className="breadcrumb-item"><span id={i} className="link" onClick={me.onClick}>{path}</span></li>;
+        });
+        return (
+            <ol className="breadcrumb">
+                {paths}
+            </ol>
+        );
+    }
+});
+
 var Form = React.createClass({
 
     onSelect: function (action) {
@@ -491,7 +524,7 @@ var Form = React.createClass({
             if(typeof msg === 'string'){
                 me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
             }else{
-                me.props.dispatch({type: 'CHANGE_DATA', data: msg, name: me.props.target, initVal: host});
+                me.props.dispatch({type: 'CHANGE_DATA', data: msg, name: me.props.target, initVal: [host]});
             }
         }).fail(function (msg) {
             me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
@@ -577,5 +610,6 @@ components.Chart = Chart;
 components.Table = Table;
 components.Form = Form;
 components.Modal = Modal;
+components.Path = Path;
 
 module.exports = components;
