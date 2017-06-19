@@ -277,6 +277,7 @@ var Table = React.createClass({
             if("width" in tmp){
                 style = {"width": tmp.width};
             }
+            cols.push(tmp.key);
             tbl_cols[i] = (
                 <Reactable.Th key={tmp.key} column={tmp.key} style={style}>{tmp.label}</Reactable.Th>
             );
@@ -371,7 +372,7 @@ var Table = React.createClass({
         }
         return (
             <div>
-            { pagination ? ( <Reactable.Table className={className} itemsPerPage={10} pageButtonLimit={10} noDataText="No matching records found." sortable={true} filterable={cols} filterBy={filterBy} hideFilterInput >
+            { pagination ? ( <Reactable.Table className={className} itemsPerPage={10} pageButtonLimit={10} noDataText="No matching records found." sortable={true} filterable={cols} >
                 <Reactable.Thead>
                     {tbl_cols}
                 </Reactable.Thead>
@@ -518,12 +519,12 @@ var Path = React.createClass({
         });
     },
     render: function () {
-        var me = this;
-        var paths = this.props.table.path.map(function(path, i){
-            // <li className="breadcrumb-item"><a href="#">Home</a></li>
-            // <li className="breadcrumb-item active">Library</li>
-            return <li className="breadcrumb-item"><span id={i} className="link" onClick={me.onClick}>{path}</span></li>;
-        });
+        var me = this, paths = [];
+        if("path" in this.props.table){
+            paths =  this.props.table.path.map(function(path, i){
+                return <li key={i} className="breadcrumb-item"><span id={i} className="link" onClick={me.onClick}>{path}</span></li>;
+            });
+        }
         return (
             <ol className="breadcrumb">
                 {paths}
@@ -572,7 +573,7 @@ var Form = React.createClass({
                     var action = "", defaultValue = element.value[0];
                     if("action" in element){
                         action = this.onSelect.bind(this, element.action);
-                        if("table" in this.props && this.props.table.path.length > 0)
+                        if("table" in this.props && "path" in this.props.table && this.props.table.path.length > 0)
                             defaultValue = this.props.table.path[0];
                     }
                     return ( <select ref="dropdown" id={index} key={element.name} onChange={action} name={element.name} defaultValue={defaultValue}>
