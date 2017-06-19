@@ -2,7 +2,9 @@ venv/
 *.pyc
 /id_rsa
 /id_rsa.pub
+bundle.js
 node_modules/
+npm-debug.log
 *.egg-info/
 pip-log.txt
 ami_images
