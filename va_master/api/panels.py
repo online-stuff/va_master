@@ -74,11 +74,26 @@ def panel_action_execute(handler):
 def salt_serve_file(handler):
     instance = handler.data['instance_name']
     action = handler.data['action']
-    args, kwargs = handler.data['args'], handler.data['kwargs']
 
-    cl = salt.Client.LocalClient()
-    result = cl.cmd(instance, action, args = args, kwargs = kwargs)
-    path_to_file = '/usr/share/backuppc/bin/BackupPC_zipCreate'
+    args = handler.data.get('args', [])
+    kwargs = handler.data.get('kwargs', {})
+
+
+    instance_info = yield apps.get_app_info(handler)
+    state = instance_info[instance]['role']
+    states = yield handler.config.deploy_handler.get_states()
+    state = [x for x in states if x['name'] == state] or [{'module' : 'openvpn'}]
+    state = state[0]
+    module = handler.data.get('module', state['module'])
+
+    action = module + '.' + action
+
+    cl = salt.client.LocalClient()
+    print ('Calilng serve on ', instance, ' with action ', action, ' with args : ', args, ' and kwargs : ', kwargs)
+    result = cl.cmd(instance, action, args, kwargs = kwargs)
+    result = result['va-backup']
+    print ('Result is : ', result)
+    path_to_file = '/tmp/some_salt_file'
 
     with open(path_to_file, 'w') as f: 
         f.write(result)

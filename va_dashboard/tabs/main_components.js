@@ -184,8 +184,8 @@ var Table = React.createClass({
             args.push(id[0]);
             var data = {"instance_name": this.props.panel.instance, "action": evtKey, "args": [args]};
             var me = this;
-            if(evtKey === "download"){
-                data.action = this.props.download;
+            if(typeof evtKey === 'object' && evtKey.type === "download"){
+                data.action = evtKey.name;
                 Network.download_file('/api/panels/serve_file', this.props.auth.token, data).done(function(d) {
                     var data = new Blob([d], {type: 'octet/stream'});
                     var url = window.URL.createObjectURL(data);
