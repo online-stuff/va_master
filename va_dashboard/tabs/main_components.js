@@ -183,16 +183,29 @@ var Table = React.createClass({
             }
             args.push(id[0]);
             var data = {"instance_name": this.props.panel.instance, "action": evtKey, "args": [args]};
-            console.log(data);
             var me = this;
-            Network.post('/api/panels/action', this.props.auth.token, data).done(function(d) {
-                var msg = d[me.props.panel.instance];
-                if(typeof msg === 'string'){
+            if(evtKey === "download"){
+                data.action = this.props.download;
+                Network.download_file('/api/panels/serve_file', this.props.auth.token, data).done(function(d) {
+                    var data = new Blob([d], {type: 'octet/stream'});
+                    var url = window.URL.createObjectURL(data);
+                    tempLink = document.createElement('a');
+                    tempLink.href = url;
+                    tempLink.setAttribute('download', args[args.length - 1]);
+                    tempLink.click();
+                }).fail(function (msg) {
                     me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
-                }
-            }).fail(function (msg) {
-                me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
-            });
+                });
+            }else{
+                Network.post('/api/panels/action', this.props.auth.token, data).done(function(d) {
+                    var msg = d[me.props.panel.instance];
+                    if(typeof msg === 'string'){
+                        me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
+                    }
+                }).fail(function (msg) {
+                    me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
+                });
+            }
         }else if(evtKey == 'chart'){
             var newName = this.props.name.replace(/\s/g, "_");
             var newId = id[0].replace(/:/g, "_");
