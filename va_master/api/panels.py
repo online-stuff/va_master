@@ -18,6 +18,7 @@ def get_paths():
             'panels/new_panel' : new_panel, #JUST FOR TESTING
             'panels/action' : panel_action, #must have instance_name and action in data, ex: panels/action instance_name=nino_dir action=list_users
             'panels/chart_data' : get_chart_data,
+            'panels/serve_file' : salt_serve_file,
         }
     }
     return paths
@@ -68,6 +69,21 @@ def panel_action_execute(handler):
         import traceback 
         traceback.print_exc()
     raise tornado.gen.Return(result)
+
+@tornado.gen.coroutine
+def salt_serve_file(handler):
+    instance = handler.data['instance_name']
+    action = handler.data['action']
+    args, kwargs = handler.data['args'], handler.data['kwargs']
+
+    cl = salt.Client.LocalClient()
+    result = cl.cmd(instance, action, args = args, kwargs = kwargs)
+    path_to_file = '/usr/share/backuppc/bin/BackupPC_zipCreate'
+
+    with open(path_to_file, 'w') as f: 
+        f.write(result)
+
+    yield handler.serve_file(path_to_file)
 
 @tornado.gen.coroutine
 def get_ts_data(handler):
