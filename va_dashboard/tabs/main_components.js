@@ -177,7 +177,7 @@ var Table = React.createClass({
         if('id' in this.props.panel){
             id.push(this.props.panel.id);
         }
-        if(this.props.table.path.length > 0){
+        if('path' in this.props.table && this.props.table.path.length > 0){
             var args = [this.props.table.path[0]]
             if(this.props.table.path.length > 1){
                 args.push(this.props.table.path[1]);
