@@ -140,6 +140,9 @@ function panel(state, action){
     if(action.type == 'CHANGE_PANEL'){
         newState.panel = action.panel;
         newState.instance = action.instance;
+        if('id' in action){
+            newState.id = action.id;
+        }
     }
 
     return newState;
