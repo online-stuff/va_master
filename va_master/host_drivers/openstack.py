@@ -158,7 +158,6 @@ class OpenStackDriver(base.DriverBase):
         try:
             resp = yield self.client.fetch(req)
         except:
-            print ('Exception!')
             import traceback; traceback.print_exc()
             raise tornado.gen.Return([])
 

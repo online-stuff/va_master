@@ -97,6 +97,8 @@ class GenericDriver(base.DriverBase):
     def get_instances(self, host):
         instances = yield self.datastore.get(host['hostname'])
         instances = instances['instances']
+        for i in instances: 
+            i['host'] = host['hostname']
         raise tornado.gen.Return(instances)
         
 
