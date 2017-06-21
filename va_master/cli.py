@@ -80,26 +80,30 @@ def handle_init(args):
     attrs = [
         ('company-name', 'The name of Your company. It will be used in the VPN certifiates [VapourApps cloud] '),
         ('domain_name', 'Enter the default domain name for this installation [va.mk]'),
-        ('ip', 'Enter an IP address of FQDN [master.va.mk]'),
+        ('fqdn', 'Enter an IP address of FQDN [master.va.mk]'),
         ('admin-user', 'Enter username for the first admin [admin]'),
         ('admin-pass', 'Enter password for the first admin [admin]'),
         ('vpn-port', 'Enter the OpenVPN port accesible from Internet to this host [8443]'),
     ]
     values = {}
+
+
+    print 'Args are : ', args
    
     if args.get('skip_args'): 
         cli_info('Setting up the va_master module without prompting for arguments. If this is the first time you are setting up the environment, you might want to make sure you enter all arguments or run init again without skip_args. ')
 
     for attr in attrs:
-        name = attr[0]
+        name = attr[0].replace('-', '_')
         cmdhelp = attr[1]
         values[name] = args.get(name)
+        print 'Values name is : ', values[name], ' for name : ', name
         if (values[name] is None) and not args.get('skip_args'): # The CLI `args` doesn't have it, ask.
             values[name] = raw_input('%s: ' % cmdhelp)
 
     values = {k: v for k, v in values.items() if v}
     result = True # If `result` is True, all actions completed successfully
-    if values.get('ip'): 
+    if values.get('fqdn'): 
         try:
             cli_environment.write_supervisor_conf()
             cli_success('Configured Supervisor.')
@@ -108,7 +112,7 @@ def handle_init(args):
             traceback.print_exc()
             result = False # We failed with step #1
         try:
-            cli_environment.write_consul_conf(values['ip'])
+            cli_environment.write_consul_conf(values['fqdn'])
             cli_success('Configured Consul.')
         except:
             import traceback
@@ -153,7 +157,7 @@ def handle_init(args):
 
         try:
             cli_info('Trying to start VPN. ')
-            cli_environment.write_vpn_pillar(values['ip']) 
+            cli_environment.write_vpn_pillar(values['fqdn']) 
             cli_success('VPN is running. ')
         except: 
             cli_error('Failed to start VPN. Error was : ')
@@ -280,7 +284,7 @@ def entry():
     expected_args = [
         ('company-name', 'The name of Your company. It will be used in the VPN certifiates [VapourApps cloud] '),
         ('domain_name', 'Enter the default domain name for this installation [va.mk]'),
-        ('ip', 'Enter an IP address of FQDN [master.va.mk]'),
+        ('fqdn', 'Enter an IP address of FQDN [master.va.mk]'),
         ('admin-user', 'Enter username for the first admin [admin]'),
         ('admin-pass', 'Enter password for the first admin [admin]'),
         ('vpn-port', 'Enter the OpenVPN port accesible from Internet to this host [8443]'),
