@@ -8,7 +8,7 @@ from tornado.httpclient import AsyncHTTPClient, HTTPRequest
 import tornado.gen
 import json, yaml
 import subprocess
-import libvirt
+#import libvirt
 import uuid
 import os
 from xml.etree import ElementTree as ET

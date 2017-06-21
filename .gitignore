@@ -1,5 +1,7 @@
 venv/
 *.pyc
+.*.swp
+.*.swo
 /id_rsa
 /id_rsa.pub
 bundle.js
