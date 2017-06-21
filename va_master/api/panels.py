@@ -55,6 +55,7 @@ def panel_action_execute(handler):
 
 
         args = handler.data.get('args', [])
+        kwargs = handler.data.get('kwargs', {})
 
         states = yield handler.config.deploy_handler.get_states()
         state = [x for x in states if x['name'] == state] or [{'module' : 'openvpn'}]
@@ -64,7 +65,7 @@ def panel_action_execute(handler):
         print 'Trying to get client. '
         cl = salt.client.LocalClient()
         print 'Trying to get result'
-        result = cl.cmd(instance, module + '.' + action , args)
+        result = cl.cmd(instance, module + '.' + action , args = args, kwarg = kwargs)
     except: 
         import traceback 
         traceback.print_exc()
