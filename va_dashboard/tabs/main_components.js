@@ -182,10 +182,15 @@ var Table = React.createClass({
             if(this.props.table.path.length > 1){
                 args.push(this.props.table.path[1]);
                 var rest = this.props.table.path.slice(2,);
-                if(rest.length > 0) args.concat(rest);
+                var path = "", slash = rest.length > 0 ? '/' : '';
+                for(var i=0; i<rest.length; i++){
+                    path += rest[i];
+                }
+                args.push(path + slash + id[0]);
+            }else{
+                args.push(id[0]);
             }
-            args.push(id[0]);
-            var data = {"instance_name": this.props.panel.instance, "action": evtKey, "args": [args]};
+            var data = {"instance_name": this.props.panel.instance, "action": evtKey, "args": args};
             var me = this;
             if(typeof evtKey === 'object' && evtKey.type === "download"){
                 data.action = evtKey.name;
@@ -194,7 +199,7 @@ var Table = React.createClass({
                     var url = window.URL.createObjectURL(data);
                     tempLink = document.createElement('a');
                     tempLink.href = url;
-                    tempLink.setAttribute('download', args[args.length - 1]);
+                    tempLink.setAttribute('download', id[0]);
                     tempLink.click();
                 }).fail(function (msg) {
                     me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
