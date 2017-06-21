@@ -347,7 +347,7 @@ var Table = React.createClass({
                         if("action" in col){
                             var col_arr = col['action'].split(':');
                             if(col_arr[0] === row[col.colClass])
-                                colText = <span className={colClass} onClick={me.linkClicked.bind(this, col_arr[1])}>{row[key]}</span>
+                                colText = <span className={colClass} onClick={me.linkClicked.bind(me, col_arr[1])}>{row[key]}</span>
                         }
                     }
                     return (
@@ -361,7 +361,7 @@ var Table = React.createClass({
                 action_col = (
                     <Reactable.Td column="action">
                         {action_length > 1 ? (
-                            <Bootstrap.DropdownButton bsStyle='primary' title="Choose" onSelect = {this.btn_clicked.bind(this, key)}>
+                            <Bootstrap.DropdownButton id={"dropdown-" + key[0]} bsStyle='primary' title="Choose" onSelect = {this.btn_clicked.bind(this, key)}>
                                 {actions}
                             </Bootstrap.DropdownButton>
                         ) : (
