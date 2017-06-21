@@ -46,7 +46,7 @@ def add_host(handler):
 
 @tornado.gen.coroutine
 def add_generic_instance(handler):
-    base_instance = {"hostname" : "", "ipv4" : "", "local_gb" : 0, "memory_mb" : 0, "status" : "n/a" }
+    base_instance = {"hostname" : "", "ip" : "", "local_gb" : 0, "memory_mb" : 0, "status" : "n/a" }
     base_instance.update(handler.data['instance'])
 
     instances = yield handler.config.deploy_handler.datastore.get(handler.data['hostname'])

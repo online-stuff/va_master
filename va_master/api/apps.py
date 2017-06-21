@@ -14,6 +14,7 @@ def get_paths():
     paths = {
         'get' : {
             'apps/vpn_users' : get_openvpn_users,
+            'apps/vpn_status' : get_openvpn_status, 
             'apps/add_app' : add_app,
             'apps/get_actions' : get_user_actions, 
 
@@ -40,13 +41,19 @@ def add_app(handler):
     app = yield get_app_info(handler)
     yield handler.config.deploy_handler.store_app(app, handler.data['host'])
 
-##@auth_only
 @tornado.gen.coroutine
 def get_openvpn_users(handler):
     cl = Caller()
     users = cl.cmd('openvpn.list_users')
     users['active'] = [{'name' : x, 'check' : False, 'connected' : x in users['status']['client_list']} for x in users['active']]
+    users['status'] = users['status']['client_list']
     raise tornado.gen.Return(users)
+
+@tornado.gen.coroutine
+def get_openvpn_status(handler):
+    cl = Caller()
+    status = cl.cmd('openvpn.get_status')
+    raise tornado.gen.Return(status)
 
 @tornado.gen.coroutine
 def add_openvpn_user(handler):

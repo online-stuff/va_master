@@ -76,7 +76,7 @@ def get_app(config):
         (r"/", IndexHandler, path_settings),
         (r"/api/(.*)", ApiHandler, {'config': config}),
         (r"/static/(.*)", DebugStaticHandler, path_settings), 
-        (r"/log/(.*)", LogMessagingSocket),
+        (r"/log", LogMessagingSocket),
         (r"/proxy/(.*)", ProxyHandler),
 
     ])
