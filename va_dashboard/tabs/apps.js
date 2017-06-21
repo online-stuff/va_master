@@ -20,12 +20,12 @@ var Appp = React.createClass({
     },
 
     getData: function() {
-        var data = {hosts: [], filter_instances: ["va-backup", "va-monitoring", "winsrv1", "winsrv2", "winsrv3"]};
+        var data = {hosts: []};
         var me = this;
         var n1 = Network.post('/api/hosts/info', this.props.auth.token, data).fail(function (msg) {
             me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
         });
-        var n2 = Network.post('/api/hosts', this.props.auth.token, {filter_instances: ["va-backup", "va-monitoring", "winsrv1", "winsrv2", "winsrv3"]}).fail(function (msg) {
+        var n2 = Network.post('/api/hosts', this.props.auth.token, {}).fail(function (msg) {
             me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
         });
         var n3 = Network.get('/api/states', this.props.auth.token).fail(function (msg) {

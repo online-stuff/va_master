@@ -46,7 +46,7 @@ def add_host(handler):
 
 @tornado.gen.coroutine
 def add_generic_instance(handler):
-    base_instance = {"hostname" : "", "ipv4" : "", "local_gb" : 0, "memory_mb" : 0, "status" : "n/a" }
+    base_instance = {"hostname" : "", "ip" : "", "local_gb" : 0, "memory_mb" : 0, "status" : "n/a" }
     base_instance.update(handler.data['instance'])
 
     instances = yield handler.config.deploy_handler.datastore.get(handler.data['hostname'])
@@ -68,11 +68,12 @@ def get_hosts_triggers(handler):
 @tornado.gen.coroutine
 def list_hosts(handler):
     hosts = yield handler.config.deploy_handler.list_hosts()
+    hidden_instances = yield handler.config.deploy_handler.datastore.get('hidden_instances')
     for host in hosts: 
         driver = yield handler.config.deploy_handler.get_driver_by_id(host['driver_name'])
         host['instances'] = yield driver.get_instances(host)
-        if handler.data.get('filter_instances'): 
-            host['instances'] = [x for x in host['instances'] if x['hostname'] in handler.data.get('filter_instances')]
+        if hidden_instances: 
+            host['instances'] = [x for x in host['instances'] if x['hostname'] not in hidden_instances]
 
     raise tornado.gen.Return({'hosts': hosts})
 
@@ -167,6 +168,7 @@ def get_host_info(handler):
     data = handler.data
     deploy_handler = handler.config.deploy_handler
     store = deploy_handler.datastore
+    hidden_instances = yield store.get('hidden_instances')
 
     required_hosts = data.get('hosts')
     hosts = yield handler.config.deploy_handler.list_hosts()
@@ -178,9 +180,9 @@ def get_host_info(handler):
     hosts_data = [x[0].get_host_data(host = x[1], get_instances = data.get('get_instances', True), get_billing = data.get('get_billing', True)) for x in zip(host_drivers, hosts)]
     hosts_info = yield hosts_data
     
-    if data.get('filter_instances'): 
+    if hidden_instances: 
         for host in hosts_info:
-            host['instances'] = [x for x in host['instances'] if x['hostname'] in data.get('filter_instances')]
+            host['instances'] = [x for x in host['instances'] if x['hostname'] not in hidden_instances]
 
     for info in zip(hosts_info, hosts): 
         info[0]['hostname'] = info[1]['hostname']

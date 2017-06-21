@@ -35,8 +35,7 @@ var Vpn = React.createClass({
     getCurrentVpns: function () {
         var me = this;
         Network.get('/api/apps/vpn_users', this.props.auth.token).done(function (data) {
-            me.setState({active: data.active});
-            me.setState({revoked: data.revoked});
+            me.setState({active: data.active, revoked: data.revoked, status: data.status});
         }).fail(function (msg) {
             me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
         });
@@ -121,12 +120,12 @@ var Vpn = React.createClass({
 
         var status_rows = this.state.status.map(function(vpn) {
             return (
-                <tr key={vpn.name}>
-                    <td>{vpn.name}</td>
-                    <td>{vpn.connected}</td>
-                    <td>{vpn.ip}</td>
-                    <td>{vpn.bytes_in}</td>
-                    <td>{vpn.bytes_out}</td>
+                <tr key={vpn['Common Name']}>
+                    <td>{vpn['Common Name']}</td>
+                    <td>{vpn['Connected Since']}</td>
+                    <td>{vpn['Real Address']}</td>
+                    <td>{vpn['Bytes Received']}</td>
+                    <td>{vpn['Bytes Sent']}</td>
                 </tr>
             );
         });

@@ -213,17 +213,21 @@ class LogMessagingSocket(tornado.websocket.WebSocketHandler):
     @tornado.web.asynchronous
     @tornado.gen.engine
     def open(self, no_messages = 100, logfile = '/var/log/vapourapps/va-master.log'):
-        self.logfile = logfile
-        with open(logfile) as f: 
-            self.messages = f.read().split('\n')
-        self.messages = self.messages
-        self.write_message(json.dumps(self.messages[-no_messages:]))
+        try: 
+            self.logfile = logfile
+            with open(logfile) as f: 
+                self.messages = f.read().split('\n')
+            self.messages = self.messages
+            self.write_message(json.dumps(self.messages[-no_messages:]))
 
-        log_handler = LogHandler(self)
-        observer = Observer()
-        observer.schedule(log_handler, path = '/var/log/vapourapps/')
-        observer.start()
-        
+            log_handler = LogHandler(self)
+            observer = Observer()
+            observer.schedule(log_handler, path = '/var/log/vapourapps/')
+            observer.start()
+        except: 
+            import traceback
+            traceback.print_exc()
+
     def get_messages(message):
         return self.messages[-message['number_of_messages']:]
 

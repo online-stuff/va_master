@@ -62,10 +62,9 @@ def panel_action_execute(handler):
         state = state[0]
         module = handler.data.get('module', state['module'])
 
-        print 'Trying to get client. '
         cl = salt.client.LocalClient()
-        print 'Trying to get result'
-        result = cl.cmd(instance, module + '.' + action , args = args, kwarg = kwargs)
+        print ('Calling salt module ', module + '.' + action, ' on ', instance, ' with args : ', args, ' and kwargs : ', kwargs)
+        result = cl.cmd(instance, module + '.' + action , args, kwargs = kwargs)
     except: 
         import traceback 
         traceback.print_exc()
@@ -125,14 +124,11 @@ def panel_action(handler):
     raise tornado.gen.Return(instance_result)
 
 
-##@auth_only(user_allowed = True)
 @tornado.gen.coroutine
 def get_panels(handler):
     panels = yield list_panels(handler)
     raise tornado.gen.Return(panels)
 
-
-#@auth_only(user_allowed = True)
 @tornado.gen.coroutine
 def get_panel_for_user(handler):
     panel = handler.data['panel']
@@ -140,7 +136,6 @@ def get_panel_for_user(handler):
     user_panels = yield list_panels(handler)
     instance_info = yield apps.get_app_info(handler)
     instance_info = instance_info[handler.data['instance_name']]
-    print ('Instance info is : ', instance_info)
     state = instance_info['role']
 
     state = filter(lambda x: x['name'] == state, user_panels)[0]
@@ -151,6 +146,7 @@ def get_panel_for_user(handler):
             handler.data['args'] = [panel] + args
         else:
             handler.data['args'] = [panel]
+
         try: 
             panel = yield panel_action_execute(handler)
         except: 
@@ -160,7 +156,7 @@ def get_panel_for_user(handler):
         panel = panel[handler.data['instance_name']]
         raise tornado.gen.Return(panel)
     else: 
-        raise tornado.gen.Return({'error' : 'Cannot get panel. '})
+        raise tornado.gen.Return(False)
 
 
 
