@@ -145,7 +145,12 @@ var Jointjs = React.createClass({
         return {};
     },
     changeDiagram: function (props){
-        var root_x = this.width/2 - 75, root_y = this.height/2 - 15;
+        var scale = 1;
+        if(props.length > 2){
+            scale = 0.8;
+            this.paper.scale(scale);
+        }
+        var root_x = this.width/scale/2 - 75, root_y = this.height/scale/2 - 15;
         var root_rect = new joint.shapes.basic.Rect({
             position: { x: root_x, y: root_y},
             size: { width: 100, height: 30 },

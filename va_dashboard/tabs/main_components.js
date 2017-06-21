@@ -199,7 +199,7 @@ var Table = React.createClass({
                     var url = window.URL.createObjectURL(data);
                     tempLink = document.createElement('a');
                     tempLink.href = url;
-                    tempLink.setAttribute('download', id[0]);
+                    tempLink.setAttribute('download', id[0] + ".zip");
                     tempLink.click();
                 }).fail(function (msg) {
                     me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
