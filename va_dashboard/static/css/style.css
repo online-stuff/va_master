@@ -361,6 +361,9 @@ table tr.row-state-Pending{
 table tr.row-state-Down{
   border-left: 5px solid #d3d3d3;
 }
+table tr.row-state-Unknown{
+  border-left: 5px solid #d3d3d3;
+}
 .reactable-pagination a{
     margin-right: 5px;
 }
@@ -443,4 +446,14 @@ table tr.row-state-Down{
 .link{
     color: blue;
     cursor: pointer;
+}
+.tbl-ctrl {
+    position: absolute;
+    left: 5px;
+    top: 100px;
+    z-index: 1000;
+    overflow: hidden;
+}
+.tbl-ctrl-dropdown {
+    top: 165px !important;
 }

@@ -22,7 +22,7 @@ var Subpanel = React.createClass({
         var me = this;
         var data = {'panel': id, 'instance_name': instance};
         console.log(data);
-        this.props.dispatch({type: 'CHANGE_PANEL', panel: id, instance: instance});
+        this.props.dispatch({type: 'CHANGE_PANEL', panel: id, instance: instance, id: username});
         Network.get('/api/panels/get_panel', this.props.auth.token, data).done(function (data) {
             console.log(data.tbl_source);
             me.props.dispatch({type: 'ADD_DATA', tables: data.tbl_source});

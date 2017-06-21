@@ -150,7 +150,7 @@ var Jointjs = React.createClass({
             position: { x: root_x, y: root_y},
             size: { width: 100, height: 30 },
             attrs: {
-                rect: { fill: '#337ab7' },
+                rect: { fill: '#337ab7', rx: '10', ry: '10' },
                 text: { text: "va-master", fill: 'white' }
             }
         });
@@ -168,7 +168,7 @@ var Jointjs = React.createClass({
                 position: h_trans[i],
                 size: { width: 100, height: 30 },
                 attrs: {
-                    rect: { fill: 'gray' },
+                    rect: { fill: 'gray', rx: '10', ry: '10' },
                     text: { text: host.name, fill: 'white' }
                 }
             }));
@@ -183,7 +183,7 @@ var Jointjs = React.createClass({
                     position: h_trans[i],
                     size: { width: 120, height: 40 },
                     attrs: {
-                        rect: { fill: 'green' },
+                        rect: { fill: 'green', rx: '10', ry: '10' },
                         text: { text: host.instances[j].name + "\nIP: " + host.instances[j].ip , fill: 'white' }
                     }
                 }));

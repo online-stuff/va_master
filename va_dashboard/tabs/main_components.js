@@ -174,7 +174,10 @@ var Chart = React.createClass({
 
 var Table = React.createClass({
     btn_clicked: function(id, evtKey){
-        if(this.props.table.path.length > 0){
+        if('id' in this.props.panel){
+            id.push(this.props.panel.id);
+        }
+        if('path' in this.props.table && this.props.table.path.length > 0){
             var args = [this.props.table.path[0]]
             if(this.props.table.path.length > 1){
                 args.push(this.props.table.path[1]);
@@ -183,16 +186,29 @@ var Table = React.createClass({
             }
             args.push(id[0]);
             var data = {"instance_name": this.props.panel.instance, "action": evtKey, "args": [args]};
-            console.log(data);
             var me = this;
-            Network.post('/api/panels/action', this.props.auth.token, data).done(function(d) {
-                var msg = d[me.props.panel.instance];
-                if(typeof msg === 'string'){
+            if(typeof evtKey === 'object' && evtKey.type === "download"){
+                data.action = evtKey.name;
+                Network.download_file('/api/panels/serve_file', this.props.auth.token, data).done(function(d) {
+                    var data = new Blob([d], {type: 'octet/stream'});
+                    var url = window.URL.createObjectURL(data);
+                    tempLink = document.createElement('a');
+                    tempLink.href = url;
+                    tempLink.setAttribute('download', args[args.length - 1]);
+                    tempLink.click();
+                }).fail(function (msg) {
                     me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
-                }
-            }).fail(function (msg) {
-                me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
-            });
+                });
+            }else{
+                Network.post('/api/panels/action', this.props.auth.token, data).done(function(d) {
+                    var msg = d[me.props.panel.instance];
+                    if(typeof msg === 'string'){
+                        me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
+                    }
+                }).fail(function (msg) {
+                    me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
+                });
+            }
         }else if(evtKey == 'chart'){
             var newName = this.props.name.replace(/\s/g, "_");
             var newId = id[0].replace(/:/g, "_");
@@ -277,6 +293,7 @@ var Table = React.createClass({
             if("width" in tmp){
                 style = {"width": tmp.width};
             }
+            cols.push(tmp.key);
             tbl_cols[i] = (
                 <Reactable.Th key={tmp.key} column={tmp.key} style={style}>{tmp.label}</Reactable.Th>
             );
@@ -371,7 +388,7 @@ var Table = React.createClass({
         }
         return (
             <div>
-            { pagination ? ( <Reactable.Table className={className} itemsPerPage={10} pageButtonLimit={10} noDataText="No matching records found." sortable={true} filterable={cols} filterBy={filterBy} hideFilterInput >
+            { pagination ? ( <Reactable.Table className={className} itemsPerPage={10} pageButtonLimit={10} noDataText="No matching records found." sortable={true} filterable={cols} >
                 <Reactable.Thead>
                     {tbl_cols}
                 </Reactable.Thead>
@@ -518,12 +535,12 @@ var Path = React.createClass({
         });
     },
     render: function () {
-        var me = this;
-        var paths = this.props.table.path.map(function(path, i){
-            // <li className="breadcrumb-item"><a href="#">Home</a></li>
-            // <li className="breadcrumb-item active">Library</li>
-            return <li className="breadcrumb-item"><span id={i} className="link" onClick={me.onClick}>{path}</span></li>;
-        });
+        var me = this, paths = [];
+        if("path" in this.props.table){
+            paths =  this.props.table.path.map(function(path, i){
+                return <li key={i} className="breadcrumb-item"><span id={i} className="link" onClick={me.onClick}>{path}</span></li>;
+            });
+        }
         return (
             <ol className="breadcrumb">
                 {paths}
@@ -572,7 +589,7 @@ var Form = React.createClass({
                     var action = "", defaultValue = element.value[0];
                     if("action" in element){
                         action = this.onSelect.bind(this, element.action);
-                        if("table" in this.props && this.props.table.path.length > 0)
+                        if("table" in this.props && "path" in this.props.table && this.props.table.path.length > 0)
                             defaultValue = this.props.table.path[0];
                     }
                     return ( <select ref="dropdown" id={index} key={element.name} onChange={action} name={element.name} defaultValue={defaultValue}>

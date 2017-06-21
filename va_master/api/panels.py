@@ -18,6 +18,7 @@ def get_paths():
             'panels/new_panel' : new_panel, #JUST FOR TESTING
             'panels/action' : panel_action, #must have instance_name and action in data, ex: panels/action instance_name=nino_dir action=list_users
             'panels/chart_data' : get_chart_data,
+            'panels/serve_file' : salt_serve_file,
         }
     }
     return paths
@@ -69,6 +70,36 @@ def panel_action_execute(handler):
         import traceback 
         traceback.print_exc()
     raise tornado.gen.Return(result)
+
+@tornado.gen.coroutine
+def salt_serve_file(handler):
+    instance = handler.data['instance_name']
+    action = handler.data['action']
+
+    args = handler.data.get('args', [])
+    kwargs = handler.data.get('kwargs', {})
+
+
+    instance_info = yield apps.get_app_info(handler)
+    state = instance_info[instance]['role']
+    states = yield handler.config.deploy_handler.get_states()
+    state = [x for x in states if x['name'] == state] or [{'module' : 'openvpn'}]
+    state = state[0]
+    module = handler.data.get('module', state['module'])
+
+    action = module + '.' + action
+
+    cl = salt.client.LocalClient()
+    print ('Calilng serve on ', instance, ' with action ', action, ' with args : ', args, ' and kwargs : ', kwargs)
+    result = cl.cmd(instance, action, args, kwargs = kwargs)
+    result = result['va-backup']
+    print ('Result is : ', result)
+    path_to_file = '/tmp/some_salt_file'
+
+    with open(path_to_file, 'w') as f: 
+        f.write(result)
+
+    yield handler.serve_file(path_to_file)
 
 @tornado.gen.coroutine
 def get_ts_data(handler):
