@@ -67,7 +67,7 @@ class DeployHandler(object):
     def get_drivers(self):
         if not self.drivers: 
             init_vals = yield self.datastore.get('init_vals')
-            host_ip =  init_vals['ip'] 
+            host_ip =  init_vals['fqdn'] 
             va_flavours = init_vals['va_flavours']
 
             kwargs = {
