@@ -48,6 +48,9 @@ var Subpanel = React.createClass({
 
     render: function () {
         var redux = {};
+        var ModalRedux = connect(function(state){
+            return {auth: state.auth, modal: state.modal, panel: state.panel, alert: state.alert};
+        })(widgets.Modal);
 
         var elements = this.state.template.content.map(function(element) {
             element.key = element.name;
@@ -72,6 +75,7 @@ var Subpanel = React.createClass({
             <div key={this.props.params.id}>
                 <Bootstrap.PageHeader>{this.state.template.title + " for " + this.state.args} <small>{this.props.params.instance}</small></Bootstrap.PageHeader>
                 {elements}
+                <ModalRedux />
             </div>
         );
     }
