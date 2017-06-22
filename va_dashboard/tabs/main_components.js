@@ -609,6 +609,9 @@ var Form = React.createClass({
             if(Object.keys(redux).indexOf(type) < 0){
                 if(type == "Button" && element.action == "modal"){
                     var modalTemplate = Object.assign({}, element.modal), args = [];
+                    if('panel' in this.props && 'args' in this.props.panel){
+                        args.push(this.props.panel.args);
+                    }
                     if('args' in this.props){
                         for(var key in this.props.args){
                             val = this.props.args[key]
