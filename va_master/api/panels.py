@@ -145,7 +145,9 @@ def get_panel_for_user(handler):
             args = [handler.data['host'], handler.data['service']]
             handler.data['args'] = [panel] + args
         else:
-            handler.data['args'] = [panel]
+            if type(handler.data.get('args', [])) != list and handler.data.get('args'): 
+                handler.data['args'] = [handler.data['args']]
+            handler.data['args'] = [panel] + handler.data.get('args', [])
 
         try: 
             panel = yield panel_action_execute(handler)
