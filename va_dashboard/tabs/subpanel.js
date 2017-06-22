@@ -14,31 +14,31 @@ var Subpanel = React.createClass({
                 "tbl_source": {},
                 "content": []
             },
-            username: ""
+            args: ""
         };
     },
 
-    getPanel: function (id, instance, username) {
+    getPanel: function (id, instance, args) {
         var me = this;
-        var data = {'panel': id, 'instance_name': instance, 'args': username};
+        var data = {'panel': id, 'instance_name': instance, 'args': args};
         console.log(data);
-        this.props.dispatch({type: 'CHANGE_PANEL', panel: id, instance: instance, id: username});
+        this.props.dispatch({type: 'CHANGE_PANEL', panel: id, instance: instance, args: args});
         Network.get('/api/panels/get_panel', this.props.auth.token, data).done(function (data) {
             console.log(data.tbl_source);
             me.props.dispatch({type: 'ADD_DATA', tables: data.tbl_source});
-            me.setState({template: data, username: username});
+            me.setState({template: data, args: args});
         }).fail(function (msg) {
             me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
         });
     },
 
     componentDidMount: function () {
-        this.getPanel(this.props.params.id, this.props.params.instance, this.props.params.username);
+        this.getPanel(this.props.params.id, this.props.params.instance, this.props.params.args);
     },
 
     componentWillReceiveProps: function (nextProps) {
-        if (nextProps.params.id !== this.props.params.id || nextProps.params.instance !== this.props.params.instance || nextProps.params.username !== this.props.params.username) {
-            this.getPanel(nextProps.params.id, nextProps.params.instance, nextProps.params.username);
+        if (nextProps.params.id !== this.props.params.id || nextProps.params.instance !== this.props.params.instance || nextProps.params.args !== this.props.params.args) {
+            this.getPanel(nextProps.params.id, nextProps.params.instance, nextProps.params.args);
         }
     },
 
@@ -70,7 +70,7 @@ var Subpanel = React.createClass({
 
         return (
             <div key={this.props.params.id}>
-                <Bootstrap.PageHeader>{this.state.template.title + " for " + this.state.username} <small>{this.props.params.instance}</small></Bootstrap.PageHeader>
+                <Bootstrap.PageHeader>{this.state.template.title + " for " + this.state.args} <small>{this.props.params.instance}</small></Bootstrap.PageHeader>
                 {elements}
             </div>
         );

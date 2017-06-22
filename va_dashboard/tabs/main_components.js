@@ -175,7 +175,7 @@ var Chart = React.createClass({
 var Table = React.createClass({
     btn_clicked: function(id, evtKey){
         if('id' in this.props.panel){
-            id.push(this.props.panel.id);
+            id.unshift(this.props.panel.args);
         }
         if('path' in this.props.table && this.props.table.path.length > 0){
             var args = [this.props.table.path[0]]
