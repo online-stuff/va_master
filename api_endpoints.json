@@ -1,0 +1,26 @@
+{
+    "put": {},
+    "user_allowed": {},
+    "post": {
+        "hosts/info": {
+            "args": [
+                "required_hosts",
+                "get_billing",
+                "get_instances"
+            ]
+        }
+    },
+    "get": {
+        "apps/get_actions": {
+            "args": []
+        }
+    },
+    "delete": {
+        "triggers/delete_trigger": {
+            "args": [
+                "hostname",
+                "trigger_id"
+            ]
+        }
+    }
+}

@@ -1,12 +1,22 @@
-import unittest
+import unittest, simplejson
 from url_handler import gather_paths
 
 class TestAPIMethods():
 
-    def __init__(self, token, base_url):
+    def __init__(self, token, base_url, paths = None):
         self.base_url = base_url
         self.paths = gather_paths()
         self.token = token
+
+    def generate_api_endpoints(self):
+        print self.paths
+        serialized_paths = {m : {f : {'args' : self.paths[m][f]['args'] for x in  self.paths[m][f]} for f in self.paths[m]} for m in self.paths}
+        with open('api_endpoints.json', 'w') as f: 
+            f.write(simplejson.dumps(serialized_paths, indent = 4))
+
+    def set_paths(self, paths): 
+        print 'Setting paths to : ', paths
+        self.paths = paths
 
     def test_api_endpoints(self):
         for method in ['get', 'post']: 
@@ -15,7 +25,7 @@ class TestAPIMethods():
                 exec_f = raw_input('Execute ' + f + ' ? y/n\n')
                 if exec_f != 'y': continue
                 f_args = functions[f]['args']
-                f_name = functions[f]['function']
+                f_name = f 
                 entered_args = []
                 if f_args != []: 
                     entered_args = []
