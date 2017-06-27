@@ -273,6 +273,10 @@ def handle_new_admin(args):
     create_user = functools.partial(login.create_user, store, args['username'], args['password'], 'admin')
     create_user_run = run_sync(create_user)
    
+def handle_test_api(args):
+    from .api import api_test
+    test_cl = api_test.TestAPIMethods(args['token'], args['base_url'])
+    test_cl.test_api_endpoints()
 
 
 
@@ -312,9 +316,13 @@ def entry():
     new_admin.add_argument('--username', help = 'The username for the admin. ')
     new_admin.add_argument('--password', help = 'The password. Will be hashed in the datastore.  ')
 
-
     new_admin.set_defaults(sub='new_admin')
 
+    test_api = subparsers.add_parser('test-api', help='Runs through (some of) the API endpoints and tests their results. ')
+    test_api.add_argument('--token', help = 'Enter the token which the test suite will use. ')
+    test_api.add_argument('--base-url', help = 'Enter the base url. Default : 127.0.0.1', default = 'https://127.0.0.1:443/api/')
+
+    test_api.set_defaults(sub='test_api')
 
     args = parser.parse_args()
     # Define handlers for each subparser
@@ -323,6 +331,7 @@ def entry():
         'jsbuild': handle_jsbuild,
         'add_module' : handle_add_module,
         'new_admin' : handle_new_admin,
+        'test_api' : handle_test_api,
         'stop': lambda x: None
     }
     # Call the proper handler based on the subparser argument

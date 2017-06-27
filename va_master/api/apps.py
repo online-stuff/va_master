@@ -9,40 +9,39 @@ from salt.client import Caller, LocalClient
 
 import panels
 
-
 def get_paths():
     paths = {
         'get' : {
-            'apps/vpn_users' : get_openvpn_users,
-            'apps/vpn_status' : get_openvpn_status, 
-            'apps/add_app' : add_app,
-            'apps/get_actions' : get_user_actions, 
+            'apps/vpn_users' : {'function' : get_openvpn_users, 'args' : []},
+            'apps/vpn_status' : {'function' : get_openvpn_status, 'args' : []},
+            'apps/add_app' : {'function' : add_app, 'args' : ['host']},
+            'apps/get_actions' : {'function' : get_user_actions, 'args' : []},
 
-            'states' : get_states, 
-            'states/reset' : reset_states, #Just for testing
+            'states' : {'function' : get_states, 'args' : []},
+            'states/reset' : {'function' : reset_states, 'args' : []},#Just for testing
 
 
         },
         'post' : {
-            'state/add' : create_new_state,
+            'state/add' : {'function' : create_new_state,'args' : ['file', 'body', 'filename']},
 
-            'apps' : launch_app, 
-            'apps/action' : perform_instance_action, 
-            'apps/add_vpn_user': add_openvpn_user,
-            'apps/revoke_vpn_user': revoke_openvpn_user,
-            'apps/list_user_logins': list_user_logins,
-            'apps/download_vpn_cert': download_vpn_cert,
+            'apps' : {'function' : launch_app, 'args' : ['role', 'hostname', 'instance_name', 'role', 'image', 'size', 'network']},
+            'apps/action' : {'function' : perform_instance_action, 'args' : ['hostname', 'action', 'instance_name']},
+            'apps/add_vpn_user': {'function' : add_openvpn_user, 'args' : ['username']},
+            'apps/revoke_vpn_user': {'function' : revoke_openvpn_user, 'args' : ['username']},
+            'apps/list_user_logins': {'function' : list_user_logins, 'args' : ['username']},
+            'apps/download_vpn_cert': {'function' : download_vpn_cert, 'args' : ['username']},
         }
     }
     return paths
 
 @tornado.gen.coroutine
-def add_app(handler):
-    app = yield get_app_info(handler)
+def add_app(deploy_handler):
+    app = yield get_app_info(deploy_handler)
     yield handler.config.deploy_handler.store_app(app, handler.data['host'])
 
 @tornado.gen.coroutine
-def get_openvpn_users(handler):
+def get_openvpn_users(deploy_handler):
     cl = Caller()
     users = cl.cmd('openvpn.list_users')
     users['active'] = [{'name' : x, 'check' : False, 'connected' : x in users['status']['client_list']} for x in users['active']]
@@ -50,35 +49,35 @@ def get_openvpn_users(handler):
     raise tornado.gen.Return(users)
 
 @tornado.gen.coroutine
-def get_openvpn_status(handler):
+def get_openvpn_status(deploy_handler):
     cl = Caller()
     status = cl.cmd('openvpn.get_status')
     raise tornado.gen.Return(status)
 
 @tornado.gen.coroutine
-def add_openvpn_user(handler):
+def add_openvpn_user(deploy_handler, username):
     cl = Caller()
-    success = cl.cmd('openvpn.add_user', username = handler.data['username'])
+    success = cl.cmd('openvpn.add_user', username = username)
     raise tornado.gen.Return(success)
 
 @tornado.gen.coroutine
-def revoke_openvpn_user(handler):
+def revoke_openvpn_user(deploy_handler, username):
     cl = Caller()
-    success = cl.cmd('openvpn.revoke_user', username = handler.data['username'])
+    success = cl.cmd('openvpn.revoke_user', username = username)
     raise tornado.gen.Return(success)   
 
 @tornado.gen.coroutine
-def list_user_logins(handler): 
+def list_user_logins(deploy_handler, username): 
     cl = Caller()
-    success = cl.cmd('openvpn.list_user_logins', user = handler.data['username'])
+    success = cl.cmd('openvpn.list_user_logins', user = username)
     raise tornado.gen.Return(success)
 
 @tornado.gen.coroutine
-def download_vpn_cert(handler):
+def download_vpn_cert(deploy_handler, username):
     cl = Caller()
-    cert = cl.cmd('openvpn.get_config', username = handler.data['username'])
+    cert = cl.cmd('openvpn.get_config', username = username)
 
-    vpn_cert_path = '/tmp/' + handler.data['username'] + '_vpn.cert'
+    vpn_cert_path = '/tmp/' + username + '_vpn.cert'
     with open(vpn_cert_path, 'w') as f: 
         f.write(cert)
  
@@ -87,28 +86,26 @@ def download_vpn_cert(handler):
 
 
 @tornado.gen.coroutine
-def perform_instance_action(handler): 
+def perform_instance_action(deploy_handler, hostname, action, instance_name): 
     try: 
-        data = handler.data
-        store = handler.config.deploy_handler.datastore
+        store = deploy_handler.datastore
         hosts = yield store.get('hosts')
 
-        host = [x for x in hosts if x['hostname'] == data['hostname']][0]
+        host = [x for x in hosts if x['hostname'] == hostname][0]
         driver = yield handler.config.deploy_handler.get_driver_by_id(host['driver_name'])
-        success = yield driver.instance_action(host, data['instance_name'], data['action'])
+        success = yield driver.instance_action(host, instance_name, action)
     except: 
         import traceback
         traceback.print_exc()
 
 
 @tornado.gen.coroutine
-def manage_states(handler, action = 'append'):
+def manage_states(deploy_handler, name, action = 'append'):
     try:
-        deploy_handler = handler.config.deploy_handler
         current_states = yield deploy_handler.datastore.get('states')
 
         #TODO delete from /srv/salt
-        getattr(current_states, action)(handler.data['name'])
+        getattr(current_states, action)(name)
         store_action = {
             'append' : deploy_handler.datastore.insert, 
             'delete' : deploy_handler.datastore.delete, 
@@ -121,19 +118,19 @@ def manage_states(handler, action = 'append'):
         traceback.print_exc()
 
 @tornado.gen.coroutine
-def get_states(handler):
-    states_data = yield handler.config.deploy_handler.get_states()
+def get_states(deploy_handler):
+    states_data = yield deploy_handler.get_states()
     raise tornado.gen.Return(states_data)
 
 
 @tornado.gen.coroutine
-def reset_states(handler):
+def reset_states(deploy_handler):
     yield handler.config.deploy_handler.reset_states()
 
 
 @tornado.gen.coroutine
-def create_new_state(handler):
-    data = handler.data['file'][0]
+def create_new_state(deploy_handler, file_contents, body, filename):
+    data = file_contents[0]
     files_archive = data['body']
     state_name = data['filename']
 
@@ -169,9 +166,7 @@ def create_new_state(handler):
 
 
 @tornado.gen.coroutine
-def get_app_info(handler):
-    instance_name = handler.data['instance_name']
-   
+def get_app_info(deploy_handler, instance_name):
     cl = Caller()
     print ('Getting inventory for :', instance_name)
     instance_info = cl.cmd('mine.get', instance_name, 'inventory') 
@@ -181,9 +176,8 @@ def get_app_info(handler):
         
 ##@auth_only
 @tornado.gen.coroutine
-def launch_app(handler):
+def launch_app(deploy_handler):
     data = handler.data
-    deploy_handler = handler.config.deploy_handler
     store = deploy_handler.datastore
 
 
@@ -193,7 +187,7 @@ def launch_app(handler):
     driver = yield deploy_handler.get_driver_by_id(required_host['driver_name'])
     result = yield driver.create_minion(required_host, data)
 
-    minion_info = yield get_app_info(handler)
+    minion_info = yield get_app_info(deploy_handler)
 
     if data.get('role'):
 
@@ -210,6 +204,6 @@ def launch_app(handler):
     raise tornado.gen.Return(result)
 
 @tornado.gen.coroutine
-def get_user_actions(handler):
-    actions = yield handler.config.deploy_handler.get_actions(int(handler.data.get('no_actions', 0)))
+def get_user_actions(deploy_handler):
+    actions = yield deploy_handler.get_actions(int(handler.data.get('no_actions', 0)))
     raise tornado.gen.Return(actions)

@@ -14,8 +14,8 @@ import json, datetime, syslog
 
 
 
-def invalid_url(handler):
-    raise Exception('Invalid URL : ' + handler.data['path'] +' with method : ' + handler.data['method'])
+def invalid_url(deploy_handler, path, method):
+    raise Exception('Invalid URL : ' + path +' with method : ' + method)
 
 class ApiHandler(tornado.web.RequestHandler):
     executor = ThreadPoolExecutor(max_workers= 4)
@@ -57,25 +57,26 @@ class ApiHandler(tornado.web.RequestHandler):
         try: 
             result_fields = ['data', 'success', 'message']
             result = (set (result.keys()) == set(result_fields))
-#            print ('Formatted correctly: ', result, ' because : ', result.keys())
             return result
         except: 
 #            print ('Error with testing formatted result - probably is ok. ')
             return False
+
     @tornado.gen.coroutine
     def exec_method(self, method, path, data):
         self.data = data
-        print 'Data is : ', data
         self.data['method'] = method
+        self.data['handler'] = self
         api_func = self.paths[method].get(path)
+
         print ('Getting a call at ', path, ' with data ', data, ' and will call function: ', api_func)
 
         if not api_func: 
-            api_func = invalid_url 
-            self.data = {'path' : path, 'method' : method}
+            data = {'path' : path, 'method' : method}
+            api_func = {'function' : invalid_url, 'args' : ['path', 'method']}
         elif api_func != user_login: 
             try: 
-                yield self.log_message(path, data, func = api_func)
+                yield self.log_message(path = path, data = data, func = api_func['function'])
 
                 user = yield get_current_user(self)
 
@@ -86,8 +87,10 @@ class ApiHandler(tornado.web.RequestHandler):
             except: 
                 import traceback
                 traceback.print_exc()
-        try: 
-            result = yield api_func(self)
+        try:
+            api_func, api_kwargs = api_func.get('function'), api_func.get('args')       
+            api_kwargs = {x : data.get(x) for x in api_kwargs if data.get(x)} or {}
+            result = yield api_func(self.config.deploy_handler, **api_kwargs)
             if type(result) == dict: 
                 if result.get('data_type', 'json') == 'file' : 
                     raise tornado.gen.Return(None)
@@ -156,6 +159,7 @@ class ApiHandler(tornado.web.RequestHandler):
     @tornado.gen.coroutine
     def log_message(self, path, data, func):
 
+        data = {x : str(data[x]) for x in data}
         user = yield url_handler.login.get_current_user(self)
         message = json.dumps({
             'type' : data['method'], 
