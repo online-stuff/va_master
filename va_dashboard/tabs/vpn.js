@@ -174,7 +174,7 @@ var Vpn = React.createClass({
                         <tr>
                         <td>Name</td>
                         <td>Connected since</td>
-                        <td>IP address</td>
+                        <td>Virtual IP</td>
                         <td>Bytes in</td>
                         <td>Bytes out</td>
                         </tr>

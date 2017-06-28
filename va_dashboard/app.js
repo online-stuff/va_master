@@ -182,7 +182,23 @@ function form(state, action){
     return newState;
 };
 
-var mainReducer = Redux.combineReducers({auth: auth, table: table, filter: filter, modal: modal, apps: apps, div: div, panel: panel, alert: alert, form: form});
+function dropdown(state, action){
+    if(typeof state === 'undefined'){
+        return {select: ""};
+    }
+
+    var newState = Object.assign({}, state);
+    if(action.type == 'SELECT'){
+        newState.select = action.select;
+    }
+    if(action.type == 'RESET_SELECTION'){
+        newState.select = "";
+    }
+
+    return newState;
+};
+
+var mainReducer = Redux.combineReducers({auth: auth, table: table, filter: filter, modal: modal, apps: apps, div: div, panel: panel, alert: alert, form: form, dropdown: dropdown});
 var store = Redux.createStore(mainReducer);
 
 var Home = require('./tabs/home');
@@ -212,7 +228,7 @@ var App = React.createClass({
                 <Router.Route path='/vpn/list_logins/:username' component={VpnLogins} />
                 <Router.Route path='/triggers' component={Triggers} />
                 <Router.Route path='/ts_status' component={Ts_status} />
-                <Router.Route path='/panel/:id/:instance' component={Panel} />
+                <Router.Route path='/panel/:id/:instance(/:args)' component={Panel} />
                 <Router.Route path='/subpanel/:id/:instance/:args' component={Subpanel} />
                 <Router.Route path='/chart_panel/:instance/:host/:service' component={ChartPanel} />
             </Router.Route>

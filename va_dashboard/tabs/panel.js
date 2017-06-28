@@ -17,9 +17,9 @@ var Panel = React.createClass({
         };
     },
 
-    getPanel: function (id, instance) {
+    getPanel: function (id, instance, args) {
         var me = this;
-        var data = {'panel': id, 'instance_name': instance};
+        var data = {'panel': id, 'instance_name': instance, 'args': args};
         console.log(data);
         this.props.dispatch({type: 'CHANGE_PANEL', panel: id, instance: instance});
         Network.get('/api/panels/get_panel', this.props.auth.token, data).done(function (data) {
@@ -33,13 +33,15 @@ var Panel = React.createClass({
     },
 
     componentDidMount: function () {
-        this.getPanel(this.props.params.id, this.props.params.instance);
+        var args = "args" in this.props.params ? this.props.params.args : [];
+        this.getPanel(this.props.params.id, this.props.params.instance, args);
     },
 
     componentWillReceiveProps: function (nextProps) {
         if (nextProps.params.id !== this.props.params.id || nextProps.params.instance !== this.props.params.instance) {
             this.props.dispatch({type: 'RESET_FILTER'});
-            this.getPanel(nextProps.params.id, nextProps.params.instance);
+            var args = "args" in nextProps.params ? nextProps.params.args : [];
+            this.getPanel(nextProps.params.id, nextProps.params.instance, args);
         }
     },
 
