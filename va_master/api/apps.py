@@ -25,7 +25,7 @@ def get_paths():
         'post' : {
             'state/add' : {'function' : create_new_state,'args' : ['file', 'body', 'filename']},
 
-            'apps' : {'function' : launch_app, 'args' : ['role', 'hostname', 'instance_name', 'role', 'image', 'size', 'network']},
+            'apps' : {'function' : launch_app, 'args' : ['handler']},
             'apps/action' : {'function' : perform_instance_action, 'args' : ['hostname', 'action', 'instance_name']},
             'apps/add_vpn_user': {'function' : add_openvpn_user, 'args' : ['username']},
             'apps/revoke_vpn_user': {'function' : revoke_openvpn_user, 'args' : ['username']},
@@ -176,7 +176,7 @@ def get_app_info(deploy_handler, instance_name):
         
 ##@auth_only
 @tornado.gen.coroutine
-def launch_app(deploy_handler):
+def launch_app(deploy_handler, handler):
     data = handler.data
     store = deploy_handler.datastore
 
