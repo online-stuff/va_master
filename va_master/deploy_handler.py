@@ -169,12 +169,9 @@ class DeployHandler(object):
         try: 
             panels = yield self.datastore.get('panels')
         except: 
-            panels = {}
+            panels = {'admin' : [], 'user' : []}
         print ('States data is : ', states_data)
         get_panel_instances = lambda i, user_type: [x for x in panels.get(user_type) if x['name'] == i] or [{'instances' : []}]
-
-        for x in states_data: 
-            print 'instances for : ', x['name'], ' is : ', get_panel_instances(x['name'], 'admin')[0]['instances']
 
         print ('Panel instances for backup is : ', get_panel_instances('backup', 'admin'))
         user_panels, admin_panels = ([

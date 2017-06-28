@@ -9,82 +9,73 @@ from login import auth_only
 def get_paths():
     paths = {
         'get' : {
-            'panels' : get_panels, 
-            'panels/get_panel' : get_panel_for_user,
-            'panels/ts_data' : get_ts_data,  
+            'panels' : {'function' : get_panels, 'args' : ['handler']}, 
+            'panels/get_panel' : {'function' : get_panel_for_user, 'args' : ['handler']},
+            'panels/ts_data' : {'function' : get_ts_data, 'args' : []},  
         },
         'post' : {
-            'panels/reset_panels': reset_panels, #JUST FOR TESTING
-            'panels/new_panel' : new_panel, #JUST FOR TESTING
-            'panels/action' : panel_action, #must have instance_name and action in data, ex: panels/action instance_name=nino_dir action=list_users
-            'panels/chart_data' : get_chart_data,
-            'panels/serve_file' : salt_serve_file,
+            'panels/reset_panels': {'function' : reset_panels, 'args' : []}, #JUST FOR TESTING
+            'panels/new_panel' : {'function' : new_panel, 'args' : ['panel_name', 'role']},
+            'panels/action' : {'function' : panel_action, 'args' : ['instance_name', 'action', 'args', 'kwargs', 'module']}, #must have instance_name and action in data, 'args' : []}, ex: panels/action instance_name=nino_dir action=list_users
+            'panels/chart_data' : {'function' : get_chart_data, 'args' : ['instance_name', 'args']},
+            'panels/serve_file' : {'function' : salt_serve_file, 'args' : ['instance_name', 'action', 'args', 'kwargs', 'module']},
         }
     }
     return paths
 
 @tornado.gen.coroutine
-def reset_panels(handler): 
-    yield handler.config.deploy_handler.reset_panels()
+def reset_panels(deploy_handler): 
+    yield deploy_handler.reset_panels()
 
 @tornado.gen.coroutine
-def new_panel(handler):
-    states = yield handler.config.deploy_handler.get_states_data()
-    panel = {'panel_name' : handler.data['panel_name'], 'role' : handler.data['role']}
-    panel.update([x for x in states if x['name'] == handler.data['role']][0]['panels'])
-    yield handler.config.deploy_handler.store_panel(panel)
+def new_panel(deploy_handler, panel_name, role):
+    states = yield deploy_handler.get_states_data()
+    panel = {'panel_name' : panel_name, 'role' : role}
+    panel.update([x for x in states if x['name'] == role][0]['panels'])
+    yield deploy_handler.store_panel(panel)
 
 
 @tornado.gen.coroutine
-def list_panels(handler): 
+def list_panels(deploy_handler, handler): 
     user_group = yield login.get_user_type(handler)
 
-    panels = yield handler.config.deploy_handler.datastore.get('panels')
+    panels = yield deploy_handler.datastore.get('panels')
     panels = panels[user_group]
 
     raise tornado.gen.Return(panels)
 
 @tornado.gen.coroutine
-def panel_action_execute(handler):
+def panel_action_execute(deploy_handler, instance_name, action, args = [], kwargs = {}, module = None):
     try:
 
-        instance = handler.data['instance_name']
-        instance_info = yield apps.get_app_info(handler)
-        state = instance_info[instance]['role']
-        action = handler.data['action']
+        instance_info = yield apps.get_app_info(deploy_handler)
+        state = instance_info[instance_info]['role']
 
-
-        args = handler.data.get('args', [])
-        kwargs = handler.data.get('kwargs', {})
-
-        states = yield handler.config.deploy_handler.get_states()
+        states = yield deploy_handler.get_states()
         state = [x for x in states if x['name'] == state] or [{'module' : 'openvpn'}]
         state = state[0]
-        module = handler.data.get('module', state['module'])
+        
+        if not module: 
+            module = state['module']
 
         cl = salt.client.LocalClient()
-        print ('Calling salt module ', module + '.' + action, ' on ', instance, ' with args : ', args, ' and kwargs : ', kwargs)
-        result = cl.cmd(instance, module + '.' + action , args, kwargs = kwargs)
+        print ('Calling salt module ', module + '.' + action, ' on ', instance_name, ' with args : ', args, ' and kwargs : ', kwargs)
+        result = cl.cmd(instance_name, module + '.' + action , args, kwargs = kwargs)
     except: 
         import traceback 
         traceback.print_exc()
     raise tornado.gen.Return(result)
 
 @tornado.gen.coroutine
-def salt_serve_file(handler):
-    instance = handler.data['instance_name']
-    action = handler.data['action']
+def salt_serve_file(deploy_handler, instance_name, action, args = [], kwargs = {}, module = None):
 
-    args = handler.data.get('args', [])
-    kwargs = handler.data.get('kwargs', {})
-
-
-    instance_info = yield apps.get_app_info(handler)
+    instance_info = yield apps.get_app_info(deploy_handler)
     state = instance_info[instance]['role']
-    states = yield handler.config.deploy_handler.get_states()
+    states = yield deploy_handler.get_states()
     state = [x for x in states if x['name'] == state] or [{'module' : 'openvpn'}]
     state = state[0]
-    module = handler.data.get('module', state['module'])
+    if not module: 
+        module = state['module']
 
     action = module + '.' + action
 
@@ -101,61 +92,53 @@ def salt_serve_file(handler):
     yield handler.serve_file(path_to_file)
 
 @tornado.gen.coroutine
-def get_ts_data(handler):
+def get_ts_data(deploy_handler):
     cl = salt.client.LocalClient()
 
     result = cl.cmd('va-monitoring.evo.mk', 'monitoring.chart_data')
     raise tornado.gen.Return(result)
 
 @tornado.gen.coroutine
-def get_chart_data(handler):
+def get_chart_data(deploy_handler, instance_name, args = ['va-directory', 'Ping']):
     cl = salt.client.LocalClient()
-
-    instance = handler.data['instance_name']
-    args = handler.data.get('args', ['va-directory', 'Ping'])
 
     result = cl.cmd(instance, 'monitoring_stats.parse' , args)
     raise tornado.gen.Return(result)
 
 @tornado.gen.coroutine
-def panel_action(handler):
-    print 'In panel action/ '
-    instance_result = yield panel_action_execute(handler)
+def panel_action(deploy_handler, instance_name, action, args = [], kwargs = {}, module = None):
+    instance_result = panel_action_execute(deploy_handler, instance_name, action, args, kwargs, module)
     raise tornado.gen.Return(instance_result)
 
 
 @tornado.gen.coroutine
-def get_panels(handler):
-    panels = yield list_panels(handler)
+def get_panels(deploy_handler, handler):
+    panels = yield list_panels(deploy_handler, handler)
     raise tornado.gen.Return(panels)
 
 @tornado.gen.coroutine
-def get_panel_for_user(handler):
-    panel = handler.data['panel']
+def get_panel_for_user(deploy_handler, panel, instance_name, service, args = []):
 
-    user_panels = yield list_panels(handler)
-    instance_info = yield apps.get_app_info(handler)
-    instance_info = instance_info[handler.data['instance_name']]
+    user_panels = yield list_panels(deploy_handler)
+    instance_info = yield apps.get_app_info(deploy_handler)
     state = instance_info['role']
 
     state = filter(lambda x: x['name'] == state, user_panels)[0]
-    if handler.data['instance_name'] in state['instances']:
-        handler.data['action'] = 'get_panel'
+    if instance_name in state['instances']:
+        action = 'get_panel'
         if 'host' in handler.data:
-            args = [handler.data['host'], handler.data['service']]
-            handler.data['args'] = [panel] + args
+            args = [host, service]
         else:
-            if type(handler.data.get('args', [])) != list and handler.data.get('args'): 
-                handler.data['args'] = [handler.data['args']]
-            handler.data['args'] = [panel] + handler.data.get('args', [])
-
+            if type(args) != list and args: 
+                args = [args]
+            args = [panel] + args
         try: 
-            panel = yield panel_action_execute(handler)
+            panel  = panel_action_execute(deploy_handler, instance_name, action, args)
         except: 
             import traceback
             traceback.print_exc()
 
-        panel = panel[handler.data['instance_name']]
+        panel = panel[instance_name]
         raise tornado.gen.Return(panel)
     else: 
         raise tornado.gen.Return(False)

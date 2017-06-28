@@ -273,6 +273,18 @@ def handle_new_admin(args):
     create_user = functools.partial(login.create_user, store, args['username'], args['password'], 'admin')
     create_user_run = run_sync(create_user)
    
+def handle_test_api(args):
+    from .api import api_test
+    test_cl = api_test.TestAPIMethods(args['token'], args['base_url'])
+    if args['generate_endpoints']: 
+        test_cl.generate_api_endpoints()
+    else: 
+        path = {}
+        with open('api_endpoints.json') as f: 
+            paths = json.loads(f.read())
+        print paths
+        test_cl.set_paths(paths)
+        test_cl.test_api_endpoints()
 
 
 
@@ -312,9 +324,13 @@ def entry():
     new_admin.add_argument('--username', help = 'The username for the admin. ')
     new_admin.add_argument('--password', help = 'The password. Will be hashed in the datastore.  ')
 
-
     new_admin.set_defaults(sub='new_admin')
 
+    test_api = subparsers.add_parser('test-api', help='Runs through (some of) the API endpoints and tests their results. ')
+    test_api.add_argument('--token', help = 'Enter the token which the test suite will use. ')
+    test_api.add_argument('--generate-endpoints', help = 'If set to True, it will generate an api_endpoints.json file which you can edit to set up default arguments for all the functions. You may delete functions that you do not want in the test from this file. ', dest = 'generate_endpoints', action = 'store_true')
+    test_api.add_argument('--base-url', help = 'Enter the base url. Default : 127.0.0.1', default = 'https://127.0.0.1:443/api/')
+    test_api.set_defaults(sub='test_api')
 
     args = parser.parse_args()
     # Define handlers for each subparser
@@ -323,6 +339,7 @@ def entry():
         'jsbuild': handle_jsbuild,
         'add_module' : handle_add_module,
         'new_admin' : handle_new_admin,
+        'test_api' : handle_test_api,
         'stop': lambda x: None
     }
     # Call the proper handler based on the subparser argument

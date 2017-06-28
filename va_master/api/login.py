@@ -14,8 +14,8 @@ def get_paths():
         'get' : {
         },
         'post' : {
-            'login' : user_login, 
-            'new_user' : create_user_api
+            'login' : {'function' : user_login, 'args' : []},
+            'new_user' : {'function' : create_user_api, 'args' : ['user', 'password']}
         }
     }
     return paths
@@ -127,8 +127,8 @@ def create_user(datastore, username, password, user_type = 'user'):
     raise tornado.gen.Return(token)
 
 @tornado.gen.coroutine
-def create_user_api(handler):
-    token = yield create_user(handler.config.deploy_handler.datastore, handler.data['user'], handler.data['pass']) 
+def create_user_api(handler, user, password):
+    token = yield create_user(handler.config.deploy_handler.datastore, user, password) 
     raise tornado.gen.Return(token)
 
 

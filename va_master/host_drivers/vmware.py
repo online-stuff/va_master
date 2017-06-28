@@ -160,7 +160,6 @@ class VMWareDriver(base.DriverBase):
 #        ])
 #        steps[1] = datacenter
 
-        print ('Steps are : ', [x.serialize() for x in steps])
 
         raise tornado.gen.Return(steps)
 
