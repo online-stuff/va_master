@@ -117,7 +117,7 @@ def get_panels(deploy_handler, handler):
     raise tornado.gen.Return(panels)
 
 @tornado.gen.coroutine
-def get_panel_for_user(deploy_handler, panel, instance_name, service):
+def get_panel_for_user(deploy_handler, panel, instance_name, service, args = []):
 
     user_panels = yield list_panels(deploy_handler)
     instance_info = yield apps.get_app_info(deploy_handler)
@@ -129,7 +129,9 @@ def get_panel_for_user(deploy_handler, panel, instance_name, service):
         if 'host' in handler.data:
             args = [host, service]
         else:
-            args = [panel]
+            if type(args) != list and args: 
+                args = [args]
+            args = [panel] + args
         try: 
             panel  = panel_action_execute(deploy_handler, instance_name, action, args)
         except: 

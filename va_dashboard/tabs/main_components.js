@@ -174,8 +174,8 @@ var Chart = React.createClass({
 
 var Table = React.createClass({
     btn_clicked: function(id, evtKey){
-        if('id' in this.props.panel){
-            id.push(this.props.panel.id);
+        if('args' in this.props.panel){
+            id.unshift(this.props.panel.args);
         }
         if('path' in this.props.table && this.props.table.path.length > 0){
             var args = [this.props.table.path[0]]
@@ -347,7 +347,7 @@ var Table = React.createClass({
                         if("action" in col){
                             var col_arr = col['action'].split(':');
                             if(col_arr[0] === row[col.colClass])
-                                colText = <span className={colClass} onClick={me.linkClicked.bind(this, col_arr[1])}>{row[key]}</span>
+                                colText = <span className={colClass} onClick={me.linkClicked.bind(me, col_arr[1])}>{row[key]}</span>
                         }
                     }
                     return (
@@ -361,7 +361,7 @@ var Table = React.createClass({
                 action_col = (
                     <Reactable.Td column="action">
                         {action_length > 1 ? (
-                            <Bootstrap.DropdownButton bsStyle='primary' title="Choose" onSelect = {this.btn_clicked.bind(this, key)}>
+                            <Bootstrap.DropdownButton id={"dropdown-" + key[0]} bsStyle='primary' title="Choose" onSelect = {this.btn_clicked.bind(this, key)}>
                                 {actions}
                             </Bootstrap.DropdownButton>
                         ) : (
@@ -609,6 +609,9 @@ var Form = React.createClass({
             if(Object.keys(redux).indexOf(type) < 0){
                 if(type == "Button" && element.action == "modal"){
                     var modalTemplate = Object.assign({}, element.modal), args = [];
+                    if('panel' in this.props && 'args' in this.props.panel){
+                        args.push(this.props.panel.args);
+                    }
                     if('args' in this.props){
                         for(var key in this.props.args){
                             val = this.props.args[key]

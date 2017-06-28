@@ -99,7 +99,7 @@ var Vpn = React.createClass({
                     <td>{vpn.name}</td>
                     <td>{vpn.connected?"True":"False"}</td>
                     <td>
-                        <Bootstrap.DropdownButton bsStyle='default' title="Choose" onSelect = {this.btn_clicked.bind(this, vpn.name)}>
+                        <Bootstrap.DropdownButton id={"dropdown-" + vpn.name} bsStyle='default' title="Choose" onSelect = {this.btn_clicked.bind(this, vpn.name)}>
                             <Bootstrap.MenuItem eventKey="download">Download certificate</Bootstrap.MenuItem>
                             <Bootstrap.MenuItem eventKey="revoke">Revoke user</Bootstrap.MenuItem>
                             <Bootstrap.MenuItem eventKey="list">List logins</Bootstrap.MenuItem>

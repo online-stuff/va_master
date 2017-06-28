@@ -44,7 +44,7 @@ def add_app(deploy_handler):
 def get_openvpn_users(deploy_handler):
     cl = Caller()
     users = cl.cmd('openvpn.list_users')
-    users['active'] = [{'name' : x, 'check' : False, 'connected' : x in users['status']['client_list']} for x in users['active']]
+    users['active'] = [{'name' : x, 'check' : False, 'connected' : x in [i['Common Name'] for i in users['status']['client_list']]} for x in users['active']]
     users['status'] = users['status']['client_list']
     raise tornado.gen.Return(users)
 

@@ -140,8 +140,8 @@ function panel(state, action){
     if(action.type == 'CHANGE_PANEL'){
         newState.panel = action.panel;
         newState.instance = action.instance;
-        if('id' in action){
-            newState.id = action.id;
+        if('args' in action){
+            newState.args = action.args;
         }
     }
 
@@ -213,7 +213,7 @@ var App = React.createClass({
                 <Router.Route path='/triggers' component={Triggers} />
                 <Router.Route path='/ts_status' component={Ts_status} />
                 <Router.Route path='/panel/:id/:instance' component={Panel} />
-                <Router.Route path='/subpanel/:id/:instance/:username' component={Subpanel} />
+                <Router.Route path='/subpanel/:id/:instance/:args' component={Subpanel} />
                 <Router.Route path='/chart_panel/:instance/:host/:service' component={ChartPanel} />
             </Router.Route>
             <Router.Route path='/login' component={Login} />
