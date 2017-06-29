@@ -13,7 +13,7 @@ var Panel = React.createClass({
                 "help_url": "",
                 "tbl_source": {},
                 "content": []
-            }
+            }, loading: true
         };
     },
 
@@ -26,7 +26,7 @@ var Panel = React.createClass({
             if(typeof data.tbl_source !== 'undefined'){
                 me.props.dispatch({type: 'ADD_DATA', tables: data.tbl_source});
             }
-            me.setState({template: data});
+            me.setState({template: data, loading: false});
         }).fail(function (msg) {
             me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
         });
@@ -39,7 +39,8 @@ var Panel = React.createClass({
 
     componentWillReceiveProps: function (nextProps) {
         if (nextProps.params.id !== this.props.params.id || nextProps.params.instance !== this.props.params.instance) {
-            this.props.dispatch({type: 'RESET_FILTER'});
+            this.setState({loading: true});
+            //this.props.dispatch({type: 'RESET_FILTER'});
             var args = "args" in nextProps.params ? nextProps.params.args : [];
             this.getPanel(nextProps.params.id, nextProps.params.instance, args);
         }
@@ -73,12 +74,21 @@ var Panel = React.createClass({
             var Redux = redux[element.type];
             return React.createElement(Redux, element);
         });
-
+        var loading = this.state.loading;
+        const spinnerStyle = {
+            display: loading ? "block": "none",
+        };
+        const blockStyle = {
+            visibility: loading ? "hidden": "visible",
+        };
         return (
-            <div key={this.props.params.id}>
-                <Bootstrap.PageHeader>{this.state.template.title} <small>{this.props.params.instance}</small></Bootstrap.PageHeader>
-                {elements}
-                <ModalRedux />
+            <div>
+                <span className="spinner" style={spinnerStyle} ><i className="fa fa-spinner fa-spin fa-3x" aria-hidden="true"></i></span>
+                <div key={this.props.params.id} style={blockStyle}>
+                    <Bootstrap.PageHeader>{this.state.template.title} <small>{this.props.params.instance}</small></Bootstrap.PageHeader>
+                    {elements}
+                    <ModalRedux />
+                </div>
             </div>
         );
     }

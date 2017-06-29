@@ -101,6 +101,7 @@ var Overview = React.createClass({
             return {hostname: host.hostname, instances: host.instances, host_usage: host.host_usage};
         }.bind(this));
         const spinnerStyle = {
+            top: '30%',
             display: this.state.loading ? "block": "none",
         };
         var host_redux = null;

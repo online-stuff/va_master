@@ -313,14 +313,12 @@ display: table-cell;
     margin-bottom: 0px!important;
 }
 .app-containter{
-    width: 100%;
     min-height: 1px;
-    position: relative;
 }
 .spinner{
     position: absolute;
     z-index: 1000;
-    top: 30%;
+    top: 200px;
     left: 45%;
 }
 .text-warning{

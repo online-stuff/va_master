@@ -5,6 +5,20 @@ var connect = require('react-redux').connect;
 
 var Network = require('../network');
 
+var NavLink = React.createClass({
+
+    render: function () {
+        var isActive = window.location.hash.indexOf(this.props.to) !== -1;
+        var className = isActive ? 'active' : '';
+
+        return (
+            <Router.Link to={this.props.to} className={className} activeClassName='active'>
+                {this.props.children}
+            </Router.Link>
+        );
+    }
+});
+
 var Home = React.createClass({
     getInitialState: function() {
         return {
@@ -55,9 +69,9 @@ var Home = React.createClass({
             var instances = panel.instances.map(function(instance) {
                 var subpanels = panel.panels.admin.map(function(panel) {
                     return (
-                        <li key={panel.key}><Router.Link to={'panel/' + panel.key + '/' + instance} activeClassName='active'>
+                        <li key={panel.key}><NavLink to={'panel/' + panel.key + '/' + instance}>
                             <span>{panel.name}</span>
-                        </Router.Link></li>
+                        </NavLink></li>
                     );
                 });
                 return (
@@ -99,21 +113,21 @@ var Home = React.createClass({
                         <Bootstrap.Glyphicon glyph='home' /> Overview</Router.IndexLink>
                         </li>
                         <li>
-                        <Router.Link to='hosts' activeClassName='active'>
-                        <Bootstrap.Glyphicon glyph='hdd' /> Hosts</Router.Link>
+                        <NavLink to='hosts'>
+                        <Bootstrap.Glyphicon glyph='hdd' /> Hosts</NavLink>
                         </li>
                         <li>
-                        <Router.Link to='apps' activeClassName='active'>
-                        <Bootstrap.Glyphicon glyph='th' /> Apps</Router.Link>
+                        <NavLink to='apps'>
+                        <Bootstrap.Glyphicon glyph='th' /> Apps</NavLink>
                         </li>
                         <li>
-                        <Router.Link to='store' activeClassName='active'>
-                        <Bootstrap.Glyphicon glyph='cloud' /> Store</Router.Link>
+                        <NavLink to='store'>
+                        <Bootstrap.Glyphicon glyph='cloud' /> Store</NavLink>
                         </li>
                         <li>
-                        <Router.Link to='vpn' activeClassName='active'>
+                        <NavLink to='vpn'>
                             <span><i className='fa fa-lock' /> VPN</span>
-                        </Router.Link>
+                        </NavLink>
                         </li>
                         <li role="separator" className="divider-vertical"></li>
                         <li className="panels-title">Admin panels</li>
