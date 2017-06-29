@@ -10,7 +10,7 @@ def get_paths():
     paths = {
         'get' : {
             'panels' : {'function' : get_panels, 'args' : ['handler']}, 
-            'panels/get_panel' : {'function' : get_panel_for_user, 'args' : ['handler']},
+            'panels/get_panel' : {'function' : get_panel_for_user, 'args' : ['instance_name', 'panel', 'host', 'handler']},
             'panels/ts_data' : {'function' : get_ts_data, 'args' : []},  
         },
         'post' : {
@@ -48,8 +48,8 @@ def list_panels(deploy_handler, handler):
 def panel_action_execute(deploy_handler, instance_name, action, args = [], kwargs = {}, module = None):
     try:
 
-        instance_info = yield apps.get_app_info(deploy_handler)
-        state = instance_info[instance_info]['role']
+        instance_info = yield apps.get_app_info(deploy_handler, instance_name)
+        state = instance_info[instance_name]['role']
 
         states = yield deploy_handler.get_states()
         state = [x for x in states if x['name'] == state] or [{'module' : 'openvpn'}]
@@ -69,7 +69,7 @@ def panel_action_execute(deploy_handler, instance_name, action, args = [], kwarg
 @tornado.gen.coroutine
 def salt_serve_file(deploy_handler, instance_name, action, args = [], kwargs = {}, module = None):
 
-    instance_info = yield apps.get_app_info(deploy_handler)
+    instance_info = yield apps.get_app_info(deploy_handler, instance_name)
     state = instance_info[instance]['role']
     states = yield deploy_handler.get_states()
     state = [x for x in states if x['name'] == state] or [{'module' : 'openvpn'}]
@@ -117,23 +117,23 @@ def get_panels(deploy_handler, handler):
     raise tornado.gen.Return(panels)
 
 @tornado.gen.coroutine
-def get_panel_for_user(deploy_handler, panel, instance_name, service, args = []):
+def get_panel_for_user(deploy_handler, handler, panel, instance_name, args = [], host = None):
 
-    user_panels = yield list_panels(deploy_handler)
-    instance_info = yield apps.get_app_info(deploy_handler)
+    user_panels = yield list_panels(deploy_handler, handler)
+    instance_info = yield apps.get_app_info(deploy_handler, instance_name)
+    instance_info = instance_info.get(instance_name)
     state = instance_info['role']
 
     state = filter(lambda x: x['name'] == state, user_panels)[0]
     if instance_name in state['instances']:
         action = 'get_panel'
-        if 'host' in handler.data:
-            args = [host, service]
-        else:
-            if type(args) != list and args: 
-                args = [args]
-            args = [panel] + args
+        if type(args) != list and args: 
+            args = [args]
+        args = [panel] + args
         try: 
-            panel  = panel_action_execute(deploy_handler, instance_name, action, args)
+            print ('Getting panel. ')
+            panel  = yield panel_action_execute(deploy_handler, instance_name, action, args)
+            print ('Panel is : ', panel)
         except: 
             import traceback
             traceback.print_exc()

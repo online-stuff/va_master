@@ -90,6 +90,7 @@ class ApiHandler(tornado.web.RequestHandler):
         try:
             api_func, api_kwargs = api_func.get('function'), api_func.get('args')       
             api_kwargs = {x : data.get(x) for x in api_kwargs if data.get(x)} or {}
+            print ('Api kwargs are : ', api_kwargs)
             result = yield api_func(self.config.deploy_handler, **api_kwargs)
             if type(result) == dict: 
                 if result.get('data_type', 'json') == 'file' : 

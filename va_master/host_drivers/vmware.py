@@ -122,9 +122,9 @@ class VMWareDriver(base.DriverBase):
         super(VMWareDriver, self).__init__(**kwargs)
 
     def get_datacenter(self, host):
-        service_instance = connect.SmartConnect(host='10.10.3.10', user = 'root', port = 443, pwd = 'm33dicina', protocol = 'https')
+        service_instance = connect.SmartConnect(host=host['host_ip'], user = host['username'], port = int(host['port']), pwd = host['password'], protocol = host['protocol'])
         content = service_instance.RetrieveContent()
-        datacenter = [x for x in content.rootFolder.childEntity if x.name == 'ha-datacenter'] or [None]
+        datacenter = [x for x in content.rootFolder.childEntity if x.name == host['datacenter']] or [None]
         return datacenter[0]
 
     @tornado.gen.coroutine
@@ -147,20 +147,17 @@ class VMWareDriver(base.DriverBase):
             ('protocol', 'Protocol', 'str'),
         ])
 
-        for i in range(3):
-            del steps[1].fields[0]
-
-
-        steps[1].add_fields([
+        datacenter = Step('Datacenter')
+        datacenter.add_fields([
             ('datacenter', 'Choose a datacenter from the list', 'options'),
         ])
-#        datacenter = Step('Datacenter')
-#        datacenter.add_fields([
-#            ('datacenter', 'Choose a datacenter from the list', 'options'),
-#        ])
-#        steps[1] = datacenter
 
+        network = Step('Network')
+        network.add_fields([
+            ('network', 'Choose a network', 'options'),
+        ])
 
+        steps = [steps[0], datacenter, network, steps[-1]]
         raise tornado.gen.Return(steps)
 
 
@@ -266,9 +263,9 @@ class VMWareDriver(base.DriverBase):
             'max_ram' : 'n/a', 
             'used_ram' : sum([x['used_ram'] for x in instances]),
             'free_ram' : 'n/a', 
-            'max_disk' : sum([x['used_disk'] + x['free_disk'] for x in instances]), 
+            'max_disk' : 'n/a', 
             'used_disk' : sum([x['used_disk'] for x in instances]), 
-            'free_disk' : sum([x['free_disk'] for x in instances]),
+            'free_disk' : 'n/a',
             'max_instances' : 'n/a', 
             'used_instances' : len(instances), 
             'free_instances' : 'n/a' 
@@ -294,9 +291,9 @@ class VMWareDriver(base.DriverBase):
         """ Uses the base driver method, but adds the region tenant and identity_url variables, used in the configurations. """
         options = {}
         if step_index < 0:
-    	    raise tornado.gen.Return(StepResult(
+    	    step_result = StepResult(
         		errors=[], new_step_index=0, option_choices={}
-    	    ))
+    	    )
         elif step_index == 0:
             self.provider_vars['VAR_IP'] = field_values['host_ip']
             self.provider_vars['VAR_USER'] = field_values['username']
@@ -308,14 +305,33 @@ class VMWareDriver(base.DriverBase):
             content = service_instance.RetrieveContent()
             datacenters = [x.name for x in content.rootFolder.childEntity]
             options = {'datacenter' : datacenters}
+            step_result = yield super(VMWareDriver, self).validate_field_values(step_index, field_values, options = options)
+
         elif step_index == 1: 
             self.field_values['datacenter'] = field_values['datacenter']
-            field_values['sec_group'] = ''
-            field_values['network'] = ''
 
-        print ('CAlling step result with : ', step_index, field_values, options)
-        step_result = yield super(VMWareDriver, self).validate_field_values(step_index, field_values, options = options)
-        print ('Step result is : ', step_result.serialize())
+            datacenter = self.get_datacenter(self.field_values)
+            networks = [x.name for x in datacenter.network]
+            field_values['sec_group'] = ''
+            field_values['networks'] = networks
+            options = {'network' : networks}
+
+    	    step_result = StepResult(
+        		errors=[], new_step_index=2, option_choices=options
+    	    )
+        elif step_index == 2: 
+            self.field_values['defaults']['network'] = field_values['network']
+            options = {
+                    'image': self.field_values['images'],
+                    'size': self.field_values['sizes'],
+            }
+    	    step_result = StepResult(
+        		errors=[], new_step_index=3, option_choices=options
+    	    )
+        else: 
+             step_result = yield super(VMWareDriver, self).validate_field_values(step_index, field_values, options = options)
+           
+
         raise tornado.gen.Return(step_result)
 
 

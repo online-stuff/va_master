@@ -20,7 +20,7 @@ def get_paths():
             'hosts' : {'function' : list_hosts, 'args' : []},
             'hosts/info' : {'function' : get_host_info, 'args' : ['required_hosts', 'get_billing', 'get_instances']},
             'hosts/new/validate_fields' : {'function' : validate_newhost_fields, 'args' : ['handler']},
-            'hosts/delete' : {'function' : delete_host, 'args' : ['host']},
+            'hosts/delete' : {'function' : delete_host, 'args' : ['hostname']},
             'hosts/add_host' : {'function' : add_host, 'args' : ['field_values', 'driver_name']},
             'hosts/generic_add_instance' : {'function' : add_generic_instance, 'args' : []},
         }
@@ -84,9 +84,9 @@ def reset_hosts(deploy_handler):
 
 
 @tornado.gen.coroutine
-def delete_host(deploy_handler, host):
+def delete_host(deploy_handler, hostname):
     hosts = yield deploy_handler.datastore.get('hosts')
-    hosts = [x for x in hosts if not x['hostname'] == host]
+    hosts = [x for x in hosts if not x['hostname'] == hostname]
     yield deploy_handler.datastore.insert('hosts', hosts)
 
 
