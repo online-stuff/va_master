@@ -263,20 +263,25 @@ var Table = React.createClass({
         }
     },
     linkClicked: function(action, event){
-        var folder = event.currentTarget.textContent;
-        var args = this.props.table.path.concat(folder);
-        var data = {"instance_name": this.props.panel.instance, "action": action, "args": args};
-        var me = this;
-        Network.post('/api/panels/action', this.props.auth.token, data).done(function(d) {
-            var msg = d[me.props.panel.instance];
-            if(typeof msg === 'string'){
+        var colVal = event.currentTarget.textContent;
+        if(action == 'link' && "panels" in this.props && 'link' in this.props.panels){
+            this.props.dispatch({type: 'SELECT', select: colVal});
+            Router.hashHistory.push('/panel/' + this.props.panels['link'] + '/' + this.props.panel.instance + '/' + [colVal]);
+        }else{
+            var args = this.props.table.path.concat(colVal);
+            var data = {"instance_name": this.props.panel.instance, "action": action, "args": args};
+            var me = this;
+            Network.post('/api/panels/action', this.props.auth.token, data).done(function(d) {
+                var msg = d[me.props.panel.instance];
+                if(typeof msg === 'string'){
+                    me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
+                }else{
+                    me.props.dispatch({type: 'CHANGE_DATA', data: msg, name: me.props.name, passVal: colVal});
+                }
+            }).fail(function (msg) {
                 me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
-            }else{
-                me.props.dispatch({type: 'CHANGE_DATA', data: msg, name: me.props.name, passVal: folder});
-            }
-        }).fail(function (msg) {
-            me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
-        });
+            });
+        }
     },
     render: function () {
         var pagination = "pagination" in this.props ? this.props.pagination : true;
@@ -342,11 +347,14 @@ var Table = React.createClass({
                 columns = this.props.columns.map(function(col, index) {
                     var key = col.key, colClass = "", colText = row[key];
                     if(typeof col.colClass !== 'undefined'){
-                        colClass = "col-" + col.colClass + "-" + row[col.colClass];
+                        colClass = col.colClass;
+                        if(row[col.colClass]){
+                            colClass = "col-" + col.colClass + "-" + row[col.colClass];
+                        }
                         colText = <span className={colClass}>{row[key]}</span>;
                         if("action" in col){
                             var col_arr = col['action'].split(':');
-                            if(col_arr[0] === row[col.colClass])
+                            if(col_arr[0] === "all" || col_arr[0] === row[col.colClass])
                                 colText = <span className={colClass} onClick={me.linkClicked.bind(me, col_arr[1])}>{row[key]}</span>
                         }
                     }
@@ -565,6 +573,7 @@ var Form = React.createClass({
             if(typeof msg === 'string'){
                 me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
             }else{
+                me.props.dispatch({type: 'SELECT', select: host});
                 me.props.dispatch({type: 'CHANGE_DATA', data: msg, name: me.props.target, initVal: [host]});
             }
         }).fail(function (msg) {
@@ -594,7 +603,9 @@ var Form = React.createClass({
                     var action = "", defaultValue = element.value[0];
                     if("action" in element){
                         action = this.onSelect.bind(this, element.action);
-                        if("table" in this.props && "path" in this.props.table && this.props.table.path.length > 0)
+                        if("dropdown" in this.props)
+                            defaultValue = this.props.dropdown.select;
+                        else if("table" in this.props && "path" in this.props.table && this.props.table.path.length > 0)
                             defaultValue = this.props.table.path[0];
                     }
                     return ( <select ref="dropdown" id={index} key={element.name} onChange={action} name={element.name} defaultValue={defaultValue}>
