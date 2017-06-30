@@ -59,6 +59,10 @@ var Home = React.createClass({
         if(!props.auth.token) {
             Router.hashHistory.push('/login');
         }
+        var activeKey = window.localStorage.getItem('activeKey') || -1;
+        if(this.state.activeKey != activeKey){
+            this.setState({activeKey: parseInt(activeKey)});
+        }
     },
     logOut: function (key, event) {
         if(key === 'logout')
@@ -146,7 +150,7 @@ var Home = React.createClass({
                         <li role="separator" className="divider-vertical"></li>
                         <li className="panels-title">Admin panels</li>
                         <li>
-                            <Bootstrap.Accordion defaultActiveKey={this.state.activeKey}>
+                            <Bootstrap.Accordion key={this.state.activeKey} defaultActiveKey={this.state.activeKey}>
                                 {panels}
                             </Bootstrap.Accordion>
                         </li>
