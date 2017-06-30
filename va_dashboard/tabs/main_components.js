@@ -198,9 +198,15 @@ var Table = React.createClass({
                     var data = new Blob([d], {type: 'octet/stream'});
                     var url = window.URL.createObjectURL(data);
                     tempLink = document.createElement('a');
+                    tempLink.style = "display: none";
                     tempLink.href = url;
                     tempLink.setAttribute('download', id[0]);
+                    document.body.appendChild(tempLink);
                     tempLink.click();
+                    setTimeout(function(){
+                        document.body.removeChild(tempLink);
+                        window.URL.revokeObjectURL(url);
+                    }, 100);
                 }).fail(function (msg) {
                     me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
                 });
