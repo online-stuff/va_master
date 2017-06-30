@@ -5,11 +5,39 @@ var connect = require('react-redux').connect;
 
 var Network = require('../network');
 
+var NavLink = React.createClass({
+
+    render: function () {
+        var isActive = window.location.hash.indexOf(this.props.to) !== -1;
+        var className = isActive ? 'active' : '';
+        if(isActive){
+            var activeKey = -1;
+            if('activeKey' in this.props){ //this.props.to.indexOf('panel') > -1
+                activeKey = this.props.activeKey;
+            }
+            window.localStorage.setItem('activeKey', activeKey);
+        }
+
+        return (
+            <Router.Link to={this.props.to} className={className} activeClassName='active'>
+                {this.props.children}
+            </Router.Link>
+        );
+    }
+});
+
 var Home = React.createClass({
     getInitialState: function() {
+        var activeKey = window.localStorage.getItem('activeKey');
+        if(activeKey){
+            activeKey = parseInt(activeKey);
+        }else{
+            activeKey = -1;
+        }
         return {
             'data': [],
-            'collapse': false
+            'collapse': false,
+            'activeKey': activeKey
         };
     },
     getPanels: function() {
@@ -55,9 +83,9 @@ var Home = React.createClass({
             var instances = panel.instances.map(function(instance) {
                 var subpanels = panel.panels.admin.map(function(panel) {
                     return (
-                        <li key={panel.key}><Router.Link to={'panel/' + panel.key + '/' + instance} activeClassName='active'>
+                        <li key={panel.key}><NavLink to={'panel/' + panel.key + '/' + instance} activeKey={i}>
                             <span>{panel.name}</span>
-                        </Router.Link></li>
+                        </NavLink></li>
                     );
                 });
                 return (
@@ -99,27 +127,29 @@ var Home = React.createClass({
                         <Bootstrap.Glyphicon glyph='home' /> Overview</Router.IndexLink>
                         </li>
                         <li>
-                        <Router.Link to='hosts' activeClassName='active'>
-                        <Bootstrap.Glyphicon glyph='hdd' /> Hosts</Router.Link>
+                        <NavLink to='hosts'>
+                        <Bootstrap.Glyphicon glyph='hdd' /> Hosts</NavLink>
                         </li>
                         <li>
-                        <Router.Link to='apps' activeClassName='active'>
-                        <Bootstrap.Glyphicon glyph='th' /> Apps</Router.Link>
+                        <NavLink to='apps'>
+                        <Bootstrap.Glyphicon glyph='th' /> Apps</NavLink>
                         </li>
                         <li>
-                        <Router.Link to='store' activeClassName='active'>
-                        <Bootstrap.Glyphicon glyph='cloud' /> Store</Router.Link>
+                        <NavLink to='store'>
+                        <Bootstrap.Glyphicon glyph='cloud' /> Store</NavLink>
                         </li>
                         <li>
-                        <Router.Link to='vpn' activeClassName='active'>
+                        <NavLink to='vpn'>
                             <span><i className='fa fa-lock' /> VPN</span>
-                        </Router.Link>
+                        </NavLink>
                         </li>
                         <li role="separator" className="divider-vertical"></li>
                         <li className="panels-title">Admin panels</li>
-                        <li><Bootstrap.Accordion>
-                            {panels}
-                        </Bootstrap.Accordion></li>
+                        <li>
+                            <Bootstrap.Accordion defaultActiveKey={this.state.activeKey}>
+                                {panels}
+                            </Bootstrap.Accordion>
+                        </li>
                     </ul>
                 </div>
                 <div className="page-content" style={this.state.collapse?{'left': '15px', 'width': '95vw'}:{'left': '230px', 'width': '80vw'}}>
