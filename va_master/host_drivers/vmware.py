@@ -228,7 +228,11 @@ class VMWareDriver(base.DriverBase):
             }
 
             for key in [('used_disk', 2**30), ('used_ram', 2**20), ('used_cpu', 1)]: 
-                instance[key[0]] = 0 if not instance[key[0]] else float(instance[key[0]]) / key[1]
+                if not instance[key[0]]: instance[key[0]] = 0
+                else: 
+                    print ('Dividing : ', (0.0 + instance[key[0]]), ' / ', key[1], ' and got : ', float(instance[key[0]]) / key[1])
+                    instance[key[0]] = round((0.0 + instance[key[0]]) / key[1], 2)
+#                instance[key[0]] = 0 if not instance[key[0]] else float(instance[key[0]]) / key[1]
             instances.append(instance)
         raise tornado.gen.Return(instances)
 
@@ -251,6 +255,9 @@ class VMWareDriver(base.DriverBase):
 
         if get_instances: 
             instances = yield self.get_instances(host)
+            print ('cpu : ', [x['used_cpu'] for x in instances])
+            print ('ram : ', [x['used_ram'] for x in instances])
+            print ('disk : ', [x['used_disk'] for x in instances])
         else: 
             instances = []
 
@@ -258,19 +265,20 @@ class VMWareDriver(base.DriverBase):
 
         host_usage = {
             'max_cpus' : 'n/a',
-            'used_cpus' : sum([x['used_cpu'] for x in instances]), 
+            'used_cpus' : round(sum([x['used_cpu'] for x in instances]), 2), 
             'free_cpus' : 'n/a', 
             'max_ram' : 'n/a', 
-            'used_ram' : sum([x['used_ram'] for x in instances]),
+            'used_ram' : round(sum([x['used_ram'] for x in instances]), 2),
             'free_ram' : 'n/a', 
             'max_disk' : 'n/a', 
-            'used_disk' : sum([x['used_disk'] for x in instances]), 
+            'used_disk' : round(sum([x['used_disk'] for x in instances]), 2), 
             'free_disk' : 'n/a',
             'max_instances' : 'n/a', 
             'used_instances' : len(instances), 
             'free_instances' : 'n/a' 
         }
 
+        print ('Usage : ', host_usage)
         host_data = {
             'instances' : instances, 
             'host_usage' : host_usage,

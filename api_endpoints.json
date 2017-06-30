@@ -8,11 +8,202 @@
                 "get_billing",
                 "get_instances"
             ]
+        },
+        "panels/reset_panels": {
+            "args": []
+        },
+        "hosts/delete": {
+            "args": [
+                "hostname"
+            ]
+        },
+        "panels/action": {
+            "args": [
+                "instance_name",
+                "action",
+                "args",
+                "kwargs",
+                "module"
+            ]
+        },
+        "triggers/edit_trigger": {
+            "args": [
+                "hostname",
+                "trigger_id",
+                "trigger"
+            ]
+        },
+        "apps": {
+            "args": [
+                "handler"
+            ]
+        },
+        "hosts/new/validate_fields": {
+            "args": [
+                "handler"
+            ]
+        },
+        "triggers/triggered": {
+            "args": [
+                "deploy_handler",
+                "hostname",
+                "service",
+                "level",
+                "extra_kwargs"
+            ]
+        },
+        "new_user": {
+            "args": [
+                "user",
+                "password"
+            ]
+        },
+        "panels/chart_data": {
+            "args": [
+                "instance_name",
+                "args"
+            ]
+        },
+        "triggers/load_triggers": {
+            "args": [
+                "hostname",
+                "triggers"
+            ]
+        },
+        "panels/new_panel": {
+            "args": [
+                "panel_name",
+                "role"
+            ]
+        },
+        "apps/revoke_vpn_user": {
+            "args": [
+                "username"
+            ]
+        },
+        "panels/serve_file": {
+            "args": [
+                "instance_name",
+                "action",
+                "args",
+                "kwargs",
+                "module"
+            ]
+        },
+        "hosts/add_host": {
+            "args": [
+                "field_values",
+                "driver_name"
+            ]
+        },
+        "apps/download_vpn_cert": {
+            "args": [
+                "username"
+            ]
+        },
+        "hosts/generic_add_instance": {
+            "args": []
+        },
+        "triggers/add_trigger": {
+            "args": [
+                "new_trigger",
+                "hostname"
+            ]
+        },
+        "state/add": {
+            "args": [
+                "file",
+                "body",
+                "filename"
+            ]
+        },
+        "apps/add_vpn_user": {
+            "args": [
+                "username"
+            ]
+        },
+        "hosts": {
+            "args": []
+        },
+        "login": {
+            "args": []
+        },
+        "apps/action": {
+            "args": [
+                "hostname",
+                "action",
+                "instance_name"
+            ]
+        },
+        "apps/list_user_logins": {
+            "args": [
+                "username"
+            ]
         }
     },
     "get": {
         "apps/get_actions": {
             "args": []
+        },
+        "panels/ts_data": {
+            "args": []
+        },
+        "triggers": {
+            "args": []
+        },
+        "apps/vpn_status": {
+            "args": []
+        },
+        "hosts/reset": {
+            "args": []
+        },
+        "panels/get_panel": {
+            "args": [
+                "instance_name",
+                "panel",
+                "host",
+                "handler"
+            ]
+        },
+        "apps/add_app": {
+            "args": [
+                "host"
+            ]
+        },
+        "states/reset": {
+            "args": []
+        },
+        "states": {
+            "args": []
+        },
+        "triggers/clear": {
+            "args": [
+                "hostname"
+            ]
+        },
+        "hosts": {
+            "args": []
+        },
+        "apps/vpn_users": {
+            "args": []
+        },
+        "panels": {
+            "args": [
+                "handler"
+            ]
+        },
+        "hosts/get_trigger_functions": {
+            "args": [
+                "hostname"
+            ]
+        },
+        "drivers": {
+            "args": []
+        },
+        "hosts/get_host_billing": {
+            "args": [
+                "hostname"
+            ]
         }
     },
     "delete": {

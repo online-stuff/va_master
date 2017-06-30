@@ -14,7 +14,7 @@ def get_paths():
         'get' : {
         },
         'post' : {
-            'login' : {'function' : user_login, 'args' : []},
+            'login' : {'function' : user_login, 'args' : ['handler']},
             'new_user' : {'function' : create_user_api, 'args' : ['user', 'password']}
         }
     }
@@ -46,14 +46,13 @@ def get_or_create_token(datastore, username, user_type = 'admin'):
 def get_current_user(handler):
     token = handler.request.headers.get('Authorization', '')
 
-    token = token.replace('Token ', '')
-#    print ('Token is : ', token)
+    token = token.replace('Token ', '')    
     
-    for type in ['user', 'admin']: # add other types as necessary, maybe from datastore. 
-        token_valid = yield is_token_valid(handler.datastore, token, type)
+    for t in ['user', 'admin']: # add other types as necessary, maybe from datastore. 
+        token_valid = yield is_token_valid(handler.datastore, token, t)
         if token_valid: 
-            user = yield handler.datastore.get('tokens/%s/by_token/%s' % (type, token))
-            raise tornado.gen.Return({'username' : user['username'], 'type' : type})
+            user = yield handler.datastore.get('tokens/%s/by_token/%s' % (t, token))
+            raise tornado.gen.Return({'username' : user['username'], 'type' : t})
     raise tornado.gen.Return(None)
 
 
@@ -72,7 +71,6 @@ def is_token_valid(datastore, token, user_type = 'admin'):
     except datastore.KeyNotFound:
         raise tornado.gen.Return(False)
     except Exception as e: 
-        print ('Something weird happened. ')
         import traceback
         traceback.print_exc()
     valid = (res['username'] != '__invalid__')
@@ -115,7 +113,6 @@ def create_user(datastore, username, password, user_type = 'user'):
         yield datastore.insert(datastore_handle, [])
         new_users = []
     crypted_pass = crypt(password)
-    print ('Pass hash will be : ', crypted_pass)
     new_users.append({
         'username': username,
         'password_hash': crypted_pass,
@@ -134,7 +131,7 @@ def create_user_api(handler, user, password):
 
 
 @tornado.gen.coroutine
-def user_login(handler):
+def user_login(deploy_handler, handler):
     body = None
     try: 
         try:
@@ -142,7 +139,7 @@ def user_login(handler):
             username = body['username'].decode('utf8')
             password = body['password'].decode('utf8')
         except:
-            raise tornado.gen.Return({'error': 'bad_body'}, 400)
+            raise tornado.gen.Return({'error': 'bad_body'})
 
         if '@' in username: 
             yield ldap_login(handler)
@@ -151,9 +148,7 @@ def user_login(handler):
         for user_type in ['admin', 'user']:
             datastore_handle = user_type + 's'
             try:
-                print ('Trying for : ', datastore_handle)
                 users = yield handler.datastore.get(datastore_handle)
-                print ('Users are : ', users)
             except handler.datastore.KeyNotFound:
                 raise tornado.gen.Return({'error': 'no_users: ' + datastore_handle}, 401)
                 # TODO: handle this gracefully?
@@ -164,7 +159,6 @@ def user_login(handler):
                 if user['username'] == username:
                     account_info = user 
                     break
-            print ('Account info is : ', account_info)
             invalid_acc_hash = crypt('__invalidpassword__')
             if not account_info:
                 # Prevent timing attacks
@@ -174,9 +168,6 @@ def user_login(handler):
                     'timestamp_created': 0
                 }
             pw_hash = account_info['password_hash']
-            print ('Password is : ', password)
-            print ('PW hash is : ', pw_hash)
-            print (crypt(password, pw_hash))
             if crypt(password, pw_hash) == pw_hash:
                 token = yield get_or_create_token(handler.datastore, username, user_type = user_type)
                 raise tornado.gen.Return({'token': token})
