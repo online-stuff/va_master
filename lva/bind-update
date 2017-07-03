@@ -1,0 +1,4 @@
+server BINDIP
+zone ZONE.
+update add CONTAINER.ZONE. 86400 CNAME LXD.ZONE.
+send
