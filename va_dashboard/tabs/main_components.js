@@ -256,10 +256,15 @@ var Table = React.createClass({
                 }else{
                     data.action = me.props.source;
                     data.args = [];
+                    if('args' in me.props.panel && me.props.panel.args !== ""){
+                        data.args = [me.props.panel.args];
+                    }
                     Network.post('/api/panels/action', me.props.auth.token, data).done(function(d) {
                         var msg = d[data.instance_name];
-                        if(typeof msg === 'string'){
+                        if(typeof msg !== 'string'){
                             me.props.dispatch({type: 'CHANGE_DATA', data: msg, name: me.props.name});
+                        }else{
+                            me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
                         }
                     });
                 }
@@ -458,11 +463,15 @@ var Modal = React.createClass({
         Network.post("/api/panels/action", this.props.auth.token, data).done(function(d) {
             me.props.dispatch({type: 'CLOSE_MODAL'});
             if('refresh_action' in me.props.modal.template){
-                var data = {"instance_name": me.props.panel.instance, "action": me.props.modal.template.refresh_action, "args": []};
+                var args = [];
+                if(me.props.panel.args !== "") args = [me.props.panel.args];
+                var data = {"instance_name": me.props.panel.instance, "action": me.props.modal.template.refresh_action, "args": args};
                 Network.post('/api/panels/action', me.props.auth.token, data).done(function(d) {
                     var msg = d[data.instance_name];
-                    if(typeof msg === 'string'){
+                    if(typeof msg !== 'string'){
                         me.props.dispatch({type: 'CHANGE_DATA', data: msg, name: me.props.modal.template.table_name});
+                    }else{
+                        me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
                     }
                 });
             }
@@ -598,7 +607,9 @@ var Form = React.createClass({
                     return ( <Bootstrap.Checkbox id={index} key={element.name} name={element.name} checked={this.props.data[index]} inline onChange={this.props.form_changed}>{element.label}</Bootstrap.Checkbox>);
                 }
                 if(type == "label"){
-                    return ( <label id={index} key={element.name} name={element.name} className="block">{element.name}</label>);
+                    return ( <label id={index} key={element.name} name={element.name} className="block">{element.value.split('\n').map(function(item, key){
+                        return <span key={key}>{item}<br/></span>
+                    })}</label>);
                 }
                 if(type == "multi_checkbox"){
                     return ( <Bootstrap.Checkbox id={index} key={element.name} name={element.name} checked={this.props.data[index]} onChange={this.props.form_changed}>{element.label}</Bootstrap.Checkbox>);
