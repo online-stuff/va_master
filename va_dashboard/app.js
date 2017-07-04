@@ -133,7 +133,7 @@ function div(state, action){
 
 function panel(state, action){
     if(typeof state === 'undefined'){
-        return {panel: '', instance: ''};
+        return {panel: '', instance: '', args: ''};
     }
 
     var newState = Object.assign({}, state);
@@ -142,6 +142,8 @@ function panel(state, action){
         newState.instance = action.instance;
         if('args' in action){
             newState.args = action.args;
+        }else{
+            newState.args = "";
         }
     }
 
