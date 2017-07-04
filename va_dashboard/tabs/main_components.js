@@ -432,7 +432,8 @@ var Modal = React.createClass({
             if(content[j].type == "Form"){
                 var elem = content[j].elements;
                 for(i=0; i<elem.length; i++){
-                    data[i] = elem[i].value;
+                    if(elem[i].type !== 'label')
+                        data[i] = elem[i].value;
                 }
             }
         }
@@ -626,7 +627,7 @@ var Form = React.createClass({
             if(Object.keys(redux).indexOf(type) < 0){
                 if(type == "Button" && element.action == "modal"){
                     var modalTemplate = Object.assign({}, element.modal), args = [];
-                    if('panel' in this.props && 'args' in this.props.panel){
+                    if('panel' in this.props && 'args' in this.props.panel && this.props.panel.args){
                         args.push(this.props.panel.args);
                     }
                     if('args' in this.props){
