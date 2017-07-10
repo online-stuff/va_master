@@ -74,7 +74,7 @@ class ApiHandler(tornado.web.RequestHandler):
         if not api_func: 
             data = {'path' : path, 'method' : method}
             api_func = {'function' : invalid_url, 'args' : ['path', 'method']}
-        elif api_func != user_login: 
+        elif api_func['function'] != user_login: 
             try: 
                 yield self.log_message(path = path, data = data, func = api_func['function'])
 
@@ -92,6 +92,8 @@ class ApiHandler(tornado.web.RequestHandler):
             api_kwargs = {x : data.get(x) for x in api_kwargs if data.get(x)} or {}
             print ('Api kwargs are : ', api_kwargs)
             result = yield api_func(self.config.deploy_handler, **api_kwargs)
+            print ('Result is : ', result)
+            print (dir(result))
             if type(result) == dict: 
                 if result.get('data_type', 'json') == 'file' : 
                     raise tornado.gen.Return(None)

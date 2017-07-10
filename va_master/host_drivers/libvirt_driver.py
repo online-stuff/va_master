@@ -422,9 +422,9 @@ class LibVirtDriver(base.DriverBase):
         elif step_index == 1:
             field_values['sec_group'] = None
 
-        step_kwargs = yield super(LibVirtDriver, self).validate_field_values(step_index, field_values)
+        step_result = yield super(LibVirtDriver, self).validate_field_values(step_index, field_values)
 
-        raise tornado.gen.Return(StepResult(**step_kwargs))
+        raise tornado.gen.Return(step_result)
 
 
 

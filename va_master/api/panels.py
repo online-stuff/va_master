@@ -10,7 +10,7 @@ def get_paths():
     paths = {
         'get' : {
             'panels' : {'function' : get_panels, 'args' : ['handler']}, 
-            'panels/get_panel' : {'function' : get_panel_for_user, 'args' : ['instance_name', 'panel', 'host', 'handler']},
+            'panels/get_panel' : {'function' : get_panel_for_user, 'args' : ['instance_name', 'panel', 'host', 'handler', 'args']},
             'panels/ts_data' : {'function' : get_ts_data, 'args' : []},  
         },
         'post' : {
@@ -107,7 +107,7 @@ def get_chart_data(deploy_handler, instance_name, args = ['va-directory', 'Ping'
 
 @tornado.gen.coroutine
 def panel_action(deploy_handler, instance_name, action, args = [], kwargs = {}, module = None):
-    instance_result = panel_action_execute(deploy_handler, instance_name, action, args, kwargs, module)
+    instance_result = yield panel_action_execute(deploy_handler, instance_name, action, args, kwargs, module)
     raise tornado.gen.Return(instance_result)
 
 
@@ -123,6 +123,7 @@ def get_panel_for_user(deploy_handler, handler, panel, instance_name, args = [],
     instance_info = yield apps.get_app_info(deploy_handler, instance_name)
     instance_info = instance_info.get(instance_name)
     state = instance_info['role']
+    print ('args are : ', args, ' and from handler: ', handler.data.get('args'))
 
     state = filter(lambda x: x['name'] == state, user_panels)[0]
     if instance_name in state['instances']:

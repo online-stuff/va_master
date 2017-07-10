@@ -97,6 +97,7 @@ def perform_instance_action(deploy_handler, hostname, action, instance_name):
     except: 
         import traceback
         traceback.print_exc()
+    raise tornado.gen.Return(success)
 
 
 @tornado.gen.coroutine
