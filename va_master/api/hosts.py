@@ -68,7 +68,10 @@ def get_hosts_triggers(deploy_handler, hostname):
 @tornado.gen.coroutine
 def list_hosts(deploy_handler):
     hosts = yield deploy_handler.list_hosts()
-    hidden_instances = yield deploy_handler.datastore.get('hidden_instances')
+    try:
+        hidden_instances = yield deploy_handler.datastore.get('hidden_instances')
+    except: 
+        hidden_instances = []
     for host in hosts: 
         driver = yield deploy_handler.get_driver_by_id(host['driver_name'])
         host['instances'] = yield driver.get_instances(host)
@@ -147,7 +150,10 @@ def validate_newhost_fields(deploy_handler, handler):
 @tornado.gen.coroutine
 def get_host_info(deploy_handler, get_billing = True, get_instances = True, required_hosts = []):
     store = deploy_handler.datastore
-    hidden_instances = yield store.get('hidden_instances')
+    try:
+        hidden_instances = yield store.get('hidden_instances')
+    except: 
+        hidden_instances = []
 
     hosts = yield deploy_handler.list_hosts()
 
