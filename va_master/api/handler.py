@@ -90,10 +90,7 @@ class ApiHandler(tornado.web.RequestHandler):
         try:
             api_func, api_kwargs = api_func.get('function'), api_func.get('args')       
             api_kwargs = {x : data.get(x) for x in api_kwargs if data.get(x)} or {}
-            print ('Api kwargs are : ', api_kwargs)
             result = yield api_func(self.config.deploy_handler, **api_kwargs)
-            print ('Result is : ', result)
-            print (dir(result))
             if type(result) == dict: 
                 if result.get('data_type', 'json') == 'file' : 
                     raise tornado.gen.Return(None)
@@ -167,7 +164,7 @@ class ApiHandler(tornado.web.RequestHandler):
         message = json.dumps({
             'type' : data['method'], 
             'function' : func.func_name,
-            'user' : user['username'], 
+            'user' : user.get('username', 'unknown'), 
             'user_type' : user['type'], 
             'path' : path, 
             'data' : data, 
@@ -196,8 +193,6 @@ class ApiHandler(tornado.web.RequestHandler):
             import traceback
             traceback.print_exc()
 
-
-
 class LogHandler(FileSystemEventHandler):
     def __init__(self, socket):
         self.socket = socket
@@ -220,6 +215,7 @@ class LogMessagingSocket(tornado.websocket.WebSocketHandler):
     @tornado.web.asynchronous
     @tornado.gen.engine
     def open(self, no_messages = 100, logfile = '/var/log/vapourapps/va-master.log'):
+        print ('Trying to open socket. ')
         try: 
             self.logfile = logfile
             with open(logfile) as f: 

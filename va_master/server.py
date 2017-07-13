@@ -5,6 +5,7 @@ import tornado.gen
 import json
 import os
 from tornado import httpclient
+
 #from bs4 import BeautifulSoup
 
 
@@ -71,7 +72,6 @@ class DebugStaticHandler(tornado.web.StaticFileHandler):
 
 def get_app(config):
     path_settings = {'path': config.server_static_path}
-
     app = tornado.web.Application([
         (r"/", IndexHandler, path_settings),
         (r"/api/(.*)", ApiHandler, {'config': config}),

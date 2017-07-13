@@ -170,6 +170,7 @@ class DriverBase(object):
                 f.write(self.provider_template)
         if not skip_profile and self.profile_template:
              profile_conf_dir =  '/etc/salt/cloud.profiles.d/' + self.profile_vars['VAR_PROFILE_NAME'] + '.conf'
+             print ('Profile is at : ', profile_conf_dir)
              self.field_values['profile_conf_dir'] = profile_conf_dir
              with open(profile_conf_dir, 'w') as f: 
                 f.write(self.profile_template)
@@ -435,6 +436,7 @@ class DriverBase(object):
         new_profile = data['instance_name'] + '-profile'
         self.profile_vars['VAR_PROFILE_NAME'] = new_profile
         self.profile_vars['VAR_SEC_GROUP'] = 'default'
+        self.profile_vars['VAR_IMAGE_USERNAME'] = data['username']
 #        self.profile_template = profile_template
 
         yield self.get_salt_configs(skip_provider = True)

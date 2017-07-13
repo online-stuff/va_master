@@ -14,7 +14,7 @@ def get_paths():
         'get' : {
             'apps/vpn_users' : {'function' : get_openvpn_users, 'args' : []},
             'apps/vpn_status' : {'function' : get_openvpn_status, 'args' : []},
-            'apps/add_app' : {'function' : add_app, 'args' : ['host']},
+            'apps/add_app' : {'function' : add_app, 'args' : ['host', 'instance_name']},
             'apps/get_actions' : {'function' : get_user_actions, 'args' : []},
 
             'states' : {'function' : get_states, 'args' : []},
@@ -36,9 +36,9 @@ def get_paths():
     return paths
 
 @tornado.gen.coroutine
-def add_app(deploy_handler):
-    app = yield get_app_info(deploy_handler)
-    yield handler.config.deploy_handler.store_app(app, handler.data['host'])
+def add_app(deploy_handler, host, instance_name):
+    app = yield get_app_info(deploy_handler, instance_name)
+    yield handler.config.deploy_handler.store_app(app, host)
 
 @tornado.gen.coroutine
 def get_openvpn_users(deploy_handler):
@@ -188,14 +188,15 @@ def launch_app(deploy_handler, handler):
     driver = yield deploy_handler.get_driver_by_id(required_host['driver_name'])
     result = yield driver.create_minion(required_host, data)
 
-    minion_info = yield get_app_info(deploy_handler)
+    minion_info = yield get_app_info(deploy_handler, handler.data['instance_name'])
 
     if data.get('role'):
 
         init_vals = yield store.get('init_vals')
         states = init_vals['states']
         state = [x for x in states if x['name'] == data['role']][0]
-
+          
+        print ('Minion info is : ', minion_info['role'])
         panel = {'panel_name' : handler.data['instance_name'], 'role' : minion_info['role']}
         panel.update(state['panels'])
         yield handler.config.deploy_handler.store_panel(panel)

@@ -352,6 +352,8 @@ class OpenStackDriver(base.DriverBase):
 
             self.provider_vars['VAR_TENANT'] = field_values['tenant']
             self.provider_vars['VAR_IDENTITY_URL'] = os_base_url
+            if not '/tokens' in self.provider_vars['VAR_IDENTITY_URL']: 
+                self.provider_vars['VAR_IDENTITY_URL'] += '/tokens'
             self.provider_vars['VAR_REGION'] = field_values['region']
 
         elif step_index == 1:
