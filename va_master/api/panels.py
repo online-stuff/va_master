@@ -49,7 +49,7 @@ def panel_action_execute(deploy_handler, instance_name, action, args = [], kwarg
     try:
 
         instance_info = yield apps.get_app_info(deploy_handler, instance_name)
-        state = instance_info[instance_name]['role']
+        state = instance_info['role']
 
         states = yield deploy_handler.get_states()
         state = [x for x in states if x['name'] == state] or [{'module' : 'openvpn'}]
@@ -70,7 +70,7 @@ def panel_action_execute(deploy_handler, instance_name, action, args = [], kwarg
 def salt_serve_file(deploy_handler, instance_name, action, args = [], kwargs = {}, module = None):
 
     instance_info = yield apps.get_app_info(deploy_handler, instance_name)
-    state = instance_info[instance]['role']
+    state = instance_info['role']
     states = yield deploy_handler.get_states()
     state = [x for x in states if x['name'] == state] or [{'module' : 'openvpn'}]
     state = state[0]
@@ -121,7 +121,6 @@ def get_panel_for_user(deploy_handler, handler, panel, instance_name, args = [],
 
     user_panels = yield list_panels(deploy_handler, handler)
     instance_info = yield apps.get_app_info(deploy_handler, instance_name)
-    instance_info = instance_info.get(instance_name)
     state = instance_info['role']
     print ('args are : ', args, ' and from handler: ', handler.data.get('args'))
 

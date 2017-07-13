@@ -169,9 +169,8 @@ def create_new_state(deploy_handler, file_contents, body, filename):
 @tornado.gen.coroutine
 def get_app_info(deploy_handler, instance_name):
     cl = Caller()
-    print ('Getting inventory for :', instance_name)
     instance_info = cl.cmd('mine.get', instance_name, 'inventory') 
-    print ('Info is : ', instance_info)
+    instance_info = instance_info.get(instance_name)
     raise tornado.gen.Return(instance_info)
 
         
