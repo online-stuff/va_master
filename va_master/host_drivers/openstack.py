@@ -111,6 +111,7 @@ class OpenStackDriver(base.DriverBase):
             field_values['username'], field_values['password'],
             field_values['tenant'])
         url = 'http://%s/v2.0/tokens' % host
+
         data = {
             'auth': {
                 'tenantName': tenant,
@@ -124,6 +125,7 @@ class OpenStackDriver(base.DriverBase):
             'Content-Type': 'application/json'
         })
         try:
+            print ('Trying to get token from : ', url)
             resp = yield self.client.fetch(req)
         except:
             import traceback
@@ -136,6 +138,7 @@ class OpenStackDriver(base.DriverBase):
             for endpoint in serv['endpoints']:
                 if 'publicURL' not in endpoint: continue
                 services[serv['type']] = endpoint['publicURL']
+        print ('Token is : ', token, ' services are : ', services)
         raise tornado.gen.Return((token, services))
 
 
