@@ -17,6 +17,8 @@ DevOps tool for corporate apps.',
         'watchdog',
         'clc-sdk',
         'google-api-python-client',
+        'vapour_linux_amd64;platform_system=="Linux"',
+        'vapour_windows_amd64;platform_system=="Windows"'
     ],
     include_package_data=True,
     entry_points={
