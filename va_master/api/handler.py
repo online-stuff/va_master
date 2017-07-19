@@ -10,8 +10,9 @@ from concurrent.futures import ThreadPoolExecutor   # `pip install futures` for 
 
 from . import url_handler
 from login import get_current_user, user_login
-import json, datetime, syslog
-
+import json, datetime, syslog, pytz
+import dateutil.relativedelta
+import dateutil.parser
 
 
 def invalid_url(deploy_handler, path, method):
@@ -214,13 +215,23 @@ class LogMessagingSocket(tornado.websocket.WebSocketHandler):
     #Socket gets messages when opened
     @tornado.web.asynchronous
     @tornado.gen.engine
-    def open(self, no_messages = 100, logfile = '/var/log/vapourapps/va-master.log'):
+    def open(self, no_messages = 0, logfile = '/var/log/vapourapps/va-master.log'):
         print ('Trying to open socket. ')
         try: 
             self.logfile = logfile
-            with open(logfile) as f: 
-                self.messages = f.read().split('\n')
-            self.messages = self.messages
+            try:
+                with open(logfile) as f: 
+                    self.messages = f.read().split('\n')
+            except: 
+                self.messages = []
+            json_msgs = []
+            for message in self.messages: 
+                try:
+                    j_msg = json.loads(message)
+                except: 
+                    pass
+                json_msgs.append(j_msg)
+            self.messages = json_msgs 
             self.write_message(json.dumps(self.messages[-no_messages:]))
 
             log_handler = LogHandler(self)
@@ -231,8 +242,9 @@ class LogMessagingSocket(tornado.websocket.WebSocketHandler):
             import traceback
             traceback.print_exc()
 
-    def get_messages(message):
-        return self.messages[-message['number_of_messages']:]
+    def get_messages(self, from_date, to_date):
+        messages = [x for x in self.messages if from_date < dateutil.parser.parse(x['timestamp']).replace(tzinfo = None) < to_date]
+        return messages
 
     def check_origin(self, origin): 
         return True
@@ -241,11 +253,27 @@ class LogMessagingSocket(tornado.websocket.WebSocketHandler):
     def on_message(self, message): 
         try:
             message = json.loads(message)
-            reply = {
-                'get_messages' : self.get_messages
-            }[message['action']]
+        except: 
+            self.write_message('Error converting message from json; probably not formatted correctly. Message was : ', message)
+            raise tornado.gen.Return(None)
+
+        try:
+            from_date = message.get('from_date')
+            date_format = '%Y-%m-%d'
+            if from_date:
+                from_date = datetime.datetime.strptime(from_date, date_format)
+            else: 
+                from_date = datetime.datetime.now() + dateutil.relativedelta.relativedelta(days = -2)
+
+            to_date = message.get('to_date')
+            if to_date: 
+                to_date = datetime.datetime.strptime(from_date, date_format)
+            else: 
+                to_date = datetime.datetime.now()
+
+            messages = self.get_messages(from_date, to_date)
+            self.write_message(json.dumps(messages))
+
         except: 
             import traceback
-#            traceback.print_exc()
-        self.write_message(reply(message))
-
+            traceback.print_exc()

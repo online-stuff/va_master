@@ -15,6 +15,7 @@ setuptools.setup(
     'pbkdf2', 
     'pyVmomi', #for vmware
     'libvirt-python', #for, well, libvirt
+    'boto3', #for aws
     'gitpython',
     'watchdog', 
     'clc-sdk',

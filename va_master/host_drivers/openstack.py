@@ -324,6 +324,13 @@ class OpenStackDriver(base.DriverBase):
 
 
     @tornado.gen.coroutine
+    def get_driver_trigger_functions(self):
+        conditions = ['domain_full', 'server_can_add_memory', 'server_can_add_cpu']
+        actions = ['server_new_terminal', 'server_cpu_full', 'server_memory_full', 'server_set_status', 'server_cpu_critical', 'server_cpu_warning', 'server_cpu_ok', 'server_memory_ok', 'server_memory_warning', 'server_memory_critical', 'server_cpu_full_ok', 'server_memory_full_ok']
+        return {'conditions' : conditions, 'actions' : actions}
+
+
+    @tornado.gen.coroutine
     def instance_action(self, host, instance_name, action):
         """ Performs instance actions using a nova client. """
         try:

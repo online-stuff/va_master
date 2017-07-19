@@ -7,11 +7,13 @@ from va_master import datastore
 
 import subprocess
 
+import boto3
+
 PROVIDER_TEMPLATE = '''VAR_PROVIDER_NAME:
-  id: VAR_APP_ID
-  key: VAR_APP_KEY
-  keyname: VAR_KEYNAME
-  private_key: VAR_PRIVATE_KEY
+  id: VAR_AWS_ACCESS_KEY_ID 
+  key: VAR_AWS_SECRET_ACCESS_KEY
+  keyname: VAR_SSH_NAME
+  private_key: VAR_SSH_FILE
   driver: ec2
 
   minion:
@@ -49,17 +51,19 @@ output=json
 
 class AWSDriver(base.DriverBase):
 
-    def __init__(self, provider_name = 'aws_provider', profile_name = 'aws_profile', host_ip = '192.168.80.39', datastore = None):
+    def __init__(self, provider_name = 'aws_provider', profile_name = 'aws_profile', host_ip = '192.168.80.39', key_name = 'va_master_key', key_path = '/root/va_master_key', datastore = None):
         kwargs = {
             'driver_name' : 'aws', 
             'provider_template' : PROVIDER_TEMPLATE, 
             'profile_template' : PROFILE_TEMPLATE, 
             'provider_name' : provider_name, 
             'profile_name' : profile_name, 
-            'host_ip' : host_ip
+            'host_ip' : host_ip,
+            'key_name' : key_name,
+            'key_path' : key_path, 
+            'datastore' : datastore,
         }
-        self.datastore = datastore.ConsulStore()
-        self.datastore.insert('sec_groups', ['default'])
+        self.aws_client = None
 
         self.image_options = ['ami-00c2af73', ]
         self.size_options = ['t1.micro', ]
@@ -67,6 +71,13 @@ class AWSDriver(base.DriverBase):
 
         super(AWSDriver, self).__init__(**kwargs)
         self.aws_config = AWS_CONFIG_TEMPLATE
+
+
+    def get_client(self, host):
+        session = boto3.session.Session(aws_access_key_id = host['aws_access_key_id'], aws_secret_access_key = host['aws_secret_access_key'], region_name = host['region'])
+        client = session.client('ec2')
+        self.aws_client = client
+        return client
 
     @tornado.gen.coroutine
     def driver_id(self):
@@ -85,89 +96,105 @@ class AWSDriver(base.DriverBase):
         ])
 
     @tornado.gen.coroutine
-    def get_salt_configs(self):
-        yield super(AWSDriver, self).get_salt_configs()
-        for var_name in self.provider_vars: 
-            self.aws_config = self.aws_config.replace(var_name, self.provider_vars[var_name])
-        self.provider_name = self.provider_vars['VAR_PROVIDER_NAME']
-        self.profile_name = self.profile_vars['VAR_PROFILE_NAME']
+    def get_steps(self):
+        """ Adds a host_ip, tenant and region field to the first step. These are needed in order to get OpenStack values. """
 
-        with open('/etc/salt/cloud.providers.d/' + self.provider_name + '.conf', 'w') as f: 
-            f.write(self.provider_template)
-        with open('/etc/salt/cloud.profiles.d/' + self.profile_name + '.conf', 'w') as f: 
-            f.write(self.profile_template)
-        with open('/root/.aws/config', 'w') as f: 
-            f.write(self.aws_config)
-
-        raise tornado.gen.Return((self.provider_template, self.profile_template))
+        steps = yield super(AWSDriver, self).get_steps()
+        steps[0].add_fields([
+            ('region', 'Region', 'options'),
+            ('aws_access_key_id', 'AWS access key IDD', 'str'),
+            ('aws_secret_access_key', 'AWS secret access key', 'str'),
+        ])
+        self.steps = steps
+        raise tornado.gen.Return(steps)
 
     @tornado.gen.coroutine
-    def get_steps(self):
-        host_info = Step('Host info')
-        host_info.add_field('app_id', 'Application ID', type = 'str')
-        host_info.add_field('app_key', 'Application Key', type = 'str')
+    def get_images(self):
+        #ec2 hiccups at images for the moment, no idea why
+        #images_result = self.aws_client.describe_images()
+        #images = images_result['Images']
+        return self.image_options
 
-        net_sec = Step('Instance info')
-        net_sec.add_field('netsec_desc', 'Current connection info', type = 'description')
-        net_sec.add_field('region', 'Region', type = 'options')
-        net_sec.add_field('sec_group', 'Pick security group', type = 'options')
+    @tornado.gen.coroutine
+    def get_sizes(self):
+        #TODO find a way to list sizes properly
+        return self.size_options
+    
+    @tornado.gen.coroutine
+    def get_sec_groups(self):
+        sec_result = self.aws_client.describe_security_groups()
+        print ('Sec result is : ', sec_result)
+        sec_groups = sec_result['SecurityGroups']
+        return [x['GroupName'] for x in sec_groups]
+   
+    @tornado.gen.coroutine
+    def get_networks(self):
+        net_result = self.aws_client.describe_network_interfaces()
+        print ('Net result is : ', net_result)
+        networks = net_result['NetworkInterfaces'] or ['default']
+        return networks
 
-        img_size = Step('Image and size')
-        img_size.add_field('img_size_desc', 'Choose an image and size for the instance. ', type = 'description')
-        img_size.add_field('image', 'Choose an image', type = 'options')
-        img_size.add_field('size', 'Choose size', type = 'options')
+    @tornado.gen.coroutine
+    def get_instances(self, host):
+        client = self.get_client(host)
+        result = client.describe_instances()
+        instances = result['Reservations']
+        raise tornado.gen.Return(instances)
 
-        raise tornado.gen.Return([host_info, net_sec, img_size])
+        #TODO instances are returned in a format I don't yet know, need to create some so I can test this. 
+        #Should be like this: 
+#        instances = [
+#            {
+#                'hostname' : 'name', 
+#                'ipv4' : 'ipv4', 
+#                'local_gb' : 0, 
+#                'memory_mb' : 0, 
+#                'status' : 'n/a', 
+#            } for x in data['instances']
+#        ]
+
+
+    @tornado.gen.coroutine
+    def get_host_data(self, host, get_instances = True, get_billing = True):
+        client = self.get_client(host)
+        host_usage = {
+            'total_disk_usage_gb' : 0, 
+            'current_disk_usage_mb' : 0, 
+            'cpus_usage' : 0
+        }
+        instances = []
+        if get_instances:
+            instances = yield self.get_instances(host)
+        host_data = {
+            'instances' : instances, 
+            'host_usage' : host_usage, 
+            'status' : {'success' : True, 'message' : ''},
+        }
+        raise tornado.gen.Return(host_data)
 
     @tornado.gen.coroutine
     def validate_field_values(self, step_index, field_values):
+        """ Uses the base driver method, but adds the region tenant and identity_url variables, used in the configurations. """
         if step_index < 0:
             raise tornado.gen.Return(StepResult(
-                errors=[], new_step_index=0, option_choices={}
+                errors=[], new_step_index=0, option_choices={'region' : self.regions,}
             ))
         elif step_index == 0:
-            self.provider_vars['VAR_APP_ID'] = field_values['app_id']
-            self.provider_vars['VAR_APP_KEY'] = field_values['app_key']
-
-            security_groups = yield self.datastore.get('sec_groups')
-
-            raise tornado.gen.Return(StepResult(errors=[], new_step_index=1, option_choices={                    'sec_group' : security_groups, 
-                    'region' : self.regions,
-            }))
-        elif step_index == 1:
-            self.profile_vars['VAR_SEC_GROUP'] = field_values['sec_group']
             self.provider_vars['VAR_REGION'] = field_values['region']
+            host = {}
+            for x in ['aws_access_key_id', 'aws_secret_access_key', 'region']:
+                host[x] = field_values[x]
+                self.provider_vars['VAR_' + x.upper()] = field_values[x]
 
-            raise tornado.gen.Return(StepResult(errors=[], new_step_index=2, option_choices={
-                    'image' : self.image_options, 
-                    'size' : self.size_options, 
-            }))
-        elif step_index == 2:
-            self.profile_vars['VAR_IMAGE'] = field_values['image']
-            self.profile_vars['VAR_SIZE'] = field_values['size'] 
+            self.get_client(host)
+            self.field_values.update(host)
+        try:
+            step_result = yield super(AWSDriver, self).validate_field_values(step_index, field_values)
+        except:
+            import traceback
+            traceback.print_exc()
+        raise tornado.gen.Return(step_result)
 
-            configs = yield self.get_salt_configs()
-
-
-            passphrase = 'some_generated_pass'
-            cmd_new_key = ['ssh-keygen', '-f', self.key_path, '-t', 'rsa', '-b', '4096', '-P', passphrase]
-
-            cmd_aws_import  = ['aws', 'ec2', 'import-key-pair', '--key-name', self.key_name, '--public-key-material',  'file://' + self.key_path + '.pub', '--profile', 'aws_provider']
-
-#            cmd_eval_agent = ['eval', "`ssh-agent`"]
-
-            cmd_add_ssh = ['ssh-add', self.key_path]
-
-            cmd_new_instance = ['salt-cloud', '--profile=' + self.profile_name, self.profile_name + '_instance']
-#            with open('/tmp/cmd_line', 'w') as f: 
-#                f.write(str(subprocess.list2cmdline(cmd_aws)))
-#                f.write(str(subprocess.list2cmdline(cmd)))
-            subprocess.call(cmd_new_key)
-            subprocess.call(cmd_aws_import)
-#            subprocess.call(cmd_eval_agent)
-            subprocess.call(cmd_add_ssh)
-            subprocess.call(cmd_new_instance)
-
-
-            raise tornado.gen.Return(configs)
+#            Probablt not important right now but might come in handy. 
+#            cmd_aws_import  = ['aws', 'ec2', 'import-key-pair', '--key-name', self.key_name, '--public-key-material',  'file://' + self.key_path + '.pub', '--profile', 'aws_provider']
 
