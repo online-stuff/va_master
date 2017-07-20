@@ -9,6 +9,8 @@ def entry():
     subparsers = parser.add_subparsers(help='action')
     
     start = subparsers.add_parser('start')
+    start.add_argument('--port')
+    start.add_argument('--data-dir')
     start.set_defaults(action='start')
     args = parser.parse_args()
 

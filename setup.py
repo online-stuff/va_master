@@ -18,7 +18,8 @@ DevOps tool for corporate apps.',
         'clc-sdk',
         'google-api-python-client',
         'vapour_linux_amd64;platform_system=="Linux"',
-        'vapour_windows_amd64;platform_system=="Windows"'
+        'vapour_windows_amd64;platform_system=="Windows"',
+        'cerberus'
     ],
     include_package_data=True,
     entry_points={

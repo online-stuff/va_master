@@ -20,15 +20,21 @@ from ..config import logger
 def invalid_url(handler):
     raise Exception('Invalid URL : ' + handler.data['path'] +' with method : ' + handler.data['method'])
 
+# Don't import these modules as endpoints
+ENDPOINT_BLACKLIST = ('apps', 'triggers')
+
 def get_endpoints():
     '''Gets the endpoints of the modules in this package in the form
     {'module_name': {'get': ..., 'post': ...}, ...}
     '''
     
-    this_dir = os.path.dirname(__file__) 
+    # Get all modules in the current package (.api)
+    this_dir = os.path.dirname(__file__)
     mods = pkgutil.iter_modules([this_dir])
     endpoints = {}
     for _, module_name, _ in mods:
+        if module_name in ENDPOINT_BLACKLIST: continue
+
         try:
             mod_endpoints = importlib.import_module('.{}'.format(module_name), __package__) \
                 .get_endpoints()
@@ -37,8 +43,7 @@ def get_endpoints():
             logger.debug('Cannot import {} as endpoint (it doesn\'t have '
             'get_endpoints()).'.format(module_name))
     return endpoints
-    
-(get_endpoints())
+
 class ApiHandler(tornado.web.RequestHandler):
     executor = ThreadPoolExecutor(max_workers= 4)
 
@@ -46,12 +51,7 @@ class ApiHandler(tornado.web.RequestHandler):
         self.config = config
         self.datastore = config.datastore
         self.data = {}
-        try:
-            self.paths = url_handler.gather_paths()
-        except: 
-            import traceback
-            traceback.print_exc()
-            return
+        self.endpoints = get_endpoints()
         self.salt_client = None
 
     def json(self, obj, status=200):

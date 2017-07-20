@@ -20,10 +20,6 @@ def get_endpoints():
     }
     return paths
 
-
-
-
-
 @tornado.gen.coroutine
 def get_or_create_token(datastore, username, user_type = 'admin'):
     found = False
