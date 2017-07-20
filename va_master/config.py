@@ -5,7 +5,6 @@ import logging
 import os
 from . import deploy_handler
 from . import datastore
-from .host_drivers import openstack
 
 def get_server_static():
     # get the server assets static path

@@ -62,6 +62,7 @@ class ApiHandler(tornado.web.RequestHandler):
         except: 
 #            print ('Error with testing formatted result - probably is ok. ')
             return False
+
     @tornado.gen.coroutine
     def exec_method(self, method, path, data):
         self.data = data
@@ -147,7 +148,6 @@ class ApiHandler(tornado.web.RequestHandler):
                 data = {}
 
             yield self.exec_method('post', path, data)
-
         except: 
             import traceback
             traceback.print_exc()

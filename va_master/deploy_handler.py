@@ -5,8 +5,6 @@ import traceback
 import functools
 import tornado
 import tornado.gen
-from host_drivers import openstack, aws, vcloud, libvirt_driver, generic_driver, century_link, gce, vmware
-
 
 from Crypto.PublicKey import RSA
 from concurrent.futures import ProcessPoolExecutor
@@ -305,5 +303,3 @@ class DeployHandler(object):
         all_actions = yield self.datastore.get('actions')
         actions = all_actions[:number_actions] if number_actions else all_actions
         raise tornado.gen.Return(all_actions[:number_actions])
-
-
