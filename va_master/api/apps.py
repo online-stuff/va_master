@@ -5,7 +5,8 @@ import subprocess
 import requests
 import zipfile, tarfile
 
-from salt.client import Caller
+from salt.client import Caller, LocalClient
+
 import panels
 
 
@@ -75,6 +76,7 @@ def download_vpn_cert(handler):
         f.write(cert)
  
     handler.serve_file(vpn_cert_path)
+    raise tornado.gen.Return({'data_type' : 'file'})
 
 
 @tornado.gen.coroutine
@@ -84,8 +86,6 @@ def perform_instance_action(handler):
         store = handler.config.deploy_handler.datastore
         hosts = yield store.get('hosts')
 
-        print ('Hosts are : ', hosts)
-        print ('Data is : ', data)
         host = [x for x in hosts if x['hostname'] == data['hostname']][0]
         driver = yield handler.config.deploy_handler.get_driver_by_id(host['driver_name'])
         success = yield driver.instance_action(host, data['instance_name'], data['action'])
@@ -155,7 +155,6 @@ def create_new_state(handler):
 
     tar_ref = tarfile.TarFile(tmp_archive)
     tar_ref.extractall(salt_path)
-    print ('Names are : ', tar_ref.getnames())
 
 #    zip_ref.close()
     tar_ref.close()
@@ -167,8 +166,9 @@ def get_app_info(handler):
     instance_name = handler.data['instance_name']
    
     cl = Caller()
+    print ('Getting inventory for :', instance_name)
     instance_info = cl.cmd('mine.get', instance_name, 'inventory') 
-
+    print ('Info is : ', instance_info)
     raise tornado.gen.Return(instance_info)
 
         
@@ -176,7 +176,6 @@ def get_app_info(handler):
 @tornado.gen.coroutine
 def launch_app(handler):
     data = handler.data
-    print ('My data is : ', data)
     deploy_handler = handler.config.deploy_handler
     store = deploy_handler.datastore
 
@@ -191,7 +190,8 @@ def launch_app(handler):
 
     if data.get('role'):
 
-        states = yield store.get('states')
+        init_vals = yield store.get('init_vals')
+        states = init_vals['states']
         state = [x for x in states if x['name'] == data['role']][0]
 
         panel = {'panel_name' : handler.data['instance_name'], 'role' : minion_info['role']}

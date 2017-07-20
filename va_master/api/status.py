@@ -1,5 +1,12 @@
 import tornado.gen
 
+def get_endpoints():
+    return {
+        'get': {
+            'status': status
+        }
+    }
+
 @tornado.gen.coroutine
 def status(handler):
     handler.json({'e': True})

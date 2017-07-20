@@ -3,6 +3,7 @@ var connect = require('react-redux').connect;
 var Network = require('../network');
 var Bootstrap = require('react-bootstrap');
 var ReactDOM = require('react-dom');
+var Reactable = require('reactable');
 
 var Appp = React.createClass({
     getInitialState: function () {
@@ -19,12 +20,12 @@ var Appp = React.createClass({
     },
 
     getData: function() {
-        var data = {hosts: []};
+        var data = {hosts: [], filter_instances: ["va-backup", "va-monitoring", "winsrv1", "winsrv2", "winsrv3"]};
         var me = this;
         var n1 = Network.post('/api/hosts/info', this.props.auth.token, data).fail(function (msg) {
             me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
         });
-        var n2 = Network.get('/api/hosts', this.props.auth.token).fail(function (msg) {
+        var n2 = Network.post('/api/hosts', this.props.auth.token, {filter_instances: ["va-backup", "va-monitoring", "winsrv1", "winsrv2", "winsrv3"]}).fail(function (msg) {
             me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
         });
         var n3 = Network.get('/api/states', this.props.auth.token).fail(function (msg) {
@@ -67,6 +68,10 @@ var Appp = React.createClass({
         });
     },
 
+    openModal: function () {
+        this.props.dispatch({type: 'OPEN_MODAL'});
+    },
+
     render: function () {
         var app_rows = [];
         for(var i = 0; i < this.state.hosts.length; i++){
@@ -85,28 +90,28 @@ var Appp = React.createClass({
                     }
                 }
                 return (
-                    <tr key={app.hostname}>
-                        <td>{app.hostname}</td>
-                        <td>{ipaddr}</td>
-                        <td>{app.size}</td>
-                        <td>{app.status}</td>
-                        <td>{app.host}</td>
-                        <td>
+                    <Reactable.Tr key={app.hostname}>
+                        <Reactable.Td column="Hostname">{app.hostname}</Reactable.Td>
+                        <Reactable.Td column="IP">{ipaddr}</Reactable.Td>
+                        <Reactable.Td column="Size">{app.size}</Reactable.Td>
+                        <Reactable.Td column="Status">{app.status}</Reactable.Td>
+                        <Reactable.Td column="Host">{app.host}</Reactable.Td>
+                        <Reactable.Td column="Actions">
                             <Bootstrap.DropdownButton bsStyle='primary' title="Choose" onSelect = {this.btn_clicked.bind(this, app.hostname, app.host)}>
                                 <Bootstrap.MenuItem eventKey="reboot">Reboot</Bootstrap.MenuItem>
                                 <Bootstrap.MenuItem eventKey="delete">Delete</Bootstrap.MenuItem>
                                 <Bootstrap.MenuItem eventKey="start">Start</Bootstrap.MenuItem>
                                 <Bootstrap.MenuItem eventKey="stop">Stop</Bootstrap.MenuItem>
                             </Bootstrap.DropdownButton>
-                        </td>
-                    </tr>
+                        </Reactable.Td>
+                    </Reactable.Tr>
                 );
             }.bind(this));
             app_rows.push(rows);
         }
 
         var AppFormRedux = connect(function(state){
-            return {auth: state.auth, apps: state.apps, alert: state.alert};
+            return {auth: state.auth, apps: state.apps, alert: state.alert, modal: state.modal};
         })(AppForm);
 
         var loaded = this.state.loaded;
@@ -120,23 +125,17 @@ var Appp = React.createClass({
         return (
             <div className="app-containter">
                 <span className="spinner" style={spinnerStyle} ><i className="fa fa-spinner fa-spin fa-3x"></i></span>
-                <AppFormRedux style={blockStyle} hosts = {this.state.hosts} states = {this.state.states} hostname = {this.state.hostname} role = {this.state.role} defaults = {this.state.defaults} options = {this.state.options} host_usage = {this.state.host_usage} getData = {this.getData} onChange = {this.onChange} onChangeRole = {this.onChangeRole} />
-                <Bootstrap.PageHeader>Current apps <small>All specified apps</small></Bootstrap.PageHeader>
-                <Bootstrap.Table striped bordered hover>
-                    <thead>
-                        <tr>
-                        <td>Hostname</td>
-                        <td>IP</td>
-                        <td>Size</td>
-                        <td>Status</td>
-                        <td>Host</td>
-                        <td>Actions</td>
-                        </tr>
-                    </thead>
-                    <tbody>
+                <div style={blockStyle}>
+                    <AppFormRedux hosts = {this.state.hosts} states = {this.state.states} hostname = {this.state.hostname} role = {this.state.role} defaults = {this.state.defaults} options = {this.state.options} host_usage = {this.state.host_usage} getData = {this.getData} onChange = {this.onChange} onChangeRole = {this.onChangeRole} />
+                    <Bootstrap.PageHeader>Current apps <small>All specified apps</small></Bootstrap.PageHeader>
+                    <Bootstrap.Button onClick={this.openModal} className="tbl-btn">
+                        <Bootstrap.Glyphicon glyph='plus' />
+                        Launch new app
+                    </Bootstrap.Button>
+                    <Reactable.Table className="table striped" columns={['Hostname', 'IP', 'Size', 'Status', 'Host', 'Actions']} itemsPerPage={10} pageButtonLimit={10} noDataText="No matching records found." sortable={true} filterable={['Hostname', 'IP', 'Size', 'Status', 'Host']} >
                         {app_rows}
-                    </tbody>
-                </Bootstrap.Table>
+                    </Reactable.Table>
+                </div>
             </div>
         );
     }
@@ -160,6 +159,10 @@ var AppForm = React.createClass({
 
     onChangeRole: function(e) {
         this.setState({role: e.target.value});
+    },
+
+    close: function() {
+        this.props.dispatch({type: 'CLOSE_MODAL'});
     },
 
     render: function () {
@@ -224,90 +227,103 @@ var AppForm = React.createClass({
         })(Stats);
 
         return (
-            <div className="container" style={this.props.style}>
-                <Bootstrap.Col xs={12} sm={6} md={6} className="app-column">
-                    <Bootstrap.PageHeader className="header">Launch new app</Bootstrap.PageHeader>
-                    <Bootstrap.Form onSubmit={this.onSubmit} horizontal>
-                        <Bootstrap.FormGroup>
-                            <Bootstrap.Col sm={4}>
-                                <Bootstrap.FormControl componentClass="select" ref='role' onChange={this.onChangeRole}>
-                                    {state_rows}
-                                </Bootstrap.FormControl>
-                            </Bootstrap.Col>
-                            <Bootstrap.Col sm={8}>
-                                <Bootstrap.FormControl type="text" ref='name' placeholder='Instance name' />
-                            </Bootstrap.Col>
-                        </Bootstrap.FormGroup>
-                        <Bootstrap.FormGroup>
-                            <Bootstrap.Col componentClass={Bootstrap.ControlLabel} sm={2}>
-                                Host
-                            </Bootstrap.Col>
-                            <Bootstrap.Col sm={10}>
-                                <Bootstrap.FormControl componentClass="select" ref='hostname' onChange={this.onChange}>
-                                    {host_rows}
-                                </Bootstrap.FormControl>
-                            </Bootstrap.Col>
-                        </Bootstrap.FormGroup>
-                        <Bootstrap.FormGroup>
-                            <Bootstrap.Col componentClass={Bootstrap.ControlLabel} sm={2}>
-                                Image
-                            </Bootstrap.Col>
-                            <Bootstrap.Col sm={10}>
-                                <Bootstrap.FormControl componentClass="select" ref='image'>
-                                    {img_rows}
-                                </Bootstrap.FormControl>
-                            </Bootstrap.Col>
-                        </Bootstrap.FormGroup>
-                        <Bootstrap.FormGroup>
-                            <Bootstrap.Col componentClass={Bootstrap.ControlLabel} sm={2}>
-                                Flavors
-                            </Bootstrap.Col>
-                            <Bootstrap.Col sm={10}>
-                                <Bootstrap.FormControl componentClass="select" ref='flavor'>
-                                    {sizes_rows}
-                                </Bootstrap.FormControl>
-                            </Bootstrap.Col>
-                        </Bootstrap.FormGroup>
-                        <Bootstrap.FormGroup>
-                            <Bootstrap.Col componentClass={Bootstrap.ControlLabel} sm={2}>
-                                Storage disk
-                            </Bootstrap.Col>
-                            <Bootstrap.Col sm={10}>
-                                <Bootstrap.FormControl type="text" ref='storage' />
-                            </Bootstrap.Col>
-                        </Bootstrap.FormGroup>
-                        <Bootstrap.FormGroup>
-                            <Bootstrap.Col componentClass={Bootstrap.ControlLabel} sm={2}>
-                                Networks
-                            </Bootstrap.Col>
-                            <Bootstrap.Col sm={10}>
-                                <Bootstrap.FormControl componentClass="select" ref='network'>
-                                    {network_rows}
-                                </Bootstrap.FormControl>
-                            </Bootstrap.Col>
-                        </Bootstrap.FormGroup>
-                        <Bootstrap.FormGroup>
-                            <Bootstrap.Col componentClass={Bootstrap.ControlLabel} sm={2}>
-                                Security group
-                            </Bootstrap.Col>
-                            <Bootstrap.Col sm={10}>
-                                <Bootstrap.FormControl componentClass="select" ref='sec_group'>
-                                    {sec_groups}
-                                </Bootstrap.FormControl>
-                            </Bootstrap.Col>
-                        </Bootstrap.FormGroup>
-                        <Bootstrap.ButtonGroup>
-                            <Bootstrap.Button type="submit" bsStyle='primary'>
-                                Launch
-                            </Bootstrap.Button>
-                        </Bootstrap.ButtonGroup>
-                        <div style={{width: '100%', padding: 10, borderRadius: 5, background: statusColor, display: statusDisplay}}>
-                            {statusMessage}
-                        </div>
-                    </Bootstrap.Form>
-                </Bootstrap.Col>
-                <StatsRedux hostname = {this.state.hostname} host_usage = {this.props.host_usage[this.state.index]} />
-            </div>
+            <Bootstrap.Modal show={this.props.modal.isOpen} onHide={this.close}>
+                <Bootstrap.Modal.Header closeButton>
+                  <Bootstrap.Modal.Title>Launch new app</Bootstrap.Modal.Title>
+                </Bootstrap.Modal.Header>
+
+                <Bootstrap.Modal.Body>
+                    <Bootstrap.Col xs={12} sm={7} md={7} className="app-column">
+                        <Bootstrap.Form onSubmit={this.onSubmit} horizontal>
+                            <Bootstrap.FormGroup>
+                                <Bootstrap.Col sm={4}>
+                                    <Bootstrap.FormControl componentClass="select" ref='role' onChange={this.onChangeRole}>
+                                        {state_rows}
+                                    </Bootstrap.FormControl>
+                                </Bootstrap.Col>
+                                <Bootstrap.Col sm={8}>
+                                    <Bootstrap.FormControl type="text" ref='name' placeholder='Instance name' />
+                                </Bootstrap.Col>
+                            </Bootstrap.FormGroup>
+                            <Bootstrap.FormGroup>
+                                <Bootstrap.Col componentClass={Bootstrap.ControlLabel} sm={3}>
+                                    Host
+                                </Bootstrap.Col>
+                                <Bootstrap.Col sm={9}>
+                                    <Bootstrap.FormControl componentClass="select" ref='hostname' onChange={this.onChange}>
+                                        {host_rows}
+                                    </Bootstrap.FormControl>
+                                </Bootstrap.Col>
+                            </Bootstrap.FormGroup>
+                            <Bootstrap.FormGroup>
+                                <Bootstrap.Col componentClass={Bootstrap.ControlLabel} sm={3}>
+                                    Image
+                                </Bootstrap.Col>
+                                <Bootstrap.Col sm={9}>
+                                    <Bootstrap.FormControl componentClass="select" ref='image'>
+                                        {img_rows}
+                                    </Bootstrap.FormControl>
+                                </Bootstrap.Col>
+                            </Bootstrap.FormGroup>
+                            <Bootstrap.FormGroup>
+                                <Bootstrap.Col componentClass={Bootstrap.ControlLabel} sm={3}>
+                                    Flavors
+                                </Bootstrap.Col>
+                                <Bootstrap.Col sm={9}>
+                                    <Bootstrap.FormControl componentClass="select" ref='flavor'>
+                                        {sizes_rows}
+                                    </Bootstrap.FormControl>
+                                </Bootstrap.Col>
+                            </Bootstrap.FormGroup>
+                            <Bootstrap.FormGroup>
+                                <Bootstrap.Col componentClass={Bootstrap.ControlLabel} sm={3}>
+                                    Storage disk
+                                </Bootstrap.Col>
+                                <Bootstrap.Col sm={9}>
+                                    <Bootstrap.FormControl type="text" ref='storage' />
+                                </Bootstrap.Col>
+                            </Bootstrap.FormGroup>
+                            <Bootstrap.FormGroup>
+                                <Bootstrap.Col componentClass={Bootstrap.ControlLabel} sm={3}>
+                                    Networks
+                                </Bootstrap.Col>
+                                <Bootstrap.Col sm={9}>
+                                    <Bootstrap.FormControl componentClass="select" ref='network'>
+                                        {network_rows}
+                                    </Bootstrap.FormControl>
+                                </Bootstrap.Col>
+                            </Bootstrap.FormGroup>
+                            <Bootstrap.FormGroup>
+                                <Bootstrap.Col componentClass={Bootstrap.ControlLabel} sm={3}>
+                                    Security group
+                                </Bootstrap.Col>
+                                <Bootstrap.Col sm={9}>
+                                    <Bootstrap.FormControl componentClass="select" ref='sec_group'>
+                                        {sec_groups}
+                                    </Bootstrap.FormControl>
+                                </Bootstrap.Col>
+                            </Bootstrap.FormGroup>
+                            <Bootstrap.FormGroup>
+                                <Bootstrap.Col componentClass={Bootstrap.ControlLabel} sm={3}>
+                                    Login as user
+                                </Bootstrap.Col>
+                                <Bootstrap.Col sm={9}>
+                                    <Bootstrap.FormControl type="text" ref='username' />
+                                </Bootstrap.Col>
+                            </Bootstrap.FormGroup>
+                            <Bootstrap.ButtonGroup>
+                                <Bootstrap.Button type="submit" bsStyle='primary'>
+                                    Launch
+                                </Bootstrap.Button>
+                            </Bootstrap.ButtonGroup>
+                            <div style={{width: '100%', padding: 10, borderRadius: 5, background: statusColor, display: statusDisplay}}>
+                                {statusMessage}
+                            </div>
+                        </Bootstrap.Form>
+                    </Bootstrap.Col>
+                    <StatsRedux hostname = {this.state.hostname} host_usage = {this.props.host_usage[this.state.index]} />
+                </Bootstrap.Modal.Body>
+            </Bootstrap.Modal>
         );
     },
     onSubmit: function(e) {
@@ -330,7 +346,8 @@ var AppForm = React.createClass({
             image: ReactDOM.findDOMNode(this.refs.image).value,
             storage: ReactDOM.findDOMNode(this.refs.storage).value,
             network: ReactDOM.findDOMNode(this.refs.network).value,
-            sec_group: ReactDOM.findDOMNode(this.refs.sec_group).value
+            sec_group: ReactDOM.findDOMNode(this.refs.sec_group).value,
+            username: ReactDOM.findDOMNode(this.refs.username).value
         };
         Network.post('/api/apps', this.props.auth.token, data).done(function(data) {
             setTimeout(function(){
@@ -346,8 +363,8 @@ var AppForm = React.createClass({
 var Stats = React.createClass({
     render: function () {
         return (
-            <Bootstrap.Col xs={12} sm={6} md={6}>
-                <Bootstrap.PageHeader className="header">{this.props.hostname}</Bootstrap.PageHeader>
+            <Bootstrap.Col xs={12} sm={5} md={5}>
+                <h3>{this.props.hostname}</h3>
                 <label>CPU: </label>{this.props.host_usage.used_cpus} / {this.props.host_usage.max_cpus}<br/>
                 <label>RAM: </label>{this.props.host_usage.used_ram} / {this.props.host_usage.max_ram}<br/>
                 <label>DISK: </label>{this.props.host_usage.used_disk} / {this.props.host_usage.max_disk}<br/>

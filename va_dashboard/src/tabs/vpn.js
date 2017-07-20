@@ -55,7 +55,7 @@ var Vpn = React.createClass({
         var me = this;
         switch (evtKey) {
             case "download":
-                Network.post("/api/apps/download_vpn_cert", this.props.auth.token, data).done(function(d) {
+                Network.download_file("/api/apps/download_vpn_cert", this.props.auth.token, data).done(function(d) {
                     var data = new Blob([d], {type: 'octet/stream'});
                     var url = window.URL.createObjectURL(data);
                     tempLink = document.createElement('a');

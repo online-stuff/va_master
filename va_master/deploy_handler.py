@@ -5,8 +5,6 @@ import traceback
 import functools
 import tornado
 import tornado.gen
-from host_drivers import openstack, aws, vcloud, libvirt_driver, generic_driver, century_link
-
 
 from Crypto.PublicKey import RSA
 from concurrent.futures import ProcessPoolExecutor
@@ -32,8 +30,7 @@ class DeployHandler(object):
             store_values = yield self.datastore.get('init_vals')
         except:
             store_values = {}
-            print ('No store values found - probably initializing deploy_handler for the first time. Will initialize with cli arguments. ')
-
+        
         for var in init_vars: 
             if var in kwargs: 
                 setattr(self, var, kwargs[var])
@@ -74,19 +71,23 @@ class DeployHandler(object):
                 'host_ip' : host_ip, 
                 'key_name' : self.ssh_key_name, 
                 'key_path' : self.ssh_key_path, 
+                'datastore' : self.datastore
             }
-
 
             self.drivers = [x(**kwargs) for x in [
                 openstack.OpenStackDriver, 
+                gce.GCEDriver,
                 generic_driver.GenericDriver,
+
             ]]
+            kwargs['flavours'] = va_flavours
 
-            #Libvirt also needs these kwargs. 
 
-            kwargs['flavours'] =  self.va_flavours
-
-            self.drivers += [x(**kwargs) for x in (century_link.CenturyLinkDriver, libvirt_driver.LibVirtDriver)]
+            self.drivers += [x(**kwargs) for x in (
+                century_link.CenturyLinkDriver, 
+                libvirt_driver.LibVirtDriver,
+                vmware.VMWareDriver
+            )]
 
         raise tornado.gen.Return(self.drivers)
 
@@ -98,6 +99,26 @@ class DeployHandler(object):
             if driver_id == id_:
                 raise tornado.gen.Return(driver)
         raise tornado.gen.Return(None)
+
+
+    @tornado.gen.coroutine
+    def get_host(self, hostname):
+        hosts = yield self.datastore.get('hosts')
+        host = [x for x in hosts if x['hostname'] == hostname][0]
+        raise tornado.gen.Return(host)
+
+    @tornado.gen.coroutine
+    def get_host_and_driver(self, hostname):
+        host = yield self.get_host(hostname)
+        driver = yield self.get_driver_by_id(host['driver_name'])
+
+        raise tornado.gen.Return((host, driver))
+
+    @tornado.gen.coroutine
+    def get_triggers(self, hostname):
+        hosts = yield self.list_hosts()
+        host = [x for x in hosts if x['hostname'] == hostname][0]
+        raise tornado.gen.Return(host['triggers'])
 
     @tornado.gen.coroutine
     def list_hosts(self):
@@ -145,9 +166,23 @@ class DeployHandler(object):
         try: 
             panels = yield self.datastore.get('panels')
         except: 
-            user_panels, admin_panels = ([{'name' : x['name'], 'icon' : x['icon'], 'instances' : [], 'panels' : x.get('panels', {'admin' : [], 'user' : []}[type])} for x in states_data] for type in ['user', 'admin'])
-            panels = {'user' : user_panels, 'admin' : admin_panels}
-            yield self.datastore.insert('panels', panels)
+            panels = {}
+        print ('States data is : ', states_data)
+        get_panel_instances = lambda i, user_type: [x for x in panels.get(user_type) if x['name'] == i] or [{'instances' : []}]
+
+        for x in states_data: 
+            print 'instances for : ', x['name'], ' is : ', get_panel_instances(x['name'], 'admin')[0]['instances']
+
+        print ('Panel instances for backup is : ', get_panel_instances('backup', 'admin'))
+        user_panels, admin_panels = ([
+            {
+                'name' : x['name'], 
+                'icon' : x['icon'], 
+                'instances' : get_panel_instances(x['name'], user_type)[0]['instances'], 
+                'panels' : x.get('panels', {'admin' : [], 'user' : []}[user_type])
+            } for x in states_data] for user_type in ['user', 'admin'])
+        panels = {'user' : user_panels, 'admin' : admin_panels}
+        yield self.datastore.insert('panels', panels)
         raise tornado.gen.Return(states_data)
 
 
@@ -156,7 +191,6 @@ class DeployHandler(object):
         try: 
             states_data = yield self.datastore.get('init_vals')
             states_data = states_data['states']
-            print ('Got states data : ', states_data)
         except self.datastore.KeyNotFound:
             states_data = yield self.get_states_data()
             yield self.datastore.insert('states', states_data)
@@ -192,18 +226,22 @@ class DeployHandler(object):
     def store_panel(self, panel):
         panels = yield self.datastore.get('panels')
 
+#        print ('Panels are : ', panels)
         
         role_user_panels = filter(lambda x: x['name'] == panel['role'], panels['user'])[0]
-        if panel['panel_name'] in role_user_panels['instances']: raise tornado.gen.Return()
-
+#        if panel['panel_name'] in role_user_panels['instances']: raise tornado.gen.Return()
+        print 'Role user panels are : ', role_user_panels
         role_user_panels['instances'].append(panel['panel_name'])
+        print 'They are now : ', role_user_panels
 
         role_admin_panels = filter(lambda x: x['name'] == panel['role'], panels['admin'])[0]
+        print 'ROle admin panels are : ', role_admin_panels
         role_admin_panels['instances'].append(panel['panel_name'])
+        print 'They are now : ', role_admin_panels
 
 #            panels['user'][panel['role']] = role_user_panels
 #            panels['admin'][panel['role']] = role_admin_panels
-        print ('New panels are : ', panels)
+#        print ('New panels are : ', panels)
         yield self.datastore.insert('panels', panels)
 
 
@@ -264,5 +302,3 @@ class DeployHandler(object):
         all_actions = yield self.datastore.get('actions')
         actions = all_actions[:number_actions] if number_actions else all_actions
         raise tornado.gen.Return(all_actions[:number_actions])
-
-

@@ -46,9 +46,15 @@ function table(state, action){
 
     if(action.type == 'ADD_DATA'){
         newState = action.tables;
+        // newState.path = [];
     }
     if(action.type == 'CHANGE_DATA'){
         newState[action.name] = action.data;
+        if("passVal" in action){
+            newState["path"].push(action.passVal);
+        }else if("initVal" in action){
+            newState["path"] = action.initVal;
+        }
     }
     return newState;
 }
@@ -58,7 +64,7 @@ function filter(state, action){
         return {filterBy: ""};
     }
 
-    var newState = Object.assign({}, state); 
+    var newState = Object.assign({}, state);
     if(action.type == 'FILTER'){
         newState.filterBy = action.filterBy;
     }
@@ -71,18 +77,26 @@ function filter(state, action){
 
 function modal(state, action){
     if(typeof state === 'undefined'){
-        return {isOpen: false, template: { title: "", content: [], buttons: [], args: []}};
+        return {isOpen: false, template: { title: "", content: [], buttons: [], args: []}, args: {}, modalType: ""};
     }
 
     var newState = Object.assign({}, state);
     if(action.type == 'OPEN_MODAL'){
         if("template" in action)
             newState.template = action.template;
+        if("args" in action){
+            newState.args = action.args;
+        }
+        if("modalType" in action){
+            newState.modalType = action.modalType;
+        }
         newState.isOpen = true;
     }
     if(action.type == 'CLOSE_MODAL'){
         newState.template = { title: "", content: [], buttons: [], args: []};
+        newState.args = {};
         newState.isOpen = false;
+        newState.modalType = "";
     }
 
     return newState;
@@ -178,6 +192,8 @@ var Subpanel = require('./tabs/subpanel');
 var Vpn = require('./tabs/vpn');
 var VpnLogins = require('./tabs/vpn_logins');
 var ChartPanel = require('./tabs/chart_panel');
+var Triggers = require('./tabs/triggers');
+var Ts_status = require('./tabs/ts_status');
 
 var Login = require('./login');
 var App = React.createClass({
@@ -191,6 +207,8 @@ var App = React.createClass({
                 <Router.Route path='/store' component={Store} />
                 <Router.Route path='/vpn' component={Vpn} />
                 <Router.Route path='/vpn/list_logins/:username' component={VpnLogins} />
+                <Router.Route path='/triggers' component={Triggers} />
+                <Router.Route path='/ts_status' component={Ts_status} />
                 <Router.Route path='/panel/:id/:instance' component={Panel} />
                 <Router.Route path='/subpanel/:id/:instance/:username' component={Subpanel} />
                 <Router.Route path='/chart_panel/:instance/:host/:service' component={ChartPanel} />
@@ -201,9 +219,28 @@ var App = React.createClass({
   }
 });
 
-document.addEventListener('DOMContentLoaded', function() {
-  var el = document.getElementById('body-wrapper');
-  ReactDOM.render(<Provider store={store}>
-        <App/>
-      </Provider>, el);
-});
+var activeCallback = $.Callbacks();
+
+WebFontConfig = {
+    custom: {
+        families: ['Glyphicons Halflings', 'FontAwesome'],
+        urls: ['static/css/bootstrap.min.css', 'static/css/font-awesome.min.css', 'static/css/style.css']
+    },
+    active: function () { activeCallback.fire(); },
+    inactive: function () { console.log("inactive fonts"); }
+};
+(function() {
+    var el = document.getElementById('body-wrapper');
+    activeCallback.add(function (){
+        ReactDOM.render(<Provider store={store}>
+              <App/>
+            </Provider>, el);
+    });
+    var wf = document.createElement('script');
+    wf.src = ('https:' == document.location.protocol ? 'https' : 'http') +
+      '://ajax.googleapis.com/ajax/libs/webfont/1.6.26/webfont.js';
+    wf.type = 'text/javascript';
+    wf.async = 'true';
+    var s = document.getElementsByTagName('script')[0];
+    s.parentNode.insertBefore(wf, s);
+})();

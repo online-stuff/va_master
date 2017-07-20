@@ -6,29 +6,74 @@ import panels
 
 
 
-def get_paths():
+def get_endpoints():
     paths = {
         'get' : {
-            'hosts' : list_hosts, 
             'hosts/reset' : reset_hosts, 
             'drivers' : list_drivers, 
+            'hosts/get_trigger_functions': get_hosts_triggers,
+            'hosts/get_host_billing' : get_host_billing, 
+            'hosts' : list_hosts, 
 
         },
         'post' : {
+            'hosts' : list_hosts, 
             'hosts/info' : get_host_info, 
             'hosts/new/validate_fields' : validate_newhost_fields, 
             'hosts/delete' : delete_host, 
+            'hosts/add_host' : add_host,
+            'hosts/generic_add_instance' : add_generic_instance,
         }
     }
     return paths
 
-##@auth_only(user_allowed = True)
+
+@tornado.gen.coroutine
+def add_host(handler):
+    host_field_values = {"username": "user", "sizes": [], "images": [], "hostname": "sample_host", "instances": [], "driver_name": "generic_driver", "defaults": {}, "sec_groups": [], "password": "pass", "ip_address": "127.0.0.1", "networks": []}
+    host_field_values.update(handler.data['field_values'])
+
+    driver = yield handler.config.deploy_handler.get_driver_by_id(handler.data['driver_name'])
+    driver.field_values = host_field_values
+
+    yield handler.config.deploy_handler.create_host(driver)
+    if host_field_values['driver_name'] == 'generic_driver' : 
+        handler.config.deploy_handler.datastore.insert(host_field_values['hostname'], {"instances" : []})
+
+
+    raise tornado.gen.Return(True)
+
+
+@tornado.gen.coroutine
+def add_generic_instance(handler):
+    base_instance = {"hostname" : "", "ipv4" : "", "local_gb" : 0, "memory_mb" : 0, "status" : "n/a" }
+    base_instance.update(handler.data['instance'])
+
+    instances = yield handler.config.deploy_handler.datastore.get(handler.data['hostname'])
+    instances['instances'].append(base_instance)
+    yield handler.config.deploy_handler.datastore.insert(handler.data['hostname'], instances)
+
+@tornado.gen.coroutine
+def get_host_billing(handler):
+    host, driver = yield handler.config.deploy_handler.get_host_and_driver(handler.data['hostname'])
+    result = yield driver.get_host_billing(host)
+    raise tornado.gen.Return(result)
+
+@tornado.gen.coroutine
+def get_hosts_triggers(handler):
+    host, driver = yield handler.config.deploy_handler.get_host_and_driver(handler.data['hostname'])
+    result = yield driver.get_driver_trigger_functions()
+    raise tornado.gen.Return(result)
+
 @tornado.gen.coroutine
 def list_hosts(handler):
     hosts = yield handler.config.deploy_handler.list_hosts()
     for host in hosts: 
         driver = yield handler.config.deploy_handler.get_driver_by_id(host['driver_name'])
         host['instances'] = yield driver.get_instances(host)
+        if handler.data.get('filter_instances'): 
+            host['instances'] = [x for x in host['instances'] if x['hostname'] in handler.data.get('filter_instances')]
+
     raise tornado.gen.Return({'hosts': hosts})
 
 
@@ -89,14 +134,9 @@ def validate_newhost_fields(handler):
             raise tornado.gen.Return({'error': 'bad_step'}, 400)
         else:
             if step_index < 0 or driver_steps[step_index].validate(field_values):
-                try: 
-                    result = yield found_driver.validate_field_values(step_index, field_values)
-                except tornado.gen.Return: 
-                    raise
-                except Exception as e:
-                    raise tornado.gen.Return({'success' : False, 'message' : 'Could not validate field values. Error was : ' + e.message, 'data' : {}})
+                result = yield found_driver.validate_field_values(step_index, field_values)
+                print 'Result is : ', result, ' with index : ', result.new_step_index
                 if result.new_step_index == -1:
-                    print ('Adding new host')
                     handler.config.deploy_handler.create_host(found_driver)
                 raise tornado.gen.Return(result.serialize())
             else:
@@ -124,9 +164,6 @@ def create_host(handler):
 
 @tornado.gen.coroutine
 def get_host_info(handler):
-    from time import time
-    print ('Starting timer. ')
-    t0 = time()
     data = handler.data
     deploy_handler = handler.config.deploy_handler
     store = deploy_handler.datastore
@@ -138,14 +175,15 @@ def get_host_info(handler):
         hosts = [host for host in hosts if host['hostname'] in required_hosts]
 
     host_drivers = yield [deploy_handler.get_driver_by_id(x['driver_name']) for x in hosts]
-
-    hosts_data = [x[0].get_host_data(x[1]) for x in zip(host_drivers, hosts)]
-    print ('Yielding data: ', hosts_data)
+    hosts_data = [x[0].get_host_data(host = x[1], get_instances = data.get('get_instances', True), get_billing = data.get('get_billing', True)) for x in zip(host_drivers, hosts)]
     hosts_info = yield hosts_data
     
+    if data.get('filter_instances'): 
+        for host in hosts_info:
+            host['instances'] = [x for x in host['instances'] if x['hostname'] in data.get('filter_instances')]
+
     for info in zip(hosts_info, hosts): 
         info[0]['hostname'] = info[1]['hostname']
 
-    print ('Info takes : ', time() - t0)
     raise tornado.gen.Return(hosts_info)
 
