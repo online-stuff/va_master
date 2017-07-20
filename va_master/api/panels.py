@@ -6,7 +6,7 @@ import login, apps
 
 from login import auth_only
 
-def get_paths():
+def get_endpoints():
     paths = {
         'get' : {
             'panels' : get_panels, 

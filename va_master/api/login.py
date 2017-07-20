@@ -9,7 +9,7 @@ from pbkdf2 import crypt
 # TODO: Check if the implementation of the `pbkdf2` lib is credible,
 # and if the library is maintained and audited. May switch to bcrypt.
 
-def get_paths():
+def get_endpoints():
     paths = {
         'get' : {
         },

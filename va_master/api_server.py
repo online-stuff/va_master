@@ -1,4 +1,4 @@
-from .api.handler import ApiHandler, LogMessagingSocket
+from .api import ApiHandler, LogMessagingSocket
 import tornado.ioloop
 import tornado.web
 import tornado.gen

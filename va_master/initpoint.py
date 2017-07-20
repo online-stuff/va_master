@@ -14,10 +14,10 @@ def bootstrap():
     my_config.logger.info('Starting deploy handler...')
 
     app = api_server.get_app(my_config)
-    ssl_ctx = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
-    ssl_ctx.load_cert_chain("/root/keys/fortornado/evo-master.crt", "/root/keys/fortornado/evo-master.key")
+    #ssl_ctx = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
+    #ssl_ctx.load_cert_chain("/root/keys/fortornado/evo-master.crt", "/root/keys/fortornado/evo-master.key")
 
-    http_server = tornado.httpserver.HTTPServer(app, ssl_options=ssl_ctx)
+    http_server = tornado.httpserver.HTTPServer(app, )#ssl_options=ssl_ctx)
     http_server.listen(443)
     tornado.ioloop.IOLoop.current().start()
 #    tornado.ioloop.IOLoop.instance().start()

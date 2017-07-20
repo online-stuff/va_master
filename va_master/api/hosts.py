@@ -6,7 +6,7 @@ import panels
 
 
 
-def get_paths():
+def get_endpoints():
     paths = {
         'get' : {
             'hosts/reset' : reset_hosts, 

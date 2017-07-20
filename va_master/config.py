@@ -10,6 +10,13 @@ def get_server_static():
     # get the server assets static path
     return pkg_resources.resource_filename('va_dashboard', 'static')
 
+# A global logger for any general use
+logger = logging.getLogger('deployer')
+logger.setLevel(logging.DEBUG)
+ch = logging.StreamHandler()
+ch.setFormatter(logging.Formatter('[%(asctime)-15s] %(message)s'))
+logger.addHandler(ch)
+
 class Config(object):
     """A `Config` contains the configuration options for the whole master. It doesn't
     need explicit options and provides smart defaults."""
@@ -19,11 +26,7 @@ class Config(object):
         self.version = (1, 0, 0)
         self.consul_port = 0
         self.datastore = datastore.ConsulStore()
-        self.logger = logging.getLogger('deployer')
-        self.logger.setLevel(logging.DEBUG)
-        ch = logging.StreamHandler()
-        ch.setFormatter(logging.Formatter('[%(asctime)-15s] %(message)s'))
-        self.logger.addHandler(ch)
+        self.logger = logger
         self.server_port = 80
         self.server_static_path = get_server_static()
         self.deploy_pool_count = 3
