@@ -200,12 +200,13 @@ class LogHandler(FileSystemEventHandler):
         super(LogHandler, self).__init__()
 
     def on_modified(self, event):
-        log_file = event.src_path
+        log_file = event.src_path + '/va-master.log'
         with open(log_file) as f: 
             log_file = [x for x in f.read().split('\n') if x]
-        last_line = log_file[-1]
+        last_line = json.loads(log_file[-1])
         try:
-            self.socket.write_message(json.dumps(last_line))
+            msg = {"type" : "update", "message" : last_line}
+            self.socket.write_message(json.dumps(msg))
         except: 
             pass
 
@@ -232,18 +233,22 @@ class LogMessagingSocket(tornado.websocket.WebSocketHandler):
                     pass
                 json_msgs.append(j_msg)
             self.messages = json_msgs 
-            self.write_message(json.dumps(self.messages[-no_messages:]))
+            yesterday = datetime.datetime.now() + dateutil.relativedelta.relativedelta(days = -1)
+
+            init_messages = self.get_messages(yesterday, datetime.datetime.now())
+            msg = {"type" : "init", "logs" : init_messages}
+            self.write_message(json.dumps(msg))
 
             log_handler = LogHandler(self)
             observer = Observer()
-            observer.schedule(log_handler, path = '/var/log/vapourapps/')
+            observer.schedule(log_handler, path = '/'.join(logfile.split('/')[:-1]))
             observer.start()
         except: 
             import traceback
             traceback.print_exc()
 
     def get_messages(self, from_date, to_date):
-        messages = [x for x in self.messages if from_date < dateutil.parser.parse(x['timestamp']).replace(tzinfo = None) < to_date]
+        messages = [x for x in self.messages if from_date < dateutil.parser.parse(x['timestamp']).replace(tzinfo = None) <= to_date]
         return messages
 
     def check_origin(self, origin): 
@@ -267,11 +272,12 @@ class LogMessagingSocket(tornado.websocket.WebSocketHandler):
 
             to_date = message.get('to_date')
             if to_date: 
-                to_date = datetime.datetime.strptime(from_date, date_format)
+                to_date = datetime.datetime.strptime(to_date, date_format)
             else: 
                 to_date = datetime.datetime.now()
 
             messages = self.get_messages(from_date, to_date)
+            messages = {'type' : 'init', 'logs' : messages}
             self.write_message(json.dumps(messages))
 
         except: 
