@@ -146,6 +146,12 @@ var Home = React.createClass({
                         <NavLink to='vpn'>
                             <span><i className='fa fa-lock' /> VPN</span>
                         </NavLink>
+                        <NavLink to='log'>
+                            <span><i className='fa fa-file-o' /> Log</span>
+                        </NavLink>
+                        <NavLink to='billing'>
+                            <span><i className='fa fa-credit-card' /> Billing</span>
+                        </NavLink>
                         </li>
                         <li role="separator" className="divider-vertical"></li>
                         <li className="panels-title">Admin panels</li>

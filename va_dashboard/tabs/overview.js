@@ -417,29 +417,13 @@ var Log = React.createClass({
         this.ws = new WebSocket(protocol  +"://"+ host +"/log");
         var me = this;
         this.ws.onmessage = function (evt) {
-            var data = JSON.parse(evt.data), result = [];
-            if(Array.isArray(data)){
-                result = data.filter(function(d) {
-                    if(d.length > 0){
-                        return true;
-                    }
-                    return false;
-                }).map(function(d) {
-                    return JSON.parse(d);
-                });
-            }else if(typeof data === "string"){
-                try {
-                    result = [JSON.parse(data)];
-                } catch(e) {
-                    me.props.dispatch({type: 'SHOW_ALERT', msg: "Log has invalid format."});
-                }
-            }else{
-                me.props.dispatch({type: 'SHOW_ALERT', msg: "Log has invalid format."});
-            }
-            if(result.length > 0){
-                var logs = result.reverse().concat(me.state.logs);
-                me.setState({logs: logs});
-            }
+            var data = JSON.parse(evt.data);
+            var logs = [];
+            if(data.type === "update")
+                logs = me.state.logs.concat([data.message]);
+            else if(data.type === "init")
+                logs = data.logs.reverse();
+            me.setState({logs: logs});
         };
         this.ws.onerror = function(evt){
             me.ws.close();
@@ -545,8 +529,8 @@ var LogChart = React.createClass({
                             type: 'time',
                             stacked: true,
                             display: false,
-                            categoryPercentage: 1.0,
-                            barPercentage: 1.0,
+                            //categoryPercentage: 1.0,
+                            //barPercentage: 1.0,
                             time: {
                                 displayFormats: {
                                     minute: 'HH:mm',
