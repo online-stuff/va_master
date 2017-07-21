@@ -9,6 +9,7 @@ DevOps tool for corporate apps.',
     keywords=['vapourapps'],
     author='VapourApps',
     install_requires=[
+        'six',
         'salt',
         'python-novaclient',
         'pbkdf2',

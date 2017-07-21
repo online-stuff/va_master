@@ -1,5 +1,5 @@
 import argparse
-from . import initpoint
+from . import entrypoint
 
 
 def entry():
@@ -15,6 +15,6 @@ def entry():
     args = parser.parse_args()
 
     if args.action == 'start':
-        initpoint.bootstrap()
+        entrypoint.bootstrap()
 if __name__ == '__main__': 
     entry()
