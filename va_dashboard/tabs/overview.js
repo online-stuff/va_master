@@ -170,12 +170,15 @@ var Jointjs = React.createClass({
         for(var i=0; i<props.length; i++){
             var host = props[i];
             var h_index = rect.length;
+            var txt = host.name;
+            txt = txt.length > 17 ? txt.substring(0,17) : txt;
+            var width = txt.length > 12 ? 120 : 100;
             rect.push(new joint.shapes.basic.Rect({
                 position: h_trans[i],
-                size: { width: 100, height: 30 },
+                size: { width: width, height: 30 },
                 attrs: {
                     rect: { fill: 'gray', rx: '10', ry: '10' },
-                    text: { text: host.name, fill: 'white' }
+                    text: { text: txt, fill: 'white' }
                 }
             }));
 
