@@ -96,7 +96,7 @@ class ApiHandler(tornado.web.RequestHandler):
                 if result.get('data_type', 'json') == 'file' : 
                     raise tornado.gen.Return(None)
 #            print ('result is : ', result)
-            if self.formatted_result(result): 
+            if self.formatted_result(result) or self.data.get('plain_result'): 
                 pass 
             elif self.has_error(result): 
                 result = {'success' : False, 'message' : result, 'data' : {}} 

@@ -30,7 +30,7 @@ def get_paths():
             'apps/add_vpn_user': {'function' : add_openvpn_user, 'args' : ['username']},
             'apps/revoke_vpn_user': {'function' : revoke_openvpn_user, 'args' : ['username']},
             'apps/list_user_logins': {'function' : list_user_logins, 'args' : ['username']},
-            'apps/download_vpn_cert': {'function' : download_vpn_cert, 'args' : ['username']},
+            'apps/download_vpn_cert': {'function' : download_vpn_cert, 'args' : ['username', 'handler']},
         }
     }
     return paths
@@ -73,7 +73,7 @@ def list_user_logins(deploy_handler, username):
     raise tornado.gen.Return(success)
 
 @tornado.gen.coroutine
-def download_vpn_cert(deploy_handler, username):
+def download_vpn_cert(deploy_handler, username, handler):
     cl = Caller()
     cert = cl.cmd('openvpn.get_config', username = username)
 

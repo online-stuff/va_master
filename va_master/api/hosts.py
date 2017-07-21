@@ -22,18 +22,18 @@ def get_paths():
             'hosts/new/validate_fields' : {'function' : validate_newhost_fields, 'args' : ['handler']},
             'hosts/delete' : {'function' : delete_host, 'args' : ['hostname']},
             'hosts/add_host' : {'function' : add_host, 'args' : ['field_values', 'driver_name']},
-            'hosts/generic_add_instance' : {'function' : add_generic_instance, 'args' : []},
+            'hosts/generic_add_instance' : {'function' : add_generic_instance, 'args' : ['hostname', 'instance']},
         }
     }
     return paths
 
 
 @tornado.gen.coroutine
-def add_host(deploy_handler):
+def add_host(deploy_handler, field_values, driver_name):
     host_field_values = {"username": "user", "sizes": [], "images": [], "hostname": "sample_host", "instances": [], "driver_name": "generic_driver", "defaults": {}, "sec_groups": [], "password": "pass", "ip_address": "127.0.0.1", "networks": []}
-    host_field_values.update(handler.data['field_values'])
+    host_field_values.update(field_values)
 
-    driver = yield deploy_handler.get_driver_by_id(handler.data['driver_name'])
+    driver = yield deploy_handler.get_driver_by_id(driver_name)
     driver.field_values = host_field_values
 
     yield deploy_handler.create_host(driver)
@@ -45,13 +45,13 @@ def add_host(deploy_handler):
 
 
 @tornado.gen.coroutine
-def add_generic_instance(deploy_handler):
+def add_generic_instance(deploy_handler, hostname, instance):
     base_instance = {"hostname" : "", "ip" : "", "local_gb" : 0, "memory_mb" : 0, "status" : "n/a" }
-    base_instance.update(handler.data['instance'])
+    base_instance.update(instance)
 
-    instances = yield deploy_handler.datastore.get(handler.data['hostname'])
+    instances = yield deploy_handler.datastore.get(hostname)
     instances['instances'].append(base_instance)
-    yield deploy_handler.datastore.insert(handler.data['hostname'], instances)
+    yield deploy_handler.datastore.insert(hostname, instances)
 
 @tornado.gen.coroutine
 def get_host_billing(deploy_handler):
