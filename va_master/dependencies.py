@@ -31,11 +31,11 @@ def load_file(filename, dep_file=DEFAULT_DEP_FILE):
     dep_data = pkg_resources.resource_string(dep_info.package, dep_file)
     dep_file = StringIO(dep_data)
     with zipfile.ZipFile(dep_file) as zf:
-        return zf.open(filename).read()
+        return zf.open(filename).read(), filename
 
 def load_and_save(filename, path):
-    bin_data = load_file(filename)
-    path = os.path.join(path, filename)
+    bin_data, real_filename = load_file(filename)
+    path = os.path.join(path, real_filename)
     with open(path, 'wb') as myfile:
         myfile.write(bin_data)
         os.fchmod(myfile.fileno(),
