@@ -10,6 +10,7 @@ DevOps tool for corporate apps.',
     author='VapourApps',
     install_requires=[
         'six',
+        'appdirs',
         'salt',
         'python-novaclient',
         'pbkdf2',
