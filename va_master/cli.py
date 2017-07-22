@@ -1,6 +1,6 @@
 import argparse
 from . import entrypoint
-
+from . import config
 
 def entry():
     parser = argparse.ArgumentParser(description='A VapourApps client interface')
@@ -10,11 +10,15 @@ def entry():
     
     start = subparsers.add_parser('start')
     start.add_argument('--port')
-    start.add_argument('--data-dir')
+    start.add_argument('--data-path')
     start.set_defaults(action='start')
     args = parser.parse_args()
 
     if args.action == 'start':
-        entrypoint.bootstrap()
+        config_kwargs = vars(args)
+        master_config = config.Config(**config_kwargs)
+        master_config.data_path = args.data_path
+        entrypoint.bootstrap(master_config)
+
 if __name__ == '__main__': 
     entry()

@@ -52,8 +52,9 @@ class Config(object):
         self.data_path = None
 
         # Now dynamically inject any kwargs
-        for kw in kwargs:
-            setattr(self, kw, kwargs[kw])
+        for kw, val in kwargs.items():
+            if val is not None:
+                setattr(self, kw, val)
 
         if self.data_path is None:
             self.data_path = default_data_path()

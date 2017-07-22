@@ -16,7 +16,7 @@ def bootstrap(master_config=None):
     #ssl_ctx.load_cert_chain("/root/keys/fortornado/evo-master.crt", "/root/keys/fortornado/evo-master.key")
 
     from . import consul
-    consul.ConsulProcess(master_config).start()
+    consul.ConsulProcess(master_config, []).start()
 
     my_serv = tornado.httpserver.HTTPServer(app, )#ssl_options=ssl_ctx)
     my_serv.listen(443)

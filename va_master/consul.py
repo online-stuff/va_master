@@ -8,12 +8,17 @@ from collections import namedtuple
 Task = namedtuple('Task', ['type'])
 
 class ConsulProcess(threading.Thread):
-    def __init__(self, config):
+    def __init__(self, config, arguments):
         super(ConsulProcess, self).__init__()
         self.config = config
+        self.arguments = arguments
+        self.alive = False
         self.name = 'consul-{}'.format(self.name)
         self.setDaemon(True)
 
     def run(self):
         p = dependencies.load_and_save('consul', self.config.data_path)
-        subprocess.check_output([p])
+        try:
+            subprocess.check_output([p] + self.arguments)
+        except Exception as e:
+            self.config.logger.error('Failed starting Consul: ' + repr(e))
