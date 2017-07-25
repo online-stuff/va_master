@@ -111,6 +111,7 @@ class OpenStackDriver(base.DriverBase):
             field_values['username'], field_values['password'],
             field_values['tenant'])
         url = 'http://%s/v2.0/tokens' % host
+
         data = {
             'auth': {
                 'tenantName': tenant,
@@ -124,6 +125,7 @@ class OpenStackDriver(base.DriverBase):
             'Content-Type': 'application/json'
         })
         try:
+            print ('Trying to get token from : ', url)
             resp = yield self.client.fetch(req)
         except:
             import traceback
@@ -136,6 +138,7 @@ class OpenStackDriver(base.DriverBase):
             for endpoint in serv['endpoints']:
                 if 'publicURL' not in endpoint: continue
                 services[serv['type']] = endpoint['publicURL']
+        print ('Token is : ', token, ' services are : ', services)
         raise tornado.gen.Return((token, services))
 
 
@@ -321,6 +324,13 @@ class OpenStackDriver(base.DriverBase):
 
 
     @tornado.gen.coroutine
+    def get_driver_trigger_functions(self):
+        conditions = ['domain_full', 'server_can_add_memory', 'server_can_add_cpu']
+        actions = ['server_new_terminal', 'server_cpu_full', 'server_memory_full', 'server_set_status', 'server_cpu_critical', 'server_cpu_warning', 'server_cpu_ok', 'server_memory_ok', 'server_memory_warning', 'server_memory_critical', 'server_cpu_full_ok', 'server_memory_full_ok']
+        return {'conditions' : conditions, 'actions' : actions}
+
+
+    @tornado.gen.coroutine
     def instance_action(self, host, instance_name, action):
         """ Performs instance actions using a nova client. """
         try:
@@ -352,6 +362,8 @@ class OpenStackDriver(base.DriverBase):
 
             self.provider_vars['VAR_TENANT'] = field_values['tenant']
             self.provider_vars['VAR_IDENTITY_URL'] = os_base_url
+            if not '/tokens' in self.provider_vars['VAR_IDENTITY_URL']: 
+                self.provider_vars['VAR_IDENTITY_URL'] += '/tokens'
             self.provider_vars['VAR_REGION'] = field_values['region']
 
         elif step_index == 1:

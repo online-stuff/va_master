@@ -256,10 +256,15 @@ var Table = React.createClass({
                 }else{
                     data.action = me.props.source;
                     data.args = [];
+                    if('args' in me.props.panel && me.props.panel.args !== ""){
+                        data.args = [me.props.panel.args];
+                    }
                     Network.post('/api/panels/action', me.props.auth.token, data).done(function(d) {
                         var msg = d[data.instance_name];
-                        if(typeof msg === 'string'){
+                        if(typeof msg !== 'string'){
                             me.props.dispatch({type: 'CHANGE_DATA', data: msg, name: me.props.name});
+                        }else{
+                            me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
                         }
                     });
                 }
@@ -272,7 +277,7 @@ var Table = React.createClass({
         var colVal = event.currentTarget.textContent;
         if(action == 'link' && "panels" in this.props && 'link' in this.props.panels){
             this.props.dispatch({type: 'SELECT', select: colVal});
-            Router.hashHistory.push('/panel/' + this.props.panels['link'] + '/' + this.props.panel.instance + '/' + [colVal]);
+            Router.hashHistory.push('/subpanel/' + this.props.panels['link'] + '/' + this.props.panel.instance + '/' + [colVal]);
         }else{
             var args = this.props.table.path.concat(colVal);
             var data = {"instance_name": this.props.panel.instance, "action": action, "args": args};
@@ -432,7 +437,8 @@ var Modal = React.createClass({
             if(content[j].type == "Form"){
                 var elem = content[j].elements;
                 for(i=0; i<elem.length; i++){
-                    data[i] = elem[i].value;
+                    if(elem[i].type !== 'label')
+                        data[i] = elem[i].value;
                 }
             }
         }
@@ -457,11 +463,15 @@ var Modal = React.createClass({
         Network.post("/api/panels/action", this.props.auth.token, data).done(function(d) {
             me.props.dispatch({type: 'CLOSE_MODAL'});
             if('refresh_action' in me.props.modal.template){
-                var data = {"instance_name": me.props.panel.instance, "action": me.props.modal.template.refresh_action, "args": []};
+                var args = [];
+                if(me.props.panel.args !== "") args = [me.props.panel.args];
+                var data = {"instance_name": me.props.panel.instance, "action": me.props.modal.template.refresh_action, "args": args};
                 Network.post('/api/panels/action', me.props.auth.token, data).done(function(d) {
                     var msg = d[data.instance_name];
-                    if(typeof msg === 'string'){
+                    if(typeof msg !== 'string'){
                         me.props.dispatch({type: 'CHANGE_DATA', data: msg, name: me.props.modal.template.table_name});
+                    }else{
+                        me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
                     }
                 });
             }
@@ -597,7 +607,9 @@ var Form = React.createClass({
                     return ( <Bootstrap.Checkbox id={index} key={element.name} name={element.name} checked={this.props.data[index]} inline onChange={this.props.form_changed}>{element.label}</Bootstrap.Checkbox>);
                 }
                 if(type == "label"){
-                    return ( <label id={index} key={element.name} name={element.name} className="block">{element.name}</label>);
+                    return ( <label id={index} key={element.name} name={element.name} className="block">{element.value.split('\n').map(function(item, key){
+                        return <span key={key}>{item}<br/></span>
+                    })}</label>);
                 }
                 if(type == "multi_checkbox"){
                     return ( <Bootstrap.Checkbox id={index} key={element.name} name={element.name} checked={this.props.data[index]} onChange={this.props.form_changed}>{element.label}</Bootstrap.Checkbox>);
@@ -626,7 +638,7 @@ var Form = React.createClass({
             if(Object.keys(redux).indexOf(type) < 0){
                 if(type == "Button" && element.action == "modal"){
                     var modalTemplate = Object.assign({}, element.modal), args = [];
-                    if('panel' in this.props && 'args' in this.props.panel){
+                    if('panel' in this.props && 'args' in this.props.panel && this.props.panel.args){
                         args.push(this.props.panel.args);
                     }
                     if('args' in this.props){

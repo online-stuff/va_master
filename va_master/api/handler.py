@@ -10,8 +10,9 @@ from concurrent.futures import ThreadPoolExecutor   # `pip install futures` for 
 
 from . import url_handler
 from login import get_current_user, user_login
-import json, datetime, syslog
-
+import json, datetime, syslog, pytz
+import dateutil.relativedelta
+import dateutil.parser
 
 
 def invalid_url(deploy_handler, path, method):
@@ -74,7 +75,7 @@ class ApiHandler(tornado.web.RequestHandler):
         if not api_func: 
             data = {'path' : path, 'method' : method}
             api_func = {'function' : invalid_url, 'args' : ['path', 'method']}
-        elif api_func != user_login: 
+        elif api_func['function'] != user_login: 
             try: 
                 yield self.log_message(path = path, data = data, func = api_func['function'])
 
@@ -90,7 +91,6 @@ class ApiHandler(tornado.web.RequestHandler):
         try:
             api_func, api_kwargs = api_func.get('function'), api_func.get('args')       
             api_kwargs = {x : data.get(x) for x in api_kwargs if data.get(x)} or {}
-            print ('Api kwargs are : ', api_kwargs)
             result = yield api_func(self.config.deploy_handler, **api_kwargs)
             if type(result) == dict: 
                 if result.get('data_type', 'json') == 'file' : 
@@ -165,7 +165,7 @@ class ApiHandler(tornado.web.RequestHandler):
         message = json.dumps({
             'type' : data['method'], 
             'function' : func.func_name,
-            'user' : user['username'], 
+            'user' : user.get('username', 'unknown'), 
             'user_type' : user['type'], 
             'path' : path, 
             'data' : data, 
@@ -194,8 +194,6 @@ class ApiHandler(tornado.web.RequestHandler):
             import traceback
             traceback.print_exc()
 
-
-
 class LogHandler(FileSystemEventHandler):
     def __init__(self, socket):
         self.socket = socket
@@ -217,12 +215,23 @@ class LogMessagingSocket(tornado.websocket.WebSocketHandler):
     #Socket gets messages when opened
     @tornado.web.asynchronous
     @tornado.gen.engine
-    def open(self, no_messages = 100, logfile = '/var/log/vapourapps/va-master.log'):
+    def open(self, no_messages = 0, logfile = '/var/log/vapourapps/va-master.log'):
+        print ('Trying to open socket. ')
         try: 
             self.logfile = logfile
-            with open(logfile) as f: 
-                self.messages = f.read().split('\n')
-            self.messages = self.messages
+            try:
+                with open(logfile) as f: 
+                    self.messages = f.read().split('\n')
+            except: 
+                self.messages = []
+            json_msgs = []
+            for message in self.messages: 
+                try:
+                    j_msg = json.loads(message)
+                except: 
+                    pass
+                json_msgs.append(j_msg)
+            self.messages = json_msgs 
             self.write_message(json.dumps(self.messages[-no_messages:]))
 
             log_handler = LogHandler(self)
@@ -233,8 +242,9 @@ class LogMessagingSocket(tornado.websocket.WebSocketHandler):
             import traceback
             traceback.print_exc()
 
-    def get_messages(message):
-        return self.messages[-message['number_of_messages']:]
+    def get_messages(self, from_date, to_date):
+        messages = [x for x in self.messages if from_date < dateutil.parser.parse(x['timestamp']).replace(tzinfo = None) < to_date]
+        return messages
 
     def check_origin(self, origin): 
         return True
@@ -243,11 +253,27 @@ class LogMessagingSocket(tornado.websocket.WebSocketHandler):
     def on_message(self, message): 
         try:
             message = json.loads(message)
-            reply = {
-                'get_messages' : self.get_messages
-            }[message['action']]
+        except: 
+            self.write_message('Error converting message from json; probably not formatted correctly. Message was : ', message)
+            raise tornado.gen.Return(None)
+
+        try:
+            from_date = message.get('from_date')
+            date_format = '%Y-%m-%d'
+            if from_date:
+                from_date = datetime.datetime.strptime(from_date, date_format)
+            else: 
+                from_date = datetime.datetime.now() + dateutil.relativedelta.relativedelta(days = -2)
+
+            to_date = message.get('to_date')
+            if to_date: 
+                to_date = datetime.datetime.strptime(from_date, date_format)
+            else: 
+                to_date = datetime.datetime.now()
+
+            messages = self.get_messages(from_date, to_date)
+            self.write_message(json.dumps(messages))
+
         except: 
             import traceback
-#            traceback.print_exc()
-        self.write_message(reply(message))
-
+            traceback.print_exc()

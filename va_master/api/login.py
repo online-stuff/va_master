@@ -50,6 +50,7 @@ def get_current_user(handler):
     
     for t in ['user', 'admin']: # add other types as necessary, maybe from datastore. 
         token_valid = yield is_token_valid(handler.datastore, token, t)
+        print ('Token valid is : ', token_valid, ' for : ', t)
         if token_valid: 
             user = yield handler.datastore.get('tokens/%s/by_token/%s' % (t, token))
             raise tornado.gen.Return({'username' : user['username'], 'type' : t})
@@ -59,6 +60,7 @@ def get_current_user(handler):
 @tornado.gen.coroutine
 def get_user_type(handler):
     user = yield get_current_user(handler)
+    print ('User is : ', user)
     if user: 
         raise tornado.gen.Return(user['type'])
     raise tornado.gen.Return(None)
@@ -149,28 +151,38 @@ def user_login(deploy_handler, handler):
             datastore_handle = user_type + 's'
             try:
                 users = yield handler.datastore.get(datastore_handle)
+                break
             except handler.datastore.KeyNotFound:
-                raise tornado.gen.Return({'error': 'no_users: ' + datastore_handle}, 401)
-                # TODO: handle this gracefully?
-                raise tornado.gen.Return()
+                print ('No users : ', datastore_handle)
+                users = []
 
-            account_info = None
-            for user in users:
-                if user['username'] == username:
-                    account_info = user 
-                    break
-            invalid_acc_hash = crypt('__invalidpassword__')
-            if not account_info:
-                # Prevent timing attacks
-                account_info = {
-                    'password_hash': invalid_acc_hash,
-                    'username': '__invalid__',
-                    'timestamp_created': 0
-                }
-            pw_hash = account_info['password_hash']
-            if crypt(password, pw_hash) == pw_hash:
-                token = yield get_or_create_token(handler.datastore, username, user_type = user_type)
-                raise tornado.gen.Return({'token': token})
+        if not users: 
+            print ('There were no users!')
+            raise tornado.gen.Return({'error': 'no_users: ' + datastore_handle})
+            # TODO: handle this gracefully?
+            raise tornado.gen.Return()
+
+        account_info = None
+        for user in users:
+            if user['username'] == username:
+                print ('Trying to compate : ', user['username'], ' to : ', username)
+                account_info = user 
+                break
+        invalid_acc_hash = crypt('__invalidpassword__')
+        if not account_info:
+            # Prevent timing attacks
+            account_info = {
+                'password_hash': invalid_acc_hash,
+                'username': '__invalid__',
+                'timestamp_created': 0
+            }
+        pw_hash = account_info['password_hash']
+        print ('Trying to login with : ', password)
+        if crypt(password, pw_hash) == pw_hash:
+            token = yield get_or_create_token(handler.datastore, username, user_type = user_type)
+            print ('Token gotted : ', token)
+            raise tornado.gen.Return({'token': token})
+        print ('Invalid pass. ')
         raise tornado.gen.Return({'error': 'invalid_password'})
 
     except tornado.gen.Return:

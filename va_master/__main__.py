@@ -1,5 +1,6 @@
 import tornado.httpserver
 import tornado.ioloop
+import tornado.options
 import cli
 import sys
 import ssl
@@ -9,6 +10,8 @@ def bootstrap():
     data to all the components."""
 
     from . import config, server
+
+    tornado.options.parse_command_line()
 
     my_config = config.Config()
     my_config.init_handler({})

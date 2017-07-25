@@ -170,6 +170,7 @@ class DriverBase(object):
                 f.write(self.provider_template)
         if not skip_profile and self.profile_template:
              profile_conf_dir =  '/etc/salt/cloud.profiles.d/' + self.profile_vars['VAR_PROFILE_NAME'] + '.conf'
+             print ('Profile is at : ', profile_conf_dir)
              self.field_values['profile_conf_dir'] = profile_conf_dir
              with open(profile_conf_dir, 'w') as f: 
                 f.write(self.profile_template)
@@ -430,11 +431,14 @@ class DriverBase(object):
         self.profile_vars['VAR_ROLE'] = data['role']
         self.profile_vars['VAR_IMAGE'] = data['image']
         self.profile_vars['VAR_SIZE'] = data['size']
-        self.profile_vars['VAR_NETWORK_ID'] = data['network'].split('|')[1]
+        self.profile_vars['VAR_NETWORK_ID'] = data['network']
+        if '|' in data['network']: 
+            self.profile_vars['VAR_NETWORK_ID'] = data['network'].split('|')[1]
 
         new_profile = data['instance_name'] + '-profile'
         self.profile_vars['VAR_PROFILE_NAME'] = new_profile
         self.profile_vars['VAR_SEC_GROUP'] = 'default'
+        self.profile_vars['VAR_IMAGE_USERNAME'] = data.get('username', 'admin')
 #        self.profile_template = profile_template
 
         yield self.get_salt_configs(skip_provider = True)
@@ -444,7 +448,7 @@ class DriverBase(object):
         new_minion_cmd = ['salt-cloud', '-p', new_profile, data['instance_name']]
         minion_apply_state = ['salt', data['instance_name'], 'state.highstate']
 
-        new_minion_values = subprocess.call(new_minion_cmd)
+#        new_minion_values = subprocess.call(new_minion_cmd)
 #        new_minion_state_values = subprocess.call(minion_apply_state)
 
         raise tornado.gen.Return(True)

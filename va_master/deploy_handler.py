@@ -81,7 +81,7 @@ class DeployHandler(object):
                 openstack.OpenStackDriver, 
                 gce.GCEDriver,
                 generic_driver.GenericDriver,
-
+                aws.AWSDriver,
             ]]
             kwargs['flavours'] = va_flavours
 

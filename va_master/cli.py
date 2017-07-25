@@ -166,11 +166,13 @@ def handle_init(args):
 
 
         # We have a connection, create an admin account
-        if values.get('admin-user') and values.get('admin-pass'): 
+        if values.get('admin_user') and values.get('admin_pass'): 
             create_user = functools.partial(login.create_user,
-                store, values['admin-user'], values['admin-pass'], 'admin')
+                store, values['admin_user'], values['admin_pass'], 'admin')
             create_user_run = run_sync(create_user)
 #            print create_admin_run
+        else: 
+            cli_info('No username and password; will not create user')
 
         states_data = run_sync(functools.partial(cli_config.deploy_handler.get_states_data))
         values.update({'states' : states_data})
@@ -182,7 +184,7 @@ def handle_init(args):
             store_config = {}
 
         store_config.update(generate_store_config(values))
-        
+        store_config = {x : store_config[x] for x in store_config if x not in ['admini-pass']}
 #            store_config = run_sync(functools.partial(store.insert, 'init_vals', store_config))
         run_sync(functools.partial(store.insert, 'init_vals', store_config))
 
