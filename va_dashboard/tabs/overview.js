@@ -170,12 +170,15 @@ var Jointjs = React.createClass({
         for(var i=0; i<props.length; i++){
             var host = props[i];
             var h_index = rect.length;
+            var txt = host.name;
+            txt = txt.length > 17 ? txt.substring(0,17) : txt;
+            var width = txt.length > 12 ? 120 : 100;
             rect.push(new joint.shapes.basic.Rect({
                 position: h_trans[i],
-                size: { width: 100, height: 30 },
+                size: { width: width, height: 30 },
                 attrs: {
                     rect: { fill: 'gray', rx: '10', ry: '10' },
-                    text: { text: host.name, fill: 'white' }
+                    text: { text: txt, fill: 'white' }
                 }
             }));
 
@@ -417,29 +420,13 @@ var Log = React.createClass({
         this.ws = new WebSocket(protocol  +"://"+ host +"/log");
         var me = this;
         this.ws.onmessage = function (evt) {
-            var data = JSON.parse(evt.data), result = [];
-            if(Array.isArray(data)){
-                result = data.filter(function(d) {
-                    if(d.length > 0){
-                        return true;
-                    }
-                    return false;
-                }).map(function(d) {
-                    return JSON.parse(d);
-                });
-            }else if(typeof data === "string"){
-                try {
-                    result = [JSON.parse(data)];
-                } catch(e) {
-                    me.props.dispatch({type: 'SHOW_ALERT', msg: "Log has invalid format."});
-                }
-            }else{
-                me.props.dispatch({type: 'SHOW_ALERT', msg: "Log has invalid format."});
-            }
-            if(result.length > 0){
-                var logs = result.reverse().concat(me.state.logs);
-                me.setState({logs: logs});
-            }
+            var data = JSON.parse(evt.data);
+            var logs = [];
+            if(data.type === "update")
+                logs = me.state.logs.concat([data.message]);
+            else if(data.type === "init")
+                logs = data.logs.reverse();
+            me.setState({logs: logs});
         };
         this.ws.onerror = function(evt){
             me.ws.close();
@@ -545,8 +532,8 @@ var LogChart = React.createClass({
                             type: 'time',
                             stacked: true,
                             display: false,
-                            categoryPercentage: 1.0,
-                            barPercentage: 1.0,
+                            //categoryPercentage: 1.0,
+                            //barPercentage: 1.0,
                             time: {
                                 displayFormats: {
                                     minute: 'HH:mm',

@@ -429,16 +429,19 @@ var Table = React.createClass({
     }
 });
 
+//TODO multiple group of checkboxes
 var Modal = React.createClass({
 
     getInitialState: function () {
-        var content = this.props.modal.template.content, data = [];
+        var content = this.props.modal.template.content, data = [], checks = {};
         for(j=0; j<content.length; j++){
             if(content[j].type == "Form"){
                 var elem = content[j].elements;
                 for(i=0; i<elem.length; i++){
                     if(elem[i].type !== 'label')
                         data[i] = elem[i].value;
+                    if(elem[i].type === 'checkbox')
+                        checks[i] = elem[i].name;
                 }
             }
         }
@@ -449,7 +452,8 @@ var Modal = React.createClass({
         return {
             data: data,
             focus: "",
-            args: args
+            args: args,
+            checks: checks
         };
     },
 
@@ -458,7 +462,23 @@ var Modal = React.createClass({
     },
 
     action: function(action_name) {
-        var data = {"instance_name": this.props.panel.instance, "action": action_name, "args": this.state.args.concat(this.state.data)};
+        var args = this.state.data.slice(0);
+        var checks = this.state.checks, keys = Object.keys(checks);
+        if(keys.length > 0){
+            var j = 0, index = 0, length = args.length, check_vals = [];
+            for(var i=0; i<length; i++){
+                if(args[index] === false){
+                    args.splice(index, 1);
+                    j++; 
+                }else if(args[index] === true){
+                    args.splice(index, 1);
+                    check_vals.push(checks[j++]);
+                }
+                index = i + 1 - j;
+            }
+            args.splice(keys[0], 0, check_vals);
+        }
+        var data = {"instance_name": this.props.panel.instance, "action": action_name, "args": this.state.args.concat(args)};
         var me = this;
         Network.post("/api/panels/action", this.props.auth.token, data).done(function(d) {
             me.props.dispatch({type: 'CLOSE_MODAL'});
@@ -635,7 +655,7 @@ var Form = React.createClass({
                 return ( <Bootstrap.FormControl id={index} key={element.name} type={type} name={element.name} value={this.props.data[index]} placeholder={element.label} onChange={this.props.form_changed} autoFocus={element.name == this.props.focus} /> );
             }
             element.key = element.name;
-            if(Object.keys(redux).indexOf(type) < 0){
+            //if(Object.keys(redux).indexOf(type) < 0){
                 if(type == "Button" && element.action == "modal"){
                     var modalTemplate = Object.assign({}, element.modal), args = [];
                     if('panel' in this.props && 'args' in this.props.panel && this.props.panel.args){
@@ -664,7 +684,7 @@ var Form = React.createClass({
                     }
                     return newstate;
                 })(Component);
-            }
+            //}
             var Redux = redux[type];
             return React.createElement(Redux, element);
         }.bind(this));

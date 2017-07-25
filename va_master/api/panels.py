@@ -48,6 +48,7 @@ def list_panels(deploy_handler, handler):
 def panel_action_execute(deploy_handler, instance_name, action, args = [], kwargs = {}, module = None):
     try:
 
+        print ('INstance name is : ', instance_name)
         instance_info = yield apps.get_app_info(deploy_handler, instance_name)
         state = instance_info['role']
 
@@ -61,6 +62,7 @@ def panel_action_execute(deploy_handler, instance_name, action, args = [], kwarg
         cl = salt.client.LocalClient()
         print ('Calling salt module ', module + '.' + action, ' on ', instance_name, ' with args : ', args, ' and kwargs : ', kwargs)
         result = cl.cmd(instance_name, module + '.' + action , args, kwargs = kwargs)
+        result = result.get(instance_name)
     except: 
         import traceback 
         traceback.print_exc()
@@ -106,10 +108,19 @@ def get_chart_data(deploy_handler, instance_name, args = ['va-directory', 'Ping'
     raise tornado.gen.Return(result)
 
 @tornado.gen.coroutine
-def panel_action(deploy_handler, instance_name, action, args = [], kwargs = {}, module = None):
-    instance_result = yield panel_action_execute(deploy_handler, instance_name, action, args, kwargs, module)
-    instance_result = instance_result.get('va-master', instance_result)
-    raise tornado.gen.Return(instance_result)
+def panel_action(deploy_handler, actions_list = [], instance_name = '', action = '', args = [], kwargs = {}, module = None):
+    if not actions_list: 
+        actions_list = [{"instance_name" : instance_name, "action" : action, "args" : args, 'kwargs' : {}, 'module' : module}]
+
+    instances = [x['instance_name'] for x in actions_list]
+    results = {x : None for x in instances}
+    for action in actions_list: 
+        instance_result = yield panel_action_execute(deploy_handler, action['instance_name'], action['action'], action['args'], action['kwargs'], action['module'])
+        results[action['instance_name']] = instance_result
+
+    if len(results.keys()) == 1: 
+        results = results[results.keys()[0]]
+    raise tornado.gen.Return(results)
 
 
 @tornado.gen.coroutine
@@ -139,7 +150,7 @@ def get_panel_for_user(deploy_handler, handler, panel, instance_name, args = [],
             import traceback
             traceback.print_exc()
 
-        panel = panel[instance_name]
+#        panel = panel[instance_name]
         raise tornado.gen.Return(panel)
     else: 
         raise tornado.gen.Return(False)
