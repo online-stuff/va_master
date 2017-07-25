@@ -110,10 +110,15 @@ def panel_action(deploy_handler, actions_list = [], instance_name = '', action =
     if not actions_list: 
         actions_list = [{"instance_name" : instance_name, "action" : action, "args" : args, 'kwargs' : {}, 'module' : module}]
 
+    instances = [x['instance_name'] for x in actions_list]
+    results = {x : None for x in instances}
     for action in actions_list: 
         instance_result = yield panel_action_execute(deploy_handler, action['instance_name'], action['action'], action['args'], actino['kwargs'], action['module'])
+        results[action['instance_name']] = instance_result
 
-    raise tornado.gen.Return(instance_result)
+    if len(results) == 1: 
+        results = results[results.keys()[0]]
+    raise tornado.gen.Return(results)
 
 
 @tornado.gen.coroutine
