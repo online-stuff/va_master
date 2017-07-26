@@ -45,7 +45,7 @@ def list_panels(deploy_handler, handler):
     raise tornado.gen.Return(panels)
 
 @tornado.gen.coroutine
-def panel_action_execute(deploy_handler, instance_name, action, args = [], kwargs = {}, module = None):
+def panel_action_execute(deploy_handler, instance_name, action, args = [], kwargs = {}, module = None, timeout = 30):
     try:
 
         print ('INstance name is : ', instance_name)
@@ -61,7 +61,7 @@ def panel_action_execute(deploy_handler, instance_name, action, args = [], kwarg
 
         cl = salt.client.LocalClient()
         print ('Calling salt module ', module + '.' + action, ' on ', instance_name, ' with args : ', args, ' and kwargs : ', kwargs)
-        result = cl.cmd(instance_name, module + '.' + action , args, kwargs = kwargs)
+        result = cl.cmd(instance_name, module + '.' + action , args, kwargs = kwargs, timeout = timeout)
         result = result.get(instance_name)
     except: 
         import traceback 

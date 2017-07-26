@@ -91,12 +91,10 @@ class ApiHandler(tornado.web.RequestHandler):
         try:
             api_func, api_kwargs = api_func.get('function'), api_func.get('args')       
             api_kwargs = {x : data.get(x) for x in api_kwargs if data.get(x)} or {}
-            print ('Kwargs are : ', api_kwargs)
             result = yield api_func(self.config.deploy_handler, **api_kwargs)
             if type(result) == dict: 
                 if result.get('data_type', 'json') == 'file' : 
                     raise tornado.gen.Return(None)
-#            print ('result is : ', result)
             if self.formatted_result(result) or self.data.get('plain_result'): 
                 pass 
             elif self.has_error(result): 
@@ -142,7 +140,11 @@ class ApiHandler(tornado.web.RequestHandler):
         try: 
             try: 
                 if 'json' in self.request.headers['Content-Type']: 
-                    data = json.loads(self.request.body)
+                    try:
+                        data = json.loads(self.request.body)
+                    except: 
+                        print ('Bad json in post request : ', self.request.body)
+                        raise tornado.gen.Return()
                 else:
                     data = {self.request.arguments[x][0] for x in self.request.arguments}
                     data.update(self.request.files)
