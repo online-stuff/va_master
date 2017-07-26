@@ -143,8 +143,9 @@ class DeployHandler(object):
         except self.datastore.KeyNotFound:
             new_hosts = []
         try: 
-            new_hosts.append(driver.field_values)
-            yield self.datastore.insert('hosts', new_hosts)
+            if not any([x['hostname'] == driver.field_values['hostname'] for x in new_hosts]):
+                new_hosts.append(driver.field_values)
+                yield self.datastore.insert('hosts', new_hosts)
         except: 
             import traceback
             traceback.print_exc()

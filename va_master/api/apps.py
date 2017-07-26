@@ -26,7 +26,7 @@ def get_paths():
             'state/add' : {'function' : create_new_state,'args' : ['file', 'body', 'filename']},
 
             'apps' : {'function' : launch_app, 'args' : ['handler']},
-            'apps/action' : {'function' : perform_instance_action, 'args' : ['hostname', 'action', 'instance_name', 'driver_name']},
+            'apps/action' : {'function' : perform_instance_action, 'args' : ['hostname', 'action', 'instance_name']},
             'apps/add_vpn_user': {'function' : add_openvpn_user, 'args' : ['username']},
             'apps/revoke_vpn_user': {'function' : revoke_openvpn_user, 'args' : ['username']},
             'apps/list_user_logins': {'function' : list_user_logins, 'args' : ['username']},
@@ -86,13 +86,14 @@ def download_vpn_cert(deploy_handler, username, handler):
 
 
 @tornado.gen.coroutine
-def perform_instance_action(deploy_handler, hostname, action, instance_name, driver_name): 
+def perform_instance_action(deploy_handler, hostname, action, instance_name): 
     try: 
         store = deploy_handler.datastore
         hosts = yield store.get('hosts')
 
         host = [x for x in hosts if x['hostname'] == hostname][0]
-        driver = yield handler.config.deploy_handler.get_driver_by_id(driver_name)
+        driver_name = host['driver_name']
+        driver = yield deploy_handler.get_driver_by_id(driver_name)
         success = yield driver.instance_action(host, instance_name, action)
     except: 
         import traceback

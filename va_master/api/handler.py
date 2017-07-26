@@ -91,6 +91,7 @@ class ApiHandler(tornado.web.RequestHandler):
         try:
             api_func, api_kwargs = api_func.get('function'), api_func.get('args')       
             api_kwargs = {x : data.get(x) for x in api_kwargs if data.get(x)} or {}
+            print ('Kwargs are : ', api_kwargs)
             result = yield api_func(self.config.deploy_handler, **api_kwargs)
             if type(result) == dict: 
                 if result.get('data_type', 'json') == 'file' : 
@@ -201,6 +202,7 @@ class LogHandler(FileSystemEventHandler):
 
     def on_modified(self, event):
         log_file = event.src_path + '/va-master.log'
+        print ('Log file is : ', log_file)
         with open(log_file) as f: 
             log_file = [x for x in f.read().split('\n') if x]
         last_line = json.loads(log_file[-1])

@@ -283,7 +283,7 @@ var Table = React.createClass({
             var data = {"instance_name": this.props.panel.instance, "action": action, "args": args};
             var me = this;
             Network.post('/api/panels/action', this.props.auth.token, data).done(function(d) {
-                var msg = d[me.props.panel.instance];
+                var msg = d;
                 if(typeof msg === 'string'){
                     me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
                 }else{
