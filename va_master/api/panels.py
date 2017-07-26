@@ -16,7 +16,7 @@ def get_paths():
         'post' : {
             'panels/reset_panels': {'function' : reset_panels, 'args' : []}, #JUST FOR TESTING
             'panels/new_panel' : {'function' : new_panel, 'args' : ['panel_name', 'role']},
-            'panels/action' : {'function' : panel_action, 'args' : ['instance_name', 'action', 'args', 'kwargs', 'module']}, #must have instance_name and action in data, 'args' : []}, ex: panels/action instance_name=nino_dir action=list_users
+            'panels/action' : {'function' : panel_action, 'args' : ['actions_list', 'instance_name', 'action', 'args', 'kwargs', 'module']}, #must have instance_name and action in data, 'args' : []}, ex: panels/action instance_name=nino_dir action=list_users
             'panels/chart_data' : {'function' : get_chart_data, 'args' : ['instance_name', 'args']},
             'panels/serve_file' : {'function' : salt_serve_file, 'args' : ['instance_name', 'action', 'args', 'kwargs', 'module']},
         }
@@ -55,8 +55,7 @@ def panel_action_execute(deploy_handler, instance_name, action, args = [], kwarg
         state = [x for x in states if x['name'] == state] or [{'module' : 'openvpn'}]
         state = state[0]
         
-        if not module: 
-            module = state['module']
+        module = state.get('module', module)
 
         cl = salt.client.LocalClient()
         print ('Calling salt module ', module + '.' + action, ' on ', instance_name, ' with args : ', args, ' and kwargs : ', kwargs)
@@ -113,7 +112,7 @@ def panel_action(deploy_handler, actions_list = [], instance_name = '', action =
     instances = [x['instance_name'] for x in actions_list]
     results = {x : None for x in instances}
     for action in actions_list: 
-        instance_result = yield panel_action_execute(deploy_handler, action['instance_name'], action['action'], action['args'], actino['kwargs'], action['module'])
+        instance_result = yield panel_action_execute(deploy_handler, action['instance_name'], action['action'], action.get('args', []), action.get('kwargs', {}), action.get('module'))
         results[action['instance_name']] = instance_result
 
     if len(results) == 1: 

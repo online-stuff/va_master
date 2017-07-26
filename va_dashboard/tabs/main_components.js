@@ -9,6 +9,22 @@ var Router = require('react-router');
 var LineChart = require("react-chartjs-2").Line;
 var defaults = require("react-chartjs-2").defaults;
 
+function send_action(instance, action, args){
+    var data = {};
+    if(Array.isArray(action)){
+        var d = [];
+        d[0] = {"instance_name": instance, "action": action[0], "args": args};
+        for(var i=1; i < action.length; i++){
+            var a = action[i].split(":");
+	    d.push({"instance_name": a[0], "action": a[1], "args": args});
+        }
+        data['actions_list'] = d;
+    }else{
+        data = {"instance_name": instance, "action": action, "args": args};
+    }
+    return data;
+}
+
 var Div = React.createClass({
 
     render: function () {
@@ -190,7 +206,7 @@ var Table = React.createClass({
             }else{
                 args.push(id[0]);
             }
-            var data = {"instance_name": this.props.panel.instance, "action": evtKey, "args": args};
+            var data = send_action(this.props.panel.instance, evtKey, args);
             var me = this;
             if(typeof evtKey === 'object' && evtKey.type === "download"){
                 data.action = evtKey.name;
@@ -247,7 +263,7 @@ var Table = React.createClass({
         }else if("panels" in this.props && evtKey in this.props.panels){
             Router.hashHistory.push('/subpanel/' + this.props.panels[evtKey] + '/' + this.props.panel.instance + '/' + id[0]);
         }else{
-            var data = {"instance_name": this.props.panel.instance, "action": evtKey, "args": id};
+            var data = send_action(this.props.panel.instance, evtKey, id);
             var me = this;
             Network.post('/api/panels/action', this.props.auth.token, data).done(function(d) {
                 var msg = d[me.props.panel.instance];
@@ -280,7 +296,7 @@ var Table = React.createClass({
             Router.hashHistory.push('/panel/' + this.props.panels['link'] + '/' + this.props.panel.instance + '/' + [colVal]);
         }else{
             var args = this.props.table.path.concat(colVal);
-            var data = {"instance_name": this.props.panel.instance, "action": action, "args": args};
+            var data = send_action(this.props.panel.instance, action, args);
             var me = this;
             Network.post('/api/panels/action', this.props.auth.token, data).done(function(d) {
                 var msg = d[me.props.panel.instance];
@@ -478,7 +494,7 @@ var Modal = React.createClass({
             }
             args.splice(keys[0], 0, check_vals);
         }
-        var data = {"instance_name": this.props.panel.instance, "action": action_name, "args": this.state.args.concat(args)};
+        var data = send_action(this.props.panel.instance, action_name, this.state.args.concat(args));
         var me = this;
         Network.post("/api/panels/action", this.props.auth.token, data).done(function(d) {
             me.props.dispatch({type: 'CLOSE_MODAL'});
