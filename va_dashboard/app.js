@@ -170,7 +170,7 @@ function alert(state, action){
 
 function form(state, action){
     if(typeof state === 'undefined'){
-        return {readonly: {}};
+        return {readonly: {}, dropdowns: {}};
     }
 
     var newState = Object.assign({}, state);
@@ -180,27 +180,20 @@ function form(state, action){
     if(action.type == 'RESET_FORM'){
         newState.readonly = {};
     }
-
-    return newState;
-};
-
-function dropdown(state, action){
-    if(typeof state === 'undefined'){
-        return {select: ""};
+    if(action.type == 'ADD_DROPDOWN'){
+        newState.dropdowns = action.dropdowns;
     }
-
-    var newState = Object.assign({}, state);
     if(action.type == 'SELECT'){
-        newState.select = action.select;
+        newState.dropdowns[action.name].select = action.select;
     }
     if(action.type == 'RESET_SELECTION'){
-        newState.select = "";
+        newState.dropdowns[action.name].select = "";
     }
 
     return newState;
 };
 
-var mainReducer = Redux.combineReducers({auth: auth, table: table, filter: filter, modal: modal, apps: apps, div: div, panel: panel, alert: alert, form: form, dropdown: dropdown});
+var mainReducer = Redux.combineReducers({auth: auth, table: table, filter: filter, modal: modal, apps: apps, div: div, panel: panel, alert: alert, form: form});
 var store = Redux.createStore(mainReducer);
 
 var Home = require('./tabs/home');

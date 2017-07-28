@@ -20,12 +20,18 @@ var Panel = React.createClass({
     getPanel: function (id, instance, args) {
         var me = this;
         var data = {'panel': id, 'instance_name': instance};
-        if(args !== "") data['args'] = args;
-        console.log(data);
-        this.props.dispatch({type: 'CHANGE_PANEL', panel: id, instance: instance});
-        Network.get('/api/panels/get_panel', this.props.auth.token, data).done(function (data) {
+        if(args !== ""){
+            data['args'] = args.split(",");
+            this.props.dispatch({type: 'CHANGE_PANEL', panel: id, instance: instance, args: data['args']});
+        }else{
+            this.props.dispatch({type: 'CHANGE_PANEL', panel: id, instance: instance});
+        }
+        Network.post('/api/panels/get_panel', this.props.auth.token, data).done(function (data) {
             if(typeof data.tbl_source !== 'undefined'){
                 me.props.dispatch({type: 'ADD_DATA', tables: data.tbl_source});
+            }
+            if(typeof data.form_source !== 'undefined'){
+                me.props.dispatch({type: 'ADD_DROPDOWN', dropdowns: data.form_source});
             }
             me.setState({template: data, loading: false});
         }).fail(function (msg) {
