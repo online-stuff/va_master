@@ -76,12 +76,25 @@ class GenericDriver(base.DriverBase):
         sizes = []
         raise tornado.gen.Return(sizes)
 
+    @tornado.gen.coroutine
+    def remove_instance(self, host, instance_name):
+        print ('Removing instance ', instance_name, ' from host : ', host['hostname'])
+        host_datastore = yield self.datastore.get(host['hostname'])
+        instances = host_datastore.get('instances')
+
+        print ('Before removal : ', instances)
+
+        instances = [x for x in instances if x['hostname'] != instance_name]
+        print ('After removal : ', instances)
+        host_datastore['instances'] = instances
+        print ('Now host is : ', host_datastore)
+        yield self.datastore.insert(host['hostname'], host_datastore)
 
     @tornado.gen.coroutine
     def instance_action(self, host, instance_name, action):
         
         instance_action = {
-            'delete' : 'delete_function', 
+            'delete' : self.remove_instance, 
             'reboot' : 'reboot_function', 
             'start' : 'start_function', 
             'stop' : 'stop_function', 
@@ -89,7 +102,7 @@ class GenericDriver(base.DriverBase):
         if action not in instance_action: 
             raise tornado.gen.Return({'success' : False, 'message' : 'Action not supported : ' +  action})
 
-        success = instance_action[action](instance_name)
+        success = yield instance_action[action](host, instance_name)
         raise tornado.gen.Return({'success' : True, 'message' : ''})
 
 

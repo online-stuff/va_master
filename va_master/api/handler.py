@@ -96,8 +96,7 @@ class ApiHandler(tornado.web.RequestHandler):
             if type(result) == dict: 
                 if result.get('data_type', 'json') == 'file' : 
                     raise tornado.gen.Return(None)
-#            print ('result is : ', result)
-            if self.formatted_result(result): 
+            if self.formatted_result(result) or self.data.get('plain_result'): 
                 pass 
             elif self.has_error(result): 
                 result = {'success' : False, 'message' : result, 'data' : {}} 
@@ -142,7 +141,11 @@ class ApiHandler(tornado.web.RequestHandler):
         try: 
             try: 
                 if 'json' in self.request.headers['Content-Type']: 
-                    data = json.loads(self.request.body)
+                    try:
+                        data = json.loads(self.request.body)
+                    except: 
+                        print ('Bad json in post request : ', self.request.body)
+                        raise tornado.gen.Return()
                 else:
                     data = {self.request.arguments[x][0] for x in self.request.arguments}
                     data.update(self.request.files)
@@ -201,8 +204,8 @@ class LogHandler(FileSystemEventHandler):
         super(LogHandler, self).__init__()
 
     def on_modified(self, event):
-        log_file_path = event.src_path
-        with open(log_file_path) as f: 
+        log_file = event.src_path + '/va-master.log'
+        with open(log_file) as f: 
             log_file = [x for x in f.read().split('\n') if x]
         try:
             last_line = log_file[-1]
