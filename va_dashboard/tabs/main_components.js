@@ -271,23 +271,28 @@ var Table = React.createClass({
         }
     },
     linkClicked: function(action, event){
-        var colVal = event.currentTarget.textContent;
-        if(action == 'link' && "panels" in this.props && 'link' in this.props.panels){
-            this.props.dispatch({type: 'SELECT', select: colVal});
-            Router.hashHistory.push('/subpanel/' + this.props.panels['link'] + '/' + this.props.panel.instance + '/' + [colVal]);
-        }else{
-            var args = this.props.table.path.concat(colVal);
-            var data = {"instance_name": this.props.panel.instance, "action": action, "args": args};
-            var me = this;
-            Network.post('/api/panels/action', this.props.auth.token, data).done(function(msg) {
-                if(typeof msg === 'string'){
-                    me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
-                }else{
-                    me.props.dispatch({type: 'CHANGE_DATA', data: msg, name: me.props.name, passVal: colVal});
-                }
-            }).fail(function (msg) {
-                me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
-            });
+        var linkVal = event.currentTarget.textContent, args = "";
+        if(window.location.hash.indexOf('subpanel') > -1){
+            args = this.props.panel.args + ","; 
+        }
+        args += linkVal;
+        if("panels" in this.props && action in this.props.panels){
+            Router.hashHistory.push('/panel/' + this.props.panels[action] + '/' + this.props.panel.instance + '/' + args);
+        }else if("subpanels" in this.props && action in this.props.subpanels){
+            Router.hashHistory.push('/subpanel/' + this.props.subpanels[action] + '/' + this.props.panel.instance + '/' + args);
+        } else {
+             var args = this.props.table.path.concat(linkVal);
+             var data = {"instance_name": this.props.panel.instance, "action": action, "args": args};
+             var me = this;
+             Network.post('/api/panels/action', this.props.auth.token, data).done(function(msg) {
+                 if(typeof msg === 'string'){
+                     me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
+                 }else{
+                     me.props.dispatch({type: 'CHANGE_DATA', data: msg, name: me.props.name, passVal: linkVal});
+                 }
+             }).fail(function (msg) {
+                 me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
+             });
         }
     },
     render: function () {
@@ -564,6 +569,7 @@ var Path = React.createClass({
     onClick: function(evt){
         // console.log(evt.currentTarget.id)
         // console.log(evt.currentTarget.textContent);
+        if(evt.currentTarget.id == 0) return;
         var args = this.props.table.path.slice(0, parseInt(evt.currentTarget.id) + 1);
         var data = {"instance_name": this.props.panel.instance, "action": this.props.action, "args": args};
         var me = this;
@@ -580,6 +586,9 @@ var Path = React.createClass({
     render: function () {
         var me = this, paths = [];
         if("path" in this.props.table){
+            //TODO remove link from first element in path
+            //paths[0] = <li key="0" className="breadcrumb-item">{path}</li>;
+            //var p = this.props.table.path.slice(1);
             paths =  this.props.table.path.map(function(path, i){
                 return <li key={i} className="breadcrumb-item"><span id={i} className="link" onClick={me.onClick}>{path}</span></li>;
             });
@@ -595,14 +604,19 @@ var Path = React.createClass({
 var Form = React.createClass({
 
     onSelect: function (action) {
-        var host = ReactDOM.findDOMNode(this.refs.dropdown).value.trim();
+        var dropdown = ReactDOM.findDOMNode(this.refs.dropdown);
+        var host = dropdown.value.trim();
+        var d_name = dropdown.name;
         var data = {"instance_name": this.props.panel.instance, "action": action, "args": [host]};
         var me = this;
         Network.post('/api/panels/action', this.props.auth.token, data).done(function(msg) {
             if(typeof msg === 'string'){
                 me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
+            }else if('val' in msg){
+                me.props.dispatch({type: 'SELECT', select: host, name: d_name});
+                me.props.dispatch({type: 'CHANGE_DATA', data: msg.list, name: me.props.target, initVal: [host, msg.val]});
             }else{
-                me.props.dispatch({type: 'SELECT', select: host});
+                me.props.dispatch({type: 'SELECT', select: host, name: d_name});
                 me.props.dispatch({type: 'CHANGE_DATA', data: msg, name: me.props.target, initVal: [host]});
             }
         }).fail(function (msg) {
@@ -631,16 +645,20 @@ var Form = React.createClass({
                     return ( <Bootstrap.FormControl id={index} key={element.name} type={type} name={element.name} value={this.props.form.readonly[element.name]} disabled /> );
                 }
                 if(type == "dropdown"){
-                    var action = "", defaultValue = element.value[0];
+                    var action = "", defaultValue = "", values = [];
+                    if('form' in this.props && element.name in this.props.form.dropdowns){
+                        d_elem = this.props.form.dropdowns[element.name];
+                        defaultValue = d_elem.select;
+                        values = d_elem.values;
+                    }else{
+                        defaultValue = element.value[0];
+                        values = element.value;
+                    }
                     if("action" in element){
                         action = this.onSelect.bind(this, element.action);
-                        if("dropdown" in this.props)
-                            defaultValue = this.props.dropdown.select;
-                        else if("table" in this.props && "path" in this.props.table && this.props.table.path.length > 0)
-                            defaultValue = this.props.table.path[0];
                     }
                     return ( <select ref="dropdown" id={index} key={element.name} onChange={action} name={element.name} defaultValue={defaultValue}>
-                        {element.value.map(function(option, i) {
+                        {values.map(function(option, i) {
                             return <option key={i} value={option}>{option}</option>
                         })}
                     </select> );
