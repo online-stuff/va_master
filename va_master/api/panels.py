@@ -14,6 +14,7 @@ def get_paths():
             'panels/ts_data' : {'function' : get_ts_data, 'args' : []},  
         },
         'post' : {
+            'panels/get_panel' : {'function' : get_panel_for_user, 'args' : ['instance_name', 'panel', 'host', 'handler', 'args']},
             'panels/reset_panels': {'function' : reset_panels, 'args' : []}, #JUST FOR TESTING
             'panels/new_panel' : {'function' : new_panel, 'args' : ['panel_name', 'role']},
             'panels/action' : {'function' : panel_action, 'args' : ['instance_name', 'action', 'args', 'kwargs', 'module']}, #must have instance_name and action in data, 'args' : []}, ex: panels/action instance_name=nino_dir action=list_users
