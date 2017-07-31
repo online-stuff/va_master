@@ -357,21 +357,21 @@ var Table = React.createClass({
                     key = [row[tbl_id]];
                 }
                 columns = this.props.columns.map(function(col, index) {
-                    var key = col.key, colClass = "", colText = row[key];
+                    var key = col.key, colClass = "", colText = colVal = row[key];
                     if(typeof col.colClass !== 'undefined'){
                         colClass = col.colClass;
                         if(row[col.colClass]){
                             colClass = "col-" + col.colClass + "-" + row[col.colClass];
                         }
-                        colText = <span className={colClass}>{row[key]}</span>;
+                        colText = <span className={colClass}>{colVal}</span>;
                         if("action" in col){
                             var col_arr = col['action'].split(':');
                             if(col_arr[0] === "all" || col_arr[0] === row[col.colClass])
-                                colText = <span className={colClass} onClick={me.linkClicked.bind(me, col_arr[1])}>{row[key]}</span>
+                                colText = <span className={colClass} onClick={me.linkClicked.bind(me, col_arr[1])}>{colVal}</span>
                         }
                     }
                     return (
-                        <Reactable.Td key={key} column={key}>
+                        <Reactable.Td key={key} column={key} value={colVal}>
                             {colText}
                         </Reactable.Td>
                     );
