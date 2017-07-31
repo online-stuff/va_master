@@ -86,7 +86,8 @@ class DriverBase(object):
                 'instances' : [],
                 'defaults' : {},
             }
-           
+          
+        self.app_fields = {} 
         self.datastore = datastore
         self.host_ip = host_ip
 
@@ -141,16 +142,12 @@ class DriverBase(object):
         """
 
         if not (self.profile_template or self.provider_template): 
-            print ('There is no template! ')
             raise tornado.gen.Return(None)
         if not skip_profile: 
             self.field_values['profile_conf'] = self.profile_vars['VAR_PROFILE_NAME']
             for var_name in self.profile_vars: 
-                print 'Trying to write : ', var_name, ' with : ', self.profile_vars[var_name]
                 if not (base_profile and var_name == 'VAR_PROFILE_NAME') and self.profile_vars[var_name]: 
-                    print 'Writing the value. '
                     self.profile_template = self.profile_template.replace(var_name, self.profile_vars[var_name])
-                    print 'Now the template is : ', self.profile_template
 
  
         if not skip_provider: 
@@ -163,14 +160,11 @@ class DriverBase(object):
         """ 
             Writes the saved configurations. If any of the arguments are set, the corresponding configuration will not be written. Does not need to be overwritten 
         """
-        print 'Template is : ', self.provider_template
         if not skip_provider and self.provider_template: 
-            print ('Writing provider')
             with open('/etc/salt/cloud.providers.d/' + self.provider_vars['VAR_PROVIDER_NAME'] + '.conf', 'w') as f: 
                 f.write(self.provider_template)
         if not skip_profile and self.profile_template:
              profile_conf_dir =  '/etc/salt/cloud.profiles.d/' + self.profile_vars['VAR_PROFILE_NAME'] + '.conf'
-             print ('Profile is at : ', profile_conf_dir)
              self.field_values['profile_conf_dir'] = profile_conf_dir
              with open(profile_conf_dir, 'w') as f: 
                 f.write(self.profile_template)
@@ -232,8 +226,6 @@ class DriverBase(object):
         provider_name = self.provider_vars['VAR_PROVIDER_NAME']
         images = cl.list_images(provider = provider_name)[provider_name]
         images = images[images.keys()[0]]
-#        print ('Images are : ', images)
-#        print ('Image one is : ', images[0])
         images = [images[x]['name'] for x in images]
         raise tornado.gen.Return(images)
 
@@ -246,7 +238,6 @@ class DriverBase(object):
         provider_name = self.provider_vars['VAR_PROVIDER_NAME']
         sizes = cl.list_sizes(provider = provider_name)[provider_name]
         sizes = sizes[sizes.keys()[0]]
-#        print ('Sizes are : ', sizes)
         sizes = [x['name'] for x in sizes]
         raise tornado.gen.Return(sizes)
 
@@ -360,7 +351,6 @@ class DriverBase(object):
             yield self.get_salt_configs(skip_profile = True)
             yield self.write_configs(skip_profile = True)	
 
-            print ('Now trying to get field_values. ')
     	    self.field_values['networks'] = yield self.get_networks()
             self.field_values['sec_groups'] = yield self.get_sec_groups()
             self.field_values['images'] = yield self.get_images()
@@ -382,12 +372,10 @@ class DriverBase(object):
 
             self.field_values['defaults']['network'] = field_values['network']
             self.field_values['defaults']['sec_group'] = field_values['sec_group']
-            print ('Options are : ', options)
             options.update({
                     'image': self.field_values['images'],
                     'size': self.field_values['sizes'],
             })
-            print ('Options is now : ', options)
             raise tornado.gen.Return(StepResult(
                 errors =[], new_step_index =2, option_choices = options
             ))
@@ -454,3 +442,15 @@ class DriverBase(object):
         raise tornado.gen.Return(True)
 
 
+@tornado.gen.coroutine
+def validate_app_fields(self, step, state, **fields):
+    if step == 2: 
+        fields = {'extra_fields' : fields}
+    self.app_fields.update(fields)
+
+    # steps_fields is a list of lists such that the index of an element is the required fields for that step. We check if the app_fields contain all of those. 
+    steps_fields = [['role', 'instance_name'], state['custom_fields'], ['role', 'image', 'size', 'network']]
+    if not all([self.app_fields.get(x) for x in steps_fields[step]]):
+        return False
+
+    return self.app_fields

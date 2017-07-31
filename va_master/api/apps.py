@@ -24,7 +24,7 @@ def get_paths():
         },
         'post' : {
             'state/add' : {'function' : create_new_state,'args' : ['file', 'body', 'filename']},
-
+            'apps/new/validate_fields' : {'function' : validate_app_fields, 'args' : ['handler']},
             'apps' : {'function' : launch_app, 'args' : ['handler']},
             'apps/action' : {'function' : perform_instance_action, 'args' : ['hostname', 'action', 'instance_name']},
             'apps/add_vpn_user': {'function' : add_openvpn_user, 'args' : ['username']},
@@ -168,6 +168,22 @@ def create_new_state(deploy_handler, file_contents, body, filename):
 
 
 @tornado.gen.coroutine
+def validate_app_fields(deploy_handler, handler, step):
+    hosts = yield store.get('hosts')
+    required_host = [host for host in hosts if host['hostname'] == data['hostname']][0]
+    driver = yield deploy_handler.get_driver_by_id(required_host['driver_name'])
+
+    fields = yield driver.validate_app_fields(step, **handler.data)
+    if not fields: 
+        raise Exception('Some fields were not entered properly. ')
+
+    if step == 2: 
+        handler.data.update(fields)
+        yield launch_app(deploy_handler, handler)
+
+
+
+@tornado.gen.coroutine
 def get_app_info(deploy_handler, instance_name):
     cl = Caller()
     instance_info = cl.cmd('mine.get', instance_name, 'inventory') 
@@ -181,11 +197,20 @@ def launch_app(deploy_handler, handler):
     data = handler.data
     store = deploy_handler.datastore
 
-
     hosts = yield store.get('hosts')
     required_host = [host for host in hosts if host['hostname'] == data['hostname']][0]
 
     driver = yield deploy_handler.get_driver_by_id(required_host['driver_name'])
+
+    if data.get('extra_fields', {}) : 
+        pillar_path = '/srv/pillar/%s-credentials.sls' % (data.get('instance_name'))
+        with open(pillar_path, 'w') as f: 
+            pillar_str = ''
+            for f in data.get('extra_fields'): 
+                pillar_str = '%s: %s\n' % (f, data['extra_fields'][f])
+            f.write(pillar_str)
+        salt_manage_pillar.add_instance(data.get['instance_name'], data.get('role', ''))
+
     result = yield driver.create_minion(required_host, data)
 
     minion_info = yield get_app_info(deploy_handler, handler.data['instance_name'])
