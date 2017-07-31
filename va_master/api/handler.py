@@ -204,13 +204,12 @@ class LogHandler(FileSystemEventHandler):
         super(LogHandler, self).__init__()
 
     def on_modified(self, event):
-        log_file = event.src_path + '/va-master.log'
+        log_file = event.src_path
+        print ('Log file is : ', log_file)
         with open(log_file) as f: 
             log_file = [x for x in f.read().split('\n') if x]
         try:
             last_line = log_file[-1]
-            print ('Log file is : ', log_file_path)
-
             last_line = json.loads(last_line)
 
             msg = {"type" : "update", "message" : last_line}
@@ -225,7 +224,7 @@ class LogMessagingSocket(tornado.websocket.WebSocketHandler):
     #Socket gets messages when opened
     @tornado.web.asynchronous
     @tornado.gen.engine
-    def open(self, no_messages = 0, logfile = '/var/log/vapourapps/va-master.log'):
+    def open(self, no_messages = 0, logfile = '/var/log/vapourapps/'):
         print ('Trying to open socket. ')
         try: 
             self.logfile = logfile
@@ -250,7 +249,7 @@ class LogMessagingSocket(tornado.websocket.WebSocketHandler):
 
             log_handler = LogHandler(self)
             observer = Observer()
-            observer.schedule(log_handler, path = '/'.join(logfile.split('/')[:-1]))
+            observer.schedule(log_handler, path = logfile)
             observer.start()
         except: 
             import traceback
