@@ -24,7 +24,7 @@ def get_paths():
         },
         'post' : {
             'state/add' : {'function' : create_new_state,'args' : ['file', 'body', 'filename']},
-            'apps/new/validate_fields' : {'function' : validate_app_fields, 'args' : ['handler']},
+            'apps/new/validate_fields' : {'function' : validate_app_fields, 'args' : ['handler', 'step']},
             'apps' : {'function' : launch_app, 'args' : ['handler']},
             'apps/action' : {'function' : perform_instance_action, 'args' : ['hostname', 'action', 'instance_name']},
             'apps/add_vpn_user': {'function' : add_openvpn_user, 'args' : ['username']},
