@@ -169,7 +169,7 @@ def create_new_state(deploy_handler, file_contents, body, filename):
 
 @tornado.gen.coroutine
 def validate_app_fields(deploy_handler, handler, step):
-    hosts = yield store.get('hosts')
+    hosts = yield deploy_handler.datastore.get('hosts')
     required_host = [host for host in hosts if host['hostname'] == data['hostname']][0]
     driver = yield deploy_handler.get_driver_by_id(required_host['driver_name'])
 
