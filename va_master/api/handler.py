@@ -204,16 +204,19 @@ class LogHandler(FileSystemEventHandler):
         super(LogHandler, self).__init__()
 
     def on_modified(self, event):
-        log_file = event.src_path + '/va-master.log'
+        log_file = event.src_path
         print ('Log file is : ', log_file)
         with open(log_file) as f: 
             log_file = [x for x in f.read().split('\n') if x]
-        last_line = json.loads(log_file[-1])
         try:
+            last_line = log_file[-1]
+            last_line = json.loads(last_line)
+
             msg = {"type" : "update", "message" : last_line}
-            self.socket.write_message(json.dumps(msg))
+#            self.socket.write_message(json.dumps(msg))
         except: 
-            pass
+            import traceback
+            traceback.print_exc()
 
 
 class LogMessagingSocket(tornado.websocket.WebSocketHandler):
@@ -221,7 +224,7 @@ class LogMessagingSocket(tornado.websocket.WebSocketHandler):
     #Socket gets messages when opened
     @tornado.web.asynchronous
     @tornado.gen.engine
-    def open(self, no_messages = 0, logfile = '/var/log/vapourapps/va-master.log'):
+    def open(self, no_messages = 0, logfile = '/var/log/vapourapps/'):
         print ('Trying to open socket. ')
         try: 
             self.logfile = logfile
@@ -235,7 +238,7 @@ class LogMessagingSocket(tornado.websocket.WebSocketHandler):
                 try:
                     j_msg = json.loads(message)
                 except: 
-                    pass
+                    break 
                 json_msgs.append(j_msg)
             self.messages = json_msgs 
             yesterday = datetime.datetime.now() + dateutil.relativedelta.relativedelta(days = -1)
@@ -246,7 +249,7 @@ class LogMessagingSocket(tornado.websocket.WebSocketHandler):
 
             log_handler = LogHandler(self)
             observer = Observer()
-            observer.schedule(log_handler, path = '/'.join(logfile.split('/')[:-1]))
+            observer.schedule(log_handler, path = logfile)
             observer.start()
         except: 
             import traceback

@@ -478,3 +478,15 @@ table tr.row-state-Unknown{
 .tbl-select > .reactable-data > tr{
     cursor: pointer;
 }
+#launch-app{
+    min-width: 80%;
+}
+#launch-app .tab-content{
+    margin-top: 20px;
+}
+.radioGroup{
+    margin-bottom: 20px;
+}
+.radioGroup input:nth-child(2){
+    margin-left: 10px;
+}

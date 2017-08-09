@@ -190,4 +190,8 @@ class GenericDriver(base.DriverBase):
         yield self.datastore.insert(host['hostname'], host_datastore)
 
         raise tornado.gen.Return(True)  
+        try:
+            yield super(GenericDriver, self).create_minion(host, data)
+        except: 
+            import traceback
 

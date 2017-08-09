@@ -13,6 +13,11 @@ import os
 
 from novaclient import client
 
+from keystoneauth1 import loading
+from keystoneauth1 import session
+from keystoneauth1 import identity
+from keystoneauth1.identity import v3
+
 PROVIDER_TEMPLATE = '''VAR_PROVIDER_NAME:
   minion:
     master: VAR_THIS_IP
@@ -125,7 +130,6 @@ class OpenStackDriver(base.DriverBase):
             'Content-Type': 'application/json'
         })
         try:
-            print ('Trying to get token from : ', url)
             resp = yield self.client.fetch(req)
         except:
             import traceback
@@ -138,7 +142,6 @@ class OpenStackDriver(base.DriverBase):
             for endpoint in serv['endpoints']:
                 if 'publicURL' not in endpoint: continue
                 services[serv['type']] = endpoint['publicURL']
-        print ('Token is : ', token, ' services are : ', services)
         raise tornado.gen.Return((token, services))
 
 
@@ -161,7 +164,7 @@ class OpenStackDriver(base.DriverBase):
         try:
             resp = yield self.client.fetch(req)
         except:
-            import traceback; traceback.print_exc()
+#            import traceback; traceback.print_exc()
             raise tornado.gen.Return([])
 
         result = json.loads(resp.body)
@@ -231,12 +234,12 @@ class OpenStackDriver(base.DriverBase):
 
             tenant_id = tenant['id']
             tenant_usage = yield self.get_openstack_value(self.token_data, 'compute', 'os-simple-tenant-usage/' + tenant_id)
-
             tenant_usage = tenant_usage['tenant_usage']
             instances = [
                 {
                     'hostname' : x['name'], 
-                    'ip' : x['addresses'].get('private_vapps', x['addresses'].get('public', [{'addr':'n/a'}]))[0]['addr'], #[x['addresses'].keys()[0]], 
+                    'ip' : x['addresses'][x['addresses'].keys()[0]][0].get('addr', 'n/a'),
+#                    'ip' : x['addresses'].get('private_vapps', x['addresses'].get('public', [{'addr':'n/a'}]))[0]['addr'], #[x['addresses'].keys()[0]], 
                     'size' : f['name'],
                     'used_disk' : y['local_gb'], 
                     'used_ram' : y['memory_mb'], 
@@ -334,8 +337,17 @@ class OpenStackDriver(base.DriverBase):
     def instance_action(self, host, instance_name, action):
         """ Performs instance actions using a nova client. """
         try:
-            nova = client.Client('2.0', host['username'], host['password'], host['tenant'], 'http://' + host['host_ip'] + '/v2.0')
-            instance = [x for x in nova.servers.list() if x.name == instance_name][0]
+            host_url = 'http://' + host['host_ip'] + '/v2.0'
+            print ('Creating novaclient with username : ', host['username'], 'password : ', host['password'], 'url : ', host_url)
+            auth = identity.Password(auth_url=host_url,
+                   username=host['username'],
+                   password=host['password'],
+                   project_name=host['tenant'])
+            sess = session.Session(auth = auth, verify = False)
+            nova = client.Client(2, session = sess)
+#            nova = client.Client('2', host['username'], host['password'], host['tenant'], host_url)
+            instances = nova.servers.list()
+            instance = [x for x in instances if x.name == instance_name][0]
         except Exception as e:
             import traceback
             traceback.print_exc()
