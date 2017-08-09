@@ -191,3 +191,4 @@ class GenericDriver(base.DriverBase):
             yield super(GenericDriver, self).create_minion(host, data)
         except: 
             import traceback
+
