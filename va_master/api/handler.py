@@ -47,6 +47,7 @@ class ApiHandler(tornado.web.RequestHandler):
             "The minion function caused an exception",
             "is not available",
             "Passed invalid arguments to",
+            "ERROR",
         ]
         if type(result) == str: 
             return any([i in result for i in exceptions])

@@ -78,16 +78,11 @@ class GenericDriver(base.DriverBase):
 
     @tornado.gen.coroutine
     def remove_instance(self, host, instance_name):
-        print ('Removing instance ', instance_name, ' from host : ', host['hostname'])
         host_datastore = yield self.datastore.get(host['hostname'])
         instances = host_datastore.get('instances')
 
-        print ('Before removal : ', instances)
-
         instances = [x for x in instances if x['hostname'] != instance_name]
-        print ('After removal : ', instances)
         host_datastore['instances'] = instances
-        print ('Now host is : ', host_datastore)
         yield self.datastore.insert(host['hostname'], host_datastore)
 
     @tornado.gen.coroutine
@@ -186,8 +181,13 @@ class GenericDriver(base.DriverBase):
       
     @tornado.gen.coroutine
     def create_minion(self, host, data):
+        host_datastore = yield self.datastore.get(host['hostname'])
+        instances = host_datastore.get('instances')
+        instance = {"hostname" : data["instance_name"], "ip" : "", "local_gb" : 0, "memory_mb" : 0, "status" : "n/a" }
+        instances.append(instance)
+
+        host_datastore['instances'] = instances
+        yield self.datastore.insert(host['hostname'], host_datastore)
+
         raise tornado.gen.Return(True)  
-        try:
-            yield super(GenericDriver, self).create_minion(host, data)
-        except: 
-            import traceback
+
