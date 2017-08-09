@@ -5,6 +5,7 @@ import subprocess
 import requests
 import zipfile, tarfile
 
+import salt_manage_pillar
 from salt.client import Caller, LocalClient
 
 import panels
@@ -203,20 +204,20 @@ def get_app_info(deploy_handler, instance_name):
 def launch_app(deploy_handler, handler):
     data = handler.data
     store = deploy_handler.datastore
+    print ('Launching with : ', data)
 
     hosts = yield store.get('hosts')
     required_host = [host for host in hosts if host['hostname'] == data['hostname']][0]
 
     driver = yield deploy_handler.get_driver_by_id(required_host['driver_name'])
-
     if data.get('extra_fields', {}) : 
         pillar_path = '/srv/pillar/%s-credentials.sls' % (data.get('instance_name'))
         with open(pillar_path, 'w') as f: 
             pillar_str = ''
-            for f in data.get('extra_fields'): 
-                pillar_str = '%s: %s\n' % (f, data['extra_fields'][f])
+            for field in data.get('extra_fields'): 
+                pillar_str += '%s: %s\n' % (field, data['extra_fields'][field])
             f.write(pillar_str)
-        salt_manage_pillar.add_instance(data.get['instance_name'], data.get('role', ''))
+        salt_manage_pillar.add_instance(data.get('instance_name'), data.get('role', ''))
 
     raise tornado.gen.Return(True)
 
