@@ -216,7 +216,10 @@ def launch_app(deploy_handler, handler):
 
     minion_info = yield get_app_info(deploy_handler, handler.data['instance_name'])
 
-    if data.get('role'):
+    if not minion_nifo: 
+        raise tornado.gen.Return({"success" : False, "message" : "No minion_info, something probably went wrong with trying to start the instance. ", "data" : None})
+
+    elif data.get('role'):
 
         init_vals = yield store.get('init_vals')
         states = init_vals['states']
