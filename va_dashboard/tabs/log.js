@@ -10,9 +10,11 @@ var Reactable = require('reactable');
 
 var Log = React.createClass({
     getInitialState: function () {
+        var checked = ["emerg", "alert", "crit", "err", "warning", "notice", "info", "debug"];
         return {
             logs: [],
-            value: ""
+            value: "",
+            checked: checked.join(',') + "%"
         }
     },
     initLog: function () {
@@ -55,6 +57,10 @@ var Log = React.createClass({
         };
         this.ws.send(JSON.stringify(msg));
     },
+    changeTable: function(checked){
+        console.log(checked);
+        this.setState({checked: checked});
+    },
     render: function () {
         var TableRedux = connect(function(state){
             return {auth: state.auth, alert: state.alert};
@@ -63,11 +69,14 @@ var Log = React.createClass({
             return {auth: state.auth, alert: state.alert};
         })(DateRange);
         return (
-            <div>
-                <DateRange updateLogs={this.updateLogs} />
-                <input type='text' value={this.state.value} onChange={this.filter} />
-                <TableRedux logs={this.state.logs} filterBy={this.state.value} />
-	    </div>
+            <div id="log-page">
+            	<div>
+                    <DateRange updateLogs={this.updateLogs} />
+                    <input type='text' value={this.state.value} onChange={this.filter} style={{float: 'right'}}/>
+	    		</div>
+                <FilterBtns changeTable={this.changeTable} />
+            	<TableRedux logs={this.state.logs} filterBy={this.state.value} checked={this.state.checked}/>
+            </div>
 	);
     }
 });
@@ -118,6 +127,43 @@ var DateRange = React.createClass({
     }
 });
 
+var FilterBtns = React.createClass({
+    getInitialState: function () {
+        return {
+            severities: ["emerg", "alert", "crit", "err", "warning", "notice", "info", "debug"],
+            btnStatus: Array.apply(null, Array(8)).map(function(){return true})
+        }
+    },
+
+	btnClick: function (key) {
+        var btnStatus = this.state.btnStatus.slice(0);
+        btnStatus[key] = !btnStatus[key];
+        this.setState({btnStatus: btnStatus});
+        var checked = [], s = this.state.severities;
+        for(var i=0; i<btnStatus.length; i++){
+            if(btnStatus[i]) checked.push(s[i]);
+        };
+        this.props.changeTable(checked);
+	},
+
+    render: function () {
+        var btnStyle = {
+			display: 'inline',
+			marginRight: '10px',
+            backgroundColor: '#fff'
+		};
+        var btnStatus = this.state.btnStatus, me = this;
+		var btns = this.state.severities.map(function(val, key){
+            var style = Object.assign({}, btnStyle);
+            if(btnStatus[key]) style['backgroundColor'] = '#eee';
+			return <Bootstrap.Button key={key} onClick={me.btnClick.bind(me, key)} style={style}>{val}</Bootstrap.Button>;
+		});
+		return (
+			<div>{btns}</div>
+		);
+    }
+});
+
 var Table = React.createClass({
     getInitialState: function () {
         return {
@@ -162,8 +208,25 @@ var Table = React.createClass({
             }
         }
         var columns = ["Timestamp", "Message", "Severity", "Host", "Facility"];
+        var otherCols = ["Timestamp", "Message", "Host", "Facility"];
+        var filterable = otherCols.map(function(col){
+            return {
+                column: col,
+                filterFunction: function(contents, filter) {
+                    // case-sensitive filtering
+                    return (contents.indexOf(filter.split("%")[1]) > -1);
+                }
+            }
+        });
+        filterable.push({
+            column: 'Severity',
+            filterFunction: function(contents, filter) {
+                // case-sensitive filtering
+                return (filter.split("%")[0].indexOf(contents) > -1);
+            }
+        });
         return ( <div>
-            <Reactable.Table className="table striped tbl-block tbl-select" columns={columns} itemsPerPage={10} pageButtonLimit={10} noDataText="No matching records found." sortable={true} filterable={columns} filterBy={this.props.filterBy} hideFilterInput>
+            <Reactable.Table className="table striped tbl-select" columns={columns} itemsPerPage={10} pageButtonLimit={10} noDataText="No matching records found." sortable={true} filterable={columns} filterBy={this.props.checked + this.props.filterBy} hideFilterInput>
                 {logs}
             </Reactable.Table>
             <div className="selected-block">
