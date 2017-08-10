@@ -14,7 +14,7 @@ var Log = React.createClass({
         return {
             logs: [],
             value: "",
-            checked: checked.join(',') + "%"
+            checked: checked
         }
     },
     initLog: function () {
@@ -68,6 +68,11 @@ var Log = React.createClass({
         var DateRangeRedux = connect(function(state){
             return {auth: state.auth, alert: state.alert};
         })(DateRange);
+        var me = this;
+        var logs = this.state.logs.filter(function(l){
+            if(me.state.checked.indexOf(l.severity) > -1) return true;
+            return false;
+        });
         return (
             <div id="log-page">
             	<div>
@@ -75,7 +80,7 @@ var Log = React.createClass({
                     <input type='text' value={this.state.value} onChange={this.filter} style={{float: 'right'}}/>
 	    		</div>
                 <FilterBtns changeTable={this.changeTable} />
-            	<TableRedux logs={this.state.logs} filterBy={this.state.value} checked={this.state.checked}/>
+            	<TableRedux logs={logs} filterBy={this.state.value} checked={this.state.checked}/>
             </div>
 	);
     }
@@ -208,25 +213,8 @@ var Table = React.createClass({
             }
         }
         var columns = ["Timestamp", "Message", "Severity", "Host", "Facility"];
-        var otherCols = ["Timestamp", "Message", "Host", "Facility"];
-        var filterable = otherCols.map(function(col){
-            return {
-                column: col,
-                filterFunction: function(contents, filter) {
-                    // case-sensitive filtering
-                    return (contents.indexOf(filter.split("%")[1]) > -1);
-                }
-            }
-        });
-        filterable.push({
-            column: 'Severity',
-            filterFunction: function(contents, filter) {
-                // case-sensitive filtering
-                return (filter.split("%")[0].indexOf(contents) > -1);
-            }
-        });
         return ( <div>
-            <Reactable.Table className="table striped tbl-select" columns={columns} itemsPerPage={10} pageButtonLimit={10} noDataText="No matching records found." sortable={true} filterable={columns} filterBy={this.props.checked + this.props.filterBy} hideFilterInput>
+            <Reactable.Table className="table striped tbl-select" columns={columns} itemsPerPage={10} pageButtonLimit={10} noDataText="No matching records found." sortable={true} filterable={columns} filterBy={this.props.filterBy} hideFilterInput>
                 {logs}
             </Reactable.Table>
             <div className="selected-block">
