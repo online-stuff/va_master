@@ -205,7 +205,6 @@ class LogHandler(FileSystemEventHandler):
 
     def on_modified(self, event):
         log_file = event.src_path
-        print ('Log file is : ', log_file)
         with open(log_file) as f: 
             log_file = [x for x in f.read().split('\n') if x]
         try:
@@ -224,12 +223,12 @@ class LogMessagingSocket(tornado.websocket.WebSocketHandler):
     #Socket gets messages when opened
     @tornado.web.asynchronous
     @tornado.gen.engine
-    def open(self, no_messages = 0, logfile = '/var/log/vapourapps/'):
+    def open(self, no_messages = 0, log_path = '/var/log/vapourapps/', log_file = 'va-master.log'):
         print ('Trying to open socket. ')
         try: 
-            self.logfile = logfile
+            self.logfile = log_path + log_file
             try:
-                with open(logfile) as f: 
+                with open(self.logfile) as f: 
                     self.messages = f.read().split('\n')
             except: 
                 self.messages = []
@@ -238,19 +237,21 @@ class LogMessagingSocket(tornado.websocket.WebSocketHandler):
                 try:
                     j_msg = json.loads(message)
                 except: 
-                    break 
+                    continue
                 json_msgs.append(j_msg)
             self.messages = json_msgs 
             yesterday = datetime.datetime.now() + dateutil.relativedelta.relativedelta(days = -1)
 
             init_messages = self.get_messages(yesterday, datetime.datetime.now())
+
             msg = {"type" : "init", "logs" : init_messages}
             self.write_message(json.dumps(msg))
 
             log_handler = LogHandler(self)
             observer = Observer()
-            observer.schedule(log_handler, path = logfile)
+            observer.schedule(log_handler, path = log_path)
             observer.start()
+            print ('Started observer. ')
         except: 
             import traceback
             traceback.print_exc()
