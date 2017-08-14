@@ -25,7 +25,7 @@ def get_paths():
         },
         'post' : {
             'state/add' : {'function' : create_new_state,'args' : ['file', 'body', 'filename']},
-            'apps/new/validate_fields' : {'function' : validate_app_fields, 'args' : ['handler', 'step']},
+            'apps/new/validate_fields' : {'function' : validate_app_fields, 'args' : ['handler']},
             'apps' : {'function' : launch_app, 'args' : ['handler']},
             'apps/action' : {'function' : perform_instance_action, 'args' : ['hostname', 'action', 'instance_name']},
             'apps/add_vpn_user': {'function' : add_openvpn_user, 'args' : ['username']},
@@ -46,7 +46,7 @@ def get_openvpn_users(deploy_handler):
     cl = Caller()
     users = cl.cmd('openvpn.list_users')
     users['active'] = [{'name' : x, 'check' : False, 'connected' : x in [i['Common Name'] for i in users['status']['client_list']]} for x in users['active']]
-    users['status'] = users['status']['client_list']
+    users['status'] = users['status']['client_list'] or []
     raise tornado.gen.Return(users)
 
 @tornado.gen.coroutine
@@ -169,19 +169,26 @@ def create_new_state(deploy_handler, file_contents, body, filename):
 
 
 @tornado.gen.coroutine
-def validate_app_fields(deploy_handler, handler, step):
-    hosts = yield deploy_handler.datastore.get('hosts')
-    required_host = [host for host in hosts if host['hostname'] == data['hostname']][0]
-    driver = yield deploy_handler.get_driver_by_id(required_host['driver_name'])
+def validate_app_fields(deploy_handler, handler):
+    driver = yield deploy_handler.get_driver_by_id('generic_driver')
+    kwargs = handler.data
+    step = handler.data.pop('step')
+    handler = handler.data.pop('handler')
 
-    fields = yield driver.validate_app_fields(step, **handler.data)
+    fields = yield driver.validate_app_fields(step, **kwargs)
     if not fields: 
         raise Exception('Some fields were not entered properly. ')
 
-    if step == 2: 
+    # If the state has extra fields, then there are 3 steps, otherwise just 2. 
+    step_max = 2
+    print ('Fields state is : ', fields['state'])
+    if fields['state'].get('fields'): step_max = 3
+
+    if step == step_max: 
         handler.data.update(fields)
         yield launch_app(deploy_handler, handler)
 
+    raise tornado.gen.Return(fields)
 
 
 @tornado.gen.coroutine
@@ -211,6 +218,8 @@ def launch_app(deploy_handler, handler):
                 pillar_str += '%s: %s\n' % (field, data['extra_fields'][field])
             f.write(pillar_str)
         salt_manage_pillar.add_instance(data.get('instance_name'), data.get('role', ''))
+
+    raise tornado.gen.Return(True)
 
     result = yield driver.create_minion(required_host, data)
 

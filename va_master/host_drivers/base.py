@@ -442,15 +442,25 @@ class DriverBase(object):
         raise tornado.gen.Return(True)
 
 
-@tornado.gen.coroutine
-def validate_app_fields(self, step, state, **fields):
-    if step == 2: 
-        fields = {'extra_fields' : fields}
-    self.app_fields.update(fields)
-
-    # steps_fields is a list of lists such that the index of an element is the required fields for that step. We check if the app_fields contain all of those. 
-    steps_fields = [['role', 'instance_name'], state['custom_fields'], ['role', 'image', 'size', 'network']]
-    if not all([self.app_fields.get(x) for x in steps_fields[step]]):
-        return False
-
-    return self.app_fields
+    @tornado.gen.coroutine
+    def validate_app_fields(self, step, **fields):
+        step -= 1
+#        if step == 2: 
+#            fields = {'extra_fields' : fields}
+        self.app_fields.update(fields)
+    
+        if 'role' in fields: 
+            states = yield self.datastore.get('init_vals')
+            states = states['states']
+            state = [x for x in states if x['name'] == fields.get('role')][0]
+            self.app_fields['state'] = state
+            state_fields = [x['name'] for x in state.get('fields', [])]
+        else: 
+            state_fields = []
+        # steps_fields is a list of lists such that the index of an element is the required fields for that step. We check if the app_fields contain all of those. 
+        steps_fields = [['role', 'instance_name'], state_fields, ['sec_group', 'image', 'size', 'network']]
+        if not all([self.app_fields.get(x) for x in steps_fields[step]]):
+            print ('Fields expected are : ', steps_fields[step], ' but have : ', self.app_fields.keys())
+            raise tornado.gen.Return(False) 
+    
+        raise tornado.gen.Return(self.app_fields)
