@@ -76,18 +76,25 @@ class ApiHandler(tornado.web.RequestHandler):
             data = {'path' : path, 'method' : method}
             api_func = {'function' : invalid_url, 'args' : ['path', 'method']}
         elif api_func['function'] != user_login: 
+            auth_successful = True
             try: 
-                yield self.log_message(path = path, data = data, func = api_func['function'])
-
                 user = yield get_current_user(self)
 
                 if not user: 
                     self.json({'success' : False, 'message' : 'User not authenticated properly. ', 'data' : {}})
+                    auth_successful = False
                 elif user['type'] == 'user' and path not in self.paths.get('user_allowed', []): 
                     self.json({'success' : False, 'message' : 'User does not have appropriate privileges. ', 'data' : {}})
-            except: 
+                    auth_successful = False
+            except Exception as e: 
                 import traceback
                 traceback.print_exc()
+
+                self.json({'success' : False, 'message' : 'There was an error retrieving user data. ' + e.message, 'data' : {}})
+                auth_successful = False
+            
+            if not auth_successful: 
+                raise tornado.gen.Return()
         try:
             api_func, api_kwargs = api_func.get('function'), api_func.get('args')       
             api_kwargs = {x : data.get(x) for x in api_kwargs if data.get(x)} or {}
@@ -109,6 +116,10 @@ class ApiHandler(tornado.web.RequestHandler):
 
             result = {'success' : False, 'message' : 'There was an error performing a request : ' + str(e.message), 'data' : {}}
 
+
+        yield self.log_message(path = path, data = data, func = api_func, result = result)
+
+
         self.json(result)
 
     @tornado.gen.coroutine
@@ -119,7 +130,6 @@ class ApiHandler(tornado.web.RequestHandler):
             if len(t_args[x]) == 1: 
                 args[x] = args[x][0]
         try:
-#            result = yield self.exec_method('get', path, {x : args[x][0] for x in args})
             result = yield self.exec_method('get', path, args)
 
         except: 
@@ -161,7 +171,7 @@ class ApiHandler(tornado.web.RequestHandler):
 
 
     @tornado.gen.coroutine
-    def log_message(self, path, data, func):
+    def log_message(self, path, data, func, result):
 
         data = {x : str(data[x]) for x in data}
         user = yield url_handler.login.get_current_user(self)
@@ -173,6 +183,7 @@ class ApiHandler(tornado.web.RequestHandler):
             'path' : path, 
             'data' : data, 
             'time' : str(datetime.datetime.now()),
+            'result' : result,
         })
         try:
             syslog.syslog(syslog.LOG_INFO | syslog.LOG_LOCAL0, message)

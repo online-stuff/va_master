@@ -4,9 +4,9 @@ from . import *
 import sys
 import types
 
-def imports():
+def get_modules():
     for name, val in globals().items():
-        if isinstance(val, types.ModuleType):
+        if isinstance(val, types.ModuleType) and hasattr(val, 'get_paths'):
             yield val
 
 
@@ -14,11 +14,7 @@ def gather_paths():
     paths = {'get' : {}, 'post' : {}, 'delete' : {}, 'put' : {}}
     user_allowed = []
 
-
-    api_modules = [x for x in imports()]
-    api_modules = [x for x in api_modules if getattr(x, 'get_paths', None)]
-
-    for api_module in api_modules:
+    for api_module in get_modules():
         module_paths = api_module.get_paths()
         for protocol in paths:
             paths[protocol].update(module_paths.get(protocol, {}))
