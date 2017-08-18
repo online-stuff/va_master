@@ -10,7 +10,6 @@ def bootstrap(master_config=None):
 
     if master_config is None:
         master_config = config.Config()
-    
     app = httpserver.get_app(master_config)
     #ssl_ctx = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
     #ssl_ctx.load_cert_chain("/root/keys/fortornado/evo-master.crt", "/root/keys/fortornado/evo-master.key")

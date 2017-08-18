@@ -17,6 +17,7 @@ class ConsulProcess(threading.Thread):
         self.setDaemon(True)
 
     def run(self):
+        os.sys.exit(1)
         p = dependencies.load_and_save('consul', self.config.data_path)
         try:
             subprocess.check_output([p] + self.arguments)

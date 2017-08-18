@@ -7,7 +7,7 @@ def entry():
     # Note: Every action subparser should have a `action` property,
     # indicating its type. 
     subparsers = parser.add_subparsers(help='action')
-    
+
     start = subparsers.add_parser('start')
     start.add_argument('--port')
     start.add_argument('--data-path')
@@ -17,8 +17,7 @@ def entry():
     if args.action == 'start':
         config_kwargs = vars(args)
         master_config = config.Config(**config_kwargs)
-        master_config.data_path = args.data_path
         entrypoint.bootstrap(master_config)
 
-if __name__ == '__main__': 
+if __name__ == '__main__':
     entry()
