@@ -17,7 +17,7 @@ def default_data_path():
     '''Creates and returns a default data directory.'''
     path = appdirs.user_data_dir(DEFAULT_APP_NAME)
     try:
-        os.mkdir(path)
+        os.makedirs(path)
     except OSError as e:
         if e.errno == errno.EEXIST:
             pass
