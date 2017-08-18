@@ -9,6 +9,7 @@ DevOps tool for corporate apps.',
     keywords=['vapourapps'],
     author='VapourApps',
     install_requires=[
+        'pyopenssl',
         'six',
         'appdirs',
         'salt',

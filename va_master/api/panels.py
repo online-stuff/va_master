@@ -9,9 +9,9 @@ from login import auth_only
 def get_endpoints():
     paths = {
         'get' : {
-            'panels' : get_panels, 
+            'panels' : get_panels,
             'panels/get_panel' : get_panel_for_user,
-            'panels/ts_data' : get_ts_data,  
+            'panels/ts_data' : get_ts_data,
         },
         'post' : {
             'panels/reset_panels': reset_panels, #JUST FOR TESTING
@@ -23,7 +23,7 @@ def get_endpoints():
     return paths
 
 @tornado.gen.coroutine
-def reset_panels(handler): 
+def reset_panels(handler):
     yield handler.config.deploy_handler.reset_panels()
 
 @tornado.gen.coroutine
@@ -35,7 +35,7 @@ def new_panel(handler):
 
 
 @tornado.gen.coroutine
-def list_panels(handler): 
+def list_panels(handler):
     user_group = yield login.get_user_type(handler)
 
     panels = yield handler.config.deploy_handler.datastore.get('panels')
@@ -64,8 +64,8 @@ def panel_action_execute(handler):
         cl = salt.client.LocalClient()
         print 'Trying to get result'
         result = cl.cmd(instance, module + '.' + action , args)
-    except: 
-        import traceback 
+    except:
+        import traceback
         traceback.print_exc()
     raise tornado.gen.Return(result)
 
@@ -119,15 +119,15 @@ def get_panel_for_user(handler):
             handler.data['args'] = [panel] + args
         else:
             handler.data['args'] = [panel]
-        try: 
+        try:
             panel = yield panel_action_execute(handler)
-        except: 
+        except:
             import traceback
             traceback.print_exc()
 
         panel = panel[handler.data['instance_name']]
         raise tornado.gen.Return(panel)
-    else: 
+    else:
         raise tornado.gen.Return({'error' : 'Cannot get panel. '})
 
 

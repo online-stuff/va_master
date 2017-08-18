@@ -41,7 +41,11 @@ class Config(object):
     def __init__(self, **kwargs):
         # Defaults first:
         self.version = (1, 0, 0)
+        self.https_port = 443
+        self.https_crt = None
+        self.https_key = None
         self.consul_port = 0
+        self.advertise_ip = '127.0.0.1' # TODO: IPv4 vs IPv6
         self.datastore = datastore.ConsulStore()
         self.logger = logger
         self.server_port = 80
