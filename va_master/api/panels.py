@@ -48,7 +48,6 @@ def list_panels(deploy_handler, handler):
 @tornado.gen.coroutine
 def panel_action_execute(deploy_handler, instance_name, action, args = [], kwargs = {}, module = None, timeout = 30):
     try:
-
         print ('INstance name is : ', instance_name)
         instance_info = yield apps.get_app_info(deploy_handler, instance_name)
         state = instance_info['role']

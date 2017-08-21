@@ -64,42 +64,36 @@ class ApiHandler(tornado.web.RequestHandler):
 #            print ('Error with testing formatted result - probably is ok. ')
             return False
 
+
     @tornado.gen.coroutine
-    def exec_method(self, method, path, data):
-        self.data = data
-        self.data['method'] = method
-        self.data['handler'] = self
-        api_func = self.paths[method].get(path)
+    def handle_user_auth(self):
+        auth_successful = True
+        try: 
+            user = yield get_current_user(self)
 
-        print ('Getting a call at ', path, ' with data ', data, ' and will call function: ', api_func)
-
-        if not api_func: 
-            data = {'path' : path, 'method' : method}
-            api_func = {'function' : invalid_url, 'args' : ['path', 'method']}
-        elif api_func['function'] != user_login: 
-            auth_successful = True
-            try: 
-                user = yield get_current_user(self)
-
-                if not user: 
-                    self.json({'success' : False, 'message' : 'User not authenticated properly. ', 'data' : {}})
-                    auth_successful = False
-                elif user['type'] == 'user' and path not in self.paths.get('user_allowed', []): 
-                    self.json({'success' : False, 'message' : 'User does not have appropriate privileges. ', 'data' : {}})
-                    auth_successful = False
-            except Exception as e: 
-                import traceback
-                traceback.print_exc()
-
-                self.json({'success' : False, 'message' : 'There was an error retrieving user data. ' + e.message, 'data' : {}})
+            if not user: 
+                self.json({'success' : False, 'message' : 'User not authenticated properly. ', 'data' : {}})
                 auth_successful = False
-            
-            if not auth_successful: 
-                raise tornado.gen.Return()
+            elif user['type'] == 'user' and path not in self.paths.get('user_allowed', []): 
+                self.json({'success' : False, 'message' : 'User does not have appropriate privileges. ', 'data' : {}})
+                auth_successful = False
+        except Exception as e: 
+            import traceback
+            traceback.print_exc()
+
+            self.json({'success' : False, 'message' : 'There was an error retrieving user data. ' + e.message, 'data' : {}})
+            auth_successful = False
+    
+        raise tornado.gen.Return(auth_successful)   
+
+    @tornado.gen.coroutine
+    def handle_func(self, api_func, data):
         try:
             api_func, api_kwargs = api_func.get('function'), api_func.get('args')       
             api_kwargs = {x : data.get(x) for x in api_kwargs if data.get(x)} or {}
+
             result = yield api_func(self.config.deploy_handler, **api_kwargs)
+
             if type(result) == dict: 
                 if result.get('data_type', 'json') == 'file' : 
                     raise tornado.gen.Return(None)
@@ -116,10 +110,32 @@ class ApiHandler(tornado.web.RequestHandler):
             traceback.print_exc()
 
             result = {'success' : False, 'message' : 'There was an error performing a request : ' + str(e.message), 'data' : {}}
+        raise tornado.gen.Return(result)
+        
 
 
-        yield self.log_message(path = path, data = data, func = api_func, result = result)
 
+    @tornado.gen.coroutine
+    def exec_method(self, method, path, data):
+        self.data = data
+        self.data['method'] = method
+        self.data['handler'] = self
+        api_func = self.paths[method].get(path)
+
+        print ('Getting a call at ', path, ' with data ', data, ' and will call function: ', api_func)
+
+        if not api_func: 
+            data = {'path' : path, 'method' : method}
+            api_func = {'function' : invalid_url, 'args' : ['path', 'method']}
+
+        elif api_func['function'] != user_login: 
+            auth_successful = yield self.handle_user_auth()    
+            if not auth_successful: 
+                raise tornado.gen.Return()
+
+        result = yield self.handle_func(api_func, data)
+
+        yield self.log_message(path = path, data = data, func = api_func['function'], result = result)
 
         self.json(result)
 
