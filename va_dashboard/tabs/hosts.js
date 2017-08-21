@@ -36,6 +36,7 @@ var Hosts = React.createClass({
             var status = "", className = "";
             if(host.status.success){
                 status = "Online";
+                className = "row-host-Online";
             }else{
                 popover = (
                     <Bootstrap.Popover title="Error">
@@ -43,7 +44,7 @@ var Hosts = React.createClass({
                     </Bootstrap.Popover>
                 );
                 status = (<Bootstrap.OverlayTrigger overlay={popover}><a>Offline</a></Bootstrap.OverlayTrigger>);
-                className = "danger";
+                className = "danger row-host-Offline";
             }
             return (
                 <Reactable.Tr key={host.hostname} className={className}>
