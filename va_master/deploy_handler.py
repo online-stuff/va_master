@@ -318,6 +318,7 @@ class DeployHandler(object):
 
     @tornado.gen.coroutine
     def get_user_salt_functions(self, user):
+        print ('User is  :', user)
         all_salt_functions = yield self.datastore.get('users_salt_functions')
         user_funcs = all_salt_functions.get(user, [])
         raise tornado.gen.Return(user_funcs)

@@ -46,9 +46,9 @@ def list_panels(deploy_handler, handler):
     raise tornado.gen.Return(panels)
 
 @tornado.gen.coroutine
-def panel_action_execute(deploy_handler, instance_name, action, dash_user, args = [], kwargs = {}, module = None, timeout = 30):
+def panel_action_execute(deploy_handler, instance_name, action, args = [], dash_user = '', kwargs = {}, module = None, timeout = 30):
     try:
-
+        print ('dash user is : ', dash_user)
         user_funcs = yield deploy_handler.get_user_salt_functions(dash_user)
         if action not in user_funcs:
             print ('Function not supported')
@@ -151,7 +151,7 @@ def get_panel_for_user(deploy_handler, handler, panel, instance_name, dash_user,
         args = [panel] + args
         try: 
             print ('Getting panel. ')
-            panel  = yield panel_action_execute(deploy_handler, instance_name, action, args)
+            panel  = yield panel_action_execute(deploy_handler, instance_name, action, args, dash_user)
             print ('Panel is : ', panel)
         except: 
             import traceback

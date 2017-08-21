@@ -91,6 +91,7 @@ class ApiHandler(tornado.web.RequestHandler):
         try:
             api_func, api_kwargs = api_func.get('function'), api_func.get('args')       
             api_kwargs = {x : data.get(x) for x in api_kwargs if data.get(x)} or {}
+            print ('My kwargs is : ', api_kwargs, ' for ', api_func)
 
             result = yield api_func(self.config.deploy_handler, **api_kwargs)
 
