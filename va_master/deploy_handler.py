@@ -309,7 +309,7 @@ class DeployHandler(object):
     def add_user_salt_functions(self, user, functions):
         all_funcs = yield self.datastore.get('users_salt_functions')
 
-        user_funcs = user_funcs.get(user, {})
+        user_funcs = user_funcs.get(user, [])
         user_funcs.update(functions)
         
         all_funcs[user] = user_funcs
@@ -317,7 +317,7 @@ class DeployHandler(object):
         yield self.datastore.insert('users_salt_functions', all_funcs)
 
     @tornado.gen.coroutine
-    def get_user_salt_function(self, user):
+    def get_user_salt_functions(self, user):
         all_salt_functions = yield self.datastore.get('users_salt_functions')
-        user_funcs = all_salt_functions.get(user)
+        user_funcs = all_salt_functions.get(user, [])
         raise tornado.gen.Return(user_funcs)

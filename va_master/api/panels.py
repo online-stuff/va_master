@@ -10,14 +10,14 @@ def get_paths():
     paths = {
         'get' : {
             'panels' : {'function' : get_panels, 'args' : ['handler']}, 
-            'panels/get_panel' : {'function' : get_panel_for_user, 'args' : ['instance_name', 'panel', 'host', 'handler', 'args']},
+            'panels/get_panel' : {'function' : get_panel_for_user, 'args' : ['instance_name', 'panel', 'host', 'handler', 'args', 'dash_user']},
             'panels/ts_data' : {'function' : get_ts_data, 'args' : []},  
         },
         'post' : {
-            'panels/get_panel' : {'function' : get_panel_for_user, 'args' : ['instance_name', 'panel', 'host', 'handler', 'args']},
+            'panels/get_panel' : {'function' : get_panel_for_user, 'args' : ['instance_name', 'panel', 'host', 'handler', 'args', 'dash_user']},
             'panels/reset_panels': {'function' : reset_panels, 'args' : []}, #JUST FOR TESTING
             'panels/new_panel' : {'function' : new_panel, 'args' : ['panel_name', 'role']},
-            'panels/action' : {'function' : panel_action, 'args' : ['instance_name', 'action', 'args', 'kwargs', 'module']}, #must have instance_name and action in data, 'args' : []}, ex: panels/action instance_name=nino_dir action=list_users
+            'panels/action' : {'function' : panel_action, 'args' : ['instance_name', 'action', 'args', 'kwargs', 'module', 'dash_user']}, #must have instance_name and action in data, 'args' : []}, ex: panels/action instance_name=nino_dir action=list_users
             'panels/chart_data' : {'function' : get_chart_data, 'args' : ['instance_name', 'args']},
             'panels/serve_file' : {'function' : salt_serve_file, 'args' : ['instance_name', 'action', 'args', 'kwargs', 'module']},
         }
@@ -46,8 +46,15 @@ def list_panels(deploy_handler, handler):
     raise tornado.gen.Return(panels)
 
 @tornado.gen.coroutine
-def panel_action_execute(deploy_handler, instance_name, action, args = [], kwargs = {}, module = None, timeout = 30):
+def panel_action_execute(deploy_handler, instance_name, action, dash_user, args = [], kwargs = {}, module = None, timeout = 30):
     try:
+
+        user_funcs = yield deploy_handler.get_user_salt_functions(dash_user)
+        if action not in user_funcs:
+            print ('Function not supported')
+            #TODO actually not allow user to do anything. This is just for testing atm. 
+            
+
         print ('INstance name is : ', instance_name)
         instance_info = yield apps.get_app_info(deploy_handler, instance_name)
         state = instance_info['role']
@@ -129,7 +136,7 @@ def get_panels(deploy_handler, handler):
     raise tornado.gen.Return(panels)
 
 @tornado.gen.coroutine
-def get_panel_for_user(deploy_handler, handler, panel, instance_name, args = [], host = None):
+def get_panel_for_user(deploy_handler, handler, panel, instance_name, dash_user, args = [], host = None):
 
     user_panels = yield list_panels(deploy_handler, handler)
     instance_info = yield apps.get_app_info(deploy_handler, instance_name)
