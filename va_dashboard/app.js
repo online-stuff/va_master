@@ -210,6 +210,7 @@ var Triggers = require('./tabs/triggers');
 var Ts_status = require('./tabs/ts_status');
 var Log = require('./tabs/log');
 var Billing = require('./tabs/billing');
+var Services = require('./tabs/services');
 
 var Login = require('./login');
 var App = React.createClass({
@@ -227,6 +228,7 @@ var App = React.createClass({
                 <Router.Route path='/ts_status' component={Ts_status} />
                 <Router.Route path='/log' component={Log} />
                 <Router.Route path='/billing' component={Billing} />
+                <Router.Route path='/services' component={Services} />
                 <Router.Route path='/panel/:id/:instance(/:args)' component={Panel} />
                 <Router.Route path='/subpanel/:id/:instance/:args' component={Subpanel} />
                 <Router.Route path='/chart_panel/:instance/:host/:service' component={ChartPanel} />

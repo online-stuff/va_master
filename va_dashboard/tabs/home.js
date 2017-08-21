@@ -143,6 +143,10 @@ var Home = React.createClass({
                         <Bootstrap.Glyphicon glyph='cloud' /> Store</NavLink>
                         </li>
                         <li>
+                        <NavLink to='services'>
+                        <Bootstrap.Glyphicon glyph='cloud' /> Services</NavLink>
+                        </li>
+                        <li>
                         <NavLink to='vpn'>
                             <span><i className='fa fa-lock' /> VPN</span>
                         </NavLink>
