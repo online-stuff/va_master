@@ -50,7 +50,6 @@ var Log = React.createClass({
         this.setState({value: evt.target.value});
     },
     updateLogs: function(startDate, endDate){
-        console.log(startDate, endDate);
         var msg = {
             from_date: startDate,
             to_date: endDate
@@ -58,7 +57,6 @@ var Log = React.createClass({
         this.ws.send(JSON.stringify(msg));
     },
     changeTable: function(checked){
-        console.log(checked);
         this.setState({checked: checked});
     },
     render: function () {
@@ -77,7 +75,7 @@ var Log = React.createClass({
             <div id="log-page">
             	<div>
                     <DateRange updateLogs={this.updateLogs} />
-                    <input type='text' value={this.state.value} onChange={this.filter} style={{float: 'right'}}/>
+                    <input type='text' placeholder='Search...' value={this.state.value} onChange={this.filter} style={{float: 'right'}}/>
 	    		</div>
                 <FilterBtns changeTable={this.changeTable} />
             	<TableRedux logs={logs} filterBy={this.state.value} checked={this.state.checked}/>
@@ -110,6 +108,7 @@ var DateRange = React.createClass({
     render: function () {
         return (
             <div className="date-range">
+                From: 
                 <DatePicker
                     dateFormat="DD/MM/YYYY"
                     selected={this.state.startDate}
@@ -118,6 +117,7 @@ var DateRange = React.createClass({
                     endDate={this.state.endDate}
                     onChange={this.handleChangeStart}
                 />
+                To: 
                 <DatePicker
                     dateFormat="DD/MM/YYYY"
                     selected={this.state.endDate}
@@ -164,7 +164,7 @@ var FilterBtns = React.createClass({
 			return <Bootstrap.Button key={key} onClick={me.btnClick.bind(me, key)} style={style}>{val}</Bootstrap.Button>;
 		});
 		return (
-			<div>{btns}</div>
+			<div id="log-btns">{btns}</div>
 		);
     }
 });

@@ -36,6 +36,14 @@ def get_paths():
     }
     return paths
 
+def bytes_to_readable(num, suffix='B'):
+    num = int(num)
+    for unit in ['','Ki','Mi','Gi','Ti','Pi','Ei','Zi']:
+        if abs(num) < 1024.0:
+            return "%3.1f%s%s" % (num, unit, suffix)
+        num /= 1024.0
+    return "%.1f%s%s" % (num, 'Yi', suffix)
+
 @tornado.gen.coroutine
 def add_app(deploy_handler, host, instance_name):
     app = yield get_app_info(deploy_handler, instance_name)
@@ -44,9 +52,19 @@ def add_app(deploy_handler, host, instance_name):
 @tornado.gen.coroutine
 def get_openvpn_users(deploy_handler):
     cl = Caller()
-    users = cl.cmd('openvpn.list_users')
-    users['active'] = [{'name' : x, 'check' : False, 'connected' : x in [i['Common Name'] for i in users['status']['client_list']]} for x in users['active']]
-    users['status'] = users['status']['client_list'] or []
+    openvpn_users = cl.cmd('openvpn.list_users')
+
+    users = {'revoked' : openvpn_users['revoked']}
+    users['active'] = [{'name' : x, 'check' : False, 'connected' : x in [i['Common Name'] for i in openvpn_users['status']['client_list']]} for x in openvpn_users['active']]
+    users['status'] = openvpn_users['status']['client_list'] or []
+
+    #Virtual address is missing from client_list, we have to find it in the routing table and update it. 
+    [x.update({'Real Address' : [y.get('Virtual Address') for y in openvpn_users['status']['routing_table'] if y['Real Address'] == x['Real Address']][0]}) for x in openvpn_users['status']['client_list']]
+       
+    #Make bytes human readable
+    for k in ['Bytes Received', 'Bytes Sent']:
+        [x.update({k : bytes_to_readable(x.get(k))}) for x in openvpn_users['status']['client_list']]
+
     raise tornado.gen.Return(users)
 
 @tornado.gen.coroutine

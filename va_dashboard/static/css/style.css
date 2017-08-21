@@ -463,6 +463,7 @@ table tr.row-state-Unknown{
 .date-range > div {
     display: inline-block;
     margin-right: 20px;
+    margin-left: 8px;
 }
 /*.date-range > :first-child {
     margin-right: 20px;
@@ -473,10 +474,13 @@ table tr.row-state-Unknown{
 #log-page > div:first-child{
     width: 70%;
 }
+#log-btns button{
+    width: 80px;
+}
 .selected-block{
     float: left;
-    padding-top: 40px;
-    padding-right: 30px;
+    padding-top: 30px;
+    padding-left: 30px;
 }
 .tbl-select{
     float: left;
@@ -497,3 +501,22 @@ table tr.row-state-Unknown{
 .radioGroup input:nth-child(2){
     margin-left: 10px;
 }
+table tr[class^=row-app]{
+  border-left: 5px solid #d3d3d3;
+}
+table tr.row-app-ACTIVE{
+  border-left: 5px solid #44de40;
+}
+table tr.row-app-PAUSED{
+  border-left: 5px solid #dedc40;
+}
+table tr.row-app-SHUTOFF{
+  border-left: 5px solid #de4040;
+}
+table tr.row-host-Online{
+  border-left: 5px solid #44de40;
+}
+table tr.row-host-Offline{
+  border-left: 5px solid #de4040;
+}
+

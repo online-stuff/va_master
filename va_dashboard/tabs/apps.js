@@ -97,8 +97,9 @@ var Appp = React.createClass({
                         ipaddr = "";
                     }
                 }
+                var rowClass = "row-app-" + app.status;
                 return (
-                    <Reactable.Tr key={app.hostname}>
+                    <Reactable.Tr key={app.hostname} className={rowClass}>
                         <Reactable.Td column="Hostname">{app.hostname}</Reactable.Td>
                         <Reactable.Td column="IP">{ipaddr}</Reactable.Td>
                         <Reactable.Td column="Size">{app.size}</Reactable.Td>

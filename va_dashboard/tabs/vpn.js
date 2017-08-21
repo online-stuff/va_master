@@ -128,9 +128,10 @@ var Vpn = React.createClass({
                 <Reactable.Table className="table striped" columns={['Name', 'Connected since', 'Virtual IP', 'Bytes in', 'Bytes out']} itemsPerPage={10} pageButtonLimit={10} noDataText="No matching records found." sortable={true} filterable={['Name', 'Connected since', 'Virtual IP', 'Bytes in', 'Bytes out']}>
                     {status_rows}
                 </Reactable.Table>
+                <div style={{position: 'relative'}}>
                 <Bootstrap.PageHeader>VPN Users</Bootstrap.PageHeader>
                 <h4>Active users</h4>
-                <Bootstrap.Button type="button" bsStyle='default' className="pull-right margina" onClick={this.openModal}>
+                <Bootstrap.Button type="button" bsStyle='default' className="tbl-btn" style={{top: '110px'}} onClick={this.openModal}>
                     <Bootstrap.Glyphicon glyph='plus' />
                     Add user
                 </Bootstrap.Button>
@@ -142,6 +143,7 @@ var Vpn = React.createClass({
                 <Reactable.Table className="table striped" columns={['Name', 'Connected']} itemsPerPage={10} pageButtonLimit={10} noDataText="No matching records found." sortable={true} filterable={['Name', 'Connected']}>
                     {revoked_rows}
                 </Reactable.Table>
+                </div>
             </div>
         );
     }
