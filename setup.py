@@ -10,6 +10,7 @@ DevOps tool for corporate apps.',
     author='VapourApps',
     install_requires=[
         'pyopenssl',
+        'netifaces',
         'six',
         'appdirs',
         'salt',

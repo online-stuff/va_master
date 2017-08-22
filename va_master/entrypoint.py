@@ -38,18 +38,22 @@ def bootstrap(master_config):
     data to all the components."""
 
     app = httpserver.get_app(master_config)
-    if None not in (master_config.https_crt, master_config.https_key):
-        pass
 
-    crt_path = os.path.join(master_config.data_path, 'https.crt')
-    key_path = os.path.join(master_config.data_path, 'https.key')
-    try:
-        with open(crt_path):
-            with open(key_path):
-                master_config.logger.info('Loading HTTPS certificates...')
-    except:
-        master_config.logger.info('Generating self-signed certificate...')
-        generate_keys(master_config, crt_path, key_path)
+    if None in (master_config.https_crt, master_config.https_key):
+        crt_path = os.path.join(master_config.data_path, 'https.crt')
+        key_path = os.path.join(master_config.data_path, 'https.key')
+        try:
+            with open(crt_path):
+                with open(key_path):
+                    master_config.logger.info('Loading self-signed ' \
+                            'certificates...')
+        except:
+            master_config.logger.info('Generating self-signed certificate...')
+            generate_keys(master_config, crt_path, key_path)
+    else:
+        crt_path = master_config.https_crt
+        key_path = master_config.key_crt
+
     ssl_ctx = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
     ssl_ctx.load_cert_chain(crt_path, key_path)
 
