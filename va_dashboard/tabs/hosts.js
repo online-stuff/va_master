@@ -69,6 +69,7 @@ var Hosts = React.createClass({
         const blockStyle = {
             visibility: loading ? "hidden": "visible",
         };
+        var sf_cols = ['Host name', 'IP', 'Instances', 'Driver', 'Status'];
         return (<div className="app-containter">
             <NewHostFormRedux changeHosts = {this.getCurrentHosts} />
             <span className="spinner" style={spinnerStyle} ><i className="fa fa-spinner fa-spin fa-3x" aria-hidden="true"></i></span>
@@ -78,7 +79,7 @@ var Hosts = React.createClass({
                     <Bootstrap.Glyphicon glyph='plus' />
                     Add host
                 </Bootstrap.Button>
-                <Reactable.Table className="table striped" columns={['Host name', 'IP', 'Instances', 'Driver', 'Status', 'Actions']} itemsPerPage={10} pageButtonLimit={10} noDataText="No matching records found." sortable={true} filterable={['Host name', 'IP', 'Instances', 'Driver', 'Status']} >
+                <Reactable.Table className="table striped" columns={['Host name', 'IP', 'Instances', 'Driver', 'Status', 'Actions']} itemsPerPage={10} pageButtonLimit={10} noDataText="No matching records found." sortable={sf_cols} filterable={sf_cols} >
                     {host_rows}
                 </Reactable.Table>
             </div>

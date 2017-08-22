@@ -502,21 +502,31 @@ table tr.row-state-Unknown{
     margin-left: 10px;
 }
 table tr[class^=row-app]{
-  border-left: 5px solid #d3d3d3;
+    border-left: 5px solid #d3d3d3;
 }
 table tr.row-app-ACTIVE{
-  border-left: 5px solid #44de40;
+    border-left: 5px solid #44de40;
 }
 table tr.row-app-PAUSED{
-  border-left: 5px solid #dedc40;
+    border-left: 5px solid #dedc40;
 }
 table tr.row-app-SHUTOFF{
-  border-left: 5px solid #de4040;
+    border-left: 5px solid #de4040;
 }
 table tr.row-host-Online{
-  border-left: 5px solid #44de40;
+    border-left: 5px solid #44de40;
 }
 table tr.row-host-Offline{
-  border-left: 5px solid #de4040;
+    border-left: 5px solid #de4040;
 }
-
+.reactable-header-sortable{
+    background-image: url("../sort_both.png");
+    background-repeat: no-repeat;
+    background-position: center right;
+}
+.reactable-header-sort-asc{
+    background-image: url("../sort_asc.png");
+}
+.reactable-header-sort-desc{
+    background-image: url("../sort_desc.png");
+}
