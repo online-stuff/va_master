@@ -17,10 +17,11 @@ def get_paths():
             'apps/vpn_status' : {'function' : get_openvpn_status, 'args' : []},
             'apps/add_app' : {'function' : add_app, 'args' : ['host', 'instance_name']},
             'apps/get_actions' : {'function' : get_user_actions, 'args' : []},
+            'apps/get_user_salt_functions' : {'function' : get_user_salt_functions, 'args' : ['dash_user']},
+            'apps/get_all_salt_functions' : {'function' : get_all_salt_functions, 'args' : []},
 
             'states' : {'function' : get_states, 'args' : []},
             'states/reset' : {'function' : reset_states, 'args' : []},#Just for testing
-
 
         },
         'post' : {
@@ -123,7 +124,7 @@ def perform_instance_action(deploy_handler, hostname, action, instance_name):
 @tornado.gen.coroutine
 def manage_states(deploy_handler, name, action = 'append'):
     try:
-        current_states = yield deploy_handler.datastore.get('states')
+        current_states = yield deploy_handler.get_states()
 
         #TODO delete from /srv/salt
         getattr(current_states, action)(name)
@@ -265,3 +266,24 @@ def launch_app(deploy_handler, handler):
 def get_user_actions(deploy_handler):
     actions = yield deploy_handler.get_actions(int(handler.data.get('no_actions', 0)))
     raise tornado.gen.Return(actions)
+
+@tornado.gen.coroutine
+def get_all_salt_functions(deploy_handler):
+    cl = LocalClient()
+    states = yield deploy_handler.get_states()
+
+    functions = cl.cmd('*', 'sys.doc')
+    result = {
+        [i for i in x if x[states[x]['module']] in i] 
+    for x in functions}
+
+    raise tornado.gen.Return(result)
+
+@tornado.gen.coroutine
+def get_user_salt_functions(deploy_handler, dash_user):
+    salt_functions = yield deploy_handler.get_user_salt_functions(dash_user['username'])
+    raise tornado.gen.Return(salt_functions)
+    
+@tornado.gen.coroutine
+def add_user_salt_functions(deploy_handler, dash_user, functions):
+    yield deploy_handler.add_user_salt_functions(dash_user['username'], functions)
