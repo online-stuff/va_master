@@ -1,5 +1,6 @@
 import tornado.web, tornado.websocket
 import tornado.gen
+from tornado.gen import coroutine, Return
 
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
@@ -16,9 +17,6 @@ import sys
 import os
 import importlib
 from ..config import logger
-
-def invalid_url(handler):
-    raise Exception('Invalid URL : ' + handler.data['path'] +' with method : ' + handler.data['method'])
 
 # Don't import these modules as endpoints
 ENDPOINT_BLACKLIST = ('apps', 'triggers')
@@ -59,7 +57,6 @@ class ApiHandler(tornado.web.RequestHandler):
         self.datastore = config.datastore
         self.data = {}
         self.endpoints = all_endpoints
-        print(self.endpoints)
         self.salt_client = None
 
     def json(self, obj, status=200):
@@ -68,62 +65,36 @@ class ApiHandler(tornado.web.RequestHandler):
         self.write(json.dumps(obj))
         self.finish()
 
-    @tornado.gen.coroutine
-    def exec_method(self, method, path, data):
-        self.data = data
-        self.data['method'] = method
+    @coroutine
+    def exec_method(self, method, path):
         api_func = self.endpoints[method].get(path)
-        print ('Getting a call at ', path, ' with data ', data, ' and will call function: ', api_func)
+        self.config.logger.info('Received a request: {} /{}'.format(\
+            method.upper(), path))
         res = yield api_func(self)
+
+        # Make sure that the method itself did not finish the request
+        # All a method has to do is return. (and we do the actual finish
+        # here.)
+
+        assert not self._finished
+
         self.json(res)
 
-    @tornado.gen.coroutine
+    @coroutine
     def get(self, path):
-        args = self.request.query_arguments
-        t_args = args
-        for x in t_args:
-            if len(t_args[x]) == 1:
-                args[x] = args[x][0]
-        try:
-#            result = yield self.exec_method('get', path, {x : args[x][0] for x in args})
-            result = yield self.exec_method('get', path, args)
+        result = yield self.exec_method('get', path, args)
 
-        except:
-            import traceback
-            traceback.print_exc()
-
-    @tornado.gen.coroutine
+    @coroutine
     def delete(self, path):
-        try:
-            data = json.loads(self.request.body)
-            result = yield self.exec_method('delete', path, data)
-        except:
-            import traceback
-            traceback.print_exc()
+        result = yield self.exec_method('delete', path, args)
 
-    @tornado.gen.coroutine
+    @coroutine
     def post(self, path):
-        try:
-            try:
-                if 'json' in self.request.headers['Content-Type']:
-                    data = json.loads(self.request.body)
-                else:
-                    data = {self.request.arguments[x][0] for x in self.request.arguments}
-                    data.update(self.request.files)
-            except ValueError:
-                import traceback
-                traceback.print_exc()
-                data = {}
-
-            yield self.exec_method('post', path, data)
-        except:
-            import traceback
-            traceback.print_exc()
+        result = yield self.exec_method('delete', path, args)
 
 
-    @tornado.gen.coroutine
+    @coroutine
     def log_message(self, path, data, func):
-
         user = yield url_handler.login.get_current_user(self)
         message = json.dumps({
             'type' : data['method'],
@@ -141,7 +112,7 @@ class ApiHandler(tornado.web.RequestHandler):
             traceback.print_exc()
 
 
-    @tornado.gen.coroutine
+    @coroutine
     def serve_file(self, file_path, chunk_size = 4096):
         try:
             self.set_header('Content-Type', 'application/octet-stream')
@@ -182,7 +153,7 @@ class LogMessagingSocket(tornado.websocket.WebSocketHandler):
     @tornado.gen.engine
     def open(self, no_messages = 100, logfile = '/var/log/vapourapps/va-master.log'):
         self.logfile = logfile
-        with open(logfile) as f: 
+        with open(logfile) as f:
             self.messages = f.read().split('\n')
         self.messages = self.messages
         self.write_message(json.dumps(self.messages[-no_messages:]))
@@ -195,18 +166,16 @@ class LogMessagingSocket(tornado.websocket.WebSocketHandler):
     def get_messages(message):
         return self.messages[-message['number_of_messages']:]
 
-    def check_origin(self, origin): 
+    def check_origin(self, origin):
         return True
 
-    @tornado.gen.coroutine
-    def on_message(self, message): 
+    @coroutine
+    def on_message(self, message):
         try:
             message = json.loads(message)
             reply = {
                 'get_messages' : self.get_messages
             }[message['action']]
-        except: 
+        except:
             import traceback
-#            traceback.print_exc()
         self.write_message(reply(message))
-

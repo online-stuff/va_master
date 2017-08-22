@@ -1,10 +1,10 @@
-import tornado.gen
 import time
 import json
 import uuid
 import functools
 import salt
 from pbkdf2 import crypt
+from tornado.gen import coroutine, Return
 
 # TODO: Check if the implementation of the `pbkdf2` lib is credible,
 # and if the library is maintained and audited. May switch to bcrypt.
@@ -14,13 +14,13 @@ def get_endpoints():
         'get' : {
         },
         'post' : {
-            'login' : user_login, 
+            'login' : user_login,
             'new_user' : create_user_api
         }
     }
     return paths
 
-@tornado.gen.coroutine
+@coroutine
 def get_or_create_token(datastore, username, user_type = 'admin'):
     found = False
     try:
@@ -33,12 +33,12 @@ def get_or_create_token(datastore, username, user_type = 'admin'):
         }
         yield datastore.insert('tokens/%s/by_username/%s' % (user_type, username), doc)
         yield datastore.insert('tokens/%s/by_token/%s' % (user_type, doc['token']), doc)
-        raise tornado.gen.Return(doc['token'])
+        raise Return(doc['token'])
     finally:
         if found:
-            raise tornado.gen.Return(token_doc['token'])
+            raise Return(token_doc['token'])
 
-@tornado.gen.coroutine
+@coroutine
 def get_current_user(handler):
     token = handler.request.headers.get('Authorization', '')
 
@@ -48,37 +48,37 @@ def get_current_user(handler):
         token_valid = yield is_token_valid(handler.datastore, token, type)
         if token_valid: 
             user = yield handler.datastore.get('tokens/%s/by_token/%s' % (type, token))
-            raise tornado.gen.Return({'username' : user['username'], 'type' : type})
-    raise tornado.gen.Return(None)
+            raise Return({'username' : user['username'], 'type' : type})
+    raise Return(None)
 
 
-@tornado.gen.coroutine
+@coroutine
 def get_user_type(handler):
     user = yield get_current_user(handler)
     if user:
-        raise tornado.gen.Return(user['type'])
-    raise tornado.gen.Return(None)
+        raise Return(user['type'])
+    raise Return(None)
 
-@tornado.gen.coroutine
+@coroutine
 def is_token_valid(datastore, token, user_type = 'admin'):
     valid = True
     try:
         res = yield datastore.get('tokens/%s/by_token/%s' % (user_type, token))
     except datastore.KeyNotFound:
-        raise tornado.gen.Return(False)
+        raise Return(False)
     except Exception as e:
         print ('Something weird happened. ')
         import traceback
         traceback.print_exc()
     valid = (res['username'] != '__invalid__')
-    raise tornado.gen.Return(valid)
+    raise Return(valid)
 
 #So far, one kwarg is used: user_allowed. 
 def auth_only(*args, **kwargs):
     user_allowed = kwargs.get('user_allowed', False)
 
     def auth_only_real(routine):
-        @tornado.gen.coroutine
+        @coroutine
         @functools.wraps(routine)
         def func(handler):
             token = handler.request.headers.get('Authorization', '')
@@ -87,7 +87,7 @@ def auth_only(*args, **kwargs):
             user_type = yield get_user_type(handler)
             #user_type is None if the token is invalid
             if not user_type or (user_type == 'user' and not user_allowed): 
-                raise tornado.gen.Return({'success': False, 'message' : 'No user with this token found. Try to log in again. '})
+                raise Return({'success': False, 'message' : 'No user with this token found. Try to log in again. '})
             else:
                 yield routine(handler)
         return func
@@ -99,7 +99,7 @@ def auth_only(*args, **kwargs):
         return auth_only_real
 
 
-@tornado.gen.coroutine
+@coroutine
 def create_user(datastore, username, password, user_type = 'user'):
     datastore_handle = user_type + 's' #Basically, make it plural (admin -> admins, user -> users)
     if len(username) < 1 or len(password) < 1:
@@ -119,16 +119,16 @@ def create_user(datastore, username, password, user_type = 'user'):
     yield datastore.insert(datastore_handle, new_users)
     token = yield get_or_create_token(datastore, username, user_type = user_type)
 
-    raise tornado.gen.Return(token)
+    raise Return(token)
 
-@tornado.gen.coroutine
+@coroutine
 def create_user_api(handler):
     token = yield create_user(handler.config.deploy_handler.datastore, handler.data['user'], handler.data['pass']) 
-    raise tornado.gen.Return(token)
+    raise Return(token)
 
 
 
-@tornado.gen.coroutine
+@coroutine
 def user_login(handler):
     body = None
     try: 
@@ -137,11 +137,11 @@ def user_login(handler):
             username = body['username'].decode('utf8')
             password = body['password'].decode('utf8')
         except:
-            raise tornado.gen.Return({'error': 'bad_body'}, 400)
+            raise Return({'error': 'bad_body'}, 400)
 
         if '@' in username: 
             yield ldap_login(handler)
-            raise tornado.gen.Return()
+            raise Return()
 
         for user_type in ['admin', 'user']:
             datastore_handle = user_type + 's'
@@ -150,9 +150,9 @@ def user_login(handler):
                 users = yield handler.datastore.get(datastore_handle)
                 print ('Users are : ', users)
             except handler.datastore.KeyNotFound:
-                raise tornado.gen.Return({'error': 'no_users: ' + datastore_handle}, 401)
+                raise Return({'error': 'no_users: ' + datastore_handle}, 401)
                 # TODO: handle this gracefully?
-                raise tornado.gen.Return()
+                raise Return()
 
             account_info = None
             for user in users:
@@ -174,17 +174,17 @@ def user_login(handler):
             print (crypt(password, pw_hash))
             if crypt(password, pw_hash) == pw_hash:
                 token = yield get_or_create_token(handler.datastore, username, user_type = user_type)
-                raise tornado.gen.Return({'token': token})
-        raise tornado.gen.Return({'error': 'invalid_password'})
+                raise Return({'token': token})
+        raise Return({'error': 'invalid_password'})
 
-    except tornado.gen.Return:
+    except Return:
         raise
     except: 
         import traceback
         traceback.print_exc()
 
 
-@tornado.gen.coroutine
+@coroutine
 def ldap_login(handler):
     body = json.loads(handler.request.body)
     username = body['username'].decode('utf8')
@@ -194,11 +194,11 @@ def ldap_login(handler):
     cl = salt.client.LocalClient()
     result = cl.cmd(directory_name, 'samba.user_auth', [username, password])['nino_dir'] #TODO write user_auth
     
-    if result['success']: 
+    if result['success']:
         token = yield get_or_create_token(handler.datastore, username, user_type = result['user_type'])
-        raise tornado.gen.Return({'token' : token})
-    else: 
-        raise tornado.gen.Return({'error' : 'Invalid login: ' + result}, 401)
+        raise Return({'token' : token})
+    else:
+        raise Return({'error' : 'Invalid login: ' + result}, 401)
 
 
 
