@@ -14,3 +14,4 @@ aws_images
 openstack_env_vars.sh
 dist/
 build/
+.vscode

@@ -44,7 +44,6 @@ def get_current_user(handler):
 
     token = token.replace('Token ', '')
     print ('Token is : ', token)
-    
     for type in ['user', 'admin']: # add other types as necessary, maybe from datastore. 
         token_valid = yield is_token_valid(handler.datastore, token, type)
         if token_valid: 
@@ -56,7 +55,7 @@ def get_current_user(handler):
 @tornado.gen.coroutine
 def get_user_type(handler):
     user = yield get_current_user(handler)
-    if user: 
+    if user:
         raise tornado.gen.Return(user['type'])
     raise tornado.gen.Return(None)
 
@@ -67,7 +66,7 @@ def is_token_valid(datastore, token, user_type = 'admin'):
         res = yield datastore.get('tokens/%s/by_token/%s' % (user_type, token))
     except datastore.KeyNotFound:
         raise tornado.gen.Return(False)
-    except Exception as e: 
+    except Exception as e:
         print ('Something weird happened. ')
         import traceback
         traceback.print_exc()

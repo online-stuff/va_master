@@ -27,22 +27,29 @@ def get_endpoints():
     '''Gets the endpoints of the modules in this package in the form
     {'module_name': {'get': ..., 'post': ...}, ...}
     '''
-    
+
     # Get all modules in the current package (.api)
     this_dir = os.path.dirname(__file__)
     mods = pkgutil.iter_modules([this_dir])
-    endpoints = {}
+    endpoints = {'get': {}, 'post': {}}
     for _, module_name, _ in mods:
         if module_name in ENDPOINT_BLACKLIST: continue
 
         try:
             mod_endpoints = importlib.import_module('.{}'.format(module_name), __package__) \
                 .get_endpoints()
-            endpoints[module_name] = mod_endpoints
+            if 'get' in mod_endpoints:
+                endpoints['get'].update(mod_endpoints['get'])
+            if 'post' in mod_endpoints:
+                endpoints['post'].update(mod_endpoints['post'])
         except AttributeError:
             logger.debug('Cannot import {} as endpoint (it doesn\'t have '
             'get_endpoints()).'.format(module_name))
     return endpoints
+
+# Only query endpoints once (it's an expensive operation)
+# These can't change at runtime.
+all_endpoints = get_endpoints()
 
 class ApiHandler(tornado.web.RequestHandler):
     executor = ThreadPoolExecutor(max_workers= 4)
@@ -51,7 +58,8 @@ class ApiHandler(tornado.web.RequestHandler):
         self.config = config
         self.datastore = config.datastore
         self.data = {}
-        self.endpoints = get_endpoints()
+        self.endpoints = all_endpoints
+        print(self.endpoints)
         self.salt_client = None
 
     def json(self, obj, status=200):
@@ -63,89 +71,52 @@ class ApiHandler(tornado.web.RequestHandler):
     @tornado.gen.coroutine
     def exec_method(self, method, path, data):
         self.data = data
-        print 'Data is : ', data
         self.data['method'] = method
-        api_func = self.paths[method].get(path)
+        api_func = self.endpoints[method].get(path)
         print ('Getting a call at ', path, ' with data ', data, ' and will call function: ', api_func)
-
-        if not api_func: 
-            api_func = invalid_url 
-            self.data = {'path' : path, 'method' : method}
-        elif api_func != user_login: 
-            try: 
-                yield self.log_message(path, data, func = api_func)
-
-                user = yield get_current_user(self)
-
-                if not user: 
-                    self.json({'success' : False, 'message' : 'User not authenticated properly. ', 'data' : {}})
-                elif user['type'] == 'user' and path not in self.paths.get('user_allowed', []): 
-                    self.json({'success' : False, 'message' : 'User does not have appropriate privileges. ', 'data' : {}})
-            except: 
-                import traceback
-                traceback.print_exc()
-        try: 
-            result = yield api_func(self)
-            if type(result) == dict: 
-                if result.get('data_type', 'json') == 'file' : 
-                    raise tornado.gen.Return(None)
-#            print ('result is : ', result)
-            if self.formatted_result(result): 
-                pass 
-            elif self.has_error(result): 
-                result = {'success' : False, 'message' : result, 'data' : {}} 
-            else: 
-                result = {'success' : True, 'message' : '', 'data' : result}
-        except tornado.gen.Return: 
-            raise
-        except Exception as e: 
-            import traceback
-            traceback.print_exc()
-
-            result = {'success' : False, 'message' : 'There was an error performing a request : ' + str(e.message), 'data' : {}}
-
-        self.json(result)
+        res = yield api_func(self)
+        self.json(res)
 
     @tornado.gen.coroutine
     def get(self, path):
         args = self.request.query_arguments
         t_args = args
-        for x in t_args: 
-            if len(t_args[x]) == 1: 
+        for x in t_args:
+            if len(t_args[x]) == 1:
                 args[x] = args[x][0]
         try:
 #            result = yield self.exec_method('get', path, {x : args[x][0] for x in args})
             result = yield self.exec_method('get', path, args)
 
-        except: 
+        except:
             import traceback
             traceback.print_exc()
 
     @tornado.gen.coroutine
     def delete(self, path):
-        try: 
+        try:
             data = json.loads(self.request.body)
             result = yield self.exec_method('delete', path, data)
-        except: 
+        except:
             import traceback
             traceback.print_exc()
 
     @tornado.gen.coroutine
     def post(self, path):
-        try: 
-            try: 
-                if 'json' in self.request.headers['Content-Type']: 
+        try:
+            try:
+                if 'json' in self.request.headers['Content-Type']:
                     data = json.loads(self.request.body)
                 else:
                     data = {self.request.arguments[x][0] for x in self.request.arguments}
                     data.update(self.request.files)
-            except ValueError: 
+            except ValueError:
                 import traceback
                 traceback.print_exc()
                 data = {}
 
             yield self.exec_method('post', path, data)
-        except: 
+        except:
             import traceback
             traceback.print_exc()
 
@@ -155,24 +126,24 @@ class ApiHandler(tornado.web.RequestHandler):
 
         user = yield url_handler.login.get_current_user(self)
         message = json.dumps({
-            'type' : data['method'], 
+            'type' : data['method'],
             'function' : func.func_name,
-            'user' : user['username'], 
-            'user_type' : user['type'], 
-            'path' : path, 
-            'data' : data, 
+            'user' : user['username'],
+            'user_type' : user['type'],
+            'path' : path,
+            'data' : data,
             'time' : str(datetime.datetime.now()),
         })
         try:
             syslog.syslog(syslog.LOG_INFO | syslog.LOG_LOCAL0, message)
-        except: 
+        except:
             import traceback
             traceback.print_exc()
 
 
     @tornado.gen.coroutine
     def serve_file(self, file_path, chunk_size = 4096):
-        try: 
+        try:
             self.set_header('Content-Type', 'application/octet-stream')
             self.set_header('Content-Disposition', 'attachment; filename=' + file_path)
             with open(file_path, 'r') as f:
