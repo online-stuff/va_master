@@ -81,42 +81,42 @@ class ApiHandler(tornado.web.RequestHandler):
     def get(self, path):
         args = self.request.query_arguments
         t_args = args
-        for x in t_args: 
-            if len(t_args[x]) == 1: 
+        for x in t_args:
+            if len(t_args[x]) == 1:
                 args[x] = args[x][0]
         try:
 #            result = yield self.exec_method('get', path, {x : args[x][0] for x in args})
             result = yield self.exec_method('get', path, args)
 
-        except: 
+        except:
             import traceback
             traceback.print_exc()
 
     @tornado.gen.coroutine
     def delete(self, path):
-        try: 
+        try:
             data = json.loads(self.request.body)
             result = yield self.exec_method('delete', path, data)
-        except: 
+        except:
             import traceback
             traceback.print_exc()
 
     @tornado.gen.coroutine
     def post(self, path):
-        try: 
-            try: 
-                if 'json' in self.request.headers['Content-Type']: 
+        try:
+            try:
+                if 'json' in self.request.headers['Content-Type']:
                     data = json.loads(self.request.body)
                 else:
                     data = {self.request.arguments[x][0] for x in self.request.arguments}
                     data.update(self.request.files)
-            except ValueError: 
+            except ValueError:
                 import traceback
                 traceback.print_exc()
                 data = {}
 
             yield self.exec_method('post', path, data)
-        except: 
+        except:
             import traceback
             traceback.print_exc()
 
@@ -126,24 +126,24 @@ class ApiHandler(tornado.web.RequestHandler):
 
         user = yield url_handler.login.get_current_user(self)
         message = json.dumps({
-            'type' : data['method'], 
+            'type' : data['method'],
             'function' : func.func_name,
-            'user' : user['username'], 
-            'user_type' : user['type'], 
-            'path' : path, 
-            'data' : data, 
+            'user' : user['username'],
+            'user_type' : user['type'],
+            'path' : path,
+            'data' : data,
             'time' : str(datetime.datetime.now()),
         })
         try:
             syslog.syslog(syslog.LOG_INFO | syslog.LOG_LOCAL0, message)
-        except: 
+        except:
             import traceback
             traceback.print_exc()
 
 
     @tornado.gen.coroutine
     def serve_file(self, file_path, chunk_size = 4096):
-        try: 
+        try:
             self.set_header('Content-Type', 'application/octet-stream')
             self.set_header('Content-Disposition', 'attachment; filename=' + file_path)
             with open(file_path, 'r') as f:
