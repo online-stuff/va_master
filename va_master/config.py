@@ -78,12 +78,12 @@ class Config(object):
             if sane_default is None:
                 sane_default = '127.0.0.1'
             logger.warning('No IP of this machine specified' \
-                '(--advertise-ip), will use {}!'.format(sane_default))
+                ' (--advertise-ip), will use {}'.format(sane_default))
             self.advertise_ip = sane_default
 
         if self.data_path is None:
             self.data_path = default_data_path()
-            logger.warning('No data path specified, using {}!' \
+            logger.warning('No data path specified, using {}' \
                 .format(self.data_path))
         self.deploy_handler = deploy_handler.DeployHandler(self.datastore, self.deploy_pool_count, self.ssh_key_name, self.ssh_key_path)
 

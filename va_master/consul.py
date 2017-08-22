@@ -13,7 +13,7 @@ class ConsulProcess(threading.Thread):
         self.config = config
         self.alive = False
         self.name = 'consul-{}'.format(self.name)
-        self.setDaemon(True)
+        # self.setDaemon(True)
 
     def run(self):
         try:
