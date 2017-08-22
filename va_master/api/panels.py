@@ -49,8 +49,8 @@ def list_panels(deploy_handler, handler):
 def panel_action_execute(deploy_handler, instance_name, action, args = [], dash_user = '', kwargs = {}, module = None, timeout = 30):
     try:
         print ('dash user is : ', dash_user)
-        user_funcs = yield deploy_handler.get_user_salt_functions(dash_user)
-        if action not in user_funcs:
+        user_funcs = yield deploy_handler.get_user_salt_functions(dash_user['username'])
+        if action not in user_funcs and dash_user['type'] != 'admin':
             print ('Function not supported')
             #TODO actually not allow user to do anything. This is just for testing atm. 
             

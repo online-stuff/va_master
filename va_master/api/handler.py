@@ -135,7 +135,7 @@ class ApiHandler(tornado.web.RequestHandler):
                 raise tornado.gen.Return()
 
         user = yield get_current_user(self)
-        data['dash_user'] = user['username']
+        data['dash_user'] = user
         result = yield self.handle_func(api_func, data)
 
         yield self.log_message(path = path, data = data, func = api_func['function'], result = result)
