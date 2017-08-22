@@ -9,6 +9,7 @@ def entry():
     parser.add_argument('--https-crt')
     parser.add_argument('--https-key')
     parser.add_argument('--advertise-ip')
+    parser.add_argument('--consul-loglevel')
     parser.add_argument('--data-path')
     args = parser.parse_args()
 
