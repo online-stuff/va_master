@@ -3,10 +3,11 @@ import json
 import uuid
 import functools
 import salt
+import datetime
 from pbkdf2 import crypt
 from tornado.gen import coroutine, Return
 
-# TODO: Check if the implementation of the `pbkdf2` lib is credible,
+# TODO: Check if the implementation of the `pbkdf2` lib is sound,
 # and if the library is maintained and audited. May switch to bcrypt.
 
 def get_endpoints():
@@ -20,23 +21,33 @@ def get_endpoints():
     }
     return paths
 
+def generate_token():
+    return uuid.uuid4().hex
+
 @coroutine
-def get_or_create_token(datastore, username, user_type = 'admin'):
+def get_or_create_token(datastore, username):
     found = False
     try:
-        token_doc = yield datastore.get('tokens/%s/by_username/%s' % (user_type, username))
-        found = True
+        tokens = yield datastore.list_subkeys('tokens')
     except datastore.KeyNotFound:
-        doc = {
-            'token': uuid.uuid4().hex,
-            'username': username
-        }
-        yield datastore.insert('tokens/%s/by_username/%s' % (user_type, username), doc)
-        yield datastore.insert('tokens/%s/by_token/%s' % (user_type, doc['token']), doc)
-        raise Return(doc['token'])
-    finally:
-        if found:
-            raise Return(token_doc['token'])
+        tokens = []
+    for tok in tokens:
+        try:
+            tok_res = yield datastore.get('tokens/{}'.format(tok))
+            if tok_res['username'] == username:
+                raise Return(tok)
+
+    # If the coroutine hasn't returned by now,
+    # We should create a new token.
+    # TODO: Validate token expiry?
+
+    new_token_doc = {
+        'username': username,
+        'created': str(datetime.datetime.now())
+    }
+    token_value = generate_token()
+    yield datastore.insert('tokens/{}'.format(token_value), new_token_doc)
+    raise Return(token_value)
 
 @coroutine
 def get_current_user(handler):
@@ -60,18 +71,21 @@ def get_user_type(handler):
     raise Return(None)
 
 @coroutine
-def is_token_valid(datastore, token, user_type = 'admin'):
-    valid = True
+def is_token_valid(datastore, token):
     try:
-        res = yield datastore.get('tokens/%s/by_token/%s' % (user_type, token))
+        all_tokens = yield datastore.list_subkeys('tokens')
     except datastore.KeyNotFound:
+        all_tokens = []
+    if token in all_tokens:
+        # It could be a valid token, but we have to query it.
+        try:
+            token_response = yield datastore.get('tokens/{}'.format(token))
+            raise Return(token_response)
+        except datastore.KeyNotFound:
+            raise Return(False)
+    else:
+        # This is definitely not a valid token & it doesn't exist.
         raise Return(False)
-    except Exception as e:
-        print ('Something weird happened. ')
-        import traceback
-        traceback.print_exc()
-    valid = (res['username'] != '__invalid__')
-    raise Return(valid)
 
 #So far, one kwarg is used: user_allowed. 
 def auth_only(*args, **kwargs):
@@ -93,9 +107,9 @@ def auth_only(*args, **kwargs):
         return func
 
     #Decorators are trippy with arguments. If no kwargs are set, you return the real auth function, otherwise, you call it and return the resulting function. 
-    if any(args): 
+    if any(args):
         return auth_only_real(*args)
-    else: 
+    else:
         return auth_only_real
 
 
@@ -123,15 +137,14 @@ def create_user(datastore, username, password, user_type = 'user'):
 
 @coroutine
 def create_user_api(handler):
-    token = yield create_user(handler.config.deploy_handler.datastore, handler.data['user'], handler.data['pass']) 
+    token = yield create_user(handler.config.deploy_handler.datastore, handler.data['user'], handler.data['pass'])
     raise Return(token)
-
 
 
 @coroutine
 def user_login(handler):
     body = None
-    try: 
+    try:
         try:
             body = json.loads(handler.request.body)
             username = body['username'].decode('utf8')
@@ -179,7 +192,7 @@ def user_login(handler):
 
     except Return:
         raise
-    except: 
+    except:
         import traceback
         traceback.print_exc()
 
@@ -193,7 +206,6 @@ def ldap_login(handler):
     username, directory_name = username.split('@')
     cl = salt.client.LocalClient()
     result = cl.cmd(directory_name, 'samba.user_auth', [username, password])['nino_dir'] #TODO write user_auth
-    
     if result['success']:
         token = yield get_or_create_token(handler.datastore, username, user_type = result['user_type'])
         raise Return({'token' : token})

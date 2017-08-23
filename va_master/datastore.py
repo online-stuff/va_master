@@ -1,6 +1,6 @@
 from abc import ABCMeta, abstractmethod
 from tornado.httpclient import AsyncHTTPClient, HTTPRequest
-import tornado.gen
+from tornado.gen import coroutine, Return
 import tornado.ioloop
 import json
 import base64
@@ -28,23 +28,23 @@ class DataStore(object):
     StoreError = StoreError
 
     @abstractmethod
-    @tornado.gen.coroutine
+    @coroutine
     def check_connection(self): pass
 
     @abstractmethod
-    @tornado.gen.coroutine
+    @coroutine
     def insert(self, doc_id, document): pass
 
     @abstractmethod
-    @tornado.gen.coroutine
+    @coroutine
     def update(self, doc_id, document): pass
 
     @abstractmethod
-    @tornado.gen.coroutine
+    @coroutine
     def get(self, doc_id): pass
 
     @abstractmethod
-    @tornado.gen.coroutine
+    @coroutine
     def delete(self, doc_id): pass
 
 class ConsulStore(DataStore):
@@ -54,15 +54,15 @@ class ConsulStore(DataStore):
         self.path = path
         self.client = AsyncHTTPClient()
 
-    @tornado.gen.coroutine
+    @coroutine
     def check_connection(self):
         try:
             result = yield self.client.fetch('%s/v1/status/leader' % self.path)
         except:
-            raise tornado.gen.Return(False)
-        raise tornado.gen.Return(result.code == 200 and result.body != '""')
+            raise Return(False)
+        raise Return(result.code == 200 and result.body != '""')
 
-    @tornado.gen.coroutine
+    @coroutine
     def insert(self, doc_id, document):
         document_json = json.dumps(document)
         req = HTTPRequest('%s/v1/kv/%s' % (self.path, doc_id), method='PUT',
@@ -72,14 +72,14 @@ class ConsulStore(DataStore):
         except Exception as e:
             raise StoreError(e)
 
-    @tornado.gen.coroutine
+    @coroutine
     def update(self, doc_id, document):
         try:
             yield self.insert(doc_id, document)
         except Exception as e:
             raise StoreError(e)
 
-    @tornado.gen.coroutine
+    @coroutine
     def get(self, doc_id):
         is_ok = False
         try:
@@ -95,9 +95,14 @@ class ConsulStore(DataStore):
         except Exception as e:
             raise StoreError(e)
         if is_ok:
-            raise tornado.gen.Return(resp)
+            raise Return(resp)
 
-    @tornado.gen.coroutine
+    @coroutine
+    def list_subkeys(self, key):
+        res = yield self.get('{}?keys'.format(key))
+        raise Return(resp)
+
+    @coroutine
     def delete(self, doc_id):
         try:
             req = HTTPRequest('%s/v1/kv/%s' % (self.path, doc_id), method='DELETE')
