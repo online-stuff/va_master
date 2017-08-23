@@ -19,7 +19,7 @@ import importlib
 from ..config import logger
 
 # Don't import these modules as endpoints
-ENDPOINT_BLACKLIST = ('apps', 'triggers')
+ENDPOINT_BLACKLIST = ('apps', 'triggers', 'decorators')
 
 def get_endpoints():
     '''Gets the endpoints of the modules in this package in the form
@@ -65,10 +65,22 @@ class ApiHandler(tornado.web.RequestHandler):
 
     @coroutine
     def exec_method(self, method, path):
-        api_func = self.endpoints[method].get(path)
+        api_func = self.endpoints[method].get(path, None)
         self.config.logger.info('Received a request: {} /{}'.format(\
             method.upper(), path))
-        res = yield api_func(self)
+
+        if api_func is None:
+            self.json({'error': 'not_found'})
+            raise Return()
+
+        res = {}
+        try:
+            res = yield api_func(self)
+        except:
+            self.config.logger.error('Encountered an error during request.')
+            traceback.print_exc()
+            self.json({'error': 'server_error'}, 500)
+            raise Return()
 
         # Make sure that the method itself did not finish the request
         # All a method has to do is return. (and we do the actual finish
@@ -80,15 +92,15 @@ class ApiHandler(tornado.web.RequestHandler):
 
     @coroutine
     def get(self, path):
-        result = yield self.exec_method('get', path, args)
+        result = yield self.exec_method('get', path)
 
     @coroutine
     def delete(self, path):
-        result = yield self.exec_method('delete', path, args)
+        result = yield self.exec_method('delete', path)
 
     @coroutine
     def post(self, path):
-        result = yield self.exec_method('delete', path, args)
+        result = yield self.exec_method('post', path)
 
 
     @coroutine
@@ -122,7 +134,7 @@ class ApiHandler(tornado.web.RequestHandler):
                         break
                     self.write(data)
             self.finish()
-        except: 
+        except:
             import traceback
             traceback.print_exc()
 
@@ -135,12 +147,12 @@ class LogHandler(FileSystemEventHandler):
 
     def on_modified(self, event):
         log_file = event.src_path
-        with open(log_file) as f: 
+        with open(log_file) as f:
             log_file = [x for x in f.read().split('\n') if x]
         last_line = log_file[-1]
         try:
             self.socket.write_message(json.dumps(last_line))
-        except: 
+        except:
             pass
 
 

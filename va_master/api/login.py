@@ -6,6 +6,7 @@ import salt
 import datetime
 from pbkdf2 import crypt
 from tornado.gen import coroutine, Return
+from . import decorators
 
 # TODO: Check if the implementation of the `pbkdf2` lib is sound,
 # and if the library is maintained and audited. May switch to bcrypt.
@@ -16,6 +17,7 @@ def get_endpoints():
         },
         'post' : {
             'login' : user_login,
+            'mytest': mytest,
             'new_user' : create_user_api
         }
     }
@@ -24,9 +26,13 @@ def get_endpoints():
 def generate_token():
     return uuid.uuid4().hex
 
+@decorators.schema({'name': {'type': 'string'}})
+@coroutine
+def mytest(handler):
+    raise Return({'hello': 'tes'})
+
 @coroutine
 def get_or_create_token(datastore, username):
-    found = False
     try:
         tokens = yield datastore.list_subkeys('tokens')
     except datastore.KeyNotFound:
@@ -36,6 +42,8 @@ def get_or_create_token(datastore, username):
             tok_res = yield datastore.get('tokens/{}'.format(tok))
             if tok_res['username'] == username:
                 raise Return(tok)
+        except datastore.KeyNotFound:
+            continue
 
     # If the coroutine hasn't returned by now,
     # We should create a new token.
@@ -54,10 +62,9 @@ def get_current_user(handler):
     token = handler.request.headers.get('Authorization', '')
 
     token = token.replace('Token ', '')
-    print ('Token is : ', token)
     for type in ['user', 'admin']: # add other types as necessary, maybe from datastore. 
         token_valid = yield is_token_valid(handler.datastore, token, type)
-        if token_valid: 
+        if token_valid:
             user = yield handler.datastore.get('tokens/%s/by_token/%s' % (type, token))
             raise Return({'username' : user['username'], 'type' : type})
     raise Return(None)
@@ -141,18 +148,21 @@ def create_user_api(handler):
     raise Return(token)
 
 
+@decorators.schema({'username': {'type': 'string'}, 'password': {'type':
+    'string'}})
 @coroutine
-def user_login(handler):
+def user_login(handler, schema_data):
     body = None
     try:
         try:
             body = json.loads(handler.request.body)
-            username = body['username'].decode('utf8')
-            password = body['password'].decode('utf8')
+            username = schema_data.username
+            password = schema_data.password
         except:
-            raise Return({'error': 'bad_body'}, 400)
+            handler.set_status(400)
+            raise Return({'error': 'bad_body'})
 
-        if '@' in username: 
+        if '@' in username:
             yield ldap_login(handler)
             raise Return()
 

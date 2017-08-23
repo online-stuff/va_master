@@ -22,7 +22,8 @@ class ConsulProcess(threading.Thread):
                 p, 'agent', '-data-dir', self.config.data_path,
                 '-server', '-bootstrap', '-advertise',
                 self.config.advertise_ip,
-                '-log-level', self.config.consul_loglevel])
+                '-log-level', self.config.consul_loglevel],
+                stdout=open('/dev/null'), stderr=open('/dev/null'))
         except Exception as e:
             self.config.logger.error('Failed starting Consul: ' + repr(e))
             os._exit(1)
