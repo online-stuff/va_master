@@ -55,9 +55,7 @@ class ApiHandler(tornado.web.RequestHandler):
     def initialize(self, config, include_version=False):
         self.config = config
         self.datastore = config.datastore
-        self.data = {}
         self.endpoints = all_endpoints
-        self.salt_client = None
 
     def json(self, obj, status=200):
         self.set_header('Content-Type', 'application/json')
