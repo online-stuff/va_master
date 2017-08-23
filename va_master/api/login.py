@@ -6,7 +6,7 @@ import salt
 import datetime
 from pbkdf2 import crypt
 from tornado.gen import coroutine, Return
-from . import decorators
+from .decorators import schema_coroutine
 
 # TODO: Check if the implementation of the `pbkdf2` lib is sound,
 # and if the library is maintained and audited. May switch to bcrypt.
@@ -26,7 +26,6 @@ def get_endpoints():
 def generate_token():
     return uuid.uuid4().hex
 
-@decorators.schema({'name': {'type': 'string'}})
 @coroutine
 def mytest(handler):
     raise Return({'hello': 'tes'})
@@ -148,9 +147,7 @@ def create_user_api(handler):
     raise Return(token)
 
 
-@decorators.schema({'username': {'type': 'string'}, 'password': {'type':
-    'string'}})
-@coroutine
+@schema_coroutine({'username': {'type': 'string'}, 'password': {'type': 'string'}})
 def user_login(handler, schema_data):
     body = None
     try:
@@ -205,7 +202,6 @@ def user_login(handler, schema_data):
     except:
         import traceback
         traceback.print_exc()
-
 
 @coroutine
 def ldap_login(handler):

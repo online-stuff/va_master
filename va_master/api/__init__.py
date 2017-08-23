@@ -48,7 +48,7 @@ def get_endpoints():
 # Only query endpoints once (it's an expensive operation)
 # These can't change at runtime.
 all_endpoints = get_endpoints()
-
+print(all_endpoints)
 class ApiHandler(tornado.web.RequestHandler):
     executor = ThreadPoolExecutor(max_workers= 4)
 
@@ -57,9 +57,16 @@ class ApiHandler(tornado.web.RequestHandler):
         self.datastore = config.datastore
         self.endpoints = all_endpoints
 
-    def json(self, obj, status=200):
+    def json(self, obj, status=None):
+        '''Returns a JSON response to the current request.
+        The second argument is an optional status code. If it's None, it won't
+        override the current status code (which may or may not be 200 OK).
+
+        Example: self.json([1,2,3]), self.json([], 404)
+        '''
         self.set_header('Content-Type', 'application/json')
-        self.set_status(status)
+        if isinstance(status, int):
+            self.set_status(status)
         self.write(json.dumps(obj))
         self.finish()
 
@@ -70,6 +77,9 @@ class ApiHandler(tornado.web.RequestHandler):
             method.upper(), path))
 
         if api_func is None:
+            self.config.logger.info('The request contains an unknown' \
+                ' endpoint, sending 404 Not found.')
+            self.set_status(404)
             self.json({'error': 'not_found'})
             raise Return()
 
