@@ -121,6 +121,10 @@ class ApiHandler(tornado.web.RequestHandler):
         self.data = data
         self.data['method'] = method
         self.data['handler'] = self
+
+        user = yield get_current_user(self)
+        data['dash_user'] = user
+
         api_func = self.paths[method].get(path)
 
         print ('Getting a call at ', path, ' with data ', data, ' and will call function: ', api_func)
@@ -134,8 +138,6 @@ class ApiHandler(tornado.web.RequestHandler):
             if not auth_successful: 
                 raise tornado.gen.Return()
 
-        user = yield get_current_user(self)
-        data['dash_user'] = user
         result = yield self.handle_func(api_func, data)
 
         yield self.log_message(path = path, data = data, func = api_func['function'], result = result)
@@ -195,6 +197,8 @@ class ApiHandler(tornado.web.RequestHandler):
 
         data = {x : str(data[x]) for x in data}
         user = yield url_handler.login.get_current_user(self)
+        if not user: 
+            user = {'username' : 'unknown'}
         message = json.dumps({
             'type' : data['method'], 
             'function' : func.func_name,
