@@ -130,17 +130,30 @@ def create_user(datastore, username, password):
 
     raise Return(token)
 
+@coroutine
+def list_users(datastore):
+    '''Returns a list of registered usernames.'''
+    response = yield datastore.list_subkeys('users')
+    raise Return(response)
+
+import tornado.ioloop
+run_sync = tornado.ioloop.IOLoop.instance().run_sync
+
+def cli_list_users(parsed_args, config):
+    @coroutine
+    def _list_users():
+        response = yield list_users(config.datastore)
+        raise Return(response)
+    users = run_sync(_list_users)
+    print('\n'.join(users))
+
 def cli_create_user(parsed_args, config):
-    import tornado.ioloop
     @coroutine
     def _create_user():
-        is_ok = yield config.datastore.check_connection()
-        if not is_ok:
-            raise RuntimeError('Can\'t connect to the master!')
         yield create_user(config.datastore, parsed_args.username,
                 parsed_args.password)
     try:
-        tornado.ioloop.IOLoop.instance().run_sync(_create_user)
+        run_sync(_create_user)
     except:
         config.logger.error('An error occured during user creation!')
         traceback.print_exc()
