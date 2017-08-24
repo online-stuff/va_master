@@ -80,12 +80,14 @@ class ConsulStore(DataStore):
             raise StoreError(e)
 
     @coroutine
-    def get(self, doc_id):
+    def __get_helper(self, doc_id):
+        '''This is a helper method to get a document that does the
+        network call, but doesn't do any processing.'''
+
         is_ok = False
         try:
             resp = yield self.client.fetch('%s/v1/kv/%s' % (self.path, doc_id))
-            resp = json.loads(resp.body)[0]['Value']
-            resp = json.loads(base64.b64decode(resp))
+            resp = json.loads(resp.body)
             is_ok = True
         except tornado.httpclient.HTTPError as e:
             if e.code == 404:
@@ -98,9 +100,24 @@ class ConsulStore(DataStore):
             raise Return(resp)
 
     @coroutine
-    def list_subkeys(self, key):
-        res = yield self.get('{}?keys'.format(key))
+    def get(self, doc_id):
+        resp = yield self.__get_helper(doc_id)
+        resp = resp[0]['Value']
+        resp = json.loads(base64.b64decode(resp))
         raise Return(resp)
+
+    @coroutine
+    def list_subkeys(self, key):
+        res = yield self.__get_helper('{}?keys'.format(key))
+        if res:
+            def filter_key(c_key):
+                '''The response is in the format ['key/a', 'key/b', 'key/c']
+                but we want ['a', 'b', 'c'], so we filter the prefix.'''
+                prefix = key
+                if prefix[-1] != '/': prefix+= '/'
+                return c_key.replace(prefix, '', 1)
+            res = [filter_key(x) for x in res]
+        raise Return(res)
 
     @coroutine
     def delete(self, doc_id):

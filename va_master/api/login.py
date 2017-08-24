@@ -3,6 +3,7 @@ import json
 import uuid
 import functools
 import salt
+import traceback
 import datetime
 from pbkdf2 import crypt
 from tornado.gen import coroutine, Return
@@ -16,8 +17,8 @@ def get_endpoints():
         'get' : {
         },
         'post' : {
-            'login' : user_login,
-            'new_user' : create_user_api
+            'login' : login_endpoint,
+            # 'new_user' : create_user_api
         }
     }
     return paths
@@ -128,6 +129,21 @@ def create_user(datastore, username, password):
     token = yield get_or_create_token(datastore, username)
 
     raise Return(token)
+
+def cli_create_user(parsed_args, config):
+    import tornado.ioloop
+    @coroutine
+    def _create_user():
+        is_ok = yield config.datastore.check_connection()
+        if not is_ok:
+            raise RuntimeError('Can\'t connect to the master!')
+        yield create_user(config.datastore, parsed_args.username,
+                parsed_args.password)
+    try:
+        tornado.ioloop.IOLoop.instance().run_sync(_create_user)
+    except:
+        config.logger.error('An error occured during user creation!')
+        traceback.print_exc()
 
 @schema_coroutine({'username': {'type': 'string'}, 'password': {'type':
     'string'}})

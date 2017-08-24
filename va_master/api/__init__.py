@@ -9,7 +9,6 @@ from tornado.httpclient import AsyncHTTPClient, HTTPRequest
 from tornado.concurrent import run_on_executor
 from concurrent.futures import ThreadPoolExecutor   # `pip install futures` for python2
 
-from login import get_current_user, user_login
 import json, datetime, syslog
 import pkgutil
 import traceback

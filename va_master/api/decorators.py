@@ -28,7 +28,9 @@ def schema_coroutine(json_schema):
                     raise ValueError
                 else:
                     coroutine_fn = coroutine(fn)
-                    yield coroutine_fn(handler, schema_data, *args, **kwargs)
+                    res = yield coroutine_fn(handler, schema_data,
+                            *args, **kwargs)
+                    raise Return(res)
             except ValueError:
                 handler.set_status(400)
                 raise Return({'error': 'bad_body'})
