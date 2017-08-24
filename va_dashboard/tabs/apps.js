@@ -130,6 +130,7 @@ var Appp = React.createClass({
         const blockStyle = {
             visibility: loaded ? "visible": "hidden",
         };
+        var sf_cols = ['Hostname', 'IP', 'Size', 'Status', 'Host'];
 
         return (
             <div className="app-containter">
@@ -141,7 +142,7 @@ var Appp = React.createClass({
                         <Bootstrap.Glyphicon glyph='plus' />
                         Launch new app
                     </Bootstrap.Button>
-                    <Reactable.Table className="table striped" columns={['Hostname', 'IP', 'Size', 'Status', 'Host', 'Actions']} itemsPerPage={10} pageButtonLimit={10} noDataText="No matching records found." sortable={true} filterable={['Hostname', 'IP', 'Size', 'Status', 'Host']} >
+                    <Reactable.Table className="table striped" columns={['Hostname', 'IP', 'Size', 'Status', 'Host', 'Actions']} itemsPerPage={10} pageButtonLimit={10} noDataText="No matching records found." sortable={sf_cols} filterable={sf_cols} >
                         {app_rows}
                     </Reactable.Table>
                 </div>

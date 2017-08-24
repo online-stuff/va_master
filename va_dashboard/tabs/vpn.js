@@ -121,6 +121,7 @@ var Vpn = React.createClass({
         var ModalRedux = connect(function(state){
             return {auth: state.auth, modal: state.modal, alert: state.alert};
         })(Modal);
+        var sf_cols = ['Name', 'Connected'];
 
         return (
             <div>
@@ -136,7 +137,7 @@ var Vpn = React.createClass({
                     Add user
                 </Bootstrap.Button>
                 <ModalRedux addVpn = {this.addVpn} />
-                <Reactable.Table className="table striped" columns={['Name', 'Connected', 'Actions']} itemsPerPage={10} pageButtonLimit={10} noDataText="No matching records found." sortable={true} filterable={['Name', 'Connected']} >
+                <Reactable.Table className="table striped" columns={['Name', 'Connected', 'Actions']} itemsPerPage={10} pageButtonLimit={10} noDataText="No matching records found." sortable={sf_cols} filterable={sf_cols} >
                     {active_rows}
                 </Reactable.Table>
                 <h4>Revoked users</h4>
