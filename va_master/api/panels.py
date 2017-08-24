@@ -4,8 +4,6 @@ import salt.client
 import tornado.gen
 import login, apps
 
-from login import auth_only
-
 def get_endpoints():
     paths = {
         'get' : {

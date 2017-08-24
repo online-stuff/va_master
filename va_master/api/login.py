@@ -15,6 +15,7 @@ from .decorators import schema_coroutine
 def get_endpoints():
     paths = {
         'get' : {
+            'mytest': mytest
         },
         'post' : {
             'login' : login_endpoint,
@@ -22,6 +23,12 @@ def get_endpoints():
         }
     }
     return paths
+
+from .decorators import auth_only
+@auth_only
+@coroutine
+def mytest(handler):
+    raise Return([1,2,3])
 
 def generate_token():
     return uuid.uuid4().hex
@@ -54,14 +61,6 @@ def get_or_create_token(datastore, username):
 
 @coroutine
 def get_current_user(handler):
-    token = handler.request.headers.get('Authorization', '')
-
-    token = token.replace('Token ', '')
-    for type in ['user', 'admin']: # add other types as necessary, maybe from datastore. 
-        token_valid = yield is_token_valid(handler.datastore, token, type)
-        if token_valid:
-            user = yield handler.datastore.get('tokens/%s/by_token/%s' % (type, token))
-            raise Return({'username' : user['username'], 'type' : type})
     raise Return(None)
 
 
@@ -89,31 +88,8 @@ def is_token_valid(datastore, token):
         # This is definitely not a valid token & it doesn't exist.
         raise Return(False)
 
-#So far, one kwarg is used: user_allowed. 
-def auth_only(*args, **kwargs):
-    user_allowed = kwargs.get('user_allowed', False)
-
-    def auth_only_real(routine):
-        @coroutine
-        @functools.wraps(routine)
-        def func(handler):
-            token = handler.request.headers.get('Authorization', '')
-            token = token.replace('Token ', '')
-
-            user_type = yield get_user_type(handler)
-            #user_type is None if the token is invalid
-            if not user_type or (user_type == 'user' and not user_allowed): 
-                raise Return({'success': False, 'message' : 'No user with this token found. Try to log in again. '})
-            else:
-                yield routine(handler)
-        return func
-
-    #Decorators are trippy with arguments. If no kwargs are set, you return the real auth function, otherwise, you call it and return the resulting function. 
-    if any(args):
-        return auth_only_real(*args)
-    else:
-        return auth_only_real
-
+# The main auth. coroutines, this is how the auth flow happens; and how
+# the master interacts with the datastore to provide it.
 
 @coroutine
 def create_user(datastore, username, password):
@@ -135,6 +111,19 @@ def list_users(datastore):
     '''Returns a list of registered usernames.'''
     response = yield datastore.list_subkeys('users')
     raise Return(response)
+
+def get_token_from_header(handler):
+    '''This extracts the token from the `Authorization: Token xxxxx`
+    header.'''
+    HEADER_NAME = 'Authorization'
+    TOKEN_SEPARATOR = 'Token'
+    auth_h = handler.request.headers.get(HEADER_NAME, '')
+    # We replace the first occurrence of the separator.
+    # Ex. `Token abcabc` -> `abcabc`
+    return auth_h.replace(TOKEN_SEPARATOR, '', 1)
+
+
+# CLI functions for modifying/listing users
 
 import tornado.ioloop
 run_sync = tornado.ioloop.IOLoop.instance().run_sync

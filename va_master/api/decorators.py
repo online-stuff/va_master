@@ -3,6 +3,40 @@ import cerberus
 from functools import wraps
 from tornado.gen import coroutine, Return
 
+
+def auth_only(fn):
+    # A coroutine signature is a boolean that gets set on every function
+    # that was processed by the tornado coroutine decorator.
+    # We use it to detect if the function is already a coroutine.
+
+    COROUTINE_SIGNATURE = '__tornado_coroutine__'
+
+    if getattr(fn, COROUTINE_SIGNATURE, None) is None:
+        # This function was not wrapped in a coroutine, but we can
+        # fix this by making it a coroutine here.
+
+        fn = coroutine(fn)
+    @coroutine
+    def validate_request_auth(handler):
+        from . import login
+        token = login.get_token_from_header(handler)
+        is_valid = yield login.is_token_valid(handler.datastore, token)
+        raise Return(is_valid)
+
+    @wraps(fn)
+    @coroutine
+    def new_fn(handler, *args, **kwargs):
+        auth_result = yield validate_request_auth(handler)
+        if not auth_result:
+            # The user can't access this coroutine/endpoint
+            # We need to send a Not Authorized response
+            handler.set_status(401)
+            raise Return({'error': 'failed_login'})
+
+        res = yield fn(handler, *args, **kwargs)
+        raise Return(res)
+    return new_fn
+
 class SchemaData(object):
     pass
 

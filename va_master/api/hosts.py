@@ -1,4 +1,3 @@
-from .login import auth_only
 import tornado.gen
 from tornado.gen import Return
 import json
