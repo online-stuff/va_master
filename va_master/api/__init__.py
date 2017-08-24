@@ -48,7 +48,7 @@ def get_endpoints():
 # Only query endpoints once (it's an expensive operation)
 # These can't change at runtime.
 all_endpoints = get_endpoints()
-print(all_endpoints)
+
 class ApiHandler(tornado.web.RequestHandler):
     executor = ThreadPoolExecutor(max_workers= 4)
 

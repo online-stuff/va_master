@@ -17,7 +17,6 @@ def get_endpoints():
         },
         'post' : {
             'login' : user_login,
-            'mytest': mytest,
             'new_user' : create_user_api
         }
     }
@@ -25,10 +24,6 @@ def get_endpoints():
 
 def generate_token():
     return uuid.uuid4().hex
-
-@coroutine
-def mytest(handler):
-    raise Return({'hello': 'tes'})
 
 @coroutine
 def get_or_create_token(datastore, username):
@@ -120,103 +115,56 @@ def auth_only(*args, **kwargs):
 
 
 @coroutine
-def create_user(datastore, username, password, user_type = 'user'):
-    datastore_handle = user_type + 's' #Basically, make it plural (admin -> admins, user -> users)
-    if len(username) < 1 or len(password) < 1:
-        raise ValueError('Username and password must not be empty.')
-    try:
-        new_users = yield datastore.get(datastore_handle)
-    except datastore.KeyNotFound:
-        yield datastore.insert(datastore_handle, [])
-        new_users = []
-    crypted_pass = crypt(password)
-    print ('Pass hash will be : ', crypted_pass)
-    new_users.append({
+def create_user(datastore, username, password):
+    '''Inserts a new user in the database and returns a valid
+    token for authenticating that particular user.'''
+    pw_hash = crypt(password)
+    doc = {
         'username': username,
-        'password_hash': crypted_pass,
+        'password_hash': pw_hash,
         'timestamp_created': long(time.time())
-    })
-    yield datastore.insert(datastore_handle, new_users)
-    token = yield get_or_create_token(datastore, username, user_type = user_type)
+    }
+    yield datastore.insert('users/{}'.format(username), doc)
+    token = yield get_or_create_token(datastore, username)
 
     raise Return(token)
 
-@coroutine
-def create_user_api(handler):
-    token = yield create_user(handler.config.deploy_handler.datastore, handler.data['user'], handler.data['pass'])
-    raise Return(token)
-
+@schema_coroutine({'username': {'type': 'string'}, 'password': {'type':
+    'string'}})
+def create_user_endpoint(handler, schema_data):
+    username = schema_data.username
+    password = schema_data.password
+    tok = yield create_user(username, password)
+    raise Return({'token': tok})
 
 @schema_coroutine({'username': {'type': 'string'}, 'password': {'type': 'string'}})
-def user_login(handler, schema_data):
-    body = None
+def login_endpoint(handler, schema_data):
+    username = schema_data.username
+    password = schema_data.password
     try:
-        try:
-            body = json.loads(handler.request.body)
-            username = schema_data.username
-            password = schema_data.password
-        except:
-            handler.set_status(400)
-            raise Return({'error': 'bad_body'})
+        users = yield handler.datastore.list_subkeys('users')
+    except handler.datastore.KeyNotFound:
+        users = []
 
-        if '@' in username:
-            yield ldap_login(handler)
-            raise Return()
+    if username not in users:
+        # User doesn't exist
+        handler.set_status(401)
+        raise Return({'error': 'failed_login'})
 
-        for user_type in ['admin', 'user']:
-            datastore_handle = user_type + 's'
-            try:
-                print ('Trying for : ', datastore_handle)
-                users = yield handler.datastore.get(datastore_handle)
-                print ('Users are : ', users)
-            except handler.datastore.KeyNotFound:
-                raise Return({'error': 'no_users: ' + datastore_handle}, 401)
-                # TODO: handle this gracefully?
-                raise Return()
+    try:
+        this_user = yield handler.datastore.get('users/{}'.format(username))
+    except handler.datastore.KeyNotFound:
+        # This is a race condition case, which *can* happen if the user
+        # gets deleted after the list_subkeys() query.
+        handler.set_status(401)
+        raise Return({'error': 'failed_login'})
 
-            account_info = None
-            for user in users:
-                if user['username'] == username:
-                    account_info = user 
-                    break
-            print ('Account info is : ', account_info)
-            invalid_acc_hash = crypt('__invalidpassword__')
-            if not account_info:
-                # Prevent timing attacks
-                account_info = {
-                    'password_hash': invalid_acc_hash,
-                    'username': '__invalid__',
-                    'timestamp_created': 0
-                }
-            pw_hash = account_info['password_hash']
-            print ('Password is : ', password)
-            print ('PW hash is : ', pw_hash)
-            print (crypt(password, pw_hash))
-            if crypt(password, pw_hash) == pw_hash:
-                token = yield get_or_create_token(handler.datastore, username, user_type = user_type)
-                raise Return({'token': token})
-        raise Return({'error': 'invalid_password'})
+    pw_hash = this_user['password_hash']
+    if crypt(password, pw_hash) == pw_hash:
+        # This is the valid password, and we are ready to create a token
+        # and return it.
 
-    except Return:
-        raise
-    except:
-        import traceback
-        traceback.print_exc()
-
-@coroutine
-def ldap_login(handler):
-    body = json.loads(handler.request.body)
-    username = body['username'].decode('utf8')
-    password = body['password'].decode('utf8')
-
-    username, directory_name = username.split('@')
-    cl = salt.client.LocalClient()
-    result = cl.cmd(directory_name, 'samba.user_auth', [username, password])['nino_dir'] #TODO write user_auth
-    if result['success']:
-        token = yield get_or_create_token(handler.datastore, username, user_type = result['user_type'])
-        raise Return({'token' : token})
-    else:
-        raise Return({'error' : 'Invalid login: ' + result}, 401)
-
-
-
+        token = yield get_or_create_token(handler.datastore, username)
+        raise Return({'token': token})
+    handler.set_status(401)
+    raise Return({'error': 'failed_login'})
