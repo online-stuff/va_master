@@ -20,6 +20,7 @@ var Login = React.createClass({
                     username: data.username});
             }, 300);
         }).fail(function(xhr) {
+            console.log(xhr);
             setTimeout(function () {
                 me.props.dispatch({type: 'LOGIN_ERROR'});
             }, 300);

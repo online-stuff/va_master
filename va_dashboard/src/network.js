@@ -11,22 +11,9 @@ module.exports = {
         if(typeof data !== 'undefined') {
             opts.data = data;
         }
-        $.ajax(opts).done(function(data){
-            if(data.success){
-                if(data.data && !$.isEmptyObject(data.data))
-                    dfd.resolve(data.data);
-                else
-                    dfd.reject("No data returned " + data.message);
-            }else{
-                dfd.reject(data.message);
-            }
-        }).fail(function(jqXHR, textStatus){
-            dfd.reject("Error " + textStatus);
-        });
-        return dfd.promise();
+        return $.ajax(opts);
     },
     post: function(url, token, data){
-        var dfd = new $.Deferred();
         var opts = {
             type: 'POST',
             url: url
@@ -40,20 +27,9 @@ module.exports = {
             opts.contentType =  'application/json';
             opts.data = JSON.stringify(data);
         }
-        $.ajax(opts).done(function(data){
-            if(data.success){
-                dfd.resolve(data.data);
-            }else{
-                dfd.reject(data.message);
-            }
-        }).fail(function(jqXHR, textStatus){
-            dfd.reject("Error " + textStatus);
-        });
-
-        return dfd.promise();
+        return $.ajax(opts);
     },
     delete: function(url, token, data){
-        var dfd = new $.Deferred();
         var opts = {
             type: 'DELETE',
             url: url
@@ -67,17 +43,7 @@ module.exports = {
             opts.contentType =  'application/json';
             opts.data = JSON.stringify(data);
         }
-        $.ajax(opts).done(function(data){
-            if(data.success){
-                dfd.resolve(data.data);
-            }else{
-                dfd.reject(data.message);
-            }
-        }).fail(function(jqXHR, textStatus){
-            dfd.reject("Error " + textStatus);
-        });
-
-        return dfd.promise();
+        return $.ajax(opts);
     },
     post_file: function(url, token, data){
         var opts = {

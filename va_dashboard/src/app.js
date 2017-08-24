@@ -33,8 +33,17 @@ function auth(state, action){
         newState.loginError = false;
         newState.inProgress = false;
     }
-    // Add into session
-    window.localStorage.setItem('auth', JSON.stringify(newState));
+    // Make sure to serialize and save the token for later
+    // Note: we don't save progress/error state, because that's per-session,
+    // and it will be confusing to see old errors/progress bars on later page
+    // visits.
+    var serializedState = {
+        token: newState.token,
+        username: newState.username,
+        loginError: false,
+        inProgress: false
+    };
+    window.localStorage.setItem('auth', JSON.stringify(serializedState));
     return newState;
 };
 

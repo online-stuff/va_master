@@ -194,6 +194,6 @@ def login_endpoint(handler, schema_data):
         # and return it.
 
         token = yield get_or_create_token(handler.datastore, username)
-        raise Return({'token': token})
+        raise Return({'username': username, 'token': token})
     handler.set_status(401)
     raise Return({'error': 'failed_login'})
