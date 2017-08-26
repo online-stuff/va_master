@@ -122,8 +122,8 @@ class VMWareDriver(base.DriverBase):
         super(VMWareDriver, self).__init__(**kwargs)
 
     def get_datacenter(self, host):
-        service_instance = connect.SmartConnect(host=host['host_ip'], user = host['username'], port = int(host['port']), pwd = host['password'], protocol = host['protocol'])
-        content = service_instance.RetrieveContent()
+        service_server = connect.SmartConnect(host=host['host_ip'], user = host['username'], port = int(host['port']), pwd = host['password'], protocol = host['protocol'])
+        content = service_server.RetrieveContent()
         datacenter = [x for x in content.rootFolder.childEntity if x.name == host['datacenter']] or [None]
         return datacenter[0]
 
@@ -192,15 +192,15 @@ class VMWareDriver(base.DriverBase):
 
 
     @tornado.gen.coroutine
-    def get_instances(self, host):
-        """ Gets various information about the instances so it can be returned to host_data. The format of the data for each instance follows the same format as in the base driver description """
+    def get_servers(self, host):
+        """ Gets various information about the servers so it can be returned to host_data. The format of the data for each server follows the same format as in the base driver description """
 
-        service_instance = connect.SmartConnect(host=host['host_ip'], user = host['username'], port = int(host['port']), pwd = host['password'], protocol = host['protocol'])
+        service_server = connect.SmartConnect(host=host['host_ip'], user = host['username'], port = int(host['port']), pwd = host['password'], protocol = host['protocol'])
 
-        instances = []
+        servers = []
         datacenter = self.get_datacenter(host)
 
-        content = service_instance.RetrieveContent()
+        content = service_server.RetrieveContent()
         vmFolder = datacenter.vmFolder
         vmList = vmFolder.childEntity
         for vm in vmList:
@@ -216,7 +216,7 @@ class VMWareDriver(base.DriverBase):
             })
 
         for vm in vmList:
-            instance = {
+            server = {
                 'hostname' : vm.name, 
                 'ip' : vm.guest.ipAddress , 
                 'size' : 'va-small',
@@ -228,13 +228,13 @@ class VMWareDriver(base.DriverBase):
             }
 
             for key in [('used_disk', 2**30), ('used_ram', 2**20), ('used_cpu', 1)]: 
-                if not instance[key[0]]: instance[key[0]] = 0
+                if not server[key[0]]: server[key[0]] = 0
                 else: 
-                    print ('Dividing : ', (0.0 + instance[key[0]]), ' / ', key[1], ' and got : ', float(instance[key[0]]) / key[1])
-                    instance[key[0]] = round((0.0 + instance[key[0]]) / key[1], 2)
-#                instance[key[0]] = 0 if not instance[key[0]] else float(instance[key[0]]) / key[1]
-            instances.append(instance)
-        raise tornado.gen.Return(instances)
+                    print ('Dividing : ', (0.0 + server[key[0]]), ' / ', key[1], ' and got : ', float(server[key[0]]) / key[1])
+                    server[key[0]] = round((0.0 + server[key[0]]) / key[1], 2)
+#                server[key[0]] = 0 if not server[key[0]] else float(server[key[0]]) / key[1]
+            servers.append(server)
+        raise tornado.gen.Return(servers)
 
 
 
@@ -242,45 +242,45 @@ class VMWareDriver(base.DriverBase):
     def get_host_status(self, host):
         """ Tries to get the token for the host. If not successful, returns an error message. """
         try:
-            service_instance = connect.SmartConnect(host=host['host_ip'], user = host['username'], port = int(host['port']), pwd = host['password'], protocol = host['protocol'])
+            service_server = connect.SmartConnect(host=host['host_ip'], user = host['username'], port = int(host['port']), pwd = host['password'], protocol = host['protocol'])
         except Exception as e: 
             raise tornado.gen.Return({'success' : False, 'message' : e.message})
 
         raise tornado.gen.Return({'success' : True, 'message' : ''})
 
     @tornado.gen.coroutine
-    def get_host_data(self, host, get_instances = True, get_billing = True):
-        """ Gets various data about the host and all the instances using the get_openstack_value() method. Returns the data in the same format as defined in the base driver. """
-        service_instance = connect.SmartConnect(host=host['host_ip'], user = host['username'], port = int(host['port']), pwd = host['password'], protocol = host['protocol'])
+    def get_host_data(self, host, get_servers = True, get_billing = True):
+        """ Gets various data about the host and all the servers using the get_openstack_value() method. Returns the data in the same format as defined in the base driver. """
+        service_server = connect.SmartConnect(host=host['host_ip'], user = host['username'], port = int(host['port']), pwd = host['password'], protocol = host['protocol'])
 
-        if get_instances: 
-            instances = yield self.get_instances(host)
-            print ('cpu : ', [x['used_cpu'] for x in instances])
-            print ('ram : ', [x['used_ram'] for x in instances])
-            print ('disk : ', [x['used_disk'] for x in instances])
+        if get_servers: 
+            servers = yield self.get_servers(host)
+            print ('cpu : ', [x['used_cpu'] for x in servers])
+            print ('ram : ', [x['used_ram'] for x in servers])
+            print ('disk : ', [x['used_disk'] for x in servers])
         else: 
-            instances = []
+            servers = []
 
         datacenter = self.get_datacenter(host)
 
         host_usage = {
             'max_cpus' : 'n/a',
-            'used_cpus' : round(sum([x['used_cpu'] for x in instances]), 2), 
+            'used_cpus' : round(sum([x['used_cpu'] for x in servers]), 2), 
             'free_cpus' : 'n/a', 
             'max_ram' : 'n/a', 
-            'used_ram' : round(sum([x['used_ram'] for x in instances]), 2),
+            'used_ram' : round(sum([x['used_ram'] for x in servers]), 2),
             'free_ram' : 'n/a', 
             'max_disk' : 'n/a', 
-            'used_disk' : round(sum([x['used_disk'] for x in instances]), 2), 
+            'used_disk' : round(sum([x['used_disk'] for x in servers]), 2), 
             'free_disk' : 'n/a',
-            'max_instances' : 'n/a', 
-            'used_instances' : len(instances), 
-            'free_instances' : 'n/a' 
+            'max_servers' : 'n/a', 
+            'used_servers' : len(servers), 
+            'free_servers' : 'n/a' 
         }
 
         print ('Usage : ', host_usage)
         host_data = {
-            'instances' : instances, 
+            'servers' : servers, 
             'host_usage' : host_usage,
             'status' : {'success' : True, 'message': ''}
         }
@@ -288,8 +288,8 @@ class VMWareDriver(base.DriverBase):
 
 
     @tornado.gen.coroutine
-    def instance_action(self, host, instance_name, action):
-        """ Performs instance actions using a nova client. """
+    def server_action(self, host, server_name, action):
+        """ Performs server actions using a nova client. """
         raise tornado.gen.Return({'success' : True, 'message' : ''})
 
 
@@ -309,8 +309,8 @@ class VMWareDriver(base.DriverBase):
             self.field_values['protocol'] = field_values['protocol']
             self.field_values['port'] = field_values['port']
 
-            service_instance = connect.SmartConnect(host='10.10.3.10', user = 'root', port = 443, pwd = 'm33dicina', protocol = 'https')
-            content = service_instance.RetrieveContent()
+            service_server = connect.SmartConnect(host='10.10.3.10', user = 'root', port = 443, pwd = 'm33dicina', protocol = 'https')
+            content = service_server.RetrieveContent()
             datacenters = [x.name for x in content.rootFolder.childEntity]
             options = {'datacenter' : datacenters}
             step_result = yield super(VMWareDriver, self).validate_field_values(step_index, field_values, options = options)
@@ -353,7 +353,7 @@ class VMWareDriver(base.DriverBase):
 #            with open(self.key_path + '.pub') as f: 
 #                key = f.read()
 #            keypair = nova.keypairs.create(name = self.key_name, public_key = key)
-#            print ('Creating instance!')
+#            print ('Creating server!')
             yield super(VMWareDriver, self).create_minion(host, data)
         except:
             import traceback

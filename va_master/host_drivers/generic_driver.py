@@ -77,46 +77,46 @@ class GenericDriver(base.DriverBase):
         raise tornado.gen.Return(sizes)
 
     @tornado.gen.coroutine
-    def remove_instance(self, host, instance_name):
+    def remove_server(self, host, server_name):
         host_datastore = yield self.datastore.get(host['hostname'])
-        instances = host_datastore.get('instances')
+        servers = host_datastore.get('servers')
 
-        instances = [x for x in instances if x['hostname'] != instance_name]
-        host_datastore['instances'] = instances
+        servers = [x for x in servers if x['hostname'] != server_name]
+        host_datastore['servers'] = servers
         yield self.datastore.insert(host['hostname'], host_datastore)
 
     @tornado.gen.coroutine
-    def instance_action(self, host, instance_name, action):
+    def server_action(self, host, server_name, action):
         
-        instance_action = {
-            'delete' : self.remove_instance, 
+        server_action = {
+            'delete' : self.remove_server, 
             'reboot' : 'reboot_function', 
             'start' : 'start_function', 
             'stop' : 'stop_function', 
         }
-        if action not in instance_action: 
+        if action not in server_action: 
             raise tornado.gen.Return({'success' : False, 'message' : 'Action not supported : ' +  action})
 
-        success = yield instance_action[action](host, instance_name)
+        success = yield server_action[action](host, server_name)
         raise tornado.gen.Return({'success' : True, 'message' : ''})
 
 
     @tornado.gen.coroutine
-    def get_instances(self, host):
-        instances = yield self.datastore.get(host['hostname'])
-        instances = instances['instances']
-        for i in instances: 
+    def get_servers(self, host):
+        servers = yield self.datastore.get(host['hostname'])
+        servers = servers['servers']
+        for i in servers: 
             i['host'] = host['hostname']
-        raise tornado.gen.Return(instances)
+        raise tornado.gen.Return(servers)
         
 
 
     @tornado.gen.coroutine
-    def get_host_data(self, host, get_instances = True, get_billing = True):
+    def get_host_data(self, host, get_servers = True, get_billing = True):
         
         try: 
             data = {
-                'instances' : [], 
+                'servers' : [], 
                 'limits' : {
                     'absolute' : [
                     ]
@@ -125,7 +125,7 @@ class GenericDriver(base.DriverBase):
             #Functions that connect to host here. 
         except Exception as e: 
             host_data = {
-                'instances' : [], 
+                'servers' : [], 
                 'limits' : {},
                 'host_usage' : {},
                 'status' : {'success' : False, 'message' : 'Could not connect to the libvirt host. ' + e}
@@ -138,20 +138,20 @@ class GenericDriver(base.DriverBase):
             'cpus_usage' :0, 
         }
 
-#        instances = [
+#        servers = [
 #            {
 #                'hostname' : 'name', 
 #                'ipv4' : 'ipv4', 
 #                'local_gb' : 0, 
 #                'memory_mb' : 0, 
 #                'status' : 'n/a', 
-#            } for x in data['instances']
+#            } for x in data['servers']
 #        ]
 
-        instances = yield self.get_instances(host)
+        servers = yield self.get_servers(host)
 
         host_data = {
-            'instances' : instances, 
+            'servers' : servers, 
             'limits' : {},
             'host_usage' : host_usage, 
             'status' : {'success' : True, 'message': ''}
@@ -172,7 +172,7 @@ class GenericDriver(base.DriverBase):
             })
 
 
-            self.datastore.insert(field_values['hostname'], {'instances' : []})
+            self.datastore.insert(field_values['hostname'], {'servers' : []})
             raise tornado.gen.Return(StepResult(
                 errors = [], new_step_index = -1, option_choices = {}
             ))
@@ -182,11 +182,11 @@ class GenericDriver(base.DriverBase):
     @tornado.gen.coroutine
     def create_minion(self, host, data):
         host_datastore = yield self.datastore.get(host['hostname'])
-        instances = host_datastore.get('instances')
-        instance = {"hostname" : data["instance_name"], "ip" : "", "local_gb" : 0, "memory_mb" : 0, "status" : "n/a" }
-        instances.append(instance)
+        servers = host_datastore.get('servers')
+        server = {"hostname" : data["server_name"], "ip" : "", "local_gb" : 0, "memory_mb" : 0, "status" : "n/a" }
+        servers.append(server)
 
-        host_datastore['instances'] = instances
+        host_datastore['servers'] = servers
         yield self.datastore.insert(host['hostname'], host_datastore)
 
         raise tornado.gen.Return(True)  

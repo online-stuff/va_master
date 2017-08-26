@@ -63,7 +63,7 @@ class DriverBase(object):
 
 
             Keyword arguments: 
-            driver_name -- The computer friendly driver name, for instance "my_driver". Used to find the driver when performing API requests. 
+            driver_name -- The computer friendly driver name, for server "my_driver". Used to find the driver when performing API requests. 
             provider_template -- A sample of how the provider configuration should look, with variable names which will be substituted from the profile_vars. 
             
             For instance, if you want to substitute an image, you should place VAR_IMAGE in the configuration, and if you're subclassing this class, the driver will replace it when generating the configuration. For custom template variables, you may need to add them to the self.provider_vars manually. 
@@ -73,17 +73,17 @@ class DriverBase(object):
             And then you need to have MY_VAR in the provider template. 
 
             profile_template -- Same as provider_template, except with the profile instead. 
-            provider_name -- The name of the provider for which the driver works, for instance: openstack_provider, or aws_provider. 
-            profile_name -- The name of the profile. The profile configuration is generated when an instance is created, and the final name is profile_name + instance_name. 
+            provider_name -- The name of the provider for which the driver works, for server: openstack_provider, or aws_provider. 
+            profile_name -- The name of the profile. The profile configuration is generated when a server is created, and the final name is profile_name + server_name. 
             host_ip -- The host ip of the machine that this runs on. It can and should be taken from the datastore (the deploy_handler passes it as a default kwarg).
-            key_name -- The name of the keypair that will be used to connect to created instances. Example: va_master_key
+            key_name -- The name of the keypair that will be used to connect to created servers. Example: va_master_key
             key_path - The entire path minus the key name. Example: /root/va_master_key/, if the full path is /root/va_master_key/va_master_key.pem. 
             datastore -- A Key/Value datastore. It can be None, but drivers that use it will misbehave. 
         """
 
         self.field_values = {
                 'driver_name' : driver_name,
-                'instances' : [],
+                'servers' : [],
                 'defaults' : {},
             }
           
@@ -136,9 +136,9 @@ class DriverBase(object):
             Creates configurations for salt implementations. Does not need to be overwritten. 
             
             Arguments: 
-            skip_provider -- If set to True, it will not create the provider configuration. This happens when creating an instance. 
+            skip_provider -- If set to True, it will not create the provider configuration. This happens when creating a server. 
             skip_profile -- If set to True, it will not create the profile configuration. 
-            base_profile -- If set to True, it will not replace the profile name for the configuration. This happens when creating a new host to create a base profile template. This template is then read when creating a new instance, and the profile name is set. 
+            base_profile -- If set to True, it will not replace the profile name for the configuration. This happens when creating a new host to create a base profile template. This template is then read when creating a new server, and the profile name is set. 
         """
 
         if not (self.profile_template or self.provider_template): 
@@ -220,7 +220,7 @@ class DriverBase(object):
     @tornado.gen.coroutine
     def get_images(self):
         """ 
-            Gets a list of all the images used to create instances. This _needs_ to be overwritten. 
+            Gets a list of all the images used to create servers. This _needs_ to be overwritten. 
         """
         cl = salt.cloud.CloudClient(path = '/etc/salt/cloud')
         provider_name = self.provider_vars['VAR_PROVIDER_NAME']
@@ -232,7 +232,7 @@ class DriverBase(object):
     @tornado.gen.coroutine
     def get_sizes(self):
         """     
-            Gets a list of all sizes (flavors) used to create instances. This _needs_ to be overwritten. 
+            Gets a list of all sizes (flavors) used to create servers. This _needs_ to be overwritten. 
         """
         cl = salt.cloud.CloudClient(path = '/etc/salt/cloud')
         provider_name = self.provider_vars['VAR_PROVIDER_NAME']
@@ -242,20 +242,20 @@ class DriverBase(object):
         raise tornado.gen.Return(sizes)
 
     @tornado.gen.coroutine
-    def instance_action(self, host, instance_name, action):
+    def server_action(self, host, server_name, action):
         """ 
-            Performs an action for the instance. This function is a stub of how such a function _could_ look, but it depends on implementation. This _needs_ to be overwritten. 
+            Performs an action for the server. This function is a stub of how such a function _could_ look, but it depends on implementation. This _needs_ to be overwritten. 
         """
-        instance_action = {
+        server_action = {
             'delete' : 'delete_function', 
             'reboot' : 'reboot_function', 
             'start' : 'start_function', 
             'stop' : 'stop_function', 
         }
-        if action not in instance_action: 
+        if action not in server_action: 
             raise tornado.gen.Return({'success' : False, 'message' : 'Action not supported : ' + action})
 
-        success = instance_action[action](instance_name)
+        success = server_action[action](server_name)
         raise tornado.gen.Return({'success' : True, 'message' : ''})
 
 
@@ -268,11 +268,11 @@ class DriverBase(object):
 
 
     @tornado.gen.coroutine
-    def get_instances(self, host):
+    def get_servers(self, host):
         """
-            Gets a list of instances in the following format. The keys are fairly descriptive. used_ram is in mb, used_disk is in GB
+            Gets a list of servers in the following format. The keys are fairly descriptive. used_ram is in mb, used_disk is in GB
         """
-        instances =  [{
+        servers =  [{
             'hostname' : '',
             'ip' : 'n/a',
             'size' : '',
@@ -283,17 +283,17 @@ class DriverBase(object):
             'used_disk' : 0,
 
         }]
-        raise tornado.gen.Return(instances)
+        raise tornado.gen.Return(servers)
        
 
     @tornado.gen.coroutine
-    def get_host_data(self, host, get_instances = True, get_billing = True):
+    def get_host_data(self, host, get_servers = True, get_billing = True):
         """ 
-            Returns information about usage for the host and instances. The format of the data is in this function. This should be overwritten so you can see this data on the overview.
+            Returns information about usage for the host and servers. The format of the data is in this function. This should be overwritten so you can see this data on the overview.
          """
         try: 
             host_data = {
-                'instances' : [], 
+                'servers' : [], 
                 'host_usage' : {},
             }
             #Functions that connect to host here. 
@@ -309,16 +309,16 @@ class DriverBase(object):
             'max_disk' : 0, # in GB this time
             'used_disk' : 0, 
             'free_disk' : 0, 
-            'max_instances' : 0, 
-            'used_instances' : 0,
+            'max_servers' : 0, 
+            'used_servers' : 0,
         }
         host_usage['free_cpus'] = host_usage['max_cpus'] - host_usage['used_cpus']
         host_usage['free_ram'] = host_usage['max_ram'] - host_usage['used_ram']
 
-        instances = yield self.get_instances(self, host)
+        servers = yield self.get_servers(self, host)
 
         host_info = {
-            'instances' : instances,
+            'servers' : servers,
             'host_usage' : host_usage,
             'status' : {'success' : True, 'message': ''}
         }
@@ -333,7 +333,7 @@ class DriverBase(object):
                 step_index -- The current step that is being evaluated. The first (or 0th) step is after the driver has been chosen. 
                 field_values -- The results that are being evaluated. 
 
-            When the last step has been reached (the steps are defined in the get_steps() method), the results are evaluated, and everything that has been saved to self.field_values will be saved to the datastore and then used for performing instance actions, or creating instances. Make sure to add any custom values there. 
+            When the last step has been reached (the steps are defined in the get_steps() method), the results are evaluated, and everything that has been saved to self.field_values will be saved to the datastore and then used for performing server actions, or creating servers. Make sure to add any custom values there. 
         """
         if step_index < 0:
             raise tornado.gen.Return(StepResult(
@@ -402,11 +402,11 @@ class DriverBase(object):
             Arguments: 
             host - The datastore information about the host. It's important that it has the profile_conf_dir value, which is the base profile configuration. 
             data - Data about the image. It's a dictionary with the following information: 
-                'role': The role with which the instance can be recognized, for instance va-directory
-                'image': The image used to create the instance, for instance VAInstance
-                'size': The size (flavor) used to create the instance, for instance va-small
+                'role': The role with which the server can be recognized, for instance va-directory
+                'image': The image used to create the server, for instance VAInstance
+                'size': The size (flavor) used to create the server, for instance va-small
                 'new_profile': The name of the profile, for instance my-directory
-                'instance_name': The name of the instance, for instance my_directory
+                'server_name': The name of the server, for instance my_directory
 
             This method will work with proper configurations and data, but only for salt-supported technology. You _need_ to overwrite this method if the technology of your driver does not work with salt. 
         """
@@ -423,7 +423,7 @@ class DriverBase(object):
         if '|' in data['network']: 
             self.profile_vars['VAR_NETWORK_ID'] = data['network'].split('|')[1]
 
-        new_profile = data['instance_name'] + '-profile'
+        new_profile = data['server_name'] + '-profile'
         self.profile_vars['VAR_PROFILE_NAME'] = new_profile
         self.profile_vars['VAR_SEC_GROUP'] = 'default'
         self.profile_vars['VAR_IMAGE_USERNAME'] = data.get('username', 'admin')
@@ -433,8 +433,8 @@ class DriverBase(object):
         yield self.write_configs(skip_provider = True)
 
         #probably use salt.cloud somehow, but the documentation is terrible. 
-        new_minion_cmd = ['salt-cloud', '-p', new_profile, data['instance_name']]
-        minion_apply_state = ['salt', data['instance_name'], 'state.highstate']
+        new_minion_cmd = ['salt-cloud', '-p', new_profile, data['server_name']]
+        minion_apply_state = ['salt', data['server_name'], 'state.highstate']
 
 #        new_minion_values = subprocess.call(new_minion_cmd)
 #        new_minion_state_values = subprocess.call(minion_apply_state)
@@ -458,7 +458,7 @@ class DriverBase(object):
         else: 
             state_fields = []
         # steps_fields is a list of lists such that the index of an element is the required fields for that step. We check if the app_fields contain all of those. 
-        steps_fields = [['role', 'instance_name'], state_fields, ['sec_group', 'image', 'size', 'network']]
+        steps_fields = [['role', 'server_name'], state_fields, ['sec_group', 'image', 'size', 'network']]
         if not all([self.app_fields.get(x) for x in steps_fields[step]]):
             print ('Fields expected are : ', steps_fields[step], ' but have : ', self.app_fields.keys())
             raise tornado.gen.Return(False) 

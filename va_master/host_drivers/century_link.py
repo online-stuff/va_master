@@ -99,18 +99,18 @@ class CenturyLinkDriver(base.DriverBase):
     
 
     @tornado.gen.coroutine
-    def instance_action(self, host, instance_name, action):
-        instance_name = instance_name.upper()
+    def server_action(self, host, server_name, action):
+        server_name = server_name.upper()
         clc.v2.SetCredentials(host['username'], host['password'])
         self.account = clc.v2.Account()
         self.get_datacenter(host)
 
         servers_list = self.get_servers_list(host)
-        server = [x for x in servers_list if instance_name in x.id] or [None]
+        server = [x for x in servers_list if server_name in x.id] or [None]
         server = server[0]
         if not server: 
-            print ('Did not find server with name: ', instance_name)
-            raise tornado.gen.Return({'success' : False, 'message' : 'Did not find server with name: ' + instance_name})
+            print ('Did not find server with name: ', server_name)
+            raise tornado.gen.Return({'success' : False, 'message' : 'Did not find server with name: ' + server_name})
 
         #post_arg is simply to cut down on code; it creates a tuple of arguments ready to be sent to the API. 
         post_arg = lambda action: ('post', 'operations/%s/servers/%s' % (self.account.alias, action), '["%s"]'% server.id)
@@ -146,8 +146,8 @@ class CenturyLinkDriver(base.DriverBase):
         raise tornado.gen.Return(billing_info)
 
     @tornado.gen.coroutine
-    def get_instances(self, host, get_billing = True):
-        """ Gets instances from the group selected when adding the host. """
+    def get_servers(self, host, get_billing = True):
+        """ Gets servers from the group selected when adding the host. """
         try: 
             datacenter = self.datacenter
         except:
@@ -157,7 +157,7 @@ class CenturyLinkDriver(base.DriverBase):
         servers = self.get_servers_list(host)
         servers = [x.data for x in servers if 'details' in x.data.keys()]
 
-        instances =  [{
+        servers =  [{
                 'hostname' : x['name'],
                 'ip' : None if not x['details']['ipAddresses'] else x['details']['ipAddresses'][0]['internal'],
                 'size' : 'va-small',
@@ -170,19 +170,19 @@ class CenturyLinkDriver(base.DriverBase):
         } for x in servers]
 
         if get_billing: 
-            instances_billing = yield self.get_host_billing(host)
-            for x in instances: 
-                instance_billing = [i for i in instances_billing if x['hostname'] == i['hostname']] or [{}]
-                instance_billing = instance_billing[0]
+            servers_billing = yield self.get_host_billing(host)
+            for x in servers: 
+                server_billing = [i for i in servers_billing if x['hostname'] == i['hostname']] or [{}]
+                server_billing = server_billing[0]
 
-                x.update(instance_billing)
+                x.update(server_billing)
 
-        raise tornado.gen.Return(instances)
+        raise tornado.gen.Return(servers)
 
 
     @tornado.gen.coroutine
-    def get_host_data(self, host, get_instances = True, get_billing = True):
-        """ Gets instances properly, but doesn't yet get host_usage. """
+    def get_host_data(self, host, get_servers = True, get_billing = True):
+        """ Gets servers properly, but doesn't yet get host_usage. """
         import time
         print ('Century link timer started. ')
         t0 = time.time()
@@ -196,25 +196,25 @@ class CenturyLinkDriver(base.DriverBase):
             #TODO do stuff with group_stats
 
             self.account = clc.v2.Account()
-            if get_instances: 
-                instances = yield self.get_instances(host, get_billing)
+            if get_servers: 
+                servers = yield self.get_servers(host, get_billing)
             else: 
-                instances = []
+                servers = []
             host_data = {
-                'instances' : instances, 
+                'servers' : servers, 
                 'host_usage' : {
                     'max_cpus' : 'n/a',
-                    'used_cpus' : sum([x['used_cpu'] for x in instances]),
+                    'used_cpus' : sum([x['used_cpu'] for x in servers]),
                     'free_cpus' : 'n/a',
                     'max_ram' : 'n/a',
-                    'used_ram' : sum([x['used_ram'] for x in instances]),
+                    'used_ram' : sum([x['used_ram'] for x in servers]),
                     'free_ram' : 'n/a',
                     'max_disk' : 'n/a',
-                    'used_disk' : sum([x['used_disk'] for x in instances]),
+                    'used_disk' : sum([x['used_disk'] for x in servers]),
                     'free_disk' : 'n/a',
-                    'max_instances' : 'n/a',
-                    'used_instances' :  group.data['serversCount'],
-                    'free_instances' :'n/a' 
+                    'max_servers' : 'n/a',
+                    'used_servers' :  group.data['serversCount'],
+                    'free_servers' :'n/a' 
                 },
             }
             #Functions that connect to host here. 
@@ -222,7 +222,7 @@ class CenturyLinkDriver(base.DriverBase):
             import traceback
             traceback.print_exc()
             host_data = {
-                'instances' : [], 
+                'servers' : [], 
                 'host_usage' : {},
                 'status' : {'success' : False, 'message' : 'Could not connect to the libvirt host. ' + e.message}
             }
@@ -275,63 +275,63 @@ class CenturyLinkDriver(base.DriverBase):
         return {'conditions' : conditions, 'actions' : actions}
 
     @tornado.gen.coroutine
-    def domain_full(self, domain, host = '', instance_name = ''):
+    def domain_full(self, domain, host = '', server_name = ''):
         cl = salt.client.LocalClient()
         result = cl.cmd('evo-master', 'evo_utils.domain_full', [domain])
         raise tornado.gen.Return(result['evo-master'])
 
     @tornado.gen.coroutine
-    def server_full_cmp(self, instance_name, acceptable_values, domain = '', host = ''):
+    def server_full_cmp(self, server_name, acceptable_values, domain = '', host = ''):
         cl = salt.client.LocalClient()
-        ts_name = instance_name.upper()[7:13]
+        ts_name = server_name.upper()[7:13]
         result = cl.cmd('evo-master', 'evo_utils.server_full_cmp', [ts_name, acceptable_values])
         raise tornado.gen.Return(result['evo-master'])
 
     @tornado.gen.coroutine
-    def server_can_add_memory(self, instance_name, domain = '', host = ''):
-        result = yield self.server_full_cmp(instance_name, [0,2], domain, host)
+    def server_can_add_memory(self, server_name, domain = '', host = ''):
+        result = yield self.server_full_cmp(server_name, [0,2], domain, host)
         raise tornado.gen.Return(result)
 
     @tornado.gen.coroutine
-    def server_can_add_cpu(self, instance_name, domain = '', host = ''):
-        result = yield self.server_full_cmp(instance_name, [0, 1], domain, host)
+    def server_can_add_cpu(self, server_name, domain = '', host = ''):
+        result = yield self.server_full_cmp(server_name, [0, 1], domain, host)
         raise tornado.gen.Return(result)
 
     @tornado.gen.coroutine
-    def server_cpu_full(self, instance_name, domain = '', host = ''):
+    def server_cpu_full(self, server_name, domain = '', host = ''):
         cl = salt.client.LocalClient()
-        ts_name = instance_name.upper()[7:13]
+        ts_name = server_name.upper()[7:13]
         result = cl.cmd('evo-master', 'evo_utils.server_cpu_full', [ts_name])
         raise tornado.gen.Return(result)
 
     @tornado.gen.coroutine
-    def server_cpu_full_ok(self, instance_name, domain = '', host = ''):
+    def server_cpu_full_ok(self, server_name, domain = '', host = ''):
         cl = salt.client.LocalClient()
-        ts_name = instance_name.upper()[7:13]
+        ts_name = server_name.upper()[7:13]
         result = cl.cmd('evo-master', 'evo_utils.server_cpu_ok', [ts_name])
         raise tornado.gen.Return(result)
 
     @tornado.gen.coroutine
-    def server_memory_full(self, instance_name, domain = '', host = ''):
+    def server_memory_full(self, server_name, domain = '', host = ''):
         cl = salt.client.LocalClient()
-        ts_name = instance_name.upper()[7:13]
+        ts_name = server_name.upper()[7:13]
         result = cl.cmd('evo-master', 'evo_utils.server_memory_full', [ts_name])
         raise tornado.gen.Return(result)
 
     @tornado.gen.coroutine
-    def server_memory_full_ok(self, instance_name, domain = '', host = ''):
+    def server_memory_full_ok(self, server_name, domain = '', host = ''):
         cl = salt.client.LocalClient()
-        ts_name = instance_name.upper()[7:13]
+        ts_name = server_name.upper()[7:13]
         result = cl.cmd('evo-master', 'evo_utils.server_memory_ok', [ts_name])
         raise tornado.gen.Return(result)
 
     @tornado.gen.coroutine
-    def server_check_hardware(self, host, instance_name, domain = '' , cpu = 0, cpu_operator = '', memory = 0, memory_operator = ''):
-        instance_name = instance_name.upper()
+    def server_check_hardware(self, host, server_name, domain = '' , cpu = 0, cpu_operator = '', memory = 0, memory_operator = ''):
+        server_name = server_name.upper()
         self.get_datacenter(host)
 
         servers = self.get_servers_list(host)
-        server = [x for x in servers if instance_name in x.id] or [None]
+        server = [x for x in servers if server_name in x.id] or [None]
         server = server[0]
 
         if cpu_operator: 
@@ -348,14 +348,14 @@ class CenturyLinkDriver(base.DriverBase):
         return end_result 
 
     @tornado.gen.coroutine
-    def server_set_status(self, instance_name, status, domain = 0, host = ''):
+    def server_set_status(self, server_name, status, domain = 0, host = ''):
         cl = salt.client.LocalClient()
-        ts_name = instance_name.upper()[7:13]
+        ts_name = server_name.upper()[7:13]
         print ('Setting status for : ', ts_name, ' to ', status)
         result = cl.cmd('evo-master', 'evo_utils.server_set_status', [ts_name, status])
 
     @tornado.gen.coroutine
-    def server_new_terminal(self, host, instance_name, domain):
+    def server_new_terminal(self, host, server_name, domain):
         print ('Starting new terminal for domain : ', domain)
         sys.path.append('/srv/salt/_modules')
         print ('Appended path ! now is : ', sys.path)
@@ -370,62 +370,62 @@ class CenturyLinkDriver(base.DriverBase):
         raise tornado.gen.Return(True)
 
     @tornado.gen.coroutine
-    def server_add_hardware(self, host, instance_name, cpu = 0, memory = 0, domain = ''):
-        yield self.server_set_hardware(host, instance_name, cpu = cpu, memory = memory, add = True)
+    def server_add_hardware(self, host, server_name, cpu = 0, memory = 0, domain = ''):
+        yield self.server_set_hardware(host, server_name, cpu = cpu, memory = memory, add = True)
 
     @tornado.gen.coroutine
-    def server_add_cpu(self, host, instance_name, domain = ''): 
-        yield self.server_add_hardware(host, instance_name, cpu = 1, memory = 0, domain = domain)
+    def server_add_cpu(self, host, server_name, domain = ''): 
+        yield self.server_add_hardware(host, server_name, cpu = 1, memory = 0, domain = domain)
 
     @tornado.gen.coroutine
-    def server_add_memory(self, host, instance_name, domain = ''): 
-        yield self.server_add_hardware(host, instance_name, cpu = 0, memory = 1, domain = domain)
+    def server_add_memory(self, host, server_name, domain = ''): 
+        yield self.server_add_hardware(host, server_name, cpu = 0, memory = 1, domain = domain)
 
     @tornado.gen.coroutine
-    def server_memory_status(self, instance_name, status, domain = '', host = ''): 
+    def server_memory_status(self, server_name, status, domain = '', host = ''): 
         cl = salt.client.LocalClient()
-        ts_name = instance_name.upper()[7:13]
+        ts_name = server_name.upper()[7:13]
         cl.cmd('evo-master', 'evo_utils.terminal_memory_status', [ts_name, status])
 
     @tornado.gen.coroutine
-    def server_memory_ok(self, instance_name, domain = '', host = ''):
-        yield self.server_memory_status(instance_name, 'OK', domain, host)
+    def server_memory_ok(self, server_name, domain = '', host = ''):
+        yield self.server_memory_status(server_name, 'OK', domain, host)
 
     @tornado.gen.coroutine
-    def server_memory_warning(self, instance_name, domain = '', host = ''):
-        yield self.server_memory_status(instance_name, 'WARNING', domain, host)
+    def server_memory_warning(self, server_name, domain = '', host = ''):
+        yield self.server_memory_status(server_name, 'WARNING', domain, host)
 
     @tornado.gen.coroutine
-    def server_memory_critical(self, instance_name, domain = '', host = ''):
-        yield self.server_memory_status(instance_name, 'CRITICAL', domain, host)
+    def server_memory_critical(self, server_name, domain = '', host = ''):
+        yield self.server_memory_status(server_name, 'CRITICAL', domain, host)
 
     @tornado.gen.coroutine
-    def server_cpu_status(self, instance_name, status, host = '', domain = ''):
+    def server_cpu_status(self, server_name, status, host = '', domain = ''):
         cl = salt.client.LocalClient()
-        ts_name = instance_name.upper()[7:13]
+        ts_name = server_name.upper()[7:13]
         cl.cmd('evo-master', 'evo_utils.terminal_cpu_status', [ts_name, status])
 
     @tornado.gen.coroutine
-    def server_cpu_ok(self, instance_name, host = '', domain = ''):
-        yield self.server_cpu_status(instance_name, 'OK', host, domain)
+    def server_cpu_ok(self, server_name, host = '', domain = ''):
+        yield self.server_cpu_status(server_name, 'OK', host, domain)
 
     @tornado.gen.coroutine
-    def server_cpu_warning(self, instance_name, host = '', domain = ''):
-        yield self.server_cpu_status(instance_name, 'WARNING', host, domain)
+    def server_cpu_warning(self, server_name, host = '', domain = ''):
+        yield self.server_cpu_status(server_name, 'WARNING', host, domain)
 
     @tornado.gen.coroutine
-    def server_cpu_critical(self, instance_name, host = '', domain = ''):
-        yield self.server_cpu_status(instance_name, 'CRITICAL', host, domain)
+    def server_cpu_critical(self, server_name, host = '', domain = ''):
+        yield self.server_cpu_status(server_name, 'CRITICAL', host, domain)
 
     @tornado.gen.coroutine
-    def server_set_hardware(self, host, instance_name, cpu = 0, memory = 0, add = False, domain = ''):
-        instance_name = instance_name.upper()
+    def server_set_hardware(self, host, server_name, cpu = 0, memory = 0, add = False, domain = ''):
+        server_name = server_name.upper()
 
         print ('From args : memory = ', memory)
 
         self.get_datacenter(host)
         servers = self.get_servers_list(host)
-        server = [x for x in servers if instance_name in x.name and x.status == 'active'] or [None]
+        server = [x for x in servers if server_name in x.name and x.status == 'active'] or [None]
         server = server[0]
        
         if add: 
@@ -569,8 +569,8 @@ class CenturyLinkDriver(base.DriverBase):
             memory = flavour['memory'] / (2**30)
 
             server_data = {
-              "name": data['instance_name'],
-              "hostName": data['instance_name'],
+              "name": data['server_name'],
+              "hostName": data['server_name'],
               "description": "Created from the VA dashboard. ",
               "groupId": self.datacenter.Groups().Get(data['sec_group']).id,
               "sourceServerId": self.datacenter.Templates().Get(data['image']).id,
@@ -594,7 +594,7 @@ class CenturyLinkDriver(base.DriverBase):
             #Extra args are usually supplied by external applications. 
             server_data.update(data.get('extra_kwargs', {}))
 
-            print ('Creating instance with data : ', server_data)
+            print ('Creating server with data : ', server_data)
 
             success = clc.v2.API.Call('post', 'servers/%s' % (self.account.alias), json.dumps(server_data), debug = True)
 

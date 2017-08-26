@@ -135,38 +135,38 @@ class AWSDriver(base.DriverBase):
         return networks
 
     @tornado.gen.coroutine
-    def get_instances(self, host):
+    def get_servers(self, host):
         client = self.get_client(host)
         result = client.describe_instances()
-        instances = result['Reservations']
-        raise tornado.gen.Return(instances)
+        servers = result['Reservations']
+        raise tornado.gen.Return(servers)
 
-        #TODO instances are returned in a format I don't yet know, need to create some so I can test this. 
+        #TODO servers are returned in a format I don't yet know, need to create some so I can test this. 
         #Should be like this: 
-#        instances = [
+#        servers = [
 #            {
 #                'hostname' : 'name', 
 #                'ipv4' : 'ipv4', 
 #                'local_gb' : 0, 
 #                'memory_mb' : 0, 
 #                'status' : 'n/a', 
-#            } for x in data['instances']
+#            } for x in data['servers']
 #        ]
 
 
     @tornado.gen.coroutine
-    def get_host_data(self, host, get_instances = True, get_billing = True):
+    def get_host_data(self, host, get_servers = True, get_billing = True):
         client = self.get_client(host)
         host_usage = {
             'total_disk_usage_gb' : 0, 
             'current_disk_usage_mb' : 0, 
             'cpus_usage' : 0
         }
-        instances = []
-        if get_instances:
-            instances = yield self.get_instances(host)
+        servers = []
+        if get_servers:
+            servers = yield self.get_servers(host)
         host_data = {
-            'instances' : instances, 
+            'servers' : servers, 
             'host_usage' : host_usage, 
             'status' : {'success' : True, 'message' : ''},
         }

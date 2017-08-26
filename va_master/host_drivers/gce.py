@@ -123,11 +123,11 @@ class GCEDriver(base.DriverBase):
 
 
     @tornado.gen.coroutine
-    def get_instances(self, host):
-        """ Gets various information about the instances so it can be returned to host_data. The format of the data for each instance follows the same format as in the base driver description """
+    def get_servers(self, host):
+        """ Gets various information about the servers so it can be returned to host_data. The format of the data for each server follows the same format as in the base driver description """
         try:
             servers = []
-            instances = [
+            servers = [
                 {
                     'hostname' : x['name'], 
                     'ip' : x['ip_address'],  
@@ -140,11 +140,11 @@ class GCEDriver(base.DriverBase):
                 } for x in servers
             ]
         except Exception as e: 
-            print ('Cannot get instances. ')
+            print ('Cannot get servers. ')
             import traceback
             print traceback.print_exc()
             raise tornado.gen.Return([])
-        raise tornado.gen.Return(instances)
+        raise tornado.gen.Return(servers)
 
 
 
@@ -154,12 +154,12 @@ class GCEDriver(base.DriverBase):
         raise tornado.gen.Return(True)
 
     @tornado.gen.coroutine
-    def get_host_data(self, host, get_instances = True, get_billing = True):
-        """ Gets various data about the host and all the instances using the get_openstack_value() method. Returns the data in the same format as defined in the base driver. """
+    def get_host_data(self, host, get_servers = True, get_billing = True):
+        """ Gets various data about the host and all the servers using the get_openstack_value() method. Returns the data in the same format as defined in the base driver. """
         import time
         print ('Starting timer for OpenStack. ')
         try:
-            instances = yield self.get_instances(host)
+            servers = yield self.get_servers(host)
             host_data = {
                 'max_cores' : 0, 
                 'used_cores' : 0, 
@@ -167,14 +167,14 @@ class GCEDriver(base.DriverBase):
                 'used_ram' : 0, 
                 'max_disk' : 0, 
                 'used_disk' : 0, 
-                'max_instances' : 0, 
-                'used_instances' : 0
+                'max_servers' : 0, 
+                'used_servers' : 0
             }
         except Exception as e: 
             import traceback
             print traceback.print_exc()
             host_data = {
-                'instances' : [],
+                'servers' : [],
                 'limits' : {},
                 'host_usage' : {},
                 'status' : {'success' : False, 'message' : 'Could not connect to the libvirt host. ' + e.message}
@@ -182,7 +182,7 @@ class GCEDriver(base.DriverBase):
             raise tornado.gen.Return(host_data)
 
 
-        instances = yield self.get_instances(host)
+        servers = yield self.get_servers(host)
 
         host_usage = {
             'max_cpus' : host_data['maxTotalCores'],
@@ -194,13 +194,13 @@ class GCEDriver(base.DriverBase):
             'max_disk' : host_data['maxTotalVolumeGigabytes'], 
             'used_disk' : host_data['totalGigabytesUsed'], 
             'free_disk' : host_data['maxTotalVolumeGigabytes'] - host_data['maxTotalVolumeGigabytes'],
-            'max_instances' : host_data['maxTotalInstances'], 
-            'used_instances' : host_data['totalInstancesUsed'], 
-            'free_instances' : host_data['maxTotalInstances'] - host_data['totalInstancesUsed']
+            'max_servers' : host_data['maxTotalInstances'], 
+            'used_servers' : host_data['totalInstancesUsed'], 
+            'free_servers' : host_data['maxTotalInstances'] - host_data['totalInstancesUsed']
         }
 
         host_data = {
-            'instances' : instances, 
+            'servers' : servers, 
             'host_usage' : host_usage,
             'status' : True,
         }
@@ -208,17 +208,17 @@ class GCEDriver(base.DriverBase):
 
 
     @tornado.gen.coroutine
-    def instance_action(self, host, instance_name, action):
-        """ Performs instance actions using a nova client. """
+    def server_action(self, host, server_name, action):
+        """ Performs server actions using a nova client. """
         try:
             nova = client.Client('2.0', host['username'], host['password'], host['tenant'], 'http://' + host['host_ip'] + '/v2.0')
-            instance = [x for x in nova.servers.list() if x.name == instance_name][0]
+            server = [x for x in nova.servers.list() if x.name == server_name][0]
         except Exception as e:
             import traceback
             traceback.print_exc()
-            raise tornado.gen.Return({'success' : False, 'message' : 'Could not get instance. ' + e.message})
+            raise tornado.gen.Return({'success' : False, 'message' : 'Could not get server. ' + e.message})
         try:
-            success = getattr(instance, action)()
+            success = getattr(server, action)()
             print ('Made action : ', success)
         except Exception as e:
             raise tornado.gen.Return({'success' : False, 'message' : 'Action was not performed. ' + e.message})
@@ -263,7 +263,7 @@ class GCEDriver(base.DriverBase):
 #            with open(self.key_path + '.pub') as f: 
 #                key = f.read()
 #            keypair = nova.keypairs.create(name = self.key_name, public_key = key)
-#            print ('Creating instance!')
+#            print ('Creating server!')
             yield super(GCEDriver, self).create_minion(host, data)
         except:
             import traceback

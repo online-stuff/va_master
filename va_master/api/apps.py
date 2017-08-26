@@ -15,7 +15,7 @@ def get_paths():
         'get' : {
             'apps/vpn_users' : {'function' : get_openvpn_users, 'args' : []},
             'apps/vpn_status' : {'function' : get_openvpn_status, 'args' : []},
-            'apps/add_app' : {'function' : add_app, 'args' : ['host', 'instance_name']},
+            'apps/add_app' : {'function' : add_app, 'args' : ['host', 'server_name']},
             'apps/get_actions' : {'function' : get_user_actions, 'args' : []},
             'apps/get_user_salt_functions' : {'function' : get_user_salt_functions, 'args' : ['dash_user']},
             'apps/get_all_salt_functions' : {'function' : get_all_salt_functions, 'args' : []},
@@ -28,7 +28,7 @@ def get_paths():
             'state/add' : {'function' : create_new_state,'args' : ['file', 'body', 'filename']},
             'apps/new/validate_fields' : {'function' : validate_app_fields, 'args' : ['handler']},
             'apps' : {'function' : launch_app, 'args' : ['handler']},
-            'apps/action' : {'function' : perform_instance_action, 'args' : ['hostname', 'action', 'instance_name']},
+            'apps/action' : {'function' : perform_server_action, 'args' : ['hostname', 'action', 'server_name']},
             'apps/add_vpn_user': {'function' : add_openvpn_user, 'args' : ['username']},
             'apps/revoke_vpn_user': {'function' : revoke_openvpn_user, 'args' : ['username']},
             'apps/list_user_logins': {'function' : list_user_logins, 'args' : ['username']},
@@ -46,8 +46,8 @@ def bytes_to_readable(num, suffix='B'):
     return "%.1f%s%s" % (num, 'Yi', suffix)
 
 @tornado.gen.coroutine
-def add_app(deploy_handler, host, instance_name):
-    app = yield get_app_info(deploy_handler, instance_name)
+def add_app(deploy_handler, host, server_name):
+    app = yield get_app_info(deploy_handler, server_name)
     yield handler.config.deploy_handler.store_app(app, host)
 
 @tornado.gen.coroutine
@@ -106,7 +106,7 @@ def download_vpn_cert(deploy_handler, username, handler):
 
 
 @tornado.gen.coroutine
-def perform_instance_action(deploy_handler, hostname, action, instance_name): 
+def perform_server_action(deploy_handler, hostname, action, server_name): 
     try: 
         store = deploy_handler.datastore
         hosts = yield store.get('hosts')
@@ -114,7 +114,7 @@ def perform_instance_action(deploy_handler, hostname, action, instance_name):
         host = [x for x in hosts if x['hostname'] == hostname][0]
         driver_name = host['driver_name']
         driver = yield deploy_handler.get_driver_by_id(driver_name)
-        success = yield driver.instance_action(host, instance_name, action)
+        success = yield driver.server_action(host, server_name, action)
     except: 
         import traceback
         traceback.print_exc()
@@ -211,11 +211,11 @@ def validate_app_fields(deploy_handler, handler):
 
 
 @tornado.gen.coroutine
-def get_app_info(deploy_handler, instance_name):
+def get_app_info(deploy_handler, server_name):
     cl = Caller()
-    instance_info = cl.cmd('mine.get', instance_name, 'inventory') 
-    instance_info = instance_info.get(instance_name)
-    raise tornado.gen.Return(instance_info)
+    server_info = cl.cmd('mine.get', server_name, 'inventory') 
+    server_info = server_info.get(server_name)
+    raise tornado.gen.Return(server_info)
 
         
 ##@auth_only
@@ -230,22 +230,22 @@ def launch_app(deploy_handler, handler):
 
     driver = yield deploy_handler.get_driver_by_id(required_host['driver_name'])
     if data.get('extra_fields', {}) : 
-        pillar_path = '/srv/pillar/%s-credentials.sls' % (data.get('instance_name'))
+        pillar_path = '/srv/pillar/%s-credentials.sls' % (data.get('server_name'))
         with open(pillar_path, 'w') as f: 
             pillar_str = ''
             for field in data.get('extra_fields'): 
                 pillar_str += '%s: %s\n' % (field, data['extra_fields'][field])
             f.write(pillar_str)
-        salt_manage_pillar.add_instance(data.get('instance_name'), data.get('role', ''))
+        salt_manage_pillar.add_server(data.get('server_name'), data.get('role', ''))
 
     raise tornado.gen.Return(True)
 
     result = yield driver.create_minion(required_host, data)
 
-    minion_info = yield get_app_info(deploy_handler, handler.data['instance_name'])
+    minion_info = yield get_app_info(deploy_handler, handler.data['server_name'])
 
     if not minion_nifo: 
-        raise tornado.gen.Return({"success" : False, "message" : "No minion_info, something probably went wrong with trying to start the instance. ", "data" : None})
+        raise tornado.gen.Return({"success" : False, "message" : "No minion_info, something probably went wrong with trying to start the server. ", "data" : None})
 
     elif data.get('role'):
 
@@ -254,11 +254,11 @@ def launch_app(deploy_handler, handler):
         state = [x for x in states if x['name'] == data['role']][0]
           
         print ('Minion info is : ', minion_info['role'])
-        panel = {'panel_name' : handler.data['instance_name'], 'role' : minion_info['role']}
+        panel = {'panel_name' : handler.data['server_name'], 'role' : minion_info['role']}
         panel.update(state['panels'])
         yield handler.config.deploy_handler.store_panel(panel)
 
-    required_host['instances'].append(minion_info)
+    required_host['servers'].append(minion_info)
     yield store.insert('hosts', hosts)
     raise tornado.gen.Return(result)
 

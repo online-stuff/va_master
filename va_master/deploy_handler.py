@@ -172,14 +172,14 @@ class DeployHandler(object):
         except: 
             panels = {'admin' : [], 'user' : []}
         print ('States data is : ', states_data)
-        get_panel_instances = lambda i, user_type: [x for x in panels.get(user_type) if x['name'] == i] or [{'instances' : []}]
+        get_panel_servers = lambda i, user_type: [x for x in panels.get(user_type) if x['name'] == i] or [{'servers' : []}]
 
-        print ('Panel instances for backup is : ', get_panel_instances('backup', 'admin'))
+        print ('Panel servers for backup is : ', get_panel_servers('backup', 'admin'))
         user_panels, admin_panels = ([
             {
                 'name' : x['name'], 
                 'icon' : x['icon'], 
-                'instances' : get_panel_instances(x['name'], user_type)[0]['instances'], 
+                'servers' : get_panel_servers(x['name'], user_type)[0]['servers'], 
                 'panels' : x.get('panels', {'admin' : [], 'user' : []}[user_type])
             } for x in states_data] for user_type in ['user', 'admin'])
         panels = {'user' : user_panels, 'admin' : admin_panels}
@@ -230,14 +230,14 @@ class DeployHandler(object):
 #        print ('Panels are : ', panels)
         
         role_user_panels = filter(lambda x: x['name'] == panel['role'], panels['user'])[0]
-#        if panel['panel_name'] in role_user_panels['instances']: raise tornado.gen.Return()
+#        if panel['panel_name'] in role_user_panels['servers']: raise tornado.gen.Return()
         print 'Role user panels are : ', role_user_panels
-        role_user_panels['instances'].append(panel['panel_name'])
+        role_user_panels['servers'].append(panel['panel_name'])
         print 'They are now : ', role_user_panels
 
         role_admin_panels = filter(lambda x: x['name'] == panel['role'], panels['admin'])[0]
         print 'ROle admin panels are : ', role_admin_panels
-        role_admin_panels['instances'].append(panel['panel_name'])
+        role_admin_panels['servers'].append(panel['panel_name'])
         print 'They are now : ', role_admin_panels
 
 #            panels['user'][panel['role']] = role_user_panels
@@ -260,7 +260,7 @@ class DeployHandler(object):
         try: 
             hosts = yield self.datastore.get('hosts')
             host = [h for h in hosts if h['hostname'] == host][0]
-            host['instances'].append(app)
+            host['servers'].append(app)
             yield self.datastore.insert('hosts', host)
         except: 
             import traceback

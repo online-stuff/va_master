@@ -135,7 +135,7 @@ def receive_trigger(deploy_handler, hostname, service = '', level = '', extra_kw
         conditions_satisfied = True
         print ('Working with trigger: ', trigger)
         for condition in trigger['conditions']:
-            condition_kwargs = {'host' : host, 'instance_name' : instance_name}
+            condition_kwargs = {'host' : host, 'server_name' : server_name}
             for kwarg in trigger['extra_kwargs']: 
                 condition_kwargs[kwarg] = extra_kwargs.get(kwarg)
             result = yield getattr(driver, condition)(**condition_kwargs)
@@ -145,7 +145,7 @@ def receive_trigger(deploy_handler, hostname, service = '', level = '', extra_kw
                 break
         if conditions_satisfied:
             for action in trigger['actions']:
-                action_kwargs = {'instance_name' : instance_name, 'host' : host}
+                action_kwargs = {'server_name' : server_name, 'host' : host}
                 for kwarg in trigger['extra_kwargs'] : 
                     action_kwargs[kwarg] = extra_kwargs.get(kwarg)
                 try:

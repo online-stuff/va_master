@@ -18,11 +18,11 @@ def get_paths():
         },
         'post' : {
             'hosts' : {'function' : list_hosts, 'args' : []},
-            'hosts/info' : {'function' : get_host_info, 'args' : ['required_hosts', 'get_billing', 'get_instances']},
+            'hosts/info' : {'function' : get_host_info, 'args' : ['required_hosts', 'get_billing', 'get_servers']},
             'hosts/new/validate_fields' : {'function' : validate_newhost_fields, 'args' : ['handler']},
             'hosts/delete' : {'function' : delete_host, 'args' : ['hostname']},
             'hosts/add_host' : {'function' : add_host, 'args' : ['field_values', 'driver_name']},
-            'hosts/generic_add_instance' : {'function' : add_generic_instance, 'args' : ['hostname', 'instance']},
+            'hosts/generic_add_server' : {'function' : add_generic_server, 'args' : ['hostname', 'server']},
         }
     }
     return paths
@@ -30,7 +30,7 @@ def get_paths():
 
 @tornado.gen.coroutine
 def add_host(deploy_handler, field_values, driver_name):
-    host_field_values = {"username": "user", "sizes": [], "images": [], "hostname": "sample_host", "instances": [], "driver_name": "generic_driver", "defaults": {}, "sec_groups": [], "password": "pass", "ip_address": "127.0.0.1", "networks": []}
+    host_field_values = {"username": "user", "sizes": [], "images": [], "hostname": "sample_host", "servers": [], "driver_name": "generic_driver", "defaults": {}, "sec_groups": [], "password": "pass", "ip_address": "127.0.0.1", "networks": []}
     host_field_values.update(field_values)
 
     driver = yield deploy_handler.get_driver_by_id(driver_name)
@@ -38,20 +38,20 @@ def add_host(deploy_handler, field_values, driver_name):
 
     yield deploy_handler.create_host(driver)
     if host_field_values['driver_name'] == 'generic_driver' : 
-        deploy_handler.datastore.insert(host_field_values['hostname'], {"instances" : []})
+        deploy_handler.datastore.insert(host_field_values['hostname'], {"servers" : []})
 
 
     raise tornado.gen.Return(True)
 
 
 @tornado.gen.coroutine
-def add_generic_instance(deploy_handler, hostname, instance):
-    base_instance = {"hostname" : "", "ip" : "", "local_gb" : 0, "memory_mb" : 0, "status" : "n/a" }
-    base_instance.update(instance)
+def add_generic_server(deploy_handler, hostname, server):
+    base_server = {"hostname" : "", "ip" : "", "local_gb" : 0, "memory_mb" : 0, "status" : "n/a" }
+    base_server.update(server)
 
-    instances = yield deploy_handler.datastore.get(hostname)
-    instances['instances'].append(base_instance)
-    yield deploy_handler.datastore.insert(hostname, instances)
+    servers = yield deploy_handler.datastore.get(hostname)
+    servers['servers'].append(base_server)
+    yield deploy_handler.datastore.insert(hostname, servers)
 
 @tornado.gen.coroutine
 def get_host_billing(deploy_handler):
@@ -69,14 +69,14 @@ def get_hosts_triggers(deploy_handler, hostname):
 def list_hosts(deploy_handler):
     hosts = yield deploy_handler.list_hosts()
     try:
-        hidden_instances = yield deploy_handler.datastore.get('hidden_instances')
+        hidden_servers = yield deploy_handler.datastore.get('hidden_servers')
     except: 
-        hidden_instances = []
+        hidden_servers = []
     for host in hosts: 
         driver = yield deploy_handler.get_driver_by_id(host['driver_name'])
-        host['instances'] = yield driver.get_instances(host)
-        if hidden_instances: 
-            host['instances'] = [x for x in host['instances'] if x['hostname'] not in hidden_instances]
+        host['servers'] = yield driver.get_servers(host)
+        if hidden_servers: 
+            host['servers'] = [x for x in host['servers'] if x['hostname'] not in hidden_servers]
 
     raise tornado.gen.Return({'hosts': hosts})
 
@@ -148,12 +148,12 @@ def validate_newhost_fields(deploy_handler, handler):
 
 
 @tornado.gen.coroutine
-def get_host_info(deploy_handler, get_billing = True, get_instances = True, required_hosts = []):
+def get_host_info(deploy_handler, get_billing = True, get_servers = True, required_hosts = []):
     store = deploy_handler.datastore
     try:
-        hidden_instances = yield store.get('hidden_instances')
+        hidden_servers = yield store.get('hidden_servers')
     except: 
-        hidden_instances = []
+        hidden_servers = []
 
     hosts = yield deploy_handler.list_hosts()
 
@@ -161,12 +161,12 @@ def get_host_info(deploy_handler, get_billing = True, get_instances = True, requ
         hosts = [host for host in hosts if host['hostname'] in required_hosts]
 
     host_drivers = yield [deploy_handler.get_driver_by_id(x['driver_name']) for x in hosts]
-    hosts_data = [x[0].get_host_data(host = x[1], get_instances = get_instances, get_billing = get_billing) for x in zip(host_drivers, hosts)]
+    hosts_data = [x[0].get_host_data(host = x[1], get_servers = get_servers, get_billing = get_billing) for x in zip(host_drivers, hosts)]
     hosts_info = yield hosts_data
     
-    if hidden_instances: 
+    if hidden_servers: 
         for host in hosts_info:
-            host['instances'] = [x for x in host['instances'] if x['hostname'] not in hidden_instances]
+            host['servers'] = [x for x in host['servers'] if x['hostname'] not in hidden_servers]
 
     for info in zip(hosts_info, hosts): 
         info[0]['hostname'] = info[1]['hostname']
