@@ -68,10 +68,12 @@ def get_providers_triggers(deploy_handler, provider_name):
 @tornado.gen.coroutine
 def list_providers(deploy_handler):
     providers = yield deploy_handler.list_providers()
+
     try:
         hidden_servers = yield deploy_handler.datastore.get('hidden_servers')
     except: 
         hidden_servers = []
+
     for provider in providers: 
         driver = yield deploy_handler.get_driver_by_id(provider['driver_name'])
         provider['servers'] = yield driver.get_servers(provider)

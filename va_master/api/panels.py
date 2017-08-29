@@ -47,51 +47,33 @@ def list_panels(deploy_handler, handler):
 
 @tornado.gen.coroutine
 def panel_action_execute(deploy_handler, server_name, action, args = [], dash_user = '', kwargs = {}, module = None, timeout = 30):
-    try:
-        print ('dash user is : ', dash_user)
-        user_funcs = yield deploy_handler.get_user_salt_functions(dash_user['username'])
-        if action not in user_funcs and dash_user['type'] != 'admin':
-            print ('Function not supported')
-            #TODO actually not allow user to do anything. This is just for testing atm. 
-            
-
-        print ('INstance name is : ', server_name)
-        server_info = yield apps.get_app_info(deploy_handler, server_name)
-        state = server_info['role']
-
-        states = yield deploy_handler.get_states()
-        state = [x for x in states if x['name'] == state] or [{'module' : 'openvpn'}]
-        state = state[0]
+    user_funcs = yield deploy_handler.get_user_salt_functions(dash_user['username'])
+    if action not in user_funcs and dash_user['type'] != 'admin':
+        print ('Function not supported')
+        #TODO actually not allow user to do anything. This is just for testing atm. 
         
-        if not module: 
-            module = state['module']
-
-        cl = salt.client.LocalClient()
-        print ('Calling salt module ', module + '.' + action, ' on ', server_name, ' with args : ', args, ' and kwargs : ', kwargs)
-        result = cl.cmd(server_name, module + '.' + action , args, kwargs = kwargs, timeout = timeout)
-        result = result.get(server_name)
-    except: 
-        import traceback 
-        traceback.print_exc()
-    raise tornado.gen.Return(result)
-
-@tornado.gen.coroutine
-def salt_serve_file(deploy_handler, server_name, action, args = [], kwargs = {}, module = None):
 
     server_info = yield apps.get_app_info(deploy_handler, server_name)
     state = server_info['role']
+
     states = yield deploy_handler.get_states()
     state = [x for x in states if x['name'] == state] or [{'module' : 'openvpn'}]
     state = state[0]
+    
     if not module: 
         module = state['module']
 
-    action = module + '.' + action
-
     cl = salt.client.LocalClient()
-    print ('Calilng serve on ', server, ' with action ', action, ' with args : ', args, ' and kwargs : ', kwargs)
-    result = cl.cmd(server, action, args, kwargs = kwargs)
-    result = result['va-backup']
+    print ('Calling salt module ', module + '.' + action, ' on ', server_name, ' with args : ', args, ' and kwargs : ', kwargs)
+    result = cl.cmd(server_name, module + '.' + action , args, kwargs = kwargs, timeout = timeout)
+    result = result.get(server_name)
+
+    raise tornado.gen.Return(result)
+
+@tornado.gen.coroutine
+def salt_serve_file(deploy_handler, server_name, action, args = [], dash_user = '', kwargs = {}, module = None):
+
+    result = yield panel_action_execute(deploy_handler, server_name, action, args, kwargs, dash_user, module)
     print ('Result is : ', result)
     path_to_file = '/tmp/some_salt_file'
 
@@ -141,7 +123,6 @@ def get_panel_for_user(deploy_handler, handler, panel, server_name, dash_user, a
     user_panels = yield list_panels(deploy_handler, handler)
     server_info = yield apps.get_app_info(deploy_handler, server_name)
     state = server_info['role']
-    print ('args are : ', args, ' and from handler: ', handler.data.get('args'))
 
     state = filter(lambda x: x['name'] == state, user_panels)[0]
     if server_name in state['servers']:
@@ -149,15 +130,8 @@ def get_panel_for_user(deploy_handler, handler, panel, server_name, dash_user, a
         if type(args) != list and args: 
             args = [args]
         args = [panel] + args
-        try: 
-            print ('Getting panel. ')
-            panel  = yield panel_action_execute(deploy_handler, server_name, action, args, dash_user)
-            print ('Panel is : ', panel)
-        except: 
-            import traceback
-            traceback.print_exc()
+        panel  = yield panel_action_execute(deploy_handler, server_name, action, args, dash_user)
 
-#        panel = panel[server_name]
         raise tornado.gen.Return(panel)
     else: 
         raise tornado.gen.Return(False)

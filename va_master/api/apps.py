@@ -52,19 +52,27 @@ def add_app(deploy_handler, provider, server_name):
 
 @tornado.gen.coroutine
 def get_openvpn_users(deploy_handler):
-    cl = Caller()
-    openvpn_users = cl.cmd('openvpn.list_users')
+    salt_caller = Caller()
+    openvpn_users = salt_caller.cmd('openvpn.list_users')
+
+    #openvpn_users returns {"revoked" : [list, of, revoked, users], "active" : [list, of, active, users], "status" : {"client_list" : [], "routing_table" : []}}
+    #We want to convert it to {"revoked" : [], "status" : [client, list], active" : [{"name" : "", "check" : False, "connected" : True/False}]}
 
     users = {'revoked' : openvpn_users['revoked']}
-    users['active'] = [{'name' : x, 'check' : False, 'connected' : x in [i['Common Name'] for i in openvpn_users['status']['client_list']]} for x in openvpn_users['active']]
+    users_names = [i['Common Name'] for i in openvpn_users['status']['client_list']]
+    users['active'] = [{'name' : x, 'check' : False, 'connected' : x in users_names} for x in openvpn_users['active']]
     users['status'] = openvpn_users['status']['client_list'] or []
 
     #Virtual address is missing from client_list, we have to find it in the routing table and update it. 
-    [x.update({'Real Address' : [y.get('Virtual Address') for y in openvpn_users['status']['routing_table'] if y['Real Address'] == x['Real Address']][0]}) for x in openvpn_users['status']['client_list']]
+    for x in openvpn_users['status']['client_list']:
+        x.update({
+            'Real Address' : [y.get('Virtual Address') for y in openvpn_users['status']['routing_table'] if y['Real Address'] == x['Real Address']][0]
+        })
        
     #Make bytes human readable
     for k in ['Bytes Received', 'Bytes Sent']:
-        [x.update({k : bytes_to_readable(x.get(k))}) for x in openvpn_users['status']['client_list']]
+        for x in openvpn_users['status']['client_list']
+        x[k] = bytes_to_readable(x[k])
 
     raise tornado.gen.Return(users)
 
@@ -107,48 +115,33 @@ def download_vpn_cert(deploy_handler, username, handler):
 
 @tornado.gen.coroutine
 def perform_server_action(deploy_handler, provider_name, action, server_name): 
-    try: 
-        store = deploy_handler.datastore
-        providers = yield store.get('providers')
-
-        provider = [x for x in providers if x['provider_name'] == provider_name][0]
-        driver_name = provider['driver_name']
-        driver = yield deploy_handler.get_driver_by_id(driver_name)
-        success = yield driver.server_action(provider, server_name, action)
-    except: 
-        import traceback
-        traceback.print_exc()
+    provider, driver = yield deploy_handler.get_provider_and_driver(provider_name) 
+    success = yield driver.server_action(provider, server_name, action)
     raise tornado.gen.Return(success)
 
 
 @tornado.gen.coroutine
 def manage_states(deploy_handler, name, action = 'append'):
-    try:
-        current_states = yield deploy_handler.get_states()
+    current_states = yield deploy_handler.get_states()
 
-        #TODO delete from /srv/salt
-        getattr(current_states, action)(name)
-        store_action = {
-            'append' : deploy_handler.datastore.insert, 
-            'delete' : deploy_handler.datastore.delete, 
-        }[action]
+    #TODO delete from /srv/salt
+    getattr(current_states, action)(name)
+    store_action = {
+        'append' : deploy_handler.datastore.insert, 
+        'delete' : deploy_handler.datastore.delete, 
+    }[action]
 
-        yield store_action('states', current_states)
-        yield deploy_handler.generate_top_sls()
-    except: 
-        import traceback
-        traceback.print_exc()
+    yield store_action('states', current_states)
+    yield deploy_handler.generate_top_sls()
 
 @tornado.gen.coroutine
 def get_states(deploy_handler):
     states_data = yield deploy_handler.get_states()
     raise tornado.gen.Return(states_data)
 
-
 @tornado.gen.coroutine
 def reset_states(deploy_handler):
     yield handler.config.deploy_handler.reset_states()
-
 
 @tornado.gen.coroutine
 def create_new_state(deploy_handler, file_contents, body, filename):
@@ -189,7 +182,11 @@ def create_new_state(deploy_handler, file_contents, body, filename):
 
 @tornado.gen.coroutine
 def validate_app_fields(deploy_handler, handler):
+    #Temporary
     driver = yield deploy_handler.get_driver_by_id('generic_driver')
+    #In the end it should probably be like this
+    #provider, driver = yield deploy_handler.get_provider_and_driver(handler.data['provider_name'])
+
     kwargs = handler.data
     step = handler.data.pop('step')
     handler = handler.data.pop('handler')
@@ -200,7 +197,6 @@ def validate_app_fields(deploy_handler, handler):
 
     # If the state has extra fields, then there are 3 steps, otherwise just 2. 
     step_max = 2
-    print ('Fields state is : ', fields['state'])
     if fields['state'].get('fields'): step_max = 3
 
     if step == step_max: 
@@ -217,7 +213,32 @@ def get_app_info(deploy_handler, server_name):
     server_info = server_info.get(server_name)
     raise tornado.gen.Return(server_info)
 
+
+def write_pillar(data)
+    pillar_path = '/srv/pillar/%s-credentials.sls' % (data.get('server_name'))
+    with open(pillar_path, 'w') as f: 
+        pillar_str = ''
+
+        #We need a pillar that looks like this: 
+        #field1: some_value
+        #field2: some_other_value
+
+        for field in data.get('extra_fields'): 
+            pillar_str += '%s: %s\n' % (field, data['extra_fields'][field])
+        f.write(pillar_str)
+    salt_manage_pillar.add_server(data.get('server_name'), data.get('role', ''))
+
         
+def add_panel_for_minion(data, minion_info):
+    init_vals = yield store.get('init_vals')
+    states = init_vals['states']
+    state = [x for x in states if x['name'] == data['role']][0]
+      
+    print ('Minion info is : ', minion_info['role'])
+    panel = {'panel_name' : data['server_name'], 'role' : minion_info['role']}
+    panel.update(state['panels'])
+    yield handler.config.deploy_handler.store_panel(panel)
+
 ##@auth_only
 @tornado.gen.coroutine
 def launch_app(deploy_handler, handler):
@@ -229,34 +250,22 @@ def launch_app(deploy_handler, handler):
     required_provider = [provider for provider in providers if provider['provider_name'] == data['provider_name']][0]
 
     driver = yield deploy_handler.get_driver_by_id(required_provider['driver_name'])
-    if data.get('extra_fields', {}) : 
-        pillar_path = '/srv/pillar/%s-credentials.sls' % (data.get('server_name'))
-        with open(pillar_path, 'w') as f: 
-            pillar_str = ''
-            for field in data.get('extra_fields'): 
-                pillar_str += '%s: %s\n' % (field, data['extra_fields'][field])
-            f.write(pillar_str)
-        salt_manage_pillar.add_server(data.get('server_name'), data.get('role', ''))
 
+    if data.get('extra_fields', {}) : 
+        write_pillar(data)
+
+    #temporary - testing with app steps    
     raise tornado.gen.Return(True)
 
     result = yield driver.create_minion(required_provider, data)
 
     minion_info = yield get_app_info(deploy_handler, handler.data['server_name'])
 
-    if not minion_nifo: 
+    if not minion_info: 
         raise tornado.gen.Return({"success" : False, "message" : "No minion_info, something probably went wrong with trying to start the server. ", "data" : None})
 
     elif data.get('role'):
-
-        init_vals = yield store.get('init_vals')
-        states = init_vals['states']
-        state = [x for x in states if x['name'] == data['role']][0]
-          
-        print ('Minion info is : ', minion_info['role'])
-        panel = {'panel_name' : handler.data['server_name'], 'role' : minion_info['role']}
-        panel.update(state['panels'])
-        yield handler.config.deploy_handler.store_panel(panel)
+        add_panel_for_minion(data, minion_info)
 
     required_provider['servers'].append(minion_info)
     yield store.insert('providers', providers)
