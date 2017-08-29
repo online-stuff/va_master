@@ -119,9 +119,9 @@ class DriverBase(object):
         pass
 
     @tornado.gen.coroutine
-    def new_host_step_descriptions(self):
+    def new_provider_step_descriptions(self):
         """
-            Shows these descriptions when creating a new host. Does not need to be overwritten. 
+            Shows these descriptions when creating a new provider. Does not need to be overwritten. 
         """
         raise tornado.gen.Return([
             {'name': 'Host info'},
@@ -138,7 +138,7 @@ class DriverBase(object):
             Arguments: 
             skip_provider -- If set to True, it will not create the provider configuration. This happens when creating a server. 
             skip_profile -- If set to True, it will not create the profile configuration. 
-            base_profile -- If set to True, it will not replace the profile name for the configuration. This happens when creating a new host to create a base profile template. This template is then read when creating a new server, and the profile name is set. 
+            base_profile -- If set to True, it will not replace the profile name for the configuration. This happens when creating a new provider to create a base profile template. This template is then read when creating a new server, and the profile name is set. 
         """
 
         if not (self.profile_template or self.provider_template): 
@@ -173,12 +173,12 @@ class DriverBase(object):
     @tornado.gen.coroutine
     def get_steps(self):
         """ 
-            These are the arguments entered when creating a new host, split into separate steps. Does not need to be overwritten, but probably should be in order to add other types of fields. You can just call this in your implementation and add fields to whichever step you want. 
+            These are the arguments entered when creating a new provider, split into separate steps. Does not need to be overwritten, but probably should be in order to add other types of fields. You can just call this in your implementation and add fields to whichever step you want. 
         """
 
-        host_info = Step('Host info')
-        host_info.add_fields([
-            ('hostname', 'Name for the host', 'str'),
+        provider_info = Step('Host info')
+        provider_info.add_fields([
+            ('provider_name', 'Name for the host', 'str'),
             ('username', 'Username', 'str'),
             ('password', 'Password', 'str'),
         ])
@@ -198,7 +198,7 @@ class DriverBase(object):
             ('size', 'Size', 'options'),
         ])
 
-        self.steps = [host_info, net_sec, imagesize]
+        self.steps = [provider_info, net_sec, imagesize]
         raise tornado.gen.Return(self.steps)
 
     @tornado.gen.coroutine
@@ -242,7 +242,7 @@ class DriverBase(object):
         raise tornado.gen.Return(sizes)
 
     @tornado.gen.coroutine
-    def server_action(self, host, server_name, action):
+    def server_action(self, provider, server_name, action):
         """ 
             Performs an action for the server. This function is a stub of how such a function _could_ look, but it depends on implementation. This _needs_ to be overwritten. 
         """
@@ -260,15 +260,15 @@ class DriverBase(object):
 
 
     @tornado.gen.coroutine
-    def get_host_status(self, host):
+    def get_provider_status(self, provider):
         """ 
-            Tries to estabilish a connection with the host. You should overwrite this method so as to properly return a negative value if the host is inaccessible. 
+            Tries to estabilish a connection with the provider. You should overwrite this method so as to properly return a negative value if the provider is inaccessible. 
         """
         raise tornado.gen.Return({'success' : True, 'message': ''})
 
 
     @tornado.gen.coroutine
-    def get_servers(self, host):
+    def get_servers(self, provider):
         """
             Gets a list of servers in the following format. The keys are fairly descriptive. used_ram is in mb, used_disk is in GB
         """
@@ -277,7 +277,7 @@ class DriverBase(object):
             'ip' : 'n/a',
             'size' : '',
             'status' : 'SHUTOFF',
-            'host' : '',
+            'provider' : '',
             'used_ram' : 0,
             'used_cpu': 0,
             'used_disk' : 0,
@@ -287,21 +287,21 @@ class DriverBase(object):
        
 
     @tornado.gen.coroutine
-    def get_host_data(self, host, get_servers = True, get_billing = True):
+    def get_provider_data(self, provider, get_servers = True, get_billing = True):
         """ 
-            Returns information about usage for the host and servers. The format of the data is in this function. This should be overwritten so you can see this data on the overview.
+            Returns information about usage for the provider and servers. The format of the data is in this function. This should be overwritten so you can see this data on the overview.
          """
         try: 
-            host_data = {
+            provider_data = {
                 'servers' : [], 
-                'host_usage' : {},
+                'provider_usage' : {},
             }
-            #Functions that connect to host here. 
+            #Functions that connect to provider here. 
         except Exception as e: 
-            host_data['status'] = {'success' : False, 'message' : 'Could not get data. ' + e}
-            raise tornado.gen.Return(host_data)
+            provider_data['status'] = {'success' : False, 'message' : 'Could not get data. ' + e}
+            raise tornado.gen.Return(provider_data)
 
-        host_usage =  {
+        provider_usage =  {
             'max_cpus' : 0, 
             'used_cpus' : 0, 
             'max_ram' : 0,  # in MB
@@ -312,22 +312,22 @@ class DriverBase(object):
             'max_servers' : 0, 
             'used_servers' : 0,
         }
-        host_usage['free_cpus'] = host_usage['max_cpus'] - host_usage['used_cpus']
-        host_usage['free_ram'] = host_usage['max_ram'] - host_usage['used_ram']
+        provider_usage['free_cpus'] = provider_usage['max_cpus'] - provider_usage['used_cpus']
+        provider_usage['free_ram'] = provider_usage['max_ram'] - provider_usage['used_ram']
 
-        servers = yield self.get_servers(self, host)
+        servers = yield self.get_servers(self, provider)
 
-        host_info = {
+        provider_info = {
             'servers' : servers,
-            'host_usage' : host_usage,
+            'provider_usage' : provider_usage,
             'status' : {'success' : True, 'message': ''}
         }
-        raise tornado.gen.Return(host_data)
+        raise tornado.gen.Return(provider_data)
 
     @tornado.gen.coroutine
     def validate_field_values(self, step_index, field_values, options = {}):
         """ 
-            Validates and saves field values entered when adding a new host. This does not need to be overwritten, but you may want to do so. 
+            Validates and saves field values entered when adding a new provider. This does not need to be overwritten, but you may want to do so. 
 
             Arguments: 
                 step_index -- The current step that is being evaluated. The first (or 0th) step is after the driver has been chosen. 
@@ -395,12 +395,12 @@ class DriverBase(object):
 
 
     @tornado.gen.coroutine
-    def create_minion(self, host, data):
+    def create_minion(self, provider, data):
         """
-            Creates a minion from the host data received from the datastore, and from data received from the panel. 
+            Creates a minion from the provider data received from the datastore, and from data received from the panel. 
             
             Arguments: 
-            host - The datastore information about the host. It's important that it has the profile_conf_dir value, which is the base profile configuration. 
+            provider - The datastore information about the provider. It's important that it has the profile_conf_dir value, which is the base profile configuration. 
             data - Data about the image. It's a dictionary with the following information: 
                 'role': The role with which the server can be recognized, for instance va-directory
                 'image': The image used to create the server, for instance VAInstance
@@ -410,7 +410,7 @@ class DriverBase(object):
 
             This method will work with proper configurations and data, but only for salt-supported technology. You _need_ to overwrite this method if the technology of your driver does not work with salt. 
         """
-        profile_dir = host['profile_conf_dir']
+        profile_dir = provider['profile_conf_dir']
         profile_template = ''
 
         with open(profile_dir) as f: 

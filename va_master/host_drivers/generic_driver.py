@@ -37,11 +37,11 @@ class GenericDriver(base.DriverBase):
 
     @tornado.gen.coroutine
     def friendly_name(self):
-        raise tornado.gen.Return('Generic host')
+        raise tornado.gen.Return('Generic provider')
 
       
     @tornado.gen.coroutine
-    def get_host_status(self, host = ''): 
+    def get_provider_status(self, provider = ''): 
         raise tornado.gen.Return({'success' : True, 'message': ''})
 
     @tornado.gen.coroutine
@@ -77,16 +77,16 @@ class GenericDriver(base.DriverBase):
         raise tornado.gen.Return(sizes)
 
     @tornado.gen.coroutine
-    def remove_server(self, host, server_name):
-        host_datastore = yield self.datastore.get(host['hostname'])
-        servers = host_datastore.get('servers')
+    def remove_server(self, provider, server_name):
+        provider_datastore = yield self.datastore.get(provider['provider_name'])
+        servers = provider_datastore.get('servers')
 
         servers = [x for x in servers if x['hostname'] != server_name]
-        host_datastore['servers'] = servers
-        yield self.datastore.insert(host['hostname'], host_datastore)
+        provider_datastore['servers'] = servers
+        yield self.datastore.insert(provider['provider_name'], provider_datastore)
 
     @tornado.gen.coroutine
-    def server_action(self, host, server_name, action):
+    def server_action(self, provider, server_name, action):
         
         server_action = {
             'delete' : self.remove_server, 
@@ -97,22 +97,22 @@ class GenericDriver(base.DriverBase):
         if action not in server_action: 
             raise tornado.gen.Return({'success' : False, 'message' : 'Action not supported : ' +  action})
 
-        success = yield server_action[action](host, server_name)
+        success = yield server_action[action](provider, server_name)
         raise tornado.gen.Return({'success' : True, 'message' : ''})
 
 
     @tornado.gen.coroutine
-    def get_servers(self, host):
-        servers = yield self.datastore.get(host['hostname'])
+    def get_servers(self, provider):
+        servers = yield self.datastore.get(provider['provider_name'])
         servers = servers['servers']
         for i in servers: 
-            i['host'] = host['hostname']
+            i['provider'] = provider['provider_name']
         raise tornado.gen.Return(servers)
         
 
 
     @tornado.gen.coroutine
-    def get_host_data(self, host, get_servers = True, get_billing = True):
+    def get_provider_data(self, provider, get_servers = True, get_billing = True):
         
         try: 
             data = {
@@ -122,17 +122,17 @@ class GenericDriver(base.DriverBase):
                     ]
                 }
             }
-            #Functions that connect to host here. 
+            #Functions that connect to provider here. 
         except Exception as e: 
-            host_data = {
+            provider_data = {
                 'servers' : [], 
                 'limits' : {},
-                'host_usage' : {},
-                'status' : {'success' : False, 'message' : 'Could not connect to the libvirt host. ' + e}
+                'provider_usage' : {},
+                'status' : {'success' : False, 'message' : 'Could not connect to the libvirt provider. ' + e}
             }
-            raise tornado.gen.Return(host_data)
+            raise tornado.gen.Return(provider_data)
            
-        host_usage = {
+        provider_usage = {
             'total_disk_usage_gb' : 0, 
             'current_disk_usage_mb' : 0, 
             'cpus_usage' :0, 
@@ -140,7 +140,7 @@ class GenericDriver(base.DriverBase):
 
 #        servers = [
 #            {
-#                'hostname' : 'name', 
+#                'providername' : 'name', 
 #                'ipv4' : 'ipv4', 
 #                'local_gb' : 0, 
 #                'memory_mb' : 0, 
@@ -148,15 +148,15 @@ class GenericDriver(base.DriverBase):
 #            } for x in data['servers']
 #        ]
 
-        servers = yield self.get_servers(host)
+        servers = yield self.get_servers(provider)
 
-        host_data = {
+        provider_data = {
             'servers' : servers, 
             'limits' : {},
-            'host_usage' : host_usage, 
+            'provider_usage' : provider_usage, 
             'status' : {'success' : True, 'message': ''}
         }
-        raise tornado.gen.Return(host_data)
+        raise tornado.gen.Return(provider_data)
 
 
 
@@ -165,14 +165,14 @@ class GenericDriver(base.DriverBase):
         step_result = yield super(GenericDriver, self).validate_field_values(step_index, field_values)
         if step_index == 0: 
             self.field_values.update({
-                'hostname' : field_values['hostname'], 
+                'provider_name' : field_values['provider_name'], 
                 'username' : field_values['username'], 
                 'password' : field_values['password'],
                 'ip_address' : field_values['ip_address'],
             })
 
 
-            self.datastore.insert(field_values['hostname'], {'servers' : []})
+            self.datastore.insert(field_values['provider_name'], {'servers' : []})
             raise tornado.gen.Return(StepResult(
                 errors = [], new_step_index = -1, option_choices = {}
             ))
@@ -180,18 +180,18 @@ class GenericDriver(base.DriverBase):
        
       
     @tornado.gen.coroutine
-    def create_minion(self, host, data):
-        host_datastore = yield self.datastore.get(host['hostname'])
-        servers = host_datastore.get('servers')
-        server = {"hostname" : data["server_name"], "ip" : "", "local_gb" : 0, "memory_mb" : 0, "status" : "n/a" }
+    def create_minion(self, provider, data):
+        provider_datastore = yield self.datastore.get(provider['provider_name'])
+        servers = provider_datastore.get('servers')
+        server = {"provider_name" : data["server_name"], "ip" : "", "local_gb" : 0, "memory_mb" : 0, "status" : "n/a" }
         servers.append(server)
 
-        host_datastore['servers'] = servers
-        yield self.datastore.insert(host['hostname'], host_datastore)
+        provider_datastore['servers'] = servers
+        yield self.datastore.insert(provider['provider_name'], provider_datastore)
 
         raise tornado.gen.Return(True)  
         try:
-            yield super(GenericDriver, self).create_minion(host, data)
+            yield super(GenericDriver, self).create_minion(provider, data)
         except: 
             import traceback
 
