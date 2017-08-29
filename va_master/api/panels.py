@@ -10,11 +10,11 @@ def get_paths():
     paths = {
         'get' : {
             'panels' : {'function' : get_panels, 'args' : ['handler']}, 
-            'panels/get_panel' : {'function' : get_panel_for_user, 'args' : ['server_name', 'panel', 'host', 'handler', 'args', 'dash_user']},
+            'panels/get_panel' : {'function' : get_panel_for_user, 'args' : ['server_name', 'panel', 'provider', 'handler', 'args', 'dash_user']},
             'panels/ts_data' : {'function' : get_ts_data, 'args' : []},  
         },
         'post' : {
-            'panels/get_panel' : {'function' : get_panel_for_user, 'args' : ['server_name', 'panel', 'host', 'handler', 'args', 'dash_user']},
+            'panels/get_panel' : {'function' : get_panel_for_user, 'args' : ['server_name', 'panel', 'provider', 'handler', 'args', 'dash_user']},
             'panels/reset_panels': {'function' : reset_panels, 'args' : []}, #JUST FOR TESTING
             'panels/new_panel' : {'function' : new_panel, 'args' : ['panel_name', 'role']},
             'panels/action' : {'function' : panel_action, 'args' : ['server_name', 'action', 'args', 'kwargs', 'module', 'dash_user']}, #must have server_name and action in data, 'args' : []}, ex: panels/action server_name=nino_dir action=list_users
@@ -136,7 +136,7 @@ def get_panels(deploy_handler, handler):
     raise tornado.gen.Return(panels)
 
 @tornado.gen.coroutine
-def get_panel_for_user(deploy_handler, handler, panel, server_name, dash_user, args = [], host = None):
+def get_panel_for_user(deploy_handler, handler, panel, server_name, dash_user, args = [], provider = None):
 
     user_panels = yield list_panels(deploy_handler, handler)
     server_info = yield apps.get_app_info(deploy_handler, server_name)

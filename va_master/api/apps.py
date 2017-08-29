@@ -15,7 +15,7 @@ def get_paths():
         'get' : {
             'apps/vpn_users' : {'function' : get_openvpn_users, 'args' : []},
             'apps/vpn_status' : {'function' : get_openvpn_status, 'args' : []},
-            'apps/add_app' : {'function' : add_app, 'args' : ['host', 'server_name']},
+            'apps/add_app' : {'function' : add_app, 'args' : ['provider', 'server_name']},
             'apps/get_actions' : {'function' : get_user_actions, 'args' : []},
             'apps/get_user_salt_functions' : {'function' : get_user_salt_functions, 'args' : ['dash_user']},
             'apps/get_all_salt_functions' : {'function' : get_all_salt_functions, 'args' : []},
@@ -28,7 +28,7 @@ def get_paths():
             'state/add' : {'function' : create_new_state,'args' : ['file', 'body', 'filename']},
             'apps/new/validate_fields' : {'function' : validate_app_fields, 'args' : ['handler']},
             'apps' : {'function' : launch_app, 'args' : ['handler']},
-            'apps/action' : {'function' : perform_server_action, 'args' : ['hostname', 'action', 'server_name']},
+            'apps/action' : {'function' : perform_server_action, 'args' : ['provider_name', 'action', 'server_name']},
             'apps/add_vpn_user': {'function' : add_openvpn_user, 'args' : ['username']},
             'apps/revoke_vpn_user': {'function' : revoke_openvpn_user, 'args' : ['username']},
             'apps/list_user_logins': {'function' : list_user_logins, 'args' : ['username']},
@@ -46,9 +46,9 @@ def bytes_to_readable(num, suffix='B'):
     return "%.1f%s%s" % (num, 'Yi', suffix)
 
 @tornado.gen.coroutine
-def add_app(deploy_handler, host, server_name):
+def add_app(deploy_handler, provider, server_name):
     app = yield get_app_info(deploy_handler, server_name)
-    yield handler.config.deploy_handler.store_app(app, host)
+    yield handler.config.deploy_handler.store_app(app, provider)
 
 @tornado.gen.coroutine
 def get_openvpn_users(deploy_handler):
@@ -106,15 +106,15 @@ def download_vpn_cert(deploy_handler, username, handler):
 
 
 @tornado.gen.coroutine
-def perform_server_action(deploy_handler, hostname, action, server_name): 
+def perform_server_action(deploy_handler, provider_name, action, server_name): 
     try: 
         store = deploy_handler.datastore
-        hosts = yield store.get('hosts')
+        providers = yield store.get('providers')
 
-        host = [x for x in hosts if x['hostname'] == hostname][0]
-        driver_name = host['driver_name']
+        provider = [x for x in providers if x['provider_name'] == provider_name][0]
+        driver_name = provider['driver_name']
         driver = yield deploy_handler.get_driver_by_id(driver_name)
-        success = yield driver.server_action(host, server_name, action)
+        success = yield driver.server_action(provider, server_name, action)
     except: 
         import traceback
         traceback.print_exc()
@@ -225,10 +225,10 @@ def launch_app(deploy_handler, handler):
     store = deploy_handler.datastore
     print ('Launching with : ', data)
 
-    hosts = yield store.get('hosts')
-    required_host = [host for host in hosts if host['hostname'] == data['hostname']][0]
+    providers = yield store.get('providers')
+    required_provider = [provider for provider in providers if provider['provider_name'] == data['provider_name']][0]
 
-    driver = yield deploy_handler.get_driver_by_id(required_host['driver_name'])
+    driver = yield deploy_handler.get_driver_by_id(required_provider['driver_name'])
     if data.get('extra_fields', {}) : 
         pillar_path = '/srv/pillar/%s-credentials.sls' % (data.get('server_name'))
         with open(pillar_path, 'w') as f: 
@@ -240,7 +240,7 @@ def launch_app(deploy_handler, handler):
 
     raise tornado.gen.Return(True)
 
-    result = yield driver.create_minion(required_host, data)
+    result = yield driver.create_minion(required_provider, data)
 
     minion_info = yield get_app_info(deploy_handler, handler.data['server_name'])
 
@@ -258,8 +258,8 @@ def launch_app(deploy_handler, handler):
         panel.update(state['panels'])
         yield handler.config.deploy_handler.store_panel(panel)
 
-    required_host['servers'].append(minion_info)
-    yield store.insert('hosts', hosts)
+    required_provider['servers'].append(minion_info)
+    yield store.insert('providers', providers)
     raise tornado.gen.Return(result)
 
 @tornado.gen.coroutine

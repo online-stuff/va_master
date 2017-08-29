@@ -219,11 +219,11 @@ class LibVirtDriver(base.DriverBase):
 
     @tornado.gen.coroutine
     def get_steps(self):
-        """ Works like the Base get_steps, but adds the host_ip and host_protocol fields. Also, there are no security groups in LibVirt, so that field is removed. """
+        """ Works like the Base get_steps, but adds the provider_ip and provider_protocol fields. Also, there are no security groups in LibVirt, so that field is removed. """
         steps = yield super(LibVirtDriver, self).get_steps()
         steps[0].add_fields([
-            ('host_ip', 'Host ip', 'str'),
-            ('host_protocol', 'Protocol; use qemu with Cert or qemu+tcp for no auth', 'options'),
+            ('provider_ip', 'Host ip', 'str'),
+            ('provider_protocol', 'Protocol; use qemu with Cert or qemu+tcp for no auth', 'options'),
         ])
         del steps[1].fields[2]
 #        self.steps = steps
@@ -262,23 +262,23 @@ class LibVirtDriver(base.DriverBase):
         raise tornado.gen.Return(self.flavours.keys())
 
     @tornado.gen.coroutine
-    def get_host_status(self, host):
-        """ Tries to open a connection to a host so as to get the status. """
+    def get_provider_status(self, provider):
+        """ Tries to open a connection to a provider so as to get the status. """
         try:
-            host_url = host['host_protocol'] + '://' + host['host_ip'] + '/system'
-            self.conn = libvirt.open(host_url)
+            provider_url = provider['provider_protocol'] + '://' + provider['provider_ip'] + '/system'
+            self.conn = libvirt.open(provider_url)
         except Exception as e:
-            raise tornado.gen.Return({'success' : False, 'message' : 'Error connecting to libvirt host. ' + e.message})
+            raise tornado.gen.Return({'success' : False, 'message' : 'Error connecting to libvirt provider. ' + e.message})
 
         raise tornado.gen.Return({'success' : True, 'message' : ''})
 
     @tornado.gen.coroutine
-    def get_servers(self, host, get_servers = True, get_billing = True):
-        """ Gets servers in the specified format so they can be used in get_host_data() """
-        host_url = host['host_protocol'] + '://' + host['host_ip'] + '/system'
+    def get_servers(self, provider, get_servers = True, get_billing = True):
+        """ Gets servers in the specified format so they can be used in get_provider_data() """
+        provider_url = provider['provider_protocol'] + '://' + provider['provider_ip'] + '/system'
 
         try:
-            conn = libvirt.open(host_url)
+            conn = libvirt.open(provider_url)
         except Exception as e:
             raise tornado.gen.Return([])
 
@@ -292,7 +292,7 @@ class LibVirtDriver(base.DriverBase):
                 'ip' : 'n/a', 
                 'size' : 'va-small', 
                 'status' : self.libvirt_states[x.info()[0]], 
-                'host' : host['hostname'],
+                'provider' : provider['provider_name'],
                 'used_ram' : x.info()[2] / 2.0**10,
                 'used_cpu': x.info()[3], 
                 'used_disk' : 'n/a',
@@ -311,24 +311,24 @@ class LibVirtDriver(base.DriverBase):
 
 
     @tornado.gen.coroutine
-    def get_host_data(self, host, get_servers = True, get_billing = True):
-        """ Gets host data as specified per the Base driver. """
-        host_url = host['host_protocol'] + '://' + host['host_ip'] + '/system'
+    def get_provider_data(self, provider, get_servers = True, get_billing = True):
+        """ Gets provider data as specified per the Base driver. """
+        provider_url = provider['provider_protocol'] + '://' + provider['provider_ip'] + '/system'
 
         try:
-            conn = libvirt.open(host_url)
+            conn = libvirt.open(provider_url)
         except Exception as e:
-            host_data = {
+            provider_data = {
                 'servers' : [],
                 'limits' : {},
-                'host_usage' : {},
-                'status' : {'success' : False, 'message' : 'Could not connect to the libvirt host. ' + e}
+                'provider_usage' : {},
+                'status' : {'success' : False, 'message' : 'Could not connect to the libvirt provider. ' + e}
             }
-            raise tornado.gen.Return(host_data)
+            raise tornado.gen.Return(provider_data)
 
 
         if get_servers: 
-            servers = yield self.get_servers(host)
+            servers = yield self.get_servers(provider)
         else: 
             servers = []
 
@@ -340,7 +340,7 @@ class LibVirtDriver(base.DriverBase):
         total_disk = sum([x.info()[2] for x in storage.listAllVolumes()])
 
         
-        host_usage =  {
+        provider_usage =  {
             'max_cpus' : conn.getMaxVcpus(None), 
             'used_cpus' : sum([x['used_cpu'] for x in servers]), 
             'max_ram' : sum([x.info()[1] for x in conn.listAllDomains()]) / 2.0**10, 
@@ -351,29 +351,29 @@ class LibVirtDriver(base.DriverBase):
             'max_servers' : 'n/a', 
             'used_servers' : len(servers),
       }
-        host_usage['free_cpus'] = host_usage['max_cpus'] - host_usage['used_cpus']
-        host_usage['free_ram'] = host_usage['max_ram'] - host_usage['used_ram']
+        provider_usage['free_cpus'] = provider_usage['max_cpus'] - provider_usage['used_cpus']
+        provider_usage['free_ram'] = provider_usage['max_ram'] - provider_usage['used_ram']
 
-        host_info = {
+        provider_info = {
             'servers' : servers,
-            'host_usage' : host_usage,
+            'provider_usage' : provider_usage,
             'status' : {'success' : True, 'message': ''}
         }
 
 
-        raise tornado.gen.Return(host_info)
+        raise tornado.gen.Return(provider_info)
 
 
     @tornado.gen.coroutine
-    def server_action(self, host, server_name, action):
+    def server_action(self, provider, server_name, action):
         """ Performs an action via the python api. """
-        host_url = host['host_protocol'] + '://' + host['host_ip'] + '/system'
+        provider_url = provider['provider_protocol'] + '://' + provider['provider_ip'] + '/system'
 
         try:
-            conn = libvirt.open(host_url)
+            conn = libvirt.open(provider_url)
             server = conn.lookupByName(server_name)
         except Exception as e:
-            raise tornado.gen.Return({'success' : False, 'message' : 'Could not connect to host. ' + e.message})
+            raise tornado.gen.Return({'success' : False, 'message' : 'Could not connect to provider. ' + e.message})
 
         server_action = {
             'delete' : server.undefine,
@@ -396,20 +396,20 @@ class LibVirtDriver(base.DriverBase):
 
     @tornado.gen.coroutine
     def validate_field_values(self, step_index, field_values):
-        """ Adds the host_protocol field, and opens a connection libvirt.conn to get info about the host. """
+        """ Adds the provider_protocol field, and opens a connection libvirt.conn to get info about the provider. """
         print ('Validating on step : ', step_index)
         if step_index < 0:
             protocols = ['qemu', 'qemu+tcp', 'qemu+tls']
     	    raise tornado.gen.Return(StepResult(
-        		errors=[], new_step_index=0, option_choices={'host_protocol' : protocols}
+        		errors=[], new_step_index=0, option_choices={'provider_protocol' : protocols}
     	    ))
         elif step_index == 0:
-            host_url = field_values['host_protocol'] + '://' + field_values['host_ip'] + '/system'
-            self.field_values['host_ip'] = field_values['host_ip']
+            provider_url = field_values['provider_protocol'] + '://' + field_values['provider_ip'] + '/system'
+            self.field_values['provider_ip'] = field_values['provider_ip']
             try:
-                self.conn = libvirt.open(host_url)
-                print ('Opened connection to ', host_url)
-                self.field_values['host_protocol'] = field_values['host_protocol']
+                self.conn = libvirt.open(provider_url)
+                print ('Opened connection to ', provider_url)
+                self.field_values['provider_protocol'] = field_values['provider_protocol']
             except:
                 import traceback
                 traceback.print_exc()
@@ -429,13 +429,13 @@ class LibVirtDriver(base.DriverBase):
 
 
     @tornado.gen.coroutine
-    def create_minion(self, host, data):
+    def create_minion(self, provider, data):
         """ 
             Instances are created manually, as there is no saltstack support. This happens by following these steps: 
             
-            1. Open a connection to the libvirt host. 
+            1. Open a connection to the libvirt provider. 
             2. Create a config drive for cloud init. What's needed for this is the salt master fqdn and the salt keys. 
-            3. Clone the libvirt volume selected when adding a host. 
+            3. Clone the libvirt volume selected when adding a provider. 
             4. If a certain storage is defined when creating an server, create a new disk for it. 
             5. Create an iso image from the config drive. 
             6. Create an xml for the new server. 
@@ -444,13 +444,13 @@ class LibVirtDriver(base.DriverBase):
         
         """
         print ('Creating minion. ')
-        host_url = host['host_protocol'] + '://' + host['host_ip'] + '/system'
-        conn = libvirt.open(host_url)
+        provider_url = provider['provider_protocol'] + '://' + provider['provider_ip'] + '/system'
+        conn = libvirt.open(provider_url)
         storage = [x for x in conn.listAllStoragePools() if x.name() == 'default'][0]
         flavour = self.flavours[data['size']]
         storage_disk = data.get('storage_disk', 0)
 
-        config_drive = yield self.create_config_drive(host, data)
+        config_drive = yield self.create_config_drive(provider, data)
 
         old_vol = [x for x in storage.listAllVolumes() if x.name() == data['image']][0]
         new_vol = yield self.clone_libvirt_volume(storage, flavour['vol_capacity'], old_vol, data['server_name'] + '-volume.qcow2')
@@ -462,7 +462,7 @@ class LibVirtDriver(base.DriverBase):
             disks.append(None)
         print ('New disk created!. ')
 
-        iso_image = yield self.create_iso_image(host_url, conn, data['server_name'], config_drive, old_vol)
+        iso_image = yield self.create_iso_image(provider_url, conn, data['server_name'], config_drive, old_vol)
 
         new_xml = yield self.create_domain_xml(data['server_name'], disks, iso_image)
 
@@ -507,7 +507,7 @@ class LibVirtDriver(base.DriverBase):
 
 
     @tornado.gen.coroutine
-    def create_iso_image(self, host_url, conn, vol_name, config_drive, base_volume):
+    def create_iso_image(self, provider_url, conn, vol_name, config_drive, base_volume):
         print ('Trying to create iso from dir: ', config_drive)
 
         try:
@@ -516,7 +516,7 @@ class LibVirtDriver(base.DriverBase):
             iso_command = ['xorrisofs', '-J', '-r', '-V', 'config_drive', '-o', iso_path, config_drive]
             storage = [x for x in conn.listAllStoragePools() if x.name() == 'default'][0]
 
-            upload_command = ['virsh', '-c', host_url, 'vol-upload', '--pool', storage.name(), iso_name, iso_path]
+            upload_command = ['virsh', '-c', provider_url, 'vol-upload', '--pool', storage.name(), iso_name, iso_path]
 
             iso_volume = yield self.create_libvirt_volume(storage, 1, iso_name)
 
@@ -583,7 +583,7 @@ class LibVirtDriver(base.DriverBase):
 
 
     @tornado.gen.coroutine
-    def create_config_drive(self, host, data):
+    def create_config_drive(self, provider, data):
         print ('Creating config. ')
         minion_dir = self.config_path + data['server_name']
         config_dir = minion_dir + '/config_drive'
@@ -611,7 +611,7 @@ class LibVirtDriver(base.DriverBase):
 
         config_dict = {
             'VAR_INSTANCE_NAME' : data['server_name'],
-            'VAR_IP' : self.host_ip, 
+            'VAR_IP' : self.provider_ip, 
             'VAR_SSH_KEY' : auth_key,
             'VAR_PUBLIC_KEY' : '\n'.join([' ' * 4 + line for line in pub_key.split('\n')]),
             'VAR_PRIVATE_KEY' : '\n'.join([' ' * 4 + line for line in pri_key.split('\n')]),
@@ -633,7 +633,7 @@ class LibVirtDriver(base.DriverBase):
             }],
             'salt-minion' : {
                 'conf' : {
-                    'master' : self.host_ip
+                    'master' : self.provider_ip
                 },
                 'public_key' : pub_key,
                 'private_key' : pri_key,

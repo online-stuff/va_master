@@ -14,10 +14,10 @@ def get_paths():
 
         },
         'post' : {
-            'services/add' : {'function' : add_services, 'args' : ['services', 'host']},
+            'services/add' : {'function' : add_services, 'args' : ['services', 'provider']},
         },
         'delete' : {
-            'services/delete' : {'function' : delete_services, 'args' : ['host']},
+            'services/delete' : {'function' : delete_services, 'args' : ['provider']},
         }
     }
     return paths
@@ -54,9 +54,9 @@ def get_service(deploy_handler, service):
 
 
 @tornado.gen.coroutine
-def add_service_with_definition(deploy_handler, service_definition, host):
+def add_service_with_definition(deploy_handler, service_definition, provider):
     service_text = json.dumps(service_definition)
-    service_conf = consul_dir + '/%s.json' % host
+    service_conf = consul_dir + '/%s.json' % provider
 
     with open(service_conf, 'w') as f:
         f.write(service_text)
@@ -65,18 +65,18 @@ def add_service_with_definition(deploy_handler, service_definition, host):
     restart_consul()
 
 @tornado.gen.coroutine
-def add_services(deploy_handler, services, host):
+def add_services(deploy_handler, services, provider):
     service_keys = ['name', 'tags', 'address', 'port', 'check']
     for key in service_keys:
         if not all([x.get(key) for x in services]):
             raise tornado.gen.Return({"success" : False, "message" : "All services need to define a value for the keys: " + ', '.join(service_keys) + '; Missing key : ' + key, 'data' : {}})
 
-    yield add_service_with_definition(deploy_handler, services, host)
+    yield add_service_with_definition(deploy_handler, services, provider)
 
 
 @tornado.gen.coroutine
-def delete_services(deploy_handler, host):
-    service_conf = consul_dir + '/%s.json' % host
+def delete_services(deploy_handler, provider):
+    service_conf = consul_dir + '/%s.json' % provider
     os.remove(service_conf)
 
     reload_systemctl()
