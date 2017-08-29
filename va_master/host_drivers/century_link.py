@@ -113,6 +113,7 @@ class CenturyLinkDriver(base.DriverBase):
             raise tornado.gen.Return({'success' : False, 'message' : 'Did not find server with name: ' + server_name})
 
         #post_arg is simply to cut down on code; it creates a tuple of arguments ready to be sent to the API. 
+        #It basically creates tuples that look like this: ('post', 'ctl/api/url', '["server_id"]')
         post_arg = lambda action: ('post', 'operations/%s/servers/%s' % (self.account.alias, action), '["%s"]'% server.id)
 
         action_map = {
@@ -256,7 +257,6 @@ class CenturyLinkDriver(base.DriverBase):
         
     @tornado.gen.coroutine
     def api_call(self, provider, data):
-        print ('I am in api_call now!')
         self.get_datacenter(provider)
 
         method = data['method']
