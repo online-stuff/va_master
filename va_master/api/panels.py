@@ -115,7 +115,7 @@ def get_chart_data(deploy_handler, instance_name, args = ['va-directory', 'Ping'
     raise tornado.gen.Return(result)
 
 @tornado.gen.coroutine
-def panel_action(deploy_handler, actions_list = [], instance_name = '', action = '', args = [], kwargs = {}, module = None):
+def panel_action(deploy_handler, actions_list = [], instance_name = '', action = '', args = [], kwargs = {}, module = None, dash_user = {}):
     if not actions_list: 
         actions_list = [{"instance_name" : instance_name, "action" : action, "args" : args, 'kwargs' : {}, 'module' : module}]
 
