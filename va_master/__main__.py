@@ -19,7 +19,7 @@ def bootstrap():
 
     app = server.get_app(my_config)
     ssl_ctx = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
-    ssl_ctx.load_cert_chain("/root/keys/fortornado/evo-master.crt", "/root/keys/fortornado/evo-master.key")
+    ssl_ctx.load_cert_chain("/opt/va_master/ssl/cert.crt", "/opt/va_master/ssl/server.key")
 
     http_server = tornado.httpserver.HTTPServer(app, ssl_options=ssl_ctx)
     http_server.listen(443)
