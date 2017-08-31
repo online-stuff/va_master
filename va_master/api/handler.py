@@ -198,7 +198,7 @@ class ApiHandler(tornado.web.RequestHandler):
         data = {x : str(data[x]) for x in data}
         user = yield url_handler.login.get_current_user(self)
         if not user: 
-            user = {'username' : 'unknown'}
+            user = {'username' : 'unknown', 'type' : 'unknown'}
         message = json.dumps({
             'type' : data['method'], 
             'function' : func.func_name,

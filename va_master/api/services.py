@@ -26,7 +26,7 @@ def reload_systemctl():
     subprocess.check_output(['systemctl', 'daemon-reload'])
 
 def restart_consul():
-    subprocess.check_output(['systemctl', 'restart', 'consul'])
+    subprocess.check_output(['consul', 'reload'])
 
 @tornado.gen.coroutine
 def list_services(deploy_handler):
@@ -52,6 +52,39 @@ def get_service(deploy_handler, service):
 #Example for how to add services: 
 #{"services": [{"name": "va-os", "tags": ["hostsvc", "web", "http"], "address": "192.168.80.16", "port": 5000, "check": {"id": "tcp", "name": "TCP connection to port", "tcp": "192.168.80.16:5000", "interval": "30s", "timeout": "10s"}}, {"name": "imconfus", "tags": ["hostsvc", "web", "http"], "address": "192.168.80.16", "port": 5000, "check": {"id": "tcp", "name": "TCP connection to port", "tcp": "192.168.80.16:5000", "interval": "30s", "timeout": "10s"}}]}
 
+
+@tornado.gen.coroutine
+def create_service_from_state(deploy_handler, state_name, service_name, service_address, service_port, provider_name):
+    all_states = yield deploy_handler.get_states()
+    state = [x for x in all_states if x['name'] == state_name][0]
+
+    state_service = state['service']
+    service = {
+        "services": [
+        {
+            "name": service_name,
+            "tags": state_service['tags'], 
+            "address": service_address, 
+            "port": service_port, 
+            "checks": [
+             {
+                "id": "tcp", 
+                "name": "TCP connection to port", 
+                "tcp": "192.168.80.16:5000", 
+                "interval": "30s", "timeout": "10s"
+            },{
+                "id": "api",
+                "name": "HTTP connection to port",
+                "http": "http://192.168.80.16:5000/v3",
+                "tls_skip_verify": true,
+                "method" : "POST",
+                "interval": "5s",
+                "timeout": "1s"
+            }   
+            ]
+       }]
+    }
+    yield add_service_with_definition(deploy_handler, service_definition, provider_name)
 
 @tornado.gen.coroutine
 def add_service_with_definition(deploy_handler, service_definition, provider):
