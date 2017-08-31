@@ -19,7 +19,7 @@ def get_paths():
             'panels/new_panel' : {'function' : new_panel, 'args' : ['panel_name', 'role']},
             'panels/action' : {'function' : panel_action, 'args' : ['server_name', 'action', 'args', 'kwargs', 'module', 'dash_user']}, #must have server_name and action in data, 'args' : []}, ex: panels/action server_name=nino_dir action=list_users
             'panels/chart_data' : {'function' : get_chart_data, 'args' : ['server_name', 'args']},
-            'panels/serve_file' : {'function' : salt_serve_file, 'args' : ['server_name', 'action', 'args', 'kwargs', 'module']},
+            'panels/serve_file' : {'function' : salt_serve_file, 'args' : ['handler', 'server_name', 'action', 'args', 'kwargs', 'module']},
         }
     }
     return paths
@@ -72,7 +72,7 @@ def panel_action_execute(deploy_handler, server_name, action, args = [], dash_us
 
 
 @tornado.gen.coroutine
-def salt_serve_file(deploy_handler, server_name, action, args = [], dash_user = '', kwargs = {}, module = None):
+def salt_serve_file(deploy_handler, handler, server_name, action, args = [], dash_user = '', kwargs = {}, module = None):
 
 #    result = yield panel_action_execute(deploy_handler, server_name, action, args, kwargs, dash_user, module)
 #    print ('Result is : ', result)
@@ -81,7 +81,7 @@ def salt_serve_file(deploy_handler, server_name, action, args = [], dash_user = 
 #    with open(path_to_file, 'w') as f: 
 #        f.write(result)
 
-    yield handler.serve_file(path_to_file, salt_source = [server_name + '.' + action] + args)
+    yield handler.serve_file('test', salt_source = [server_name, module + '.' + action] + args)
 
 @tornado.gen.coroutine
 def get_ts_data(deploy_handler):
