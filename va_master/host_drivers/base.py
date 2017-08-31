@@ -356,6 +356,9 @@ class DriverBase(object):
             self.field_values['images'] = yield self.get_images()
             self.field_values['sizes']= yield self.get_sizes()
 
+            self.field_values['location'] = field_values.get('location', 'va_master')                
+
+
             options.update({
                     'network': self.field_values['networks'],
                     'sec_group': self.field_values['sec_groups'],
