@@ -257,18 +257,22 @@ def launch_app(deploy_handler, handler):
     #temporary - testing with app steps    
     raise tornado.gen.Return(True)
 
-    result = yield driver.create_minion(required_provider, data)
+    result = yield driver.create_server(required_provider, data)
 
-    minion_info = yield get_app_info(deploy_handler, handler.data['server_name'])
 
-    if not minion_info: 
-        raise tornado.gen.Return({"success" : False, "message" : "No minion_info, something probably went wrong with trying to start the server. ", "data" : None})
+    if data.get('role'):
+        minion_info = yield get_app_info(deploy_handler, handler.data['server_name'])
+#        minion_info.update({''})
 
-    elif data.get('role'):
         add_panel_for_minion(data, minion_info)
+        required_provider['servers'].append(minion_info)
+        yield store.insert('providers', providers)
 
-    required_provider['servers'].append(minion_info)
-    yield store.insert('providers', providers)
+
+        if not minion_info: 
+            raise tornado.gen.Return({"success" : False, "message" : "No minion_info, something probably went wrong with trying to start the server. ", "data" : None})
+
+
     raise tornado.gen.Return(result)
 
 @tornado.gen.coroutine

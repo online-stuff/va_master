@@ -429,7 +429,7 @@ class LibVirtDriver(base.DriverBase):
 
 
     @tornado.gen.coroutine
-    def create_minion(self, provider, data):
+    def create_server(self, provider, data):
         """ 
             Instances are created manually, as there is no saltstack support. This happens by following these steps: 
             

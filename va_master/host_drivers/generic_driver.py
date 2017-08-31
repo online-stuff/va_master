@@ -180,7 +180,7 @@ class GenericDriver(base.DriverBase):
        
       
     @tornado.gen.coroutine
-    def create_minion(self, provider, data):
+    def create_server(self, provider, data):
         provider_datastore = yield self.datastore.get(provider['provider_name'])
         servers = provider_datastore.get('servers')
         server = {"provider_name" : data["server_name"], "ip" : "", "local_gb" : 0, "memory_mb" : 0, "status" : "n/a" }

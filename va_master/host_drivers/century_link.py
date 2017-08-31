@@ -557,7 +557,7 @@ class CenturyLinkDriver(base.DriverBase):
         raise tornado.gen.Return(step_result)
       
     @tornado.gen.coroutine
-    def create_minion(self, provider, data):
+    def create_server(self, provider, data):
         print ('Creating minion with data: ', data)
         try: 
             clc.v2.SetCredentials(provider['username'], provider['password'])

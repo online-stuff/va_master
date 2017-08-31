@@ -254,7 +254,7 @@ class GCEDriver(base.DriverBase):
 
 
     @tornado.gen.coroutine
-    def create_minion(self, provider, data):
+    def create_server(self, provider, data):
         """ Works properly with the base driver method, but overwritten for bug tracking. """
         try:
 #            nova = client.Client('2', provider['username'], provider['password'], provider['tenant'], 'http://' + provider['provider_ip'] + '/v2.0')
