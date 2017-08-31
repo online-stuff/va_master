@@ -70,17 +70,18 @@ def panel_action_execute(deploy_handler, server_name, action, args = [], dash_us
 
     raise tornado.gen.Return(result)
 
+
 @tornado.gen.coroutine
 def salt_serve_file(deploy_handler, server_name, action, args = [], dash_user = '', kwargs = {}, module = None):
 
-    result = yield panel_action_execute(deploy_handler, server_name, action, args, kwargs, dash_user, module)
-    print ('Result is : ', result)
-    path_to_file = '/tmp/some_salt_file'
+#    result = yield panel_action_execute(deploy_handler, server_name, action, args, kwargs, dash_user, module)
+#    print ('Result is : ', result)
+#    path_to_file = '/tmp/some_salt_file'
 
-    with open(path_to_file, 'w') as f: 
-        f.write(result)
+#    with open(path_to_file, 'w') as f: 
+#        f.write(result)
 
-    yield handler.serve_file(path_to_file)
+    yield handler.serve_file(path_to_file, salt_source = [server_name + '.' + action] + args)
 
 @tornado.gen.coroutine
 def get_ts_data(deploy_handler):

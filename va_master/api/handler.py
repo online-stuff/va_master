@@ -217,16 +217,28 @@ class ApiHandler(tornado.web.RequestHandler):
 
 
     @tornado.gen.coroutine
-    def serve_file(self, file_path, chunk_size = 4096):
+    def serve_file(self, source, chunk_size = 10**6, salt_source = []):
         try: 
             self.set_header('Content-Type', 'application/octet-stream')
             self.set_header('Content-Disposition', 'attachment; filename=' + file_path)
-            with open(file_path, 'r') as f:
-                while True:
-                    data = f.read(chunk_size)
-                    if not data:
-                        break
-                    self.write(data)
+            offset = 0
+
+            if salt_source: 
+                client = LocalClient()
+                source = client.cmd
+                args = salt_source
+            else:
+                f = open(file_path, 'r')
+                source = source.read
+                args = [chunk_size]
+
+            while True:
+                data = source(*args)
+                offset += chunk_size
+                if not data:
+                    break
+                self.write(data)
+                self.flush()
             self.finish()
         except: 
             import traceback

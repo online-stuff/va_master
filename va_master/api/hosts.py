@@ -135,7 +135,6 @@ def validate_new_provider_fields(deploy_handler, handler):
         else:
             if step_index < 0 or driver_steps[step_index].validate(field_values):
                 result = yield found_driver.validate_field_values(step_index, field_values)
-                print 'Result is : ', result, ' with index : ', result.new_step_index
                 if result.new_step_index == -1:
                     deploy_handler.create_provider(found_driver)
                 raise tornado.gen.Return(result.serialize())
@@ -174,7 +173,6 @@ def get_provider_info(deploy_handler, get_billing = True, get_servers = True, re
         info[0]['provider_name'] = info[1]['provider_name']
         info[0]['location'] = info[1]['location']
 
-    print ('Provider data is : ', providers_info)
     #Convert to {"location" : [list, of, providers], "location2" : [list, of, other, providers]}
     providers_info = {l : [x for x in providers_info if x['location'] == l] for l in [x['location'] for x in providers_info]}
 
