@@ -12,8 +12,11 @@ import distutils
 import traceback
 import functools
 import imp
+from .api import login
 
 consul_conf_path = '/etc/consul.json'
+run_sync = tornado.ioloop.IOLoop.instance().run_sync
+
 
 def is_cli():
     # TODO: Find a way to separate a CLI entrypoint execution versus
@@ -73,9 +76,7 @@ def generate_store_config(values):
 
     return store_config
 
-
-def handle_init(args):
-    """Handles cli `start` command. Should write proper conf and start daemon."""
+def get_values_from_args(args):
     # If optional arguments weren't specified, interactively ask.
     attrs = [
         ('company-name', 'The name of Your company. It will be used in the VPN certifiates [VapourApps cloud] '),
@@ -86,9 +87,6 @@ def handle_init(args):
         ('vpn-port', 'Enter the OpenVPN port accesible from Internet to this host [8443]'),
     ]
     values = {}
-
-
-    print 'Args are : ', args
    
     if args.get('skip_args'): 
         cli_info('Setting up the va_master module without prompting for arguments. If this is the first time you are setting up the environment, you might want to make sure you enter all arguments or run init again without skip_args. ')
@@ -97,13 +95,15 @@ def handle_init(args):
         name = attr[0].replace('-', '_')
         cmdhelp = attr[1]
         values[name] = args.get(name)
-        print 'Values name is : ', values[name], ' for name : ', name
         if (values[name] is None) and not args.get('skip_args'): # The CLI `args` doesn't have it, ask.
             values[name] = raw_input('%s: ' % cmdhelp)
 
     values = {k: v for k, v in values.items() if v}
-    result = True # If `result` is True, all actions completed successfully
-    if values.get('fqdn'): 
+    return values
+
+def handle_configurations(fqdn = None):
+    result = True
+    if fqdn:
         try:
             cli_environment.write_supervisor_conf()
             cli_success('Configured Supervisor.')
@@ -112,7 +112,7 @@ def handle_init(args):
             traceback.print_exc()
             result = False # We failed with step #1
         try:
-            cli_environment.write_consul_conf(values['fqdn'])
+            cli_environment.write_consul_conf(fqdn)
             cli_success('Configured Consul.')
         except:
             import traceback
@@ -120,9 +120,9 @@ def handle_init(args):
             traceback.print_exc()
             result = False # We failed with step #2
 
-    if not result:
-        cli_error('Initialization failed because of one or more errors.')
-        sys.exit(1)
+        if not result:
+            cli_error('Initialization failed because of one or more errors.')
+            sys.exit(1)
     else:
         try:
             cli_environment.reload_daemon()
@@ -134,86 +134,110 @@ def handle_init(args):
             traceback.print_exc()
             sys.exit(1)
 
-        from .api import login
-        cli_config = config.Config(init_vals = values)
-
-        store = cli_config.datastore
-        run_sync = tornado.ioloop.IOLoop.instance().run_sync
-        attempts, failed = 1, True
-        cli_info('Waiting for the key value store to come alive...')
-        while attempts <= cli_environment.DATASTORE_ATTEMPTS:
-            is_running = run_sync(store.check_connection)
-            cli_info('  -> attempt #%i...' % attempts)
-            if is_running:
-                failed = False
-                break
-            else:
-                time.sleep(cli_environment.DATASTORE_RETRY_TIME)
-                attempts+= 1
-        if failed:
-            cli_error('Store connection timeout after %i attempts.' \
-                % attempts)
-            sys.exit(1)
-
-        try:
-            cli_info('Trying to start VPN. ')
-            cli_environment.write_vpn_pillar(values['fqdn']) 
-            cli_success('VPN is running. ')
-        except: 
-            cli_error('Failed to start VPN. Error was : ')
-            import traceback
-            traceback.print_exc()
 
 
-        # We have a connection, create an admin account
-        if values.get('admin_user') and values.get('admin_pass'): 
-            create_user = functools.partial(login.create_user,
-                store, values['admin_user'], values['admin_pass'], 'admin')
-            create_user_run = run_sync(create_user)
-#            print create_admin_run
-        else: 
-            cli_info('No username and password; will not create user')
+def check_datastore_connection(values, store):
+    attempts, failed = 1, True
+    cli_info('Waiting for the key value store to come alive...')
+    while attempts <= cli_environment.DATASTORE_ATTEMPTS:
+        is_running = run_sync(store.check_connection)
+        cli_info('  -> attempt #%i...' % attempts)
+        if is_running:
+            failed = False
+            break
+        else:
+            time.sleep(cli_environment.DATASTORE_RETRY_TIME)
+            attempts+= 1
+    if failed:
+        cli_error('Store connection timeout after %i attempts.' \
+            % attempts)
+        sys.exit(1)
 
-        states_data = run_sync(functools.partial(cli_config.deploy_handler.get_states_data))
-        values.update({'states' : states_data})
+    try:
+        cli_info('Trying to start VPN. ')
+        cli_environment.write_vpn_pillar(values['fqdn']) 
+        cli_success('VPN is running. ')
+    except: 
+        cli_error('Failed to start VPN. Error was : ')
+        import traceback
+        traceback.print_exc()
 
+    return not failed
 
-        try:
-            store_config = run_sync(functools.partial(store.get, 'init_vals')) or {}
-        except: 
-            store_config = {}
+def create_admin_user(admin_user, admin_pass, store):
+    if admin_user and admin_pass: 
+        create_user = functools.partial(login.create_user,
+            store, admin_user, admin_pass, 'admin')
+        create_user_run = run_sync(create_user)
+    else: 
+        cli_info('No username and password; will not create user')
 
-        store_config.update(generate_store_config(values))
-        store_config = {x : store_config[x] for x in store_config if x not in ['admini-pass']}
+def handle_store_init(cli_config, values, store):
+    states_data = run_sync(functools.partial(cli_config.deploy_handler.get_states_data))
+    values.update({'states' : states_data})
+
+#    handle_store_config(values)
+
+    try:
+        store_config = run_sync(functools.partial(store.get, 'init_vals')) or {}
+    except: 
+        store_config = {}
+
+    store_config.update(generate_store_config(values))
+    store_config = {x : store_config[x] for x in store_config if x not in ['admin_pass']}
 #            store_config = run_sync(functools.partial(store.insert, 'init_vals', store_config))
-        run_sync(functools.partial(store.insert, 'init_vals', store_config))
+    run_sync(functools.partial(store.insert, 'init_vals', store_config))
+    return store_config
 
-        try:
-            panels = run_sync(functools.partial(store.get, 'panels')) or {'admin' : [], 'user' : []}
-        except: 
-            run_sync(functools.partial(store.insert, 'panels', {'admin' : [], 'user' :[]}))
+def add_initial_panels(store):
+    try:
+        panels = run_sync(functools.partial(store.get, 'panels')) or {'admin' : [], 'user' : []}
+    except: 
+        run_sync(functools.partial(store.insert, 'panels', {'admin' : [], 'user' :[]}))
 
-
-        #Generate an ssh-key
+def create_ssh_keys(store_config):
+    try: 
         try: 
-            try: 
-                os.mkdir(store_coonfig.ssh_key_path)
-                key_full_path = cli_config.ssh_key_path + cli_config.ssh_key_name
-    
-                ssh_cmd = ['ssh-keygen', '-t', 'rsa', '-f', key_full_path, '-N', '']
-    
-                subprocess.call(ssh_cmd)
-                subprocess.call(['mv', key_full_path, key_full_path + '.pem'])
+            os.mkdir(store_config.ssh_key_path)
+            key_full_path = cli_config.ssh_key_path + cli_config.ssh_key_name
 
-            except: 
-                pass
+            ssh_cmd = ['ssh-keygen', '-t', 'rsa', '-f', key_full_path, '-N', '']
+
+            subprocess.call(ssh_cmd)
+            subprocess.call(['mv', key_full_path, key_full_path + '.pem'])
+
         except: 
-            import traceback
-            print ('Could not generate a key. Probably already exists. ')
-            traceback.print_exc()
+            pass
+    except: 
+        import traceback
+        print ('Could not generate a key. Probably already exists. ')
+        traceback.print_exc()
 
-        cli_success('Created first account. Setup is finished.')
-        cli_config.init_handler(init_vals = values)
+def handle_init(args):
+    """Handles cli `start` command. Should write proper conf and start daemon."""
+
+    values = get_values_from_args(args)
+
+    result = True # If `result` is True, all actions completed successfully
+
+    handle_configurations(values.get('fqdn'))
+
+    cli_config = config.Config(init_vals = values)
+
+    store = cli_config.datastore
+
+    check_datastore_connection(values, store)
+    create_admin_user(values.get('admin_user'), values.get('admin_pass'), store)
+    store_config = handle_store_init(cli_config, values, store)
+    add_initial_panels(store)
+
+
+
+    #Generate an ssh-key
+    create_ssh_keys(store_config)
+
+    cli_success('Created first account. Setup is finished.')
+    cli_config.init_handler(init_vals = values)
 
 
 def handle_jsbuild(args):
