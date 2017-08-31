@@ -172,6 +172,11 @@ def get_provider_info(deploy_handler, get_billing = True, get_servers = True, re
 
     for info in zip(providers_info, providers): 
         info[0]['provider_name'] = info[1]['provider_name']
+        info[0]['location'] = info[1]['location']
+
+    print ('Provider data is : ', providers_info)
+    #Convert to {"location" : [list, of, providers], "location2" : [list, of, other, providers]}
+    providers_info = {l : [x for x in providers_info if x['location'] == l] for l in [x['location'] for x in providers_info]}
 
     raise tornado.gen.Return(providers_info)
 

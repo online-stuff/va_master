@@ -71,8 +71,8 @@ def get_openvpn_users(deploy_handler):
        
     #Make bytes human readable
     for k in ['Bytes Received', 'Bytes Sent']:
-        for x in openvpn_users['status']['client_list']
-        x[k] = bytes_to_readable(x[k])
+        for x in openvpn_users['status']['client_list']:
+            x[k] = bytes_to_readable(x[k])
 
     raise tornado.gen.Return(users)
 
@@ -214,7 +214,7 @@ def get_app_info(deploy_handler, server_name):
     raise tornado.gen.Return(server_info)
 
 
-def write_pillar(data)
+def write_pillar(data):
     pillar_path = '/srv/pillar/%s-credentials.sls' % (data.get('server_name'))
     with open(pillar_path, 'w') as f: 
         pillar_str = ''
@@ -262,7 +262,7 @@ def launch_app(deploy_handler, handler):
 
     if data.get('role'):
         minion_info = yield get_app_info(deploy_handler, handler.data['server_name'])
-#        minion_info.update({''})
+        minion_info.update({'type' : 'app'})
 
         add_panel_for_minion(data, minion_info)
         required_provider['servers'].append(minion_info)
@@ -271,7 +271,6 @@ def launch_app(deploy_handler, handler):
 
         if not minion_info: 
             raise tornado.gen.Return({"success" : False, "message" : "No minion_info, something probably went wrong with trying to start the server. ", "data" : None})
-
 
     raise tornado.gen.Return(result)
 
