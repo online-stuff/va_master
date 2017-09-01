@@ -18,7 +18,7 @@ def get_paths():
         },
         'post' : {
             'providers' : {'function' : list_providers, 'args' : []},
-            'providers/info' : {'function' : get_provider_info, 'args' : ['required_providers', 'get_billing', 'get_servers']},
+            'providers/info' : {'function' : get_provider_info, 'args' : ['required_providers', 'get_billing', 'get_servers', 'sort_by_location']},
             'providers/new/validate_fields' : {'function' : validate_new_provider_fields, 'args' : ['handler']},
             'providers/delete' : {'function' : delete_provider, 'args' : ['provider_name']},
             'providers/add_provider' : {'function' : add_provider, 'args' : ['field_values', 'driver_name']},
@@ -149,7 +149,7 @@ def validate_new_provider_fields(deploy_handler, handler):
 
 
 @tornado.gen.coroutine
-def get_provider_info(deploy_handler, get_billing = True, get_servers = True, required_providers = []):
+def get_provider_info(deploy_handler, get_billing = True, get_servers = True, required_providers = [], sort_by_location = False):
     store = deploy_handler.datastore
     try:
         hidden_servers = yield store.get('hidden_servers')
@@ -173,8 +173,9 @@ def get_provider_info(deploy_handler, get_billing = True, get_servers = True, re
         info[0]['provider_name'] = info[1]['provider_name']
         info[0]['location'] = info[1]['location']
 
-    #Convert to {"location" : [list, of, providers], "location2" : [list, of, other, providers]}
-    providers_info = {l : [x for x in providers_info if x['location'] == l] for l in [x['location'] for x in providers_info]}
+    if sort_by_location: 
+        #Convert to {"location" : [list, of, providers], "location2" : [list, of, other, providers]}
+        providers_info = {l : [x for x in providers_info if x['location'] == l] for l in [x['location'] for x in providers_info]}
 
     raise tornado.gen.Return(providers_info)
 
