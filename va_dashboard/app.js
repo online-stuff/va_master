@@ -133,13 +133,13 @@ function div(state, action){
 
 function panel(state, action){
     if(typeof state === 'undefined'){
-        return {panel: '', instance: '', args: ''};
+        return {panel: '', server: '', args: ''};
     }
 
     var newState = Object.assign({}, state);
     if(action.type == 'CHANGE_PANEL'){
         newState.panel = action.panel;
-        newState.instance = action.instance;
+        newState.server = action.server;
         if('args' in action){
             newState.args = action.args;
         }else{
@@ -229,9 +229,9 @@ var App = React.createClass({
                 <Router.Route path='/log' component={Log} />
                 <Router.Route path='/billing' component={Billing} />
                 <Router.Route path='/services' component={Services} />
-                <Router.Route path='/panel/:id/:instance(/:args)' component={Panel} />
-                <Router.Route path='/subpanel/:id/:instance/:args' component={Subpanel} />
-                <Router.Route path='/chart_panel/:instance/:host/:service' component={ChartPanel} />
+                <Router.Route path='/panel/:id/:server(/:args)' component={Panel} />
+                <Router.Route path='/subpanel/:id/:server/:args' component={Subpanel} />
+                <Router.Route path='/chart_panel/:server/:host/:service' component={ChartPanel} />
             </Router.Route>
             <Router.Route path='/login' component={Login} />
         </Router.Router>
