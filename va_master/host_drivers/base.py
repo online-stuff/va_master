@@ -124,7 +124,7 @@ class DriverBase(object):
             Shows these descriptions when creating a new provider. Does not need to be overwritten. 
         """
         raise tornado.gen.Return([
-            {'name': 'Host info'},
+            {'name': 'Provider info'},
             {'name': 'Pick a Network'},
             {'name': 'Security'}
         ])
@@ -176,7 +176,7 @@ class DriverBase(object):
             These are the arguments entered when creating a new provider, split into separate steps. Does not need to be overwritten, but probably should be in order to add other types of fields. You can just call this in your implementation and add fields to whichever step you want. 
         """
 
-        provider_info = Step('Host info')
+        provider_info = Step('Provider info')
         provider_info.add_fields([
             ('provider_name', 'Name for the host', 'str'),
             ('username', 'Username', 'str'),

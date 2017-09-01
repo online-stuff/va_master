@@ -142,7 +142,7 @@ class VMWareDriver(base.DriverBase):
         """ Works like the Base get_steps, but adds the provider_ip and provider_protocol fields. Also, there are no security groups in LibVirt, so that field is removed. """
         steps = yield super(VMWareDriver, self).get_steps()
         steps[0].add_fields([
-            ('provider_ip', 'Host ip', 'str'),
+            ('provider_ip', 'Provider ip', 'str'),
             ('port', 'Port', 'str'),            
             ('protocol', 'Protocol', 'str'),
         ])
