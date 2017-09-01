@@ -14,6 +14,8 @@ import json, datetime, syslog, pytz
 import dateutil.relativedelta
 import dateutil.parser
 
+from salt.client import LocalClient
+
 
 def invalid_url(deploy_handler, path, method):
     raise Exception('Invalid URL : ' + path +' with method : ' + method)
@@ -217,10 +219,24 @@ class ApiHandler(tornado.web.RequestHandler):
 
 
     @tornado.gen.coroutine
+    def send_data(self, source, data, args, chunk_size):
+        offset = 0
+        while True:
+           print ('Calling ', source, ' with ', args)
+           data = source(*args)
+           offset += chunk_size
+           if not data:
+               break
+           self.write(data)
+           self.flush()
+       
+
+
+    @tornado.gen.coroutine
     def serve_file(self, source, chunk_size = 10**6, salt_source = []):
         try: 
             self.set_header('Content-Type', 'application/octet-stream')
-            self.set_header('Content-Disposition', 'attachment; filename=' + file_path)
+            self.set_header('Content-Disposition', 'attachment; filename=test.zip')
             offset = 0
 
             if salt_source: 
@@ -228,18 +244,13 @@ class ApiHandler(tornado.web.RequestHandler):
                 source = client.cmd
                 args = salt_source
             else:
-                f = open(file_path, 'r')
-                source = source.read
+                f = open(source, 'r')
+                source = f.read
                 args = [chunk_size]
 
-            while True:
-                data = source(*args)
-                offset += chunk_size
-                if not data:
-                    break
-                self.write(data)
-                self.flush()
-            self.finish()
+            yield self.send_data(source, data, args, chunk_size)
+
+#            self.finish()
         except: 
             import traceback
             traceback.print_exc()

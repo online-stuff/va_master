@@ -245,7 +245,7 @@ class OpenStackDriver(base.DriverBase):
                     'used_ram' : y['memory_mb'], 
                     'used_cpu' : y['vcpus'],
                     'status' : x['status'], 
-                    'host' : provider['provider_name'], 
+                    'provider' : provider['provider_name'], 
                 } for x in nova_servers for y in tenant_usage['server_usages'] for f in flavors if y['name'] == x['name'] and f['id'] == x['flavor']['id']
             ]
         except Exception as e: 
