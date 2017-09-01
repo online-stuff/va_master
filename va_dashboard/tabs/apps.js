@@ -37,7 +37,10 @@ var Appp = React.createClass({
                 return provider.provider_usage;
             });
             var providers = resp2.providers;
-            var first_provider = providers[0];
+            if(providers.length > 0)
+                var first_provider = providers[0];
+            else
+                first_provider = {provider_name: "", sizes: [], networks: [], images: [], sec_groups: [], defaults: []};
             var role = resp3[0].name;
             if(me.props.apps.select){
                 role = me.props.apps.select;
@@ -50,7 +53,7 @@ var Appp = React.createClass({
                     states[state.name] = state.fields;
                 }
             }
-            me.setState({provider_usage: provider_usage, providers: providers, provider_name: first_provider.provider_name, options: {sizes: first_provider.sizes, networks: first_provider.networks, images: first_provider.images, sec_groups: first_provider.sec_groups}, defaults: first_provider.defaults, states: states, role: role, loaded: true});
+            me.setState({provider_usage: provider_usage, providers: providers, provider_name: first_provider.hostname, options: {sizes: first_provider.sizes, networks: first_provider.networks, images: first_provider.images, sec_groups: first_provider.sec_groups}, defaults: first_provider.defaults, states: states, role: role, loaded: true});
         });
     },
 
@@ -64,7 +67,7 @@ var Appp = React.createClass({
 
     btn_clicked: function(provider_name, provider, evtKey){
         var me = this;
-        var data = {provider_name: provider, server_name: provider_name, action: evtKey};
+        var data = {provider_name: provider, server_name: hostname, action: evtKey};
         Network.post('/api/apps/action', this.props.auth.token, data).done(function(d) {
             Network.post('/api/providers/info', me.props.auth.token, {providers: []}).done(function(data) {
                 me.setState({providers: data});
@@ -83,7 +86,7 @@ var Appp = React.createClass({
     render: function () {
         var app_rows = [];
         for(var i = 0; i < this.state.providers.length; i++){
-            // provider_name = this.state.providers[i].provider_name;
+            // provider_name = this.state.providers[i].hostname;
             var rows = this.state.providers[i].servers.map(function(app) {
                 ipaddr = app.ip;
                 if(Array.isArray(ipaddr)){
@@ -106,7 +109,7 @@ var Appp = React.createClass({
                         <Reactable.Td column="Status">{app.status}</Reactable.Td>
                         <Reactable.Td column="Host">{app.provider}</Reactable.Td>
                         <Reactable.Td column="Actions">
-                            <Bootstrap.DropdownButton id={'dropdown-' + app.provider_name} bsStyle='primary' title="Choose" onSelect = {this.btn_clicked.bind(this, app.provider_name, app.provider)}>
+                            <Bootstrap.DropdownButton id={'dropdown-' + app.provider_name} bsStyle='primary' title="Choose" onSelect = {this.btn_clicked.bind(this, app.hostname, app.provider)}>
                                 <Bootstrap.MenuItem eventKey="reboot">Reboot</Bootstrap.MenuItem>
                                 <Bootstrap.MenuItem eventKey="delete">Delete</Bootstrap.MenuItem>
                                 <Bootstrap.MenuItem eventKey="start">Start</Bootstrap.MenuItem>
@@ -136,7 +139,7 @@ var Appp = React.createClass({
             <div className="app-containter">
                 <span className="spinner" style={spinnerStyle} ><i className="fa fa-spinner fa-spin fa-3x"></i></span>
                 <div style={blockStyle}>
-                    <AppFormRedux providers = {this.state.providers} states = {this.state.states} provider_name = {this.state.provider_name} role = {this.state.role} defaults = {this.state.defaults} options = {this.state.options} provider_usage = {this.state.provider_usage} getData = {this.getData} onChange = {this.onChange} onChangeRole = {this.onChangeRole} />
+                    <AppFormRedux providers = {this.state.providers} states = {this.state.states} provider_name = {this.state.hostname} role = {this.state.role} defaults = {this.state.defaults} options = {this.state.options} provider_usage = {this.state.provider_usage} getData = {this.getData} onChange = {this.onChange} onChangeRole = {this.onChangeRole} />
                     <Bootstrap.PageHeader>Current apps <small>All specified apps</small></Bootstrap.PageHeader>
                     <Bootstrap.Button onClick={this.openModal} className="tbl-btn">
                         <Bootstrap.Glyphicon glyph='plus' />
@@ -217,7 +220,7 @@ var UserStep = React.createClass({
 
 var HostStep = React.createClass({
     getInitialState: function () {
-        return {progress: 0, provider_name: this.props.provider_name, options: this.props.options, defaults: this.props.defaults, index: 0};
+        return {progress: 0, provider_name: this.props.hostname, options: this.props.options, defaults: this.props.defaults, index: 0};
     },
 
     onChange: function(e) {
@@ -347,7 +350,7 @@ var HostStep = React.createClass({
                         </div>
                     </Bootstrap.Form>
                 </Bootstrap.Col>
-                <StatsRedux provider_name = {this.state.provider_name} provider_usage = {this.props.provider_usage[this.state.index]} />
+                <StatsRedux provider_name = {this.state.hostname} provider_usage = {this.props.provider_usage[this.state.index]} />
             </div>
         );
     },
@@ -365,7 +368,7 @@ var HostStep = React.createClass({
         }, 10000);
         var data = {
             step: 3,
-            provider_name: ReactDOM.findDOMNode(this.refs.provider_name).value,
+            provider_name: ReactDOM.findDOMNode(this.refs.hostname).value,
             size: ReactDOM.findDOMNode(this.refs.flavor).value,
             image: ReactDOM.findDOMNode(this.refs.image).value,
             storage: ReactDOM.findDOMNode(this.refs.storage).value,
@@ -476,7 +479,7 @@ var AppForm = React.createClass({
                         {step2}
 
                         <Bootstrap.Tab title='Choose provider' eventKey={3}>
-                            <HostStepRedux provider_name = {this.props.provider_name} providers = {this.props.providers} provider_usage = {this.props.provider_usage} options = {this.props.options} defaults = {this.props.defaults} ref="step3" changeStep = {this.changeStep} server_name = {this.state.server_name} status = {this.state.status}  launchApp = {this.launchApp} />
+                            <HostStepRedux provider_name = {this.props.hostname} providers = {this.props.providers} provider_usage = {this.props.provider_usage} options = {this.props.options} defaults = {this.props.defaults} ref="step3" changeStep = {this.changeStep} server_name = {this.state.server_name} status = {this.state.status}  launchApp = {this.launchApp} />
                         </Bootstrap.Tab>
                     </Bootstrap.Tabs>
                 </Bootstrap.Modal.Body>

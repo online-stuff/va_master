@@ -20,7 +20,7 @@ var Hosts = React.createClass({
         this.getCurrentHosts();
     },
     deleteHost: function (e){
-        var data = {"provider_name": e.target.value};
+        var data = {"hostname": e.target.value};
         var me = this;
         Network.post('/api/providers/delete', this.props.auth.token, data).done(function(data) {
             me.getCurrentHosts();
@@ -47,13 +47,13 @@ var Hosts = React.createClass({
                 className = "danger row-provider-Offline";
             }
             return (
-                <Reactable.Tr key={provider.provider_name} className={className}>
-                    <Reactable.Td column="Host name">{provider.provider_name}</Reactable.Td>
+                <Reactable.Tr key={provider.hostname} className={className}>
+                    <Reactable.Td column="Host name">{provider.hostname}</Reactable.Td>
                     <Reactable.Td column="IP">{provider.provider_ip}</Reactable.Td>
                     <Reactable.Td column="Instances">{provider.servers.length}</Reactable.Td>
                     <Reactable.Td column="Driver">{provider.driver_name}</Reactable.Td>
                     <Reactable.Td column="Status">{status}</Reactable.Td>
-                    <Reactable.Td column="Actions"><Bootstrap.Button type="button" bsStyle='primary' onClick={this.deleteHost} value={provider.provider_name}>
+                    <Reactable.Td column="Actions"><Bootstrap.Button type="button" bsStyle='primary' onClick={this.deleteHost} value={provider.hostname}>
                         Delete
                     </Bootstrap.Button></Reactable.Td>
                 </Reactable.Tr>
@@ -300,7 +300,7 @@ var NewHostForm = React.createClass({
     },
     onSubmit: function(e) {
         e.preventDefault();
-        var data = {name: this.refs.provider_name.value, driver: this.state.currentDriver};
+        var data = {name: this.refs.hostname.value, driver: this.state.currentDriver};
         var me = this;
         Network.post('/api/providers', this.props.auth.token, data).done(function(data) {
             me.props.changeHosts();

@@ -412,7 +412,7 @@ var Log = React.createClass({
         return {logs: [], category: ['info', 'warning', 'danger'] }
     },
     initLog: function () {
-        var provider = window.location.provider;
+        var provider = window.location.host;
         if(provider.indexOf(":") == 0){
             provider += ":80";
         }
