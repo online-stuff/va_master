@@ -219,6 +219,20 @@ class ApiHandler(tornado.web.RequestHandler):
 
 
     @tornado.gen.coroutine
+    def send_data(self, source, data, args, chunk_size):
+        offset = 0
+        while True:
+           print ('Calling ', source, ' with ', args)
+           data = source(*args)
+           offset += chunk_size
+           if not data:
+               break
+           self.write(data)
+           self.flush()
+       
+
+
+    @tornado.gen.coroutine
     def serve_file(self, source, chunk_size = 10**6, salt_source = []):
         try: 
             self.set_header('Content-Type', 'application/octet-stream')
@@ -234,14 +248,8 @@ class ApiHandler(tornado.web.RequestHandler):
                 source = f.read
                 args = [chunk_size]
 
-            while True:
-                print ('Calling ', source, ' with ', args)
-                data = source(*args)
-                offset += chunk_size
-                if not data:
-                    break
-                self.write(data)
-                self.flush()
+            yield self.send_data(source, data, args, chunk_size)
+
 #            self.finish()
         except: 
             import traceback
