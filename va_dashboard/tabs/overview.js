@@ -95,7 +95,7 @@ var Overview = React.createClass({
         var diagram = [];
         var provider_rows = this.state.providers.map(function(provider) {
             var provider_servers = provider.servers.map(function(i) {
-                return {name: i.provider_name, ip: i.ip};
+                return {name: i.hostname, ip: i.ip};
             });
             diagram.push({name: provider.provider_name, servers: provider_servers});
             return {provider_name: provider.provider_name, servers: provider.servers, provider_usage: provider.provider_usage};
@@ -290,7 +290,7 @@ var Host = React.createClass({
             diskData.push(server.used_disk);
             cost += server.month_to_date;
             e_cost += server.monthly_estimate;
-            return server.provider_name;
+            return server.hostname;
         });
         servers.push("Free");
         var usage = this.props.provider_usage;
@@ -369,9 +369,9 @@ var HostRows = React.createClass({
         })(Host);
         var provider = this.props.providers[this.state.index];
         return (
-            <Bootstrap.Panel header={provider.provider_name + " / Instances: " + provider.servers.length} bsStyle='primary' className="provider-billing-block">
+            <Bootstrap.Panel header={provider.name + " / Instances: " + provider.servers.length} bsStyle='primary' className="provider-billing-block">
                 <Bootstrap.Glyphicon glyph='arrow-left' onClick={this.prevHost}></Bootstrap.Glyphicon>
-                <HostRedux key={provider.provider_name} title={provider.provider_name} chartData={provider.servers} provider_usage={provider.provider_usage} />
+                <HostRedux key={provider.name} title={provider.name} chartData={provider.servers} provider_usage={provider.provider_usage} />
                 <Bootstrap.Glyphicon glyph='arrow-right' onClick={this.nextHost}></Bootstrap.Glyphicon>
             </Bootstrap.Panel>
         );
