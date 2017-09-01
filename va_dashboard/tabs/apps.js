@@ -9,23 +9,23 @@ var Appp = React.createClass({
     getInitialState: function () {
         return {
             loaded: false,
-            hosts: [],
+            providers: [],
             states: [],
-            hostname: "",
+            provider_name: "",
             role: "",
             defaults: {image: "", network: "", sec_group: "", size: ""},
             options: {sizes: [], networks: [], images: [], sec_groups: []},
-            host_usage: [{used_cpus: "", max_cpus: "", used_ram: "", max_ram: "", used_disk: "", max_disk: "", used_instances: "", max_instances: ""}]
+            provider_usage: [{used_cpus: "", max_cpus: "", used_ram: "", max_ram: "", used_disk: "", max_disk: "", used_servers: "", max_servers: ""}]
         };
     },
 
     getData: function() {
-        var data = {hosts: []};
+        var data = {providers: []};
         var me = this;
-        var n1 = Network.post('/api/hosts/info', this.props.auth.token, data).fail(function (msg) {
+        var n1 = Network.post('/api/providers/info', this.props.auth.token, data).fail(function (msg) {
             me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
         });
-        var n2 = Network.post('/api/hosts', this.props.auth.token, {}).fail(function (msg) {
+        var n2 = Network.post('/api/providers', this.props.auth.token, {}).fail(function (msg) {
             me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
         });
         var n3 = Network.get('/api/states', this.props.auth.token).fail(function (msg) {
@@ -33,11 +33,11 @@ var Appp = React.createClass({
         });
 
         $.when( n1, n2, n3 ).done(function ( resp1, resp2, resp3 ) {
-            var host_usage = resp1.map(function(host) {
-                return host.host_usage;
+            var provider_usage = resp1.map(function(provider) {
+                return provider.provider_usage;
             });
-            var hosts = resp2.hosts;
-            var first_host = hosts[0];
+            var providers = resp2.providers;
+            var first_provider = providers[0];
             var role = resp3[0].name;
             if(me.props.apps.select){
                 role = me.props.apps.select;
@@ -50,7 +50,7 @@ var Appp = React.createClass({
                     states[state.name] = state.fields;
                 }
             }
-            me.setState({host_usage: host_usage, hosts: hosts, hostname: first_host.hostname, options: {sizes: first_host.sizes, networks: first_host.networks, images: first_host.images, sec_groups: first_host.sec_groups}, defaults: first_host.defaults, states: states, role: role, loaded: true});
+            me.setState({provider_usage: provider_usage, providers: providers, provider_name: first_provider.provider_name, options: {sizes: first_provider.sizes, networks: first_provider.networks, images: first_provider.images, sec_groups: first_provider.sec_groups}, defaults: first_provider.defaults, states: states, role: role, loaded: true});
         });
     },
 
@@ -62,12 +62,12 @@ var Appp = React.createClass({
         this.props.dispatch({type: 'RESET_APP'});
     },
 
-    btn_clicked: function(hostname, host, evtKey){
+    btn_clicked: function(provider_name, provider, evtKey){
         var me = this;
-        var data = {hostname: host, instance_name: hostname, action: evtKey};
+        var data = {provider_name: provider, server_name: provider_name, action: evtKey};
         Network.post('/api/apps/action', this.props.auth.token, data).done(function(d) {
-            Network.post('/api/hosts/info', me.props.auth.token, {hosts: []}).done(function(data) {
-                me.setState({hosts: data});
+            Network.post('/api/providers/info', me.props.auth.token, {providers: []}).done(function(data) {
+                me.setState({providers: data});
             }).fail(function (msg) {
                 me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
             });
@@ -82,9 +82,9 @@ var Appp = React.createClass({
 
     render: function () {
         var app_rows = [];
-        for(var i = 0; i < this.state.hosts.length; i++){
-            // hostname = this.state.hosts[i].hostname;
-            var rows = this.state.hosts[i].instances.map(function(app) {
+        for(var i = 0; i < this.state.providers.length; i++){
+            // provider_name = this.state.providers[i].provider_name;
+            var rows = this.state.providers[i].servers.map(function(app) {
                 ipaddr = app.ip;
                 if(Array.isArray(ipaddr)){
                     if(ipaddr.length > 0){
@@ -99,14 +99,14 @@ var Appp = React.createClass({
                 }
                 var rowClass = "row-app-" + app.status;
                 return (
-                    <Reactable.Tr key={app.hostname} className={rowClass}>
-                        <Reactable.Td column="Hostname">{app.hostname}</Reactable.Td>
+                    <Reactable.Tr key={app.provider_name} className={rowClass}>
+                        <Reactable.Td column="Hostname">{app.provider_name}</Reactable.Td>
                         <Reactable.Td column="IP">{ipaddr}</Reactable.Td>
                         <Reactable.Td column="Size">{app.size}</Reactable.Td>
                         <Reactable.Td column="Status">{app.status}</Reactable.Td>
-                        <Reactable.Td column="Host">{app.host}</Reactable.Td>
+                        <Reactable.Td column="Host">{app.provider}</Reactable.Td>
                         <Reactable.Td column="Actions">
-                            <Bootstrap.DropdownButton id={'dropdown-' + app.hostname} bsStyle='primary' title="Choose" onSelect = {this.btn_clicked.bind(this, app.hostname, app.host)}>
+                            <Bootstrap.DropdownButton id={'dropdown-' + app.provider_name} bsStyle='primary' title="Choose" onSelect = {this.btn_clicked.bind(this, app.provider_name, app.provider)}>
                                 <Bootstrap.MenuItem eventKey="reboot">Reboot</Bootstrap.MenuItem>
                                 <Bootstrap.MenuItem eventKey="delete">Delete</Bootstrap.MenuItem>
                                 <Bootstrap.MenuItem eventKey="start">Start</Bootstrap.MenuItem>
@@ -136,7 +136,7 @@ var Appp = React.createClass({
             <div className="app-containter">
                 <span className="spinner" style={spinnerStyle} ><i className="fa fa-spinner fa-spin fa-3x"></i></span>
                 <div style={blockStyle}>
-                    <AppFormRedux hosts = {this.state.hosts} states = {this.state.states} hostname = {this.state.hostname} role = {this.state.role} defaults = {this.state.defaults} options = {this.state.options} host_usage = {this.state.host_usage} getData = {this.getData} onChange = {this.onChange} onChangeRole = {this.onChangeRole} />
+                    <AppFormRedux providers = {this.state.providers} states = {this.state.states} provider_name = {this.state.provider_name} role = {this.state.role} defaults = {this.state.defaults} options = {this.state.options} provider_usage = {this.state.provider_usage} getData = {this.getData} onChange = {this.onChange} onChangeRole = {this.onChangeRole} />
                     <Bootstrap.PageHeader>Current apps <small>All specified apps</small></Bootstrap.PageHeader>
                     <Bootstrap.Button onClick={this.openModal} className="tbl-btn">
                         <Bootstrap.Glyphicon glyph='plus' />
@@ -217,15 +217,15 @@ var UserStep = React.createClass({
 
 var HostStep = React.createClass({
     getInitialState: function () {
-        return {progress: 0, hostname: this.props.hostname, options: this.props.options, defaults: this.props.defaults, index: 0};
+        return {progress: 0, provider_name: this.props.provider_name, options: this.props.options, defaults: this.props.defaults, index: 0};
     },
 
     onChange: function(e) {
         var value = e.target.value;
-        for(var i=0; i < this.props.hosts.length; i++){
-            var host = this.props.hosts[i];
-            if(host.hostname === value){
-                this.setState({hostname: value, options: {sizes: host.sizes, networks: host.networks, images: host.images, sec_groups: host.sec_groups}, defaults: host.defaults, index: i});
+        for(var i=0; i < this.props.providers.length; i++){
+            var provider = this.props.providers[i];
+            if(provider.provider_name === value){
+                this.setState({provider_name: value, options: {sizes: provider.sizes, networks: provider.networks, images: provider.images, sec_groups: provider.sec_groups}, defaults: provider.defaults, index: i});
                 break;
             }
         }
@@ -248,8 +248,8 @@ var HostStep = React.createClass({
 
         var me = this;
 
-        var host_rows = this.props.hosts.map(function(host, i) {
-            return <option key = {i}>{host.hostname}</option>
+        var provider_rows = this.props.providers.map(function(provider, i) {
+            return <option key = {i}>{provider.provider_name}</option>
         });
 
         var img_rows = this.state.options.images.map(function(img) {
@@ -281,8 +281,8 @@ var HostStep = React.createClass({
                                 Host
                             </Bootstrap.Col>
                             <Bootstrap.Col sm={9}>
-                                <Bootstrap.FormControl componentClass="select" ref='hostname' onChange={this.onChange}>
-                                    {host_rows}
+                                <Bootstrap.FormControl componentClass="select" ref='provider_name' onChange={this.onChange}>
+                                    {provider_rows}
                                 </Bootstrap.FormControl>
                             </Bootstrap.Col>
                         </Bootstrap.FormGroup>
@@ -347,7 +347,7 @@ var HostStep = React.createClass({
                         </div>
                     </Bootstrap.Form>
                 </Bootstrap.Col>
-                <StatsRedux hostname = {this.state.hostname} host_usage = {this.props.host_usage[this.state.index]} />
+                <StatsRedux provider_name = {this.state.provider_name} provider_usage = {this.props.provider_usage[this.state.index]} />
             </div>
         );
     },
@@ -365,7 +365,7 @@ var HostStep = React.createClass({
         }, 10000);
         var data = {
             step: 3,
-            hostname: ReactDOM.findDOMNode(this.refs.hostname).value,
+            provider_name: ReactDOM.findDOMNode(this.refs.provider_name).value,
             size: ReactDOM.findDOMNode(this.refs.flavor).value,
             image: ReactDOM.findDOMNode(this.refs.image).value,
             storage: ReactDOM.findDOMNode(this.refs.storage).value,
@@ -385,7 +385,7 @@ var HostStep = React.createClass({
 
 var AppForm = React.createClass({
     getInitialState: function () {
-        return {role: this.props.role, step2: false, stepIndex: 1, isLoading: false, errors: [], instance_name: "", status: 'none', btnDisable: false};
+        return {role: this.props.role, step2: false, stepIndex: 1, isLoading: false, errors: [], server_name: "", status: 'none', btnDisable: false};
     },
 
     onChangeRole: function(e) {
@@ -409,10 +409,10 @@ var AppForm = React.createClass({
     nextStep: function () {
         if(this.state.stepIndex === 1){
             var nextStep = this.state.step2 ? 2 : 3;
-            var me = this, instance_name = ReactDOM.findDOMNode(this.refs.name).value;
-            var data = {step: 1, role: ReactDOM.findDOMNode(this.refs.role).value, instance_name: instance_name};
+            var me = this, server_name = ReactDOM.findDOMNode(this.refs.name).value;
+            var data = {step: 1, role: ReactDOM.findDOMNode(this.refs.role).value, server_name: server_name};
             Network.post('/api/apps/new/validate_fields', this.props.auth.token, data).done(function(d) {
-                me.setState({stepIndex: nextStep, instance_name: instance_name});
+                me.setState({stepIndex: nextStep, server_name: server_name});
             }).fail(function (msg) {
                 me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
             });
@@ -444,7 +444,7 @@ var AppForm = React.createClass({
         if(this.state.step2){
             step2 = (
                 <Bootstrap.Tab title='Choose user' eventKey={2}>
-                    <UserStepRedux fields = {this.props.states[this.state.role]} goToNextStep = {this.goToNextStep} ref="step2" instance_name = {this.state.instance_name} />
+                    <UserStepRedux fields = {this.props.states[this.state.role]} goToNextStep = {this.goToNextStep} ref="step2" server_name = {this.state.server_name} />
                 </Bootstrap.Tab>
             );
         }
@@ -475,8 +475,8 @@ var AppForm = React.createClass({
 
                         {step2}
 
-                        <Bootstrap.Tab title='Choose host' eventKey={3}>
-                            <HostStepRedux hostname = {this.props.hostname} hosts = {this.props.hosts} host_usage = {this.props.host_usage} options = {this.props.options} defaults = {this.props.defaults} ref="step3" changeStep = {this.changeStep} instance_name = {this.state.instance_name} status = {this.state.status}  launchApp = {this.launchApp} />
+                        <Bootstrap.Tab title='Choose provider' eventKey={3}>
+                            <HostStepRedux provider_name = {this.props.provider_name} providers = {this.props.providers} provider_usage = {this.props.provider_usage} options = {this.props.options} defaults = {this.props.defaults} ref="step3" changeStep = {this.changeStep} server_name = {this.state.server_name} status = {this.state.status}  launchApp = {this.launchApp} />
                         </Bootstrap.Tab>
                     </Bootstrap.Tabs>
                 </Bootstrap.Modal.Body>
@@ -497,11 +497,11 @@ var Stats = React.createClass({
     render: function () {
         return (
             <Bootstrap.Col xs={12} sm={5} md={5}>
-                <h3>{this.props.hostname}</h3>
-                <label>CPU: </label>{this.props.host_usage.used_cpus} / {this.props.host_usage.max_cpus}<br/>
-                <label>RAM: </label>{this.props.host_usage.used_ram} / {this.props.host_usage.max_ram}<br/>
-                <label>DISK: </label>{this.props.host_usage.used_disk} / {this.props.host_usage.max_disk}<br/>
-                <label>INSTANCES: </label>{this.props.host_usage.used_instances} / {this.props.host_usage.max_instances}<br/>
+                <h3>{this.props.provider_name}</h3>
+                <label>CPU: </label>{this.props.provider_usage.used_cpus} / {this.props.provider_usage.max_cpus}<br/>
+                <label>RAM: </label>{this.props.provider_usage.used_ram} / {this.props.provider_usage.max_ram}<br/>
+                <label>DISK: </label>{this.props.provider_usage.used_disk} / {this.props.provider_usage.max_disk}<br/>
+                <label>INSTANCES: </label>{this.props.provider_usage.used_servers} / {this.props.provider_usage.max_servers}<br/>
             </Bootstrap.Col>
         );
 
