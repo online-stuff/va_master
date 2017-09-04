@@ -238,7 +238,7 @@ def launch_app(deploy_handler, handler):
             f.write(pillar_str)
         salt_manage_pillar.add_instance(data.get('instance_name'), data.get('role', ''))
 
-    raise tornado.gen.Return(True)
+#    raise tornado.gen.Return(True)
 
     result = yield driver.create_minion(required_host, data)
 
