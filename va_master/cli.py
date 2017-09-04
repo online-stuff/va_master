@@ -176,8 +176,6 @@ def handle_store_init(cli_config, values, store):
     states_data = run_sync(functools.partial(cli_config.deploy_handler.get_states_data))
     values.update({'states' : states_data})
 
-#    handle_store_config(values)
-
     try:
         store_config = run_sync(functools.partial(store.get, 'init_vals')) or {}
     except: 
@@ -197,17 +195,12 @@ def add_initial_panels(store):
 
 def create_ssh_keys(store_config):
     try: 
-        try: 
-            os.mkdir(store_config.ssh_key_path)
-            key_full_path = cli_config.ssh_key_path + cli_config.ssh_key_name
-
-            ssh_cmd = ['ssh-keygen', '-t', 'rsa', '-f', key_full_path, '-N', '']
-
-            subprocess.call(ssh_cmd)
-            subprocess.call(['mv', key_full_path, key_full_path + '.pem'])
-
-        except: 
-            pass
+#            os.mkdir(cli_config.ssh_key_path)
+        key_full_path = cli_config.ssh_key_path + cli_config.ssh_key_name
+        ssh_cmd = ['ssh-keygen', '-t', 'rsa', '-f', key_full_path, '-N', '']
+        
+        subprocess.call(ssh_cmd)
+        subprocess.call(['mv', key_full_path, key_full_path + '.pem'])
     except: 
         import traceback
         print ('Could not generate a key. Probably already exists. ')

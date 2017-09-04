@@ -27,7 +27,7 @@ PROVIDER_TEMPLATE = '''VAR_PROVIDER_NAME:
   auth_version: 2
   compute_name: nova
   protocol: ipv4
-  ssh_key_name: VAR_SSH_NAME
+  ssh_key_name: VAR_KEYPAIR_NAME
   ssh_key_file: VAR_SSH_FILE
   ssh_interface: private_ips
   use_keystoneauth: True
@@ -68,6 +68,7 @@ class OpenStackDriver(base.DriverBase):
             'datastore' : datastore
             }
         self.regions = ['RegionOne', ]
+        self.keypair_name = ''
         super(OpenStackDriver, self).__init__(**kwargs)
 
     @tornado.gen.coroutine
@@ -146,7 +147,7 @@ class OpenStackDriver(base.DriverBase):
 
 
     @tornado.gen.coroutine
-    def get_openstack_value(self, token_data, token_value, url_endpoint):
+    def get_openstack_value(self, token_data, token_value, url_endpoint, method = 'GET', data = {}):
         """
             Gets a specified value by using the OpenStack REST api. 
 
@@ -157,10 +158,12 @@ class OpenStackDriver(base.DriverBase):
         """
 
         url = token_data[1][token_value]
-        req = HTTPRequest('%s/%s' % (url, url_endpoint), 'GET', headers={
+        req = HTTPRequest('%s/%s' % (url, url_endpoint), method, headers={
             'X-Auth-Token': token_data[0],
             'Accept': 'application/json'
         })
+        if data: 
+            req.data = data
         try:
             resp = yield self.client.fetch(req)
         except:
@@ -169,6 +172,21 @@ class OpenStackDriver(base.DriverBase):
 
         result = json.loads(resp.body)
         raise tornado.gen.Return(result)
+
+
+    @tornado.gen.coroutine
+    def create_keypair(self, username, password, tenant, host_ip):
+        auth_url = 'http://' + host_ip + '/v2.0'
+        loader = loading.get_plugin_loader('password')
+        auth = loader.load_from_options(auth_url=auth_url, username=username, password=password, project_name=tenant)
+        sess = session.Session(auth=auth)
+        nova_cl = client.Client('2.0', session=sess)
+
+#        nova = client.Client('2', username, password, tenant, 'http://' + host_ip + '/v2.0')
+#        sess = session.Session = 
+        with open(self.key_path + '.pub') as f: 
+            key = f.read()
+        keypair = nova_cl.keypairs.create(name = self.keypair_name, public_key = key)
 
 
     @tornado.gen.coroutine
@@ -377,6 +395,10 @@ class OpenStackDriver(base.DriverBase):
             if not '/tokens' in self.provider_vars['VAR_IDENTITY_URL']: 
                 self.provider_vars['VAR_IDENTITY_URL'] += '/tokens'
             self.provider_vars['VAR_REGION'] = field_values['region']
+
+            self.keypair_name = field_values['provider_name'] + '_key'
+            self.provider_vars['VAR_KEYPAIR_NAME'] = self.keypair_name
+            yield self.create_keypair(field_values['username'], field_values['password'], field_values['tenant'], field_values['host_ip'])
 
         elif step_index == 1:
             for field in ['network', 'sec_group']:

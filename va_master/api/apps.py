@@ -196,10 +196,7 @@ def validate_app_fields(deploy_handler, handler):
         raise Exception('Some fields were not entered properly. ')
 
     # If the state has extra fields, then there are 3 steps, otherwise just 2. 
-    step_max = 2
-    if fields['state'].get('fields'): step_max = 3
-
-    if step == step_max: 
+    if step == 3: 
         handler.data.update(fields)
         yield launch_app(deploy_handler, handler)
 
@@ -254,11 +251,8 @@ def launch_app(deploy_handler, handler):
     if data.get('extra_fields', {}) : 
         write_pillar(data)
 
-    #temporary - testing with app steps    
-    raise tornado.gen.Return(True)
-
-    result = yield driver.create_server(required_provider, data)
-
+    result = yield driver.create_minion(required_host, data)
+    print ('Result is : ', result)
 
     if data.get('role'):
         minion_info = yield get_app_info(deploy_handler, handler.data['server_name'])
@@ -268,9 +262,8 @@ def launch_app(deploy_handler, handler):
         required_provider['servers'].append(minion_info)
         yield store.insert('providers', providers)
 
-
-        if not minion_info: 
-            raise tornado.gen.Return({"success" : False, "message" : "No minion_info, something probably went wrong with trying to start the server. ", "data" : None})
+    if not minion_info: 
+        raise tornado.gen.Return({"success" : False, "message" : "No minion_info, something probably went wrong with trying to start the instance. ", "data" : None})
 
     raise tornado.gen.Return(result)
 
