@@ -219,7 +219,7 @@ class ApiHandler(tornado.web.RequestHandler):
 
 
     @tornado.gen.coroutine
-    def serve_file(self, source, chunk_size = 10**6, salt_source = []):
+    def serve_file(self, source, chunk_size = 10**6, salt_source = {}):
         try: 
             self.set_header('Content-Type', 'application/octet-stream')
             self.set_header('Content-Disposition', 'attachment; filename=test.zip')
@@ -228,15 +228,15 @@ class ApiHandler(tornado.web.RequestHandler):
             if salt_source: 
                 client = LocalClient()
                 source = client.cmd
-                args = salt_source
+                kwargs = salt_source
             else:
                 f = open(source, 'r')
                 source = f.read
-                args = [chunk_size]
+                kwargs = [chunk_size]
 
             while True:
-                print ('Calling ', source, ' with ', args)
-                data = source(*args)
+                print ('Calling ', source, ' with kwargs ', kwargs)
+                data = source(**kwargs)
                 offset += chunk_size
                 if not data:
                     break
