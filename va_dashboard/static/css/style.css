@@ -409,7 +409,7 @@ table tr.row-state-Unknown{
 .billing-info > div:last-child {
     margin-left: 5%;
 }
-.host-billing{
+.provider-billing{
     text-align: center;
     font-size: 25px;
     font-weight: bolder;
@@ -424,7 +424,7 @@ table tr.row-state-Unknown{
     z-index: 1000;
     overflow:hidden;
 }
-.host-billing-block span{
+.provider-billing-block span{
     display: inline-block;
     /*padding-left: 5px;
     padding-right: 5px;*/
@@ -513,10 +513,10 @@ table tr.row-app-PAUSED{
 table tr.row-app-SHUTOFF{
     border-left: 5px solid #de4040;
 }
-table tr.row-host-Online{
+table tr.row-provider-Online{
     border-left: 5px solid #44de40;
 }
-table tr.row-host-Offline{
+table tr.row-provider-Offline{
     border-left: 5px solid #de4040;
 }
 .reactable-header-sortable{

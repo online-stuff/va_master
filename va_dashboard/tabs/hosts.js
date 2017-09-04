@@ -20,7 +20,7 @@ var Hosts = React.createClass({
         this.getCurrentHosts();
     },
     deleteHost: function (e){
-        var data = {"hostname": e.target.value};
+        var data = {"provider_name": e.target.value};
         var me = this;
         Network.post('/api/providers/delete', this.props.auth.token, data).done(function(data) {
             me.getCurrentHosts();
@@ -47,13 +47,13 @@ var Hosts = React.createClass({
                 className = "danger row-provider-Offline";
             }
             return (
-                <Reactable.Tr key={provider.hostname} className={className}>
-                    <Reactable.Td column="Host name">{provider.hostname}</Reactable.Td>
+                <Reactable.Tr key={provider.provider_name} className={className}>
+                    <Reactable.Td column="Provider name">{provider.provider_name}</Reactable.Td>
                     <Reactable.Td column="IP">{provider.provider_ip}</Reactable.Td>
                     <Reactable.Td column="Instances">{provider.servers.length}</Reactable.Td>
                     <Reactable.Td column="Driver">{provider.driver_name}</Reactable.Td>
                     <Reactable.Td column="Status">{status}</Reactable.Td>
-                    <Reactable.Td column="Actions"><Bootstrap.Button type="button" bsStyle='primary' onClick={this.deleteHost} value={provider.hostname}>
+                    <Reactable.Td column="Actions"><Bootstrap.Button type="button" bsStyle='primary' onClick={this.deleteHost} value={provider.provider_name}>
                         Delete
                     </Bootstrap.Button></Reactable.Td>
                 </Reactable.Tr>
@@ -69,7 +69,7 @@ var Hosts = React.createClass({
         const blockStyle = {
             visibility: loading ? "hidden": "visible",
         };
-        var sf_cols = ['Host name', 'IP', 'Instances', 'Driver', 'Status'];
+        var sf_cols = ['Provider name', 'IP', 'Instances', 'Driver', 'Status'];
         return (<div className="app-containter">
             <NewHostFormRedux changeHosts = {this.getCurrentHosts} />
             <span className="spinner" style={spinnerStyle} ><i className="fa fa-spinner fa-spin fa-3x" aria-hidden="true"></i></span>
@@ -79,7 +79,7 @@ var Hosts = React.createClass({
                     <Bootstrap.Glyphicon glyph='plus' />
                     Add provider
                 </Bootstrap.Button>
-                <Reactable.Table className="table striped" columns={['Host name', 'IP', 'Instances', 'Driver', 'Status', 'Actions']} itemsPerPage={10} pageButtonLimit={10} noDataText="No matching records found." sortable={sf_cols} filterable={sf_cols} >
+                <Reactable.Table className="table striped" columns={['Provider name', 'IP', 'Instances', 'Driver', 'Status', 'Actions']} itemsPerPage={10} pageButtonLimit={10} noDataText="No matching records found." sortable={sf_cols} filterable={sf_cols} >
                     {provider_rows}
                 </Reactable.Table>
             </div>
@@ -300,7 +300,7 @@ var NewHostForm = React.createClass({
     },
     onSubmit: function(e) {
         e.preventDefault();
-        var data = {name: this.refs.hostname.value, driver: this.state.currentDriver};
+        var data = {name: this.refs.provider_name.value, driver: this.state.currentDriver};
         var me = this;
         Network.post('/api/providers', this.props.auth.token, data).done(function(data) {
             me.props.changeHosts();

@@ -53,9 +53,9 @@ var Store = React.createClass({
             <div>
                 <Bootstrap.Button onClick={this.openModal}>
                     <Bootstrap.Glyphicon glyph='plus' />
-                    Add state
+                    Add app 
                 </Bootstrap.Button>
-                <Bootstrap.PageHeader>Current states</Bootstrap.PageHeader>
+                <Bootstrap.PageHeader>Available apps</Bootstrap.PageHeader>
                 <div className="container-fluid">
                     <Bootstrap.Row>
                         {states_rows}
@@ -81,7 +81,7 @@ var NewStateForm = React.createClass({
                 <Bootstrap.Modal.Body>
                     <form onSubmit={this.onSubmit} ref="uploadForm" encType="multipart/form-data">
                         <Bootstrap.FormGroup>
-                            <Bootstrap.ControlLabel >State name</Bootstrap.ControlLabel>
+                            <Bootstrap.ControlLabel >App name</Bootstrap.ControlLabel>
                             <Bootstrap.FormControl type='text' ref="name" />
                         </Bootstrap.FormGroup>
                         <Bootstrap.FormGroup>
