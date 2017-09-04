@@ -199,11 +199,12 @@ def validate_app_fields(deploy_handler, handler):
         raise Exception('Some fields were not entered properly. ')
 
     # If the state has extra fields, then there are 3 steps, otherwise just 2. 
-    step_max = 2
-    print ('Fields state is : ', fields['state'])
-    if fields['state'].get('fields'): step_max = 3
-
-    if step == step_max: 
+#    step_max = 2
+#    print ('Fields state is : ', fields['state'])
+#    if fields['state'].get('fields'): step_max = 3
+#
+#    print ('Step max is : ', step_max, ' and step is : ', step)
+    if step == 3: 
         handler.data.update(fields)
         yield launch_app(deploy_handler, handler)
 
@@ -238,13 +239,14 @@ def launch_app(deploy_handler, handler):
             f.write(pillar_str)
         salt_manage_pillar.add_instance(data.get('instance_name'), data.get('role', ''))
 
-    raise tornado.gen.Return(True)
+#    raise tornado.gen.Return(True)
 
     result = yield driver.create_minion(required_host, data)
+    print ('Result is : ', result)
 
     minion_info = yield get_app_info(deploy_handler, handler.data['instance_name'])
 
-    if not minion_nifo: 
+    if not minion_info: 
         raise tornado.gen.Return({"success" : False, "message" : "No minion_info, something probably went wrong with trying to start the instance. ", "data" : None})
 
     elif data.get('role'):

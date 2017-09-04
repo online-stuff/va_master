@@ -184,7 +184,7 @@ def handle_init(args):
             store_config = {}
 
         store_config.update(generate_store_config(values))
-        store_config = {x : store_config[x] for x in store_config if x not in ['admini-pass']}
+        store_config = {x : store_config[x] for x in store_config if x not in ['admin-pass']}
 #            store_config = run_sync(functools.partial(store.insert, 'init_vals', store_config))
         run_sync(functools.partial(store.insert, 'init_vals', store_config))
 
@@ -196,17 +196,14 @@ def handle_init(args):
 
         #Generate an ssh-key
         try: 
-            try: 
-                os.mkdir(store_coonfig.ssh_key_path)
-                key_full_path = cli_config.ssh_key_path + cli_config.ssh_key_name
-    
-                ssh_cmd = ['ssh-keygen', '-t', 'rsa', '-f', key_full_path, '-N', '']
-    
-                subprocess.call(ssh_cmd)
-                subprocess.call(['mv', key_full_path, key_full_path + '.pem'])
+#            os.mkdir(cli_config.ssh_key_path)
+            key_full_path = cli_config.ssh_key_path + cli_config.ssh_key_name
+            ssh_cmd = ['ssh-keygen', '-t', 'rsa', '-f', key_full_path, '-N', '']
+            
+            subprocess.call(ssh_cmd)
+            subprocess.call(['mv', key_full_path, key_full_path + '.pem'])
 
-            except: 
-                pass
+                
         except: 
             import traceback
             print ('Could not generate a key. Probably already exists. ')
