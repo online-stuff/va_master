@@ -131,12 +131,12 @@ var Home = React.createClass({
                         <Bootstrap.Glyphicon glyph='home' /> Overview</Router.IndexLink>
                         </li>
                         <li>
-                        <NavLink to='hosts'>
-                        <Bootstrap.Glyphicon glyph='hdd' /> Hosts</NavLink>
+                        <NavLink to='providers'>
+                        <Bootstrap.Glyphicon glyph='hdd' /> Providers</NavLink>
                         </li>
                         <li>
-                        <NavLink to='apps'>
-                        <Bootstrap.Glyphicon glyph='th' /> Apps</NavLink>
+                        <NavLink to='servers'>
+                        <Bootstrap.Glyphicon glyph='th' /> Servers</NavLink>
                         </li>
                         <li>
                         <NavLink to='store'>

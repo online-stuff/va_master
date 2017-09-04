@@ -5,7 +5,7 @@ var Bootstrap = require('react-bootstrap');
 var ReactDOM = require('react-dom');
 var Reactable = require('reactable');
 
-var Appp = React.createClass({
+var Servers = React.createClass({
     getInitialState: function () {
         return {
             loaded: false,
@@ -122,9 +122,9 @@ var Appp = React.createClass({
             app_rows.push(rows);
         }
 
-        var AppFormRedux = connect(function(state){
+        var ServerFormRedux = connect(function(state){
             return {auth: state.auth, apps: state.apps, alert: state.alert, modal: state.modal};
-        })(AppForm);
+        })(ServerForm);
 
         var loaded = this.state.loaded;
         const spinnerStyle = {
@@ -139,7 +139,7 @@ var Appp = React.createClass({
             <div className="app-containter">
                 <span className="spinner" style={spinnerStyle} ><i className="fa fa-spinner fa-spin fa-3x"></i></span>
                 <div style={blockStyle}>
-                    <AppFormRedux providers = {this.state.providers} states = {this.state.states} provider_name = {this.state.hostname} role = {this.state.role} defaults = {this.state.defaults} options = {this.state.options} provider_usage = {this.state.provider_usage} getData = {this.getData} onChange = {this.onChange} onChangeRole = {this.onChangeRole} />
+                    <ServerFormRedux providers = {this.state.providers} states = {this.state.states} provider_name = {this.state.hostname} role = {this.state.role} defaults = {this.state.defaults} options = {this.state.options} provider_usage = {this.state.provider_usage} getData = {this.getData} onChange = {this.onChange} onChangeRole = {this.onChangeRole} />
                     <Bootstrap.PageHeader>Current servers <small>All specified servers</small></Bootstrap.PageHeader>
                     <Bootstrap.Button onClick={this.openModal} className="tbl-btn">
                         <Bootstrap.Glyphicon glyph='plus' />
@@ -378,7 +378,7 @@ var HostStep = React.createClass({
         };
         Network.post('/api/apps/new/validate_fields', this.props.auth.token, data).done(function(data) {
             //me.setState({status: 'launched'});
-            me.props.launchApp();
+            me.props.launchServer();
         }).fail(function (msg) {
             me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
         });
@@ -386,7 +386,7 @@ var HostStep = React.createClass({
 
 });
 
-var AppForm = React.createClass({
+var ServerForm = React.createClass({
     getInitialState: function () {
         return {role: this.props.role, step2: false, stepIndex: 1, isLoading: false, errors: [], server_name: "", status: 'none', btnDisable: false};
     },
@@ -404,7 +404,7 @@ var AppForm = React.createClass({
         this.setState({stepIndex: 3});
     },
 
-    launchApp: function () {
+    launchServer: function () {
         //this.close();
         this.setState({btnDisable: true, status: 'launched'});
     },
@@ -479,7 +479,7 @@ var AppForm = React.createClass({
                         {step2}
 
                         <Bootstrap.Tab title='Choose provider' eventKey={3}>
-                            <HostStepRedux provider_name = {this.props.hostname} providers = {this.props.providers} provider_usage = {this.props.provider_usage} options = {this.props.options} defaults = {this.props.defaults} ref="step3" changeStep = {this.changeStep} server_name = {this.state.server_name} status = {this.state.status}  launchApp = {this.launchApp} />
+                            <HostStepRedux provider_name = {this.props.hostname} providers = {this.props.providers} provider_usage = {this.props.provider_usage} options = {this.props.options} defaults = {this.props.defaults} ref="step3" changeStep = {this.changeStep} server_name = {this.state.server_name} status = {this.state.status}  launchServer = {this.launchServer} />
                         </Bootstrap.Tab>
                     </Bootstrap.Tabs>
                 </Bootstrap.Modal.Body>
@@ -511,8 +511,8 @@ var Stats = React.createClass({
     }
 });
 
-Apps = connect(function(state){
+Servers = connect(function(state){
     return {auth: state.auth, apps: state.apps, alert: state.alert};
-})(Appp);
+})(Servers);
 
-module.exports = Apps;
+module.exports = Servers;
