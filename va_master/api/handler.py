@@ -240,7 +240,7 @@ class ApiHandler(tornado.web.RequestHandler):
 
 
     @tornado.gen.coroutine
-    def serve_file(self, source, chunk_size = 10**6, salt_source = []):
+    def serve_file(self, source, chunk_size = 10**6, salt_source = {}):
         try: 
             offset = 0
 
@@ -251,7 +251,7 @@ class ApiHandler(tornado.web.RequestHandler):
             else:
                 f = open(source, 'r')
                 source = f.read
-                kwargs = [chunk_size]
+                kwargs = {"size" : chunk_size}
 
             yield self.send_data(source, kwargs, chunk_size)
 #            self.finish()
