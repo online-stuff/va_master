@@ -436,8 +436,8 @@ class DriverBase(object):
         new_minion_cmd = ['salt-cloud', '-p', new_profile, data['instance_name']]
         minion_apply_state = ['salt', data['instance_name'], 'state.highstate']
 
-#        new_minion_values = subprocess.call(new_minion_cmd)
-#        new_minion_state_values = subprocess.call(minion_apply_state)
+        new_minion_values = subprocess.call(new_minion_cmd)
+        new_minion_state_values = subprocess.call(minion_apply_state)
 
         raise tornado.gen.Return(True)
 
