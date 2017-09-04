@@ -219,10 +219,29 @@ class ApiHandler(tornado.web.RequestHandler):
 
 
     @tornado.gen.coroutine
-    def serve_file(self, source, chunk_size = 10**6, salt_source = {}):
+    def send_data(self, source, kwargs, chunk_size):
+        offset = 0
+        while True:
+           print ('Calling ', source, ' with ', kwargs)
+           data = source(**kwargs)
+           offset += chunk_size
+           if not data:
+               break
+           if type(data) == dict: #If using salt, it typically is formatted as {"minion" : "data"}
+               data = data[kwargs.get('tgt')]
+#           print ('Keys are : ', data.keys())
+
+           self.set_header('Content-Type', 'application/octet-stream')
+           self.set_header('Content-Disposition', 'attachment; filename=test.zip')
+
+           self.write(unicode(data, "ISO-8859-1"))
+           self.flush()
+       
+
+
+    @tornado.gen.coroutine
+    def serve_file(self, source, chunk_size = 10**6, salt_source = []):
         try: 
-            self.set_header('Content-Type', 'application/octet-stream')
-            self.set_header('Content-Disposition', 'attachment; filename=test.zip')
             offset = 0
 
             if salt_source: 
@@ -234,14 +253,7 @@ class ApiHandler(tornado.web.RequestHandler):
                 source = f.read
                 kwargs = [chunk_size]
 
-            while True:
-                print ('Calling ', source, ' with kwargs ', kwargs)
-                data = source(**kwargs)
-                offset += chunk_size
-                if not data:
-                    break
-                self.write(data)
-                self.flush()
+            yield self.send_data(source, kwargs, chunk_size)
 #            self.finish()
         except: 
             import traceback
