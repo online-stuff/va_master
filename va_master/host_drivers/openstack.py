@@ -412,18 +412,8 @@ class OpenStackDriver(base.DriverBase):
         raise tornado.gen.Return(step_result)
 
 
-    @tornado.gen.coroutine
-    def create_server(self, provider, data):
-        """ Works properly with the base driver method, but overwritten for bug tracking. """
-        try:
-#            nova = client.Client('2', provider['username'], provider['password'], provider['tenant'], 'http://' + provider['provider_ip'] + '/v2.0')
-#            full_key_path = provider['salt_key_path'] + ('/' * provider['salt_key_path'][-1] != '/') + provider['salt_key_name'] + '.pub'
-#            f = ''
-#            with open(self.key_path + '.pub') as f: 
-#                key = f.read()
-#            keypair = nova.keypairs.create(name = self.key_name, public_key = key)
-#            print ('Creating server!')
-            yield super(OpenStackDriver, self).create_minion(provider, data)
-        except:
-            import traceback
-            traceback.print_exc()
+#    @tornado.gen.coroutine
+#    def create_server(self, provider, data):
+#        """ Works properly with the base driver method, but overwritten for bug tracking. """
+#        yield super(OpenStackDriver, self).create_minion(provider, data)
+
