@@ -81,7 +81,7 @@ def salt_serve_file(deploy_handler, handler, server_name, action, args = [], das
 #    with open(path_to_file, 'w') as f: 
 #        f.write(result)
 
-    yield handler.serve_file('test', salt_source = [server_name, module + '.' + action] + args)
+    yield handler.serve_file('test', salt_source = {"tgt" : server_name, "fun" : module + '.' + action, "arg" :  args})
 
 @tornado.gen.coroutine
 def get_ts_data(deploy_handler):

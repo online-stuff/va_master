@@ -219,15 +219,22 @@ class ApiHandler(tornado.web.RequestHandler):
 
 
     @tornado.gen.coroutine
-    def send_data(self, source, data, args, chunk_size):
+    def send_data(self, source, kwargs, chunk_size):
         offset = 0
         while True:
-           print ('Calling ', source, ' with ', args)
-           data = source(*args)
+           print ('Calling ', source, ' with ', kwargs)
+           data = source(**kwargs)
            offset += chunk_size
            if not data:
                break
-           self.write(data)
+           if type(data) == dict: #If using salt, it typically is formatted as {"minion" : "data"}
+               data = data[kwargs.get('tgt')]
+#           print ('Keys are : ', data.keys())
+
+           self.set_header('Content-Type', 'application/octet-stream')
+           self.set_header('Content-Disposition', 'attachment; filename=test.zip')
+
+           self.write(unicode(data, "ISO-8859-1"))
            self.flush()
        
 
@@ -235,21 +242,18 @@ class ApiHandler(tornado.web.RequestHandler):
     @tornado.gen.coroutine
     def serve_file(self, source, chunk_size = 10**6, salt_source = []):
         try: 
-            self.set_header('Content-Type', 'application/octet-stream')
-            self.set_header('Content-Disposition', 'attachment; filename=test.zip')
             offset = 0
 
             if salt_source: 
                 client = LocalClient()
                 source = client.cmd
-                args = salt_source
+                kwargs = salt_source
             else:
                 f = open(source, 'r')
                 source = f.read
-                args = [chunk_size]
+                kwargs = [chunk_size]
 
-            yield self.send_data(source, data, args, chunk_size)
-
+            yield self.send_data(source, kwargs, chunk_size)
 #            self.finish()
         except: 
             import traceback
