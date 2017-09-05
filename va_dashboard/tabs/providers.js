@@ -4,11 +4,11 @@ var Network = require('../network');
 var connect = require('react-redux').connect;
 var Reactable = require('reactable');
 
-var Hosts = React.createClass({
+var Providers = React.createClass({
     getInitialState: function () {
         return {providers: [], loading: true};
     },
-    getCurrentHosts: function () {
+    getCurrentProviders: function () {
         var me = this;
         Network.post('/api/providers', this.props.auth.token, {}).done(function (data) {
             me.setState({providers: data.providers, loading: false});
@@ -17,18 +17,18 @@ var Hosts = React.createClass({
         });
     },
     componentDidMount: function () {
-        this.getCurrentHosts();
+        this.getCurrentProviders();
     },
-    deleteHost: function (e){
+    deleteProvider: function (e){
         var data = {"provider_name": e.target.value};
         var me = this;
         Network.post('/api/providers/delete', this.props.auth.token, data).done(function(data) {
-            me.getCurrentHosts();
+            me.getCurrentProviders();
         }).fail(function (msg) {
             me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
         });
     },
-    addHost: function () {
+    addProvider: function () {
         this.props.dispatch({type: 'OPEN_MODAL'});
     },
     render: function() {
@@ -53,15 +53,15 @@ var Hosts = React.createClass({
                     <Reactable.Td column="Instances">{provider.servers.length}</Reactable.Td>
                     <Reactable.Td column="Driver">{provider.driver_name}</Reactable.Td>
                     <Reactable.Td column="Status">{status}</Reactable.Td>
-                    <Reactable.Td column="Actions"><Bootstrap.Button type="button" bsStyle='primary' onClick={this.deleteHost} value={provider.provider_name}>
+                    <Reactable.Td column="Actions"><Bootstrap.Button type="button" bsStyle='primary' onClick={this.deleteProvider} value={provider.provider_name}>
                         Delete
                     </Bootstrap.Button></Reactable.Td>
                 </Reactable.Tr>
             );
         }.bind(this));
-        var NewHostFormRedux = connect(function(state){
+        var NewProviderFormRedux = connect(function(state){
             return {auth: state.auth, alert: state.alert, modal: state.modal};
-        })(NewHostForm);
+        })(NewProviderForm);
         var loading = this.state.loading;
         const spinnerStyle = {
             display: loading ? "block": "none",
@@ -71,11 +71,11 @@ var Hosts = React.createClass({
         };
         var sf_cols = ['Provider name', 'IP', 'Instances', 'Driver', 'Status'];
         return (<div className="app-containter">
-            <NewHostFormRedux changeHosts = {this.getCurrentHosts} />
+            <NewProviderFormRedux changeProviders = {this.getCurrentProviders} />
             <span className="spinner" style={spinnerStyle} ><i className="fa fa-spinner fa-spin fa-3x" aria-hidden="true"></i></span>
             <div style={blockStyle}>
                 <Bootstrap.PageHeader>Current providers <small>All specified providers</small></Bootstrap.PageHeader>
-                <Bootstrap.Button onClick={this.addHost} className="tbl-btn">
+                <Bootstrap.Button onClick={this.addProvider} className="tbl-btn">
                     <Bootstrap.Glyphicon glyph='plus' />
                     Add provider
                 </Bootstrap.Button>
@@ -87,7 +87,7 @@ var Hosts = React.createClass({
     }
 });
 
-var HostStep = React.createClass({
+var ProviderStep = React.createClass({
     render: function () {
         var fields = [];
         for(var i = 0; i < this.props.fields.length; i++) {
@@ -145,7 +145,7 @@ var HostStep = React.createClass({
     }
 });
 
-var NewHostForm = React.createClass({
+var NewProviderForm = React.createClass({
     getInitialState: function () {
         return {currentDriver: null, drivers: [], stepIndex: -1, optionChoices: {},
             errors: [], fieldValues: {}, isLoading: false};
@@ -212,7 +212,7 @@ var NewHostForm = React.createClass({
                 }else{
                     steps.push(
                         <Bootstrap.Tab title={step.name} eventKey={j} key={j}>
-                            <HostStep fields={step.fields} optionChoices={this.state.optionChoices}
+                            <ProviderStep fields={step.fields} optionChoices={this.state.optionChoices}
                                 fieldValues={this.state.fieldValues}
                                 onFieldChange={this.onFieldChange}/>
                         </Bootstrap.Tab>
@@ -286,7 +286,7 @@ var NewHostForm = React.createClass({
                 }
                 if(d.new_step_index == -1 && d.errors.length == 0){
                     setTimeout(function(){
-                         me.props.changeHosts();
+                         me.props.changeProviders();
                     }, 2000);
                 }else{
                     me.setState({stepIndex: d.new_step_index, optionChoices: mergeChoices, errors: d.errors, isLoading: false});
@@ -303,15 +303,15 @@ var NewHostForm = React.createClass({
         var data = {name: this.refs.provider_name.value, driver: this.state.currentDriver};
         var me = this;
         Network.post('/api/providers', this.props.auth.token, data).done(function(data) {
-            me.props.changeHosts();
+            me.props.changeProviders();
         }).fail(function (msg) {
             me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
         });
     }
 });
 
-Hosts = connect(function(state){
+Providers = connect(function(state){
     return {auth: state.auth, alert: state.alert};
-})(Hosts);
+})(Providers);
 
-module.exports = Hosts;
+module.exports = Providers;
