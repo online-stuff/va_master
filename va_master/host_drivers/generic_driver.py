@@ -10,7 +10,7 @@ import tornado.gen
 import json
 import subprocess
 import os
-
+from paramiko import SSHClient
 
 PROVIDER_TEMPLATE = ""
 PROFILE_TEMPLATE = ""
@@ -181,6 +181,13 @@ class GenericDriver(base.DriverBase):
       
     @tornado.gen.coroutine
     def create_server(self, provider, data):
+        #TODO Connect to ssh://data.get('ip') -p data.get('port')[ -u data.get('user') -pass data.get('pass') || -key data.get('key')
+        cl = SSHClient()
+        cl.load_system_host_keys()
+        cl.connect(data.get('ip'), port = int(data.get('port')), username = data.get('username'), password = data.get('password'))
+        # distro = ssh_session.cmd(['get', 'distro', 'cmd'])
+        # instal = ssh_session.cmd(['install', 'salt', 'stuff'])
+        # services are added on the api side. 
         provider_datastore = yield self.datastore.get(provider['provider_name'])
         servers = provider_datastore.get('servers')
         server = {"provider_name" : data["server_name"], "ip" : "", "local_gb" : 0, "memory_mb" : 0, "status" : "n/a" }
