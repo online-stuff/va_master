@@ -412,8 +412,16 @@ class OpenStackDriver(base.DriverBase):
         raise tornado.gen.Return(step_result)
 
 
-#    @tornado.gen.coroutine
-#    def create_server(self, provider, data):
-#        """ Works properly with the base driver method, but overwritten for bug tracking. """
-#        yield super(OpenStackDriver, self).create_minion(provider, data)
+    @tornado.gen.coroutine
+    def create_server(self, host, data):
+        """ Works properly with the base driver method, but overwritten for bug tracking. """
+        try:
+            yield super(OpenStackDriver, self).create_minion(host, data)
+
+            #Once a server is created, we revert the templates to the originals for creating future servers. 
+            self.profile_template = PROFILE_TEMPLATE
+            self.provider_template = PROVIDER_TEMPLATE
+        except:
+            import traceback
+            traceback.print_exc()
 
