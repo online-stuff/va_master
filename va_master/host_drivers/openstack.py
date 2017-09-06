@@ -424,6 +424,9 @@ class OpenStackDriver(base.DriverBase):
 #            keypair = nova.keypairs.create(name = self.key_name, public_key = key)
 #            print ('Creating instance!')
             yield super(OpenStackDriver, self).create_minion(host, data)
+
+            self.profile_template = PROFILE_TEMPLATE
+            self.provider_template = PROVIDER_TEMPLATE
         except:
             import traceback
             traceback.print_exc()
