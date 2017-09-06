@@ -59,31 +59,14 @@ def create_service_from_state(deploy_handler, state_name, service_name, service_
     state = [x for x in all_states if x['name'] == state_name][0]
 
     state_service = state['service']
-    service = {
-        "services": [
-        {
-            "name": service_name,
-            "tags": state_service['tags'], 
-            "address": service_address, 
-            "port": service_port, 
-            "checks": [
-             {
-                "id": "tcp", 
-                "name": "TCP connection to port", 
-                "tcp": "192.168.80.16:5000", 
-                "interval": "30s", "timeout": "10s"
-            },{
-                "id": "api",
-                "name": "HTTP connection to port",
-                "http": "http://192.168.80.16:5000/v3",
-                "tls_skip_verify": true,
-                "method" : "POST",
-                "interval": "5s",
-                "timeout": "1s"
-            }   
-            ]
-       }]
-    }
+    services = state_service['services']
+    for service in services: 
+        for check in services[service]:
+            for k in services[service][k]:
+                if 'VAR_' in services[service][k]:
+                    #Somehow do work with var
+                    pass
+
     yield add_service_with_definition(deploy_handler, service_definition, provider_name)
 
 @tornado.gen.coroutine
