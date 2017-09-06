@@ -48,14 +48,12 @@ def list_panels(deploy_handler, handler):
 @tornado.gen.coroutine
 def panel_action_execute(deploy_handler, instance_name, action, args = [], dash_user = '', kwargs = {}, module = None, timeout = 30):
     try:
-        print ('dash user is : ', dash_user)
         user_funcs = yield deploy_handler.get_user_salt_functions(dash_user['username'])
         if action not in user_funcs and dash_user['type'] != 'admin':
             print ('Function not supported')
             #TODO actually not allow user to do anything. This is just for testing atm. 
             
 
-        print ('INstance name is : ', instance_name)
         instance_info = yield apps.get_app_info(deploy_handler, instance_name)
         state = instance_info['role']
 
@@ -68,7 +66,7 @@ def panel_action_execute(deploy_handler, instance_name, action, args = [], dash_
 
         cl = salt.client.LocalClient()
         print ('Calling salt module ', module + '.' + action, ' on ', instance_name, ' with args : ', args, ' and kwargs : ', kwargs)
-        result = cl.cmd(instance_name, module + '.' + action , args, kwargs = kwargs, timeout = timeout)
+        result = cl.cmd(instance_name, module + '.' + action , args, kwarg = kwargs, timeout = timeout)
         result = result.get(instance_name)
     except: 
         import traceback 
@@ -115,7 +113,7 @@ def get_chart_data(deploy_handler, instance_name, args = ['va-directory', 'Ping'
     raise tornado.gen.Return(result)
 
 @tornado.gen.coroutine
-def panel_action(deploy_handler, actions_list = [], instance_name = '', action = '', args = [], kwargs = {}, module = None):
+def panel_action(deploy_handler, actions_list = [], instance_name = '', action = '', args = [], kwargs = {}, module = None, dash_user = {}):
     if not actions_list: 
         actions_list = [{"instance_name" : instance_name, "action" : action, "args" : args, 'kwargs' : {}, 'module' : module}]
 
@@ -141,7 +139,11 @@ def get_panel_for_user(deploy_handler, handler, panel, instance_name, dash_user,
     user_panels = yield list_panels(deploy_handler, handler)
     instance_info = yield apps.get_app_info(deploy_handler, instance_name)
     state = instance_info['role']
-    print ('args are : ', args, ' and from handler: ', handler.data.get('args'))
+
+    #This is usually for get requests. Any arguments in the url that are not arguments of this function are assumed to be keyword arguments for salt. 
+    if not args: 
+        kwargs = {x : handler.data[x] for x in handler.data if x not in ['handler', 'panel', 'instance_name', 'dash_user', 'method']}
+
 
     state = filter(lambda x: x['name'] == state, user_panels)[0]
     if instance_name in state['instances']:
@@ -150,9 +152,8 @@ def get_panel_for_user(deploy_handler, handler, panel, instance_name, dash_user,
             args = [args]
         args = [panel] + args
         try: 
-            print ('Getting panel. ')
-            panel  = yield panel_action_execute(deploy_handler, instance_name, action, args, dash_user)
-            print ('Panel is : ', panel)
+            print ('Getting panel with ', action, ' and args ', args)
+            panel  = yield panel_action_execute(deploy_handler, instance_name, action, args, dash_user, kwargs = kwargs)
         except: 
             import traceback
             traceback.print_exc()
