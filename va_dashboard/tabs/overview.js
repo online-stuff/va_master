@@ -157,9 +157,7 @@ var Diagram = React.createClass({
     },
     render: function() {
         var graph = {nodes: [], edges: []}, ll = 0;
-        if(Object.keys(this.props.providers).length > 0){
-            graph.nodes.push({id: 'master', label: "va-master"});
-        }
+        graph.nodes.push({id: 'master', label: "va-master"});
         for(var location in this.props.providers){
             var provider = this.props.providers[location];
             var txt = location;
