@@ -65,7 +65,7 @@ def panel_action_execute(deploy_handler, server_name, action, args = [], dash_us
 
     cl = salt.client.LocalClient()
     print ('Calling salt module ', module + '.' + action, ' on ', server_name, ' with args : ', args, ' and kwargs : ', kwargs)
-    result = cl.cmd(server_name, module + '.' + action , args, kwargs = kwargs, timeout = timeout)
+    result = cl.cmd(server_name, module + '.' + action , args, kwarg = kwargs, timeout = timeout)
     result = result.get(server_name)
 
     raise tornado.gen.Return(result)
@@ -98,7 +98,7 @@ def get_chart_data(deploy_handler, server_name, args = ['va-directory', 'Ping'])
     raise tornado.gen.Return(result)
 
 @tornado.gen.coroutine
-def panel_action(deploy_handler, actions_list = [], server_name = '', action = '', args = [], kwargs = {}, module = None):
+def panel_action(deploy_handler, actions_list = [], server_name = '', action = '', args = [], kwargs = {}, module = None, dash_user = {}):
     if not actions_list: 
         actions_list = [{"server_name" : server_name, "action" : action, "args" : args, 'kwargs' : {}, 'module' : module}]
 
@@ -125,14 +125,17 @@ def get_panel_for_user(deploy_handler, handler, panel, server_name, dash_user, a
     server_info = yield apps.get_app_info(deploy_handler, server_name)
     state = server_info['role']
 
+    #This is usually for get requests. Any arguments in the url that are not arguments of this function are assumed to be keyword arguments for salt. 
+    if not args: 
+        kwargs = {x : handler.data[x] for x in handler.data if x not in ['handler', 'panel', 'instance_name', 'dash_user', 'method']}
+
     state = filter(lambda x: x['name'] == state, user_panels)[0]
     if server_name in state['servers']:
         action = 'get_panel'
         if type(args) != list and args: 
             args = [args]
         args = [panel] + args
-        panel  = yield panel_action_execute(deploy_handler, server_name, action, args, dash_user)
-
+        panel  = yield panel_action_execute(deploy_handler, server_name, action, args, dash_user, kwargs = kwargs)
         raise tornado.gen.Return(panel)
     else: 
         raise tornado.gen.Return(False)

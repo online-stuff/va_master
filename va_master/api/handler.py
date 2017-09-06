@@ -149,16 +149,18 @@ class ApiHandler(tornado.web.RequestHandler):
     @tornado.gen.coroutine
     def get(self, path):
         args = self.request.query_arguments
+        print ('Args before are : ', args)
         t_args = args
         for x in t_args: 
             if len(t_args[x]) == 1: 
                 args[x] = args[x][0]
+        print ('Args after are : ', args)
         try:
             result = yield self.exec_method('get', path, args)
-
         except: 
             import traceback
             traceback.print_exc()
+
 
     @tornado.gen.coroutine
     def delete(self, path):
