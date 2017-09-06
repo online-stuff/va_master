@@ -128,30 +128,29 @@ var Home = React.createClass({
                     <ul className='left-menu'>
                         <li>
                         <Router.IndexLink to='' activeClassName='active'>
-                        <Bootstrap.Glyphicon glyph='home' /> Overview</Router.IndexLink>
+                            <Bootstrap.Glyphicon glyph='home' /> Overview</Router.IndexLink>
                         </li>
                         <li>
                         <NavLink to='providers'>
-                        <Bootstrap.Glyphicon glyph='hdd' /> Providers</NavLink>
+                            <Bootstrap.Glyphicon glyph='hdd' /> Providers</NavLink>
                         </li>
-                        <li>
                         <NavLink to='servers'>
-                        <Bootstrap.Glyphicon glyph='th' /> Servers</NavLink>
-                        </li>
+                            <span><i className='fa fa-server' /> Servers</span>
+                        </NavLink>
                         <li>
                         <NavLink to='store'>
-                        <Bootstrap.Glyphicon glyph='cloud' /> Store</NavLink>
+                            <Bootstrap.Glyphicon glyph='th' /> Apps</NavLink>
                         </li>
                         <li>
                         <NavLink to='services'>
-                        <Bootstrap.Glyphicon glyph='cloud' /> Services</NavLink>
+                            <Bootstrap.Glyphicon glyph='cloud' /> Services</NavLink>
                         </li>
                         <li>
                         <NavLink to='vpn'>
                             <span><i className='fa fa-lock' /> VPN</span>
                         </NavLink>
                         <NavLink to='log'>
-                            <span><i className='fa fa-file-o' /> Log</span>
+                            <span><i className='fa fa-bar-chart' /> Log</span>
                         </NavLink>
                         <NavLink to='billing'>
                             <span><i className='fa fa-credit-card' /> Billing</span>
