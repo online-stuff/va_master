@@ -163,6 +163,7 @@ class GenericDriver(base.DriverBase):
     @tornado.gen.coroutine
     def validate_field_values(self, step_index, field_values):
         step_result = yield super(GenericDriver, self).validate_field_values(step_index, field_values)
+
         if step_index == 0: 
             self.field_values.update({
                 'provider_name' : field_values['provider_name'], 
@@ -178,13 +179,34 @@ class GenericDriver(base.DriverBase):
             ))
         raise tornado.gen.Return(step_result)
        
-      
+     
+    @tornado.gen.coroutine
+    def validate_app_fields(self, step, **fields):
+        steps_fields = [['role', 'server_name'], [], ['username', 'ip', 'port']]
+        result = yield super(GenericDriver, self).validate_app_fields(step, steps_fields = steps_fields, **fields)
+        raise tornado.gen.Return(result)
+
     @tornado.gen.coroutine
     def create_server(self, provider, data):
         #TODO Connect to ssh://data.get('ip') -p data.get('port')[ -u data.get('user') -pass data.get('pass') || -key data.get('key')
         cl = SSHClient()
         cl.load_system_host_keys()
-        cl.connect(data.get('ip'), port = int(data.get('port')), username = data.get('username'), password = data.get('password'))
+
+        connect_kwargs = {
+            'username' : data.get('username'), 
+        }
+        if data.get('port'): 
+            connect_kwargs['port'] = int(data.get('port'))
+
+
+        if data.get('password'): 
+            connect_kwargs['password'] = data['password']
+        else: 
+            connect_kwargs['key_filename'] = self.key_path + '.pem'
+
+
+        print ('Attempting connect with : ', connect_kwargs)
+        cl.connect(data.get('ip'), **connect_kwargs)
         # distro = ssh_session.cmd(['get', 'distro', 'cmd'])
         # instal = ssh_session.cmd(['install', 'salt', 'stuff'])
         # services are added on the api side. 
@@ -197,8 +219,8 @@ class GenericDriver(base.DriverBase):
         yield self.datastore.insert(provider['provider_name'], provider_datastore)
 
         raise tornado.gen.Return(True)  
-        try:
-            yield super(GenericDriver, self).create_minion(provider, data)
-        except: 
-            import traceback
+#        try:
+#            yield super(GenericDriver, self).create_minion(provider, data)
+#        except: 
+#            import traceback
 

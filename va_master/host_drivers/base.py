@@ -446,7 +446,8 @@ class DriverBase(object):
 
 
     @tornado.gen.coroutine
-    def validate_app_fields(self, step, **fields):
+    def validate_app_fields(self, step, steps_fields = [], **fields):
+        print ('Steps fields are : ', steps_fields)
         step -= 1
 #        if step == 2: 
 #            fields = {'extra_fields' : fields}
@@ -461,7 +462,8 @@ class DriverBase(object):
         else: 
             state_fields = []
         # steps_fields is a list of lists such that the index of an element is the required fields for that step. We check if the app_fields contain all of those. 
-        steps_fields = [['role', 'server_name'], state_fields, ['sec_group', 'image', 'size', 'network']]
+        if not steps_fields: 
+            steps_fields = [['role', 'server_name'], state_fields, ['sec_group', 'image', 'size', 'network']]
         if not all([self.app_fields.get(x) for x in steps_fields[step]]):
             print ('Fields expected are : ', steps_fields[step], ' but have : ', self.app_fields.keys())
             raise tornado.gen.Return(False) 

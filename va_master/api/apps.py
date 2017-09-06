@@ -185,7 +185,7 @@ def validate_app_fields(deploy_handler, handler):
     #Temporary
     driver = yield deploy_handler.get_driver_by_id('generic_driver')
     #In the end it should probably be like this
-    #provider, driver = yield deploy_handler.get_provider_and_driver(handler.data['provider_name'])
+#    provider, driver = yield deploy_handler.get_provider_and_driver(handler.data['provider_name'])
 
     kwargs = handler.data
     step = handler.data.pop('step')
@@ -244,14 +244,12 @@ def launch_app(deploy_handler, handler):
     print ('Launching with : ', data)
 
     providers = yield store.get('providers')
-    required_provider = [provider for provider in providers if provider['provider_name'] == data['provider_name']][0]
-
-    driver = yield deploy_handler.get_driver_by_id(required_provider['driver_name'])
+    provider, driver = yield deploy_handler.get_provider_and_driver(data.get('provider_name'))
 
     if data.get('extra_fields', {}) : 
         write_pillar(data)
 
-    result = yield driver.create_minion(required_host, data)
+    result = yield driver.create_server(provider, data)
     print ('Result is : ', result)
 
     if data.get('role'):

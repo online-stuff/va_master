@@ -112,8 +112,12 @@ class DeployHandler(object):
 
     @tornado.gen.coroutine
     def get_provider_and_driver(self, provider_name):
-        provider = yield self.get_provider(provider_name)
-        driver = yield self.get_driver_by_id(provider['driver_name'])
+        try:
+            provider = yield self.get_provider(provider_name)
+            driver = yield self.get_driver_by_id(provider['driver_name'])
+        except: 
+            provider = yield self.get_provider('va_generic') 
+            driver = yield self.get_driver_by_id('generic_driver')
 
         raise tornado.gen.Return((provider, driver))
 
