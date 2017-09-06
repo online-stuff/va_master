@@ -442,6 +442,8 @@ class DriverBase(object):
         new_minion_values = subprocess.call(new_minion_cmd)
         new_minion_state_values = subprocess.call(minion_apply_state)
 
+
+
         raise tornado.gen.Return(True)
 
 
