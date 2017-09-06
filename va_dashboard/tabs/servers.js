@@ -187,13 +187,17 @@ var UserStep = React.createClass({
         }
 
         return (
-            <Bootstrap.Form ref="form" horizontal>
+            <form ref="form" className="form-horizontal">
                 <div className="radioGroup">
-                    <input type="radio" value="new" name="user" checked={this.state.user === "new"} onChange={this.radioChange} /> New user
-                    <input type="radio" value="existing" name="user" checked={this.state.user === "existing"} onChange={this.radioChange} /> Join to existing
+                    <label className="radio-inline">
+                        <input type="radio" value="new" name="user" checked={this.state.user === "new"} onChange={this.radioChange} /> New user
+                    </label>
+                    <label className="radio-inline">
+                        <input type="radio" value="existing" name="user" checked={this.state.user === "existing"} onChange={this.radioChange} /> Join to existing
+                    </label>
                 </div>
                 {fields}
-            </Bootstrap.Form>
+            </form>
         );
     },
     onSubmit: function() {
@@ -216,6 +220,121 @@ var UserStep = React.createClass({
         }
     }
 
+});
+
+var SSHStep = React.createClass({
+    getInitialState: function () {
+        return {progress: 0, auth: false};
+    },
+
+    toggleAuth: function (e) {
+        this.setState({auth: e.target.checked});
+    },
+
+    onSubmit: function() {
+        //e.preventDefault();
+        var me = this;
+        this.setState({progress: 0});
+        interval = setInterval(function(){
+            if(me.props.status == 'launching' && me.state.progress <= 80){
+                var newProgress = me.state.progress + 10;
+                me.setState({progress: newProgress})
+            }else{
+                clearInterval(interval);
+            }
+        }, 10000);
+        var data = {
+            step: 3,
+            ip: ReactDOM.findDOMNode(this.refs.ip).value,
+            port: ReactDOM.findDOMNode(this.refs.port).value,
+            hostname: ReactDOM.findDOMNode(this.refs.hostname).value,
+            username: ReactDOM.findDOMNode(this.refs.username).value
+        };
+        if(!this.state.auth)
+            data['password'] = ReactDOM.findDOMNode(this.refs.password).value;
+        Network.post('/api/apps/new/validate_fields', this.props.auth.token, data).done(function(data) {
+            //me.setState({status: 'launched'});
+            me.props.launchServer();
+        }).fail(function (msg) {
+            me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
+        });
+    },
+
+    render: function () {
+        var statusColor, statusDisplay, statusMessage;
+
+        if(this.props.status == 'launching'){
+            statusColor = 'yellow';
+            statusDisplay = 'block';
+            statusMessage = 'Launching... ' + this.state.progress + '%';
+        }else if(this.props.status == 'launched'){
+            statusColor = 'green';
+            statusDisplay = 'block';
+            statusMessage = 'Launched successfully!';
+        }else {
+            statusDisplay = 'none';
+        }
+
+        return (
+            <form ref="form" className="form-horizontal">
+                <Bootstrap.FormGroup>
+                    <Bootstrap.Col componentClass={Bootstrap.ControlLabel} sm={3}>
+                        IP address
+                    </Bootstrap.Col>
+                    <Bootstrap.Col sm={9}>
+                        <Bootstrap.FormControl type="text" ref='ip' />
+                    </Bootstrap.Col>
+                </Bootstrap.FormGroup>
+
+                <Bootstrap.FormGroup>
+                    <Bootstrap.Col componentClass={Bootstrap.ControlLabel} sm={3}>
+                        Hostname
+                    </Bootstrap.Col>
+                    <Bootstrap.Col sm={9}>
+                        <Bootstrap.FormControl type="text" ref='hostname' />
+                    </Bootstrap.Col>
+                </Bootstrap.FormGroup>
+
+                <Bootstrap.FormGroup>
+                    <Bootstrap.Col componentClass={Bootstrap.ControlLabel} sm={3}>
+                        SSH port
+                    </Bootstrap.Col>
+                    <Bootstrap.Col sm={9}>
+                        <Bootstrap.FormControl type="number" ref='port' />
+                    </Bootstrap.Col>
+                </Bootstrap.FormGroup>
+
+                <Bootstrap.FormGroup>
+                    <Bootstrap.Col componentClass={Bootstrap.ControlLabel} sm={3}>
+                        Username 
+                    </Bootstrap.Col>
+                    <Bootstrap.Col sm={9}>
+                        <Bootstrap.FormControl type="text" ref='username' />
+                    </Bootstrap.Col>
+                </Bootstrap.FormGroup>
+                
+                <Bootstrap.FormGroup>
+                    <div className="col-sm-offset-3 col-sm-9">
+                        <div className="checkbox">
+                            <label>
+                                <input type="checkbox" onChange={this.toggleAuth} />
+                                Use SSH Key Auth?
+                            </label>
+                        </div>
+                    </div>
+                </Bootstrap.FormGroup>
+
+                {!this.state.auth && <Bootstrap.FormGroup>
+                    <Bootstrap.Col componentClass={Bootstrap.ControlLabel} sm={3}>
+                        Password 
+                    </Bootstrap.Col>
+                    <Bootstrap.Col sm={9}>
+                        <Bootstrap.FormControl type="password" ref='password' />
+                    </Bootstrap.Col>
+                </Bootstrap.FormGroup>}
+            </form>
+        );
+    }
 });
 
 var HostStep = React.createClass({
@@ -278,7 +397,7 @@ var HostStep = React.createClass({
         return (
             <div>
                 <Bootstrap.Col xs={12} sm={7} md={7} className="app-column">
-                    <Bootstrap.Form ref="form" horizontal>
+                    <form ref="form" className="form-horizontal">
                         <Bootstrap.FormGroup>
                             <Bootstrap.Col componentClass={Bootstrap.ControlLabel} sm={3}>
                                 Provider 
@@ -348,7 +467,7 @@ var HostStep = React.createClass({
                         <div style={{width: '100%', padding: 10, borderRadius: 5, background: statusColor, display: statusDisplay}}>
                             {statusMessage}
                         </div>
-                    </Bootstrap.Form>
+                    </form>
                 </Bootstrap.Col>
                 <StatsRedux provider_name = {this.state.hostname} provider_usage = {this.props.provider_usage[this.state.index]} />
             </div>
@@ -388,7 +507,7 @@ var HostStep = React.createClass({
 
 var ServerForm = React.createClass({
     getInitialState: function () {
-        return {role: this.props.role, step2: false, stepIndex: 1, isLoading: false, errors: [], server_name: "", status: 'none', btnDisable: false};
+        return {role: this.props.role, step2: false, standalone: false, stepIndex: 1, isLoading: false, errors: [], server_name: "", status: 'none', btnDisable: false};
     },
 
     onChangeRole: function(e) {
@@ -429,6 +548,10 @@ var ServerForm = React.createClass({
         }
     },
 
+    toggleStandalone: function (e) {
+        this.setState({standalone: e.target.checked});
+    },
+
     render: function () {
         var me = this;
 
@@ -438,16 +561,32 @@ var ServerForm = React.createClass({
         var HostStepRedux = connect(function(state){
             return {auth: state.auth, alert: state.alert};
         }, null, null, { withRef: true })(HostStep);
+        var SSHStepRedux = connect(function(state){
+            return {auth: state.auth, alert: state.alert};
+        }, null, null, { withRef: true })(SSHStep);
 
         var state_rows = Object.keys(this.props.states).map(function(state) {
             return <option key = {state}>{state}</option>
         });
 
-        var step2 = null;
+        var step2 = null, step3 = null;
         if(this.state.step2){
             step2 = (
                 <Bootstrap.Tab title='Choose user' eventKey={2}>
                     <UserStepRedux fields = {this.props.states[this.state.role]} goToNextStep = {this.goToNextStep} ref="step2" server_name = {this.state.server_name} />
+                </Bootstrap.Tab>
+            );
+        }
+        if(this.state.standalone){
+            step3 = (
+                <Bootstrap.Tab title='Choose ssh' eventKey={3}>
+                    <SSHStepRedux ref="step3" status = {this.state.status} launchServer = {this.launchServer} />
+                </Bootstrap.Tab>
+            );
+        }else{
+            step3 = (
+                <Bootstrap.Tab title='Choose provider' eventKey={3}>
+                    <HostStepRedux provider_name = {this.props.hostname} providers = {this.props.providers} provider_usage = {this.props.provider_usage} options = {this.props.options} defaults = {this.props.defaults} ref="step3" changeStep = {this.changeStep} server_name = {this.state.server_name} status = {this.state.status}  launchServer = {this.launchServer} />
                 </Bootstrap.Tab>
             );
         }
@@ -462,7 +601,7 @@ var ServerForm = React.createClass({
                 <Bootstrap.Modal.Body>
                     <Bootstrap.Tabs id="launch-app" activeKey={this.state.stepIndex}>
                         <Bootstrap.Tab title='Choose role' eventKey={1}>
-                            <Bootstrap.Form onSubmit={this.onSubmit} horizontal>
+                            <form onSubmit={this.onSubmit} className="form-horizontal">
                                 <Bootstrap.FormGroup>
                                     <Bootstrap.Col sm={4}>
                                         <Bootstrap.FormControl componentClass="select" ref='role' defaultValue={this.props.apps.select} onChange={this.onChangeRole}>
@@ -473,14 +612,18 @@ var ServerForm = React.createClass({
                                         <Bootstrap.FormControl type="text" ref='name' placeholder='Instance name' />
                                     </Bootstrap.Col>
                                 </Bootstrap.FormGroup>
-                            </Bootstrap.Form>
+                            </form>
+                            <div className="checkbox">
+                                <label>
+                                    <input type="checkbox" onChange={this.toggleStandalone} />
+                                    Standalone?
+                                </label>
+                            </div>
                         </Bootstrap.Tab>
 
                         {step2}
+                        {step3}
 
-                        <Bootstrap.Tab title='Choose provider' eventKey={3}>
-                            <HostStepRedux provider_name = {this.props.hostname} providers = {this.props.providers} provider_usage = {this.props.provider_usage} options = {this.props.options} defaults = {this.props.defaults} ref="step3" changeStep = {this.changeStep} server_name = {this.state.server_name} status = {this.state.status}  launchServer = {this.launchServer} />
-                        </Bootstrap.Tab>
                     </Bootstrap.Tabs>
                 </Bootstrap.Modal.Body>
 

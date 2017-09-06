@@ -496,6 +496,8 @@ table tr.row-state-Unknown{
     margin-top: 20px;
 }
 .radioGroup{
+    margin: auto;
+    width: 50%;
     margin-bottom: 20px;
 }
 .radioGroup input:nth-child(2){
