@@ -19,7 +19,7 @@ def get_paths():
             'panels/new_panel' : {'function' : new_panel, 'args' : ['panel_name', 'role']},
             'panels/action' : {'function' : panel_action, 'args' : ['instance_name', 'action', 'args', 'kwargs', 'module', 'dash_user']}, #must have instance_name and action in data, 'args' : []}, ex: panels/action instance_name=nino_dir action=list_users
             'panels/chart_data' : {'function' : get_chart_data, 'args' : ['instance_name', 'args']},
-            'panels/serve_file' : {'function' : salt_serve_file, 'args' : ['instance_name', 'action', 'args', 'kwargs', 'module']},
+            'panels/serve_file' : {'function' : salt_serve_file, 'args' : ['handler', 'instance_name', 'action', 'args', 'kwargs', 'module']},
         }
     }
     return paths
@@ -74,7 +74,7 @@ def panel_action_execute(deploy_handler, instance_name, action, args = [], dash_
     raise tornado.gen.Return(result)
 
 @tornado.gen.coroutine
-def salt_serve_file(deploy_handler, instance_name, action, args = [], kwargs = {}, module = None):
+def salt_serve_file(deploy_handler, handler, instance_name, action, args = [], kwargs = {}, module = None):
 
     instance_info = yield apps.get_app_info(deploy_handler, instance_name)
     state = instance_info['role']
@@ -87,10 +87,9 @@ def salt_serve_file(deploy_handler, instance_name, action, args = [], kwargs = {
     action = module + '.' + action
 
     cl = salt.client.LocalClient()
-    print ('Calilng serve on ', instance, ' with action ', action, ' with args : ', args, ' and kwargs : ', kwargs)
-    result = cl.cmd(instance, action, args, kwargs = kwargs)
+    print ('Calilng serve on ', instance_name, ' with action ', action, ' with args : ', args, ' and kwargs : ', kwargs)
+    result = cl.cmd(instance_name, action, args, kwargs = kwargs)
     result = result['va-backup']
-    print ('Result is : ', result)
     path_to_file = '/tmp/some_salt_file'
 
     with open(path_to_file, 'w') as f: 
@@ -120,7 +119,7 @@ def panel_action(deploy_handler, actions_list = [], instance_name = '', action =
     instances = [x['instance_name'] for x in actions_list]
     results = {x : None for x in instances}
     for action in actions_list: 
-        instance_result = yield panel_action_execute(deploy_handler, action['instance_name'], action['action'], action['args'], action['kwargs'], action['module'])
+        instance_result = yield panel_action_execute(deploy_handler, action['instance_name'], action['action'], action['args'], dash_user, action['kwargs'], action['module'])
         results[action['instance_name']] = instance_result
 
     if len(results.keys()) == 1: 
@@ -134,7 +133,7 @@ def get_panels(deploy_handler, handler):
     raise tornado.gen.Return(panels)
 
 @tornado.gen.coroutine
-def get_panel_for_user(deploy_handler, handler, panel, instance_name, dash_user, args = [], host = None):
+def get_panel_for_user(deploy_handler, handler, panel, instance_name, dash_user, args = [], host = None, kwargs = {}):
 
     user_panels = yield list_panels(deploy_handler, handler)
     instance_info = yield apps.get_app_info(deploy_handler, instance_name)
@@ -152,7 +151,6 @@ def get_panel_for_user(deploy_handler, handler, panel, instance_name, dash_user,
             args = [args]
         args = [panel] + args
         try: 
-            print ('Getting panel with ', action, ' and args ', args)
             panel  = yield panel_action_execute(deploy_handler, instance_name, action, args, dash_user, kwargs = kwargs)
         except: 
             import traceback
