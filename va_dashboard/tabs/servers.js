@@ -139,7 +139,7 @@ var Servers = React.createClass({
             <div className="app-containter">
                 <span className="spinner" style={spinnerStyle} ><i className="fa fa-spinner fa-spin fa-3x"></i></span>
                 <div style={blockStyle}>
-                    <ServerFormRedux providers = {this.state.providers} states = {this.state.states} provider_name = {this.state.hostname} role = {this.state.role} defaults = {this.state.defaults} options = {this.state.options} provider_usage = {this.state.provider_usage} getData = {this.getData} onChange = {this.onChange} onChangeRole = {this.onChangeRole} />
+                    <ServerFormRedux loaded={loaded} providers = {this.state.providers} states = {this.state.states} provider_name = {this.state.hostname} role = {this.state.role} defaults = {this.state.defaults} options = {this.state.options} provider_usage = {this.state.provider_usage} getData = {this.getData} onChange = {this.onChange} onChangeRole = {this.onChangeRole} />
                     <Bootstrap.PageHeader>Current servers <small>All specified servers</small></Bootstrap.PageHeader>
                     <Bootstrap.Button onClick={this.openModal} className="tbl-btn">
                         <Bootstrap.Glyphicon glyph='plus' />
@@ -593,7 +593,7 @@ var ServerForm = React.createClass({
 
 
         return (
-            <Bootstrap.Modal show={this.props.modal.isOpen} onHide={this.close}>
+            <Bootstrap.Modal show={this.props.loaded && this.props.modal.isOpen} onHide={this.close}>
                 <Bootstrap.Modal.Header closeButton>
                   <Bootstrap.Modal.Title>Launch new app</Bootstrap.Modal.Title>
                 </Bootstrap.Modal.Header>

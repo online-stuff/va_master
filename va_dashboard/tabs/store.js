@@ -25,7 +25,8 @@ var Store = React.createClass({
 
     launchApp: function (e){
         this.props.dispatch({type: 'LAUNCH', select: e.target.value});
-        Router.hashHistory.push('/apps');
+        this.props.dispatch({type: 'OPEN_MODAL'});
+        Router.hashHistory.push('/servers');
     },
     openModal: function () {
         this.props.dispatch({type: 'OPEN_MODAL'});
