@@ -155,7 +155,7 @@ def check_datastore_connection(values, store):
 
     try:
         cli_info('Trying to start VPN. ')
-        cli_environment.write_vpn_pillar(values['fqdn']) 
+        cli_environment.write_vpn_pillar(values['domain_name']) 
         cli_success('VPN is running. ')
     except: 
         cli_error('Failed to start VPN. Error was : ')

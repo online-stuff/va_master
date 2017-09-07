@@ -20,6 +20,7 @@ setuptools.setup(
     'watchdog', 
     'clc-sdk',
     'google-api-python-client',
+    'paramiko', #for ssh connections
   ],
   zip_safe=False,
   entry_points = {

@@ -427,6 +427,21 @@ class LibVirtDriver(base.DriverBase):
         raise tornado.gen.Return(step_result)
 
 
+    @tornado.gen.coroutine
+    def validate_app_fields(self, step, **fields):
+        if 'role' in fields:
+            states = yield self.datastore.get('init_vals')
+            states = states['states']
+            state = [x for x in states if x['name'] == fields.get('role')][0]
+            self.app_fields['state'] = state
+            state_fields = [x['name'] for x in state.get('fields', [])]
+        else:
+            state_fields = []
+        steps_fields = [['role', 'server_name'], state_fields, ['sec_group', 'image', 'size', 'network']]
+        result = yield super(LibVirtDriver, self).validate_app_fields(step, steps_fields = steps_fields, **fields)
+        raise tornado.gen.Return(result)
+
+
 
     @tornado.gen.coroutine
     def create_server(self, provider, data):
@@ -443,7 +458,7 @@ class LibVirtDriver(base.DriverBase):
             8. Create permanent server. 
         
         """
-        print ('Creating minion. ')
+        print ('Creating libvirt server. ')
         provider_url = provider['provider_protocol'] + '://' + provider['provider_ip'] + '/system'
         conn = libvirt.open(provider_url)
         storage = [x for x in conn.listAllStoragePools() if x.name() == 'default'][0]
