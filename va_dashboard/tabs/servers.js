@@ -487,7 +487,7 @@ var HostStep = React.createClass({
         }, 10000);
         var data = {
             step: 3,
-            provider_name: ReactDOM.findDOMNode(this.refs.hostname).value,
+            provider_name: ReactDOM.findDOMNode(this.refs.provider_name).value,
             size: ReactDOM.findDOMNode(this.refs.flavor).value,
             image: ReactDOM.findDOMNode(this.refs.image).value,
             storage: ReactDOM.findDOMNode(this.refs.storage).value,
