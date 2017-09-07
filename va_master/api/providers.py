@@ -172,7 +172,7 @@ def get_provider_info(deploy_handler, handler, get_billing = True, get_servers =
             provider['servers'] = [x for x in provider['servers'] if x['hostname'] not in hidden_servers]
 
         for server in provider['servers']:
-            server_panel = [x for x in states if server['hostname'] in x['servers']] or [{'icon' : 'fa-server'}]
+            server_panel = [x for x in states if server.get('hostname', '') in x['servers']] or [{'icon' : 'fa-server'}]
             server['icon'] = server_panel[0]['icon']
 
     for info in zip(providers_info, providers): 
