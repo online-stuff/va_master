@@ -183,9 +183,8 @@ def create_new_state(deploy_handler, file_contents, body, filename):
 @tornado.gen.coroutine
 def validate_app_fields(deploy_handler, handler):
     #Temporary
-    driver = yield deploy_handler.get_driver_by_id('generic_driver')
     #In the end it should probably be like this
-#    provider, driver = yield deploy_handler.get_provider_and_driver(handler.data['provider_name'])
+    provider, driver = yield deploy_handler.get_provider_and_driver(handler.data.get('provider_name', 'host'))
 
     kwargs = handler.data
     step = handler.data.pop('step')

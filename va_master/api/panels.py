@@ -127,7 +127,7 @@ def get_panel_for_user(deploy_handler, handler, panel, server_name, dash_user, a
 
     #This is usually for get requests. Any arguments in the url that are not arguments of this function are assumed to be keyword arguments for salt. 
     if not args: 
-        kwargs = {x : handler.data[x] for x in handler.data if x not in ['handler', 'panel', 'instance_name', 'dash_user', 'method']}
+        kwargs = {x : handler.data[x] for x in handler.data if x not in ['handler', 'panel', 'instance_name', 'dash_user', 'method', 'server_name']}
 
     state = filter(lambda x: x['name'] == state, user_panels)[0]
     if server_name in state['servers']:
