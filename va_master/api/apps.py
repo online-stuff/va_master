@@ -13,6 +13,7 @@ import panels
 def get_paths():
     paths = {
         'get' : {
+            'apps/set_settings' : {'function' : set_settings, 'args' : ['settings']},
             'apps/vpn_users' : {'function' : get_openvpn_users, 'args' : []},
             'apps/vpn_status' : {'function' : get_openvpn_status, 'args' : []},
             'apps/add_app' : {'function' : add_app, 'args' : ['provider', 'server_name']},
@@ -289,3 +290,15 @@ def get_user_salt_functions(deploy_handler, dash_user):
 @tornado.gen.coroutine
 def add_user_salt_functions(deploy_handler, dash_user, functions):
     yield deploy_handler.add_user_salt_functions(dash_user['username'], functions)
+
+@tornado.gen.coroutine
+def set_settings(deploy_handler, settings):
+    pillar_file = '/srv/pillar/nekoj.sls'
+    with open(pillar_file, 'r') as f:
+        a = yaml.load(f.read())
+
+    a.update(settings)
+
+    with open(pillar_file, 'w') as f:
+        f.write(yaml.dump(a, default_flow_style=False))
+
