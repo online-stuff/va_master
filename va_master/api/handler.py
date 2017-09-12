@@ -67,6 +67,16 @@ class ApiHandler(tornado.web.RequestHandler):
             return False
 
 
+    def fetch_func(method, path):
+        api_func = self.paths[method].get(path)
+
+        print ('Getting a call at ', path, ' with data ', data, ' and will call function: ', api_func)
+
+        if not api_func: 
+            api_func = {'function' : invalid_url, 'args' : ['path', 'method']}
+
+        return api_func
+
     @tornado.gen.coroutine
     def handle_user_auth(self):
         auth_successful = True
@@ -126,13 +136,7 @@ class ApiHandler(tornado.web.RequestHandler):
         user = yield get_current_user(self)
         data['dash_user'] = user
 
-        api_func = self.paths[method].get(path)
-
-        print ('Getting a call at ', path, ' with data ', data, ' and will call function: ', api_func)
-
-        if not api_func: 
-            data = {'path' : path, 'method' : method}
-            api_func = {'function' : invalid_url, 'args' : ['path', 'method']}
+        api_func = self.fetch_func(method, path)
 
         elif api_func['function'] != user_login: 
             auth_successful = yield self.handle_user_auth()    
