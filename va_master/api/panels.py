@@ -53,6 +53,22 @@ def panel_action_execute(deploy_handler, server_name, action, args = [], dash_us
             print ('Function not supported')
             #TODO actually not allow user to do anything. This is just for testing atm. 
         
+    server_info = yield apps.get_app_info(deploy_handler, server_name)
+    state = server_info['role']
+
+    states = yield deploy_handler.get_states()
+    state = [x for x in states if x['name'] == state] or [{'module' : 'openvpn'}]
+    state = state[0]
+
+    if not module:
+        module = state['module']
+
+    cl = salt.client.LocalClient()
+    print ('Calling salt module ', module + '.' + action, ' on ', server_name, ' with args : ', args, ' and kwargs : ', kwargs)
+    result = cl.cmd(server_name, module + '.' + action , args, kwarg = kwargs, timeout = timeout)
+    result = result.get(server_name)
+
+    raise tornado.gen.Return(result)
 
 @tornado.gen.coroutine
 def salt_serve_file(deploy_handler, handler, server_name, action, args = [], dash_user = '', kwargs = {}, module = None):
@@ -64,7 +80,18 @@ def salt_serve_file(deploy_handler, handler, server_name, action, args = [], das
 #    with open(path_to_file, 'w') as f: 
 #        f.write(result)
 
+    server_info = yield apps.get_app_info(deploy_handler, server_name)
+    state = server_info['role']
+
+    states = yield deploy_handler.get_states()
+    state = [x for x in states if x['name'] == state] or [{'module' : 'openvpn'}]
+    state = state[0]
+
+    if not module:
+        module = state['module']
+
     yield handler.serve_file('test', salt_source = {"tgt" : server_name, "fun" : module + '.' + action, "arg" :  args})
+    raise tornado.gen.Return({"data_type" : "file"})
 
 @tornado.gen.coroutine
 def get_ts_data(deploy_handler):
