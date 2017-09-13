@@ -223,11 +223,14 @@ class ApiHandler(tornado.web.RequestHandler):
 
     @tornado.gen.coroutine
     def send_data(self, source, kwargs, chunk_size):
+        if kwargs.get('args'): 
+            args = kwargs.pop('args')
         offset = 0
         while True:
-            kwargs['range_from'] = offset
+            if kwargs: 
+                kwargs['range_from'] = offset
             print ('Calling ', source, ' with ', kwargs)
-            data = source(**kwargs)
+            data = source(*args, **kwargs)
             print ('Result is : ', data)
             offset += chunk_size
              
@@ -258,7 +261,7 @@ class ApiHandler(tornado.web.RequestHandler):
             else:
                 f = open(source, 'r')
                 source = f.read
-                kwargs = {"size" : chunk_size}
+                kwargs = {"args" : [chunk_size]}
 
             yield self.send_data(source, kwargs, chunk_size)
             self.finish()

@@ -66,6 +66,7 @@ def panel_action_execute(deploy_handler, server_name, action, args = [], dash_us
     cl = salt.client.LocalClient()
     print ('Calling salt module ', module + '.' + action, ' on ', server_name, ' with args : ', args, ' and kwargs : ', kwargs)
     result = cl.cmd(server_name, module + '.' + action , args, kwarg = kwargs, timeout = timeout)
+    print ('Result is : ', result)
     result = result.get(server_name)
 
     raise tornado.gen.Return(result)
