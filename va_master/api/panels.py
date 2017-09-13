@@ -10,16 +10,16 @@ def get_paths():
     paths = {
         'get' : {
             'panels' : {'function' : get_panels, 'args' : ['handler']}, 
-            'panels/get_panel' : {'function' : get_panel_for_user, 'args' : ['instance_name', 'panel', 'host', 'handler', 'args', 'dash_user']},
+            'panels/get_panel' : {'function' : get_panel_for_user, 'args' : ['server_name', 'panel', 'provider', 'handler', 'args', 'dash_user']},
             'panels/ts_data' : {'function' : get_ts_data, 'args' : []},  
         },
         'post' : {
-            'panels/get_panel' : {'function' : get_panel_for_user, 'args' : ['instance_name', 'panel', 'host', 'handler', 'args', 'dash_user']},
+            'panels/get_panel' : {'function' : get_panel_for_user, 'args' : ['server_name', 'panel', 'provider', 'handler', 'args', 'dash_user']},
             'panels/reset_panels': {'function' : reset_panels, 'args' : []}, #JUST FOR TESTING
             'panels/new_panel' : {'function' : new_panel, 'args' : ['panel_name', 'role']},
-            'panels/action' : {'function' : panel_action, 'args' : ['instance_name', 'action', 'args', 'kwargs', 'module', 'dash_user']}, #must have instance_name and action in data, 'args' : []}, ex: panels/action instance_name=nino_dir action=list_users
-            'panels/chart_data' : {'function' : get_chart_data, 'args' : ['instance_name', 'args']},
-            'panels/serve_file' : {'function' : salt_serve_file, 'args' : ['handler', 'instance_name', 'action', 'args', 'kwargs', 'module']},
+            'panels/action' : {'function' : panel_action, 'args' : ['server_name', 'action', 'args', 'kwargs', 'module', 'dash_user']}, #must have server_name and action in data, 'args' : []}, ex: panels/action server_name=nino_dir action=list_users
+            'panels/chart_data' : {'function' : get_chart_data, 'args' : ['server_name', 'args']},
+            'panels/serve_file' : {'function' : salt_serve_file, 'args' : ['handler', 'server_name', 'action', 'args', 'kwargs', 'module']},
         }
     }
     return paths
@@ -46,56 +46,25 @@ def list_panels(deploy_handler, handler):
     raise tornado.gen.Return(panels)
 
 @tornado.gen.coroutine
-def panel_action_execute(deploy_handler, instance_name, action, args = [], dash_user = '', kwargs = {}, module = None, timeout = 30):
-    try:
+def panel_action_execute(deploy_handler, server_name, action, args = [], dash_user = '', kwargs = {}, module = None, timeout = 30):
+    if dash_user.get('username'):
         user_funcs = yield deploy_handler.get_user_salt_functions(dash_user['username'])
         if action not in user_funcs and dash_user['type'] != 'admin':
             print ('Function not supported')
             #TODO actually not allow user to do anything. This is just for testing atm. 
-            
-
-        instance_info = yield apps.get_app_info(deploy_handler, instance_name)
-        state = instance_info['role']
-
-        states = yield deploy_handler.get_states()
-        state = [x for x in states if x['name'] == state] or [{'module' : 'openvpn'}]
-        state = state[0]
         
-        if not module: 
-            module = state['module']
-
-        cl = salt.client.LocalClient()
-        print ('Calling salt module ', module + '.' + action, ' on ', instance_name, ' with args : ', args, ' and kwargs : ', kwargs)
-        result = cl.cmd(instance_name, module + '.' + action , args, kwarg = kwargs, timeout = timeout)
-        result = result.get(instance_name)
-    except: 
-        import traceback 
-        traceback.print_exc()
-    raise tornado.gen.Return(result)
 
 @tornado.gen.coroutine
-def salt_serve_file(deploy_handler, handler, instance_name, action, args = [], kwargs = {}, module = None):
+def salt_serve_file(deploy_handler, handler, server_name, action, args = [], dash_user = '', kwargs = {}, module = None):
 
-    instance_info = yield apps.get_app_info(deploy_handler, instance_name)
-    state = instance_info['role']
-    states = yield deploy_handler.get_states()
-    state = [x for x in states if x['name'] == state] or [{'module' : 'openvpn'}]
-    state = state[0]
-    if not module: 
-        module = state['module']
+#    result = yield panel_action_execute(deploy_handler, server_name, action, args, kwargs, dash_user, module)
+#    print ('Result is : ', result)
+#    path_to_file = '/tmp/some_salt_file'
 
-    action = module + '.' + action
+#    with open(path_to_file, 'w') as f: 
+#        f.write(result)
 
-    cl = salt.client.LocalClient()
-    print ('Calilng serve on ', instance_name, ' with action ', action, ' with args : ', args, ' and kwargs : ', kwargs)
-    result = cl.cmd(instance_name, action, args, kwargs = kwargs)
-    result = result['va-backup']
-    path_to_file = '/tmp/some_salt_file'
-
-    with open(path_to_file, 'w') as f: 
-        f.write(result)
-
-    yield handler.serve_file(path_to_file)
+    yield handler.serve_file('test', salt_source = {"tgt" : server_name, "fun" : module + '.' + action, "arg" :  args})
 
 @tornado.gen.coroutine
 def get_ts_data(deploy_handler):
@@ -105,22 +74,22 @@ def get_ts_data(deploy_handler):
     raise tornado.gen.Return(result)
 
 @tornado.gen.coroutine
-def get_chart_data(deploy_handler, instance_name, args = ['va-directory', 'Ping']):
+def get_chart_data(deploy_handler, server_name, args = ['va-directory', 'Ping']):
     cl = salt.client.LocalClient()
 
-    result = cl.cmd(instance, 'monitoring_stats.parse' , args)
+    result = cl.cmd(server, 'monitoring_stats.parse' , args)
     raise tornado.gen.Return(result)
 
 @tornado.gen.coroutine
-def panel_action(deploy_handler, actions_list = [], instance_name = '', action = '', args = [], kwargs = {}, module = None, dash_user = {}):
+def panel_action(deploy_handler, actions_list = [], server_name = '', action = '', args = [], kwargs = {}, module = None, dash_user = {}):
     if not actions_list: 
-        actions_list = [{"instance_name" : instance_name, "action" : action, "args" : args, 'kwargs' : {}, 'module' : module}]
+        actions_list = [{"server_name" : server_name, "action" : action, "args" : args, 'kwargs' : {}, 'module' : module}]
 
-    instances = [x['instance_name'] for x in actions_list]
-    results = {x : None for x in instances}
+    servers = [x['server_name'] for x in actions_list]
+    results = {x : None for x in servers}
     for action in actions_list: 
-        instance_result = yield panel_action_execute(deploy_handler, action['instance_name'], action['action'], action['args'], dash_user, action['kwargs'], action['module'])
-        results[action['instance_name']] = instance_result
+        server_result = yield panel_action_execute(deploy_handler, action['server_name'], action['action'], action['args'], action['kwargs'], action['module'])
+        results[action['server_name']] = server_result
 
     if len(results.keys()) == 1: 
         results = results[results.keys()[0]]
@@ -133,30 +102,25 @@ def get_panels(deploy_handler, handler):
     raise tornado.gen.Return(panels)
 
 @tornado.gen.coroutine
-def get_panel_for_user(deploy_handler, handler, panel, instance_name, dash_user, args = [], host = None, kwargs = {}):
+def get_panel_for_user(deploy_handler, handler, panel, server_name, dash_user, args = [], provider = None, kwargs = {}):
 
     user_panels = yield list_panels(deploy_handler, handler)
-    instance_info = yield apps.get_app_info(deploy_handler, instance_name)
-    state = instance_info['role']
+    server_info = yield apps.get_app_info(deploy_handler, server_name)
+    state = server_info['role']
 
     #This is usually for get requests. Any arguments in the url that are not arguments of this function are assumed to be keyword arguments for salt. 
     if not args: 
-        kwargs = {x : handler.data[x] for x in handler.data if x not in ['handler', 'panel', 'instance_name', 'dash_user', 'method']}
-
+        kwargs = {x : handler.data[x] for x in handler.data if x not in ['handler', 'panel', 'instance_name', 'dash_user', 'method', 'server_name']}
+    else: 
+        kwargs = {}
 
     state = filter(lambda x: x['name'] == state, user_panels)[0]
-    if instance_name in state['instances']:
+    if server_name in state['servers']:
         action = 'get_panel'
         if type(args) != list and args: 
             args = [args]
         args = [panel] + args
-        try: 
-            panel  = yield panel_action_execute(deploy_handler, instance_name, action, args, dash_user, kwargs = kwargs)
-        except: 
-            import traceback
-            traceback.print_exc()
-
-#        panel = panel[instance_name]
+        panel  = yield panel_action_execute(deploy_handler, server_name, action, args, dash_user, kwargs = kwargs)
         raise tornado.gen.Return(panel)
     else: 
         raise tornado.gen.Return(False)

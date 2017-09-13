@@ -85,7 +85,7 @@ class GCEDriver(base.DriverBase):
 
     @tornado.gen.coroutine
     def get_steps(self):
-        """ Adds a host_ip, tenant and region field to the first step. These are needed in order to get OpenStack values. """
+        """ Adds a provider_ip, tenant and region field to the first step. These are needed in order to get OpenStack values. """
 
         steps = yield super(GCEDriver, self).get_steps()
         steps[0].add_fields([
@@ -123,11 +123,11 @@ class GCEDriver(base.DriverBase):
 
 
     @tornado.gen.coroutine
-    def get_instances(self, host):
-        """ Gets various information about the instances so it can be returned to host_data. The format of the data for each instance follows the same format as in the base driver description """
+    def get_servers(self, provider):
+        """ Gets various information about the servers so it can be returned to provider_data. The format of the data for each server follows the same format as in the base driver description """
         try:
             servers = []
-            instances = [
+            servers = [
                 {
                     'hostname' : x['name'], 
                     'ip' : x['ip_address'],  
@@ -136,89 +136,89 @@ class GCEDriver(base.DriverBase):
                     'used_ram' : x['used_ram'], 
                     'used_cpu' : x['used_cpu'],
                     'status' : x['status'], 
-                    'host' : host['hostname']
+                    'host' : provider['hostname']
                 } for x in servers
             ]
         except Exception as e: 
-            print ('Cannot get instances. ')
+            print ('Cannot get servers. ')
             import traceback
             print traceback.print_exc()
             raise tornado.gen.Return([])
-        raise tornado.gen.Return(instances)
+        raise tornado.gen.Return(servers)
 
 
 
     @tornado.gen.coroutine
-    def get_host_status(self, host):
-        """ Tries to get the token for the host. If not successful, returns an error message. """
+    def get_provider_status(self, provider):
+        """ Tries to get the token for the provider. If not successful, returns an error message. """
         raise tornado.gen.Return(True)
 
     @tornado.gen.coroutine
-    def get_host_data(self, host, get_instances = True, get_billing = True):
-        """ Gets various data about the host and all the instances using the get_openstack_value() method. Returns the data in the same format as defined in the base driver. """
+    def get_provider_data(self, provider, get_servers = True, get_billing = True):
+        """ Gets various data about the provider and all the servers using the get_openstack_value() method. Returns the data in the same format as defined in the base driver. """
         import time
         print ('Starting timer for OpenStack. ')
         try:
-            instances = yield self.get_instances(host)
-            host_data = {
+            servers = yield self.get_servers(provider)
+            provider_data = {
                 'max_cores' : 0, 
                 'used_cores' : 0, 
                 'max_ram' : 0, 
                 'used_ram' : 0, 
                 'max_disk' : 0, 
                 'used_disk' : 0, 
-                'max_instances' : 0, 
-                'used_instances' : 0
+                'max_servers' : 0, 
+                'used_servers' : 0
             }
         except Exception as e: 
             import traceback
             print traceback.print_exc()
-            host_data = {
-                'instances' : [],
+            provider_data = {
+                'servers' : [],
                 'limits' : {},
-                'host_usage' : {},
-                'status' : {'success' : False, 'message' : 'Could not connect to the libvirt host. ' + e.message}
+                'provider_usage' : {},
+                'status' : {'success' : False, 'message' : 'Could not connect to the libvirt provider. ' + e.message}
             }
-            raise tornado.gen.Return(host_data)
+            raise tornado.gen.Return(provider_data)
 
 
-        instances = yield self.get_instances(host)
+        servers = yield self.get_servers(provider)
 
-        host_usage = {
-            'max_cpus' : host_data['maxTotalCores'],
-            'used_cpus' : host_data['totalCoresUsed'], 
-            'free_cpus' : host_data['maxTotalCores'] - host_data['totalCoresUsed'], 
-            'max_ram' : host_data['maxTotalRAMSize'], 
-            'used_ram' : host_data['totalRAMUsed'],
-            'free_ram' : host_data['maxTotalRAMSize'] - host_data['totalRAMUsed'], 
-            'max_disk' : host_data['maxTotalVolumeGigabytes'], 
-            'used_disk' : host_data['totalGigabytesUsed'], 
-            'free_disk' : host_data['maxTotalVolumeGigabytes'] - host_data['maxTotalVolumeGigabytes'],
-            'max_instances' : host_data['maxTotalInstances'], 
-            'used_instances' : host_data['totalInstancesUsed'], 
-            'free_instances' : host_data['maxTotalInstances'] - host_data['totalInstancesUsed']
+        provider_usage = {
+            'max_cpus' : provider_data['maxTotalCores'],
+            'used_cpus' : provider_data['totalCoresUsed'], 
+            'free_cpus' : provider_data['maxTotalCores'] - provider_data['totalCoresUsed'], 
+            'max_ram' : provider_data['maxTotalRAMSize'], 
+            'used_ram' : provider_data['totalRAMUsed'],
+            'free_ram' : provider_data['maxTotalRAMSize'] - provider_data['totalRAMUsed'], 
+            'max_disk' : provider_data['maxTotalVolumeGigabytes'], 
+            'used_disk' : provider_data['totalGigabytesUsed'], 
+            'free_disk' : provider_data['maxTotalVolumeGigabytes'] - provider_data['maxTotalVolumeGigabytes'],
+            'max_servers' : provider_data['maxTotalInstances'], 
+            'used_servers' : provider_data['totalInstancesUsed'], 
+            'free_servers' : provider_data['maxTotalInstances'] - provider_data['totalInstancesUsed']
         }
 
-        host_data = {
-            'instances' : instances, 
-            'host_usage' : host_usage,
+        provider_data = {
+            'servers' : servers, 
+            'provider_usage' : provider_usage,
             'status' : True,
         }
-        raise tornado.gen.Return(host_data)
+        raise tornado.gen.Return(provider_data)
 
 
     @tornado.gen.coroutine
-    def instance_action(self, host, instance_name, action):
-        """ Performs instance actions using a nova client. """
+    def server_action(self, provider, server_name, action):
+        """ Performs server actions using a nova client. """
         try:
-            nova = client.Client('2.0', host['username'], host['password'], host['tenant'], 'http://' + host['host_ip'] + '/v2.0')
-            instance = [x for x in nova.servers.list() if x.name == instance_name][0]
+            nova = client.Client('2.0', provider['username'], provider['password'], provider['tenant'], 'http://' + provider['provider_ip'] + '/v2.0')
+            server = [x for x in nova.servers.list() if x.name == server_name][0]
         except Exception as e:
             import traceback
             traceback.print_exc()
-            raise tornado.gen.Return({'success' : False, 'message' : 'Could not get instance. ' + e.message})
+            raise tornado.gen.Return({'success' : False, 'message' : 'Could not get server. ' + e.message})
         try:
-            success = getattr(instance, action)()
+            success = getattr(server, action)()
             print ('Made action : ', success)
         except Exception as e:
             raise tornado.gen.Return({'success' : False, 'message' : 'Action was not performed. ' + e.message})
@@ -254,17 +254,17 @@ class GCEDriver(base.DriverBase):
 
 
     @tornado.gen.coroutine
-    def create_minion(self, host, data):
+    def create_server(self, provider, data):
         """ Works properly with the base driver method, but overwritten for bug tracking. """
         try:
-#            nova = client.Client('2', host['username'], host['password'], host['tenant'], 'http://' + host['host_ip'] + '/v2.0')
-#            full_key_path = host['salt_key_path'] + ('/' * host['salt_key_path'][-1] != '/') + host['salt_key_name'] + '.pub'
+#            nova = client.Client('2', provider['username'], provider['password'], provider['tenant'], 'http://' + provider['provider_ip'] + '/v2.0')
+#            full_key_path = provider['salt_key_path'] + ('/' * provider['salt_key_path'][-1] != '/') + provider['salt_key_name'] + '.pub'
 #            f = ''
 #            with open(self.key_path + '.pub') as f: 
 #                key = f.read()
 #            keypair = nova.keypairs.create(name = self.key_name, public_key = key)
-#            print ('Creating instance!')
-            yield super(GCEDriver, self).create_minion(host, data)
+#            print ('Creating server!')
+            yield super(GCEDriver, self).create_minion(provider, data)
         except:
             import traceback
             traceback.print_exc()

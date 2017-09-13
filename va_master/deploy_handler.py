@@ -105,47 +105,51 @@ class DeployHandler(object):
 
 
     @tornado.gen.coroutine
-    def get_host(self, hostname):
-        hosts = yield self.datastore.get('hosts')
-        host = [x for x in hosts if x['hostname'] == hostname][0]
-        raise tornado.gen.Return(host)
+    def get_provider(self, provider_name):
+        providers = yield self.datastore.get('providers')
+        provider = [x for x in providers if x['provider_name'] == provider_name][0]
+        raise tornado.gen.Return(provider)
 
     @tornado.gen.coroutine
-    def get_host_and_driver(self, hostname):
-        host = yield self.get_host(hostname)
-        driver = yield self.get_driver_by_id(host['driver_name'])
+    def get_provider_and_driver(self, provider_name = ''):
+        if provider_name: 
+            provider = yield self.get_provider(provider_name)
+            driver = yield self.get_driver_by_id(provider['driver_name'])
+        else: 
+            provider = yield self.get_provider('va_generic') 
+            driver = yield self.get_driver_by_id('generic_driver')
 
-        raise tornado.gen.Return((host, driver))
-
-    @tornado.gen.coroutine
-    def get_triggers(self, hostname):
-        hosts = yield self.list_hosts()
-        host = [x for x in hosts if x['hostname'] == hostname][0]
-        raise tornado.gen.Return(host['triggers'])
+        raise tornado.gen.Return((provider, driver))
 
     @tornado.gen.coroutine
-    def list_hosts(self):
+    def get_triggers(self, provider_name):
+        providers = yield self.list_providers()
+        provider = [x for x in providers if x['provider_name'] == provider_name][0]
+        raise tornado.gen.Return(provider['triggers'])
+
+    @tornado.gen.coroutine
+    def list_providers(self):
         try:
-            hosts = yield self.datastore.get('hosts')
-            for host in hosts: 
-                driver = yield self.get_driver_by_id(host['driver_name'])
-                host_status = yield driver.get_host_status(host)
-                host['status'] = host_status
+            providers = yield self.datastore.get('providers')
+            for provider in providers: 
+                driver = yield self.get_driver_by_id(provider['driver_name'])
+                provider_status = yield driver.get_provider_status(provider)
+                provider['status'] = provider_status
         except self.datastore.KeyNotFound:
-            print ('No hosts found. ')
-            hosts = []
-        raise tornado.gen.Return(hosts)
+            print ('No providers found. ')
+            providers = []
+        raise tornado.gen.Return(providers)
 
     @tornado.gen.coroutine
-    def create_host(self, driver):
+    def create_provider(self, driver):
         try:
-            new_hosts = yield self.datastore.get('hosts')
+            new_providers = yield self.datastore.get('providers')
         except self.datastore.KeyNotFound:
-            new_hosts = []
+            new_providers = []
         try: 
-            if not any([x['hostname'] == driver.field_values['hostname'] for x in new_hosts]):
-                new_hosts.append(driver.field_values)
-                yield self.datastore.insert('hosts', new_hosts)
+            if not any([x['provider_name'] == driver.field_values['provider_name'] for x in new_providers]):
+                new_providers.append(driver.field_values)
+                yield self.datastore.insert('providers', new_providers)
         except: 
             import traceback
             traceback.print_exc()
@@ -172,14 +176,14 @@ class DeployHandler(object):
         except: 
             panels = {'admin' : [], 'user' : []}
         print ('States data is : ', states_data)
-        get_panel_instances = lambda i, user_type: [x for x in panels.get(user_type) if x['name'] == i] or [{'instances' : []}]
+        get_panel_servers = lambda i, user_type: [x for x in panels.get(user_type) if x['name'] == i] or [{'servers' : []}]
 
-        print ('Panel instances for backup is : ', get_panel_instances('backup', 'admin'))
+        print ('Panel servers for backup is : ', get_panel_servers('backup', 'admin'))
         user_panels, admin_panels = ([
             {
                 'name' : x['name'], 
                 'icon' : x['icon'], 
-                'instances' : get_panel_instances(x['name'], user_type)[0]['instances'], 
+                'servers' : get_panel_servers(x['name'], user_type)[0]['servers'], 
                 'panels' : x.get('panels', {'admin' : [], 'user' : []}[user_type])
             } for x in states_data] for user_type in ['user', 'admin'])
         panels = {'user' : user_panels, 'admin' : admin_panels}
@@ -230,14 +234,14 @@ class DeployHandler(object):
 #        print ('Panels are : ', panels)
         
         role_user_panels = filter(lambda x: x['name'] == panel['role'], panels['user'])[0]
-#        if panel['panel_name'] in role_user_panels['instances']: raise tornado.gen.Return()
+#        if panel['panel_name'] in role_user_panels['servers']: raise tornado.gen.Return()
         print 'Role user panels are : ', role_user_panels
-        role_user_panels['instances'].append(panel['panel_name'])
+        role_user_panels['servers'].append(panel['panel_name'])
         print 'They are now : ', role_user_panels
 
         role_admin_panels = filter(lambda x: x['name'] == panel['role'], panels['admin'])[0]
         print 'ROle admin panels are : ', role_admin_panels
-        role_admin_panels['instances'].append(panel['panel_name'])
+        role_admin_panels['servers'].append(panel['panel_name'])
         print 'They are now : ', role_admin_panels
 
 #            panels['user'][panel['role']] = role_user_panels
@@ -256,12 +260,12 @@ class DeployHandler(object):
 
 
     @tornado.gen.coroutine
-    def store_app(self, app, host):
+    def store_app(self, app, provider):
         try: 
-            hosts = yield self.datastore.get('hosts')
-            host = [h for h in hosts if h['hostname'] == host][0]
-            host['instances'].append(app)
-            yield self.datastore.insert('hosts', host)
+            providers = yield self.datastore.get('providers')
+            provider = [h for h in providers if h['provider_name'] == provider][0]
+            provider['servers'].append(app)
+            yield self.datastore.insert('providers', provider)
         except: 
             import traceback
             traceback.print_exc()

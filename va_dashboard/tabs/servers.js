@@ -5,27 +5,27 @@ var Bootstrap = require('react-bootstrap');
 var ReactDOM = require('react-dom');
 var Reactable = require('reactable');
 
-var Appp = React.createClass({
+var Servers = React.createClass({
     getInitialState: function () {
         return {
             loaded: false,
-            hosts: [],
+            providers: [],
             states: [],
-            hostname: "",
+            provider_name: "",
             role: "",
             defaults: {image: "", network: "", sec_group: "", size: ""},
             options: {sizes: [], networks: [], images: [], sec_groups: []},
-            host_usage: [{used_cpus: "", max_cpus: "", used_ram: "", max_ram: "", used_disk: "", max_disk: "", used_instances: "", max_instances: ""}]
+            provider_usage: [{used_cpus: "", max_cpus: "", used_ram: "", max_ram: "", used_disk: "", max_disk: "", used_servers: "", max_servers: ""}]
         };
     },
 
     getData: function() {
-        var data = {hosts: []};
+        var data = {providers: []};
         var me = this;
-        var n1 = Network.post('/api/hosts/info', this.props.auth.token, data).fail(function (msg) {
+        var n1 = Network.post('/api/providers/info', this.props.auth.token, data).fail(function (msg) {
             me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
         });
-        var n2 = Network.post('/api/hosts', this.props.auth.token, {}).fail(function (msg) {
+        var n2 = Network.post('/api/providers', this.props.auth.token, {}).fail(function (msg) {
             me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
         });
         var n3 = Network.get('/api/states', this.props.auth.token).fail(function (msg) {
@@ -33,11 +33,14 @@ var Appp = React.createClass({
         });
 
         $.when( n1, n2, n3 ).done(function ( resp1, resp2, resp3 ) {
-            var host_usage = resp1.map(function(host) {
-                return host.host_usage;
+            var provider_usage = resp1.map(function(provider) {
+                return provider.provider_usage;
             });
-            var hosts = resp2.hosts;
-            var first_host = hosts[0];
+            var providers = resp2.providers;
+            if(providers.length > 0)
+                var first_provider = providers[0];
+            else
+                first_provider = {provider_name: "", sizes: [], networks: [], images: [], sec_groups: [], defaults: []};
             var role = resp3[0].name;
             if(me.props.apps.select){
                 role = me.props.apps.select;
@@ -50,7 +53,7 @@ var Appp = React.createClass({
                     states[state.name] = state.fields;
                 }
             }
-            me.setState({host_usage: host_usage, hosts: hosts, hostname: first_host.hostname, options: {sizes: first_host.sizes, networks: first_host.networks, images: first_host.images, sec_groups: first_host.sec_groups}, defaults: first_host.defaults, states: states, role: role, loaded: true});
+            me.setState({provider_usage: provider_usage, providers: providers, provider_name: first_provider.provider_name, options: {sizes: first_provider.sizes, networks: first_provider.networks, images: first_provider.images, sec_groups: first_provider.sec_groups}, defaults: first_provider.defaults, states: states, role: role, loaded: true});
         });
     },
 
@@ -62,12 +65,12 @@ var Appp = React.createClass({
         this.props.dispatch({type: 'RESET_APP'});
     },
 
-    btn_clicked: function(hostname, host, evtKey){
+    btn_clicked: function(provider_name, provider, evtKey){
         var me = this;
-        var data = {hostname: host, instance_name: hostname, action: evtKey};
+        var data = {provider_name: provider, server_name: hostname, action: evtKey};
         Network.post('/api/apps/action', this.props.auth.token, data).done(function(d) {
-            Network.post('/api/hosts/info', me.props.auth.token, {hosts: []}).done(function(data) {
-                me.setState({hosts: data});
+            Network.post('/api/providers/info', me.props.auth.token, {providers: []}).done(function(data) {
+                me.setState({providers: data});
             }).fail(function (msg) {
                 me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
             });
@@ -82,9 +85,9 @@ var Appp = React.createClass({
 
     render: function () {
         var app_rows = [];
-        for(var i = 0; i < this.state.hosts.length; i++){
-            // hostname = this.state.hosts[i].hostname;
-            var rows = this.state.hosts[i].instances.map(function(app) {
+        for(var i = 0; i < this.state.providers.length; i++){
+            // provider_name = this.state.providers[i].provider_name;
+            var rows = this.state.providers[i].servers.map(function(app) {
                 ipaddr = app.ip;
                 if(Array.isArray(ipaddr)){
                     if(ipaddr.length > 0){
@@ -104,9 +107,9 @@ var Appp = React.createClass({
                         <Reactable.Td column="IP">{ipaddr}</Reactable.Td>
                         <Reactable.Td column="Size">{app.size}</Reactable.Td>
                         <Reactable.Td column="Status">{app.status}</Reactable.Td>
-                        <Reactable.Td column="Host">{app.host}</Reactable.Td>
+                        <Reactable.Td column="Host">{app.provider}</Reactable.Td>
                         <Reactable.Td column="Actions">
-                            <Bootstrap.DropdownButton id={'dropdown-' + app.hostname} bsStyle='primary' title="Choose" onSelect = {this.btn_clicked.bind(this, app.hostname, app.host)}>
+                            <Bootstrap.DropdownButton id={'dropdown-' + app.hostname} bsStyle='primary' title="Choose" onSelect = {this.btn_clicked.bind(this, app.hostname, app.provider)}>
                                 <Bootstrap.MenuItem eventKey="reboot">Reboot</Bootstrap.MenuItem>
                                 <Bootstrap.MenuItem eventKey="delete">Delete</Bootstrap.MenuItem>
                                 <Bootstrap.MenuItem eventKey="start">Start</Bootstrap.MenuItem>
@@ -119,9 +122,9 @@ var Appp = React.createClass({
             app_rows.push(rows);
         }
 
-        var AppFormRedux = connect(function(state){
+        var ServerFormRedux = connect(function(state){
             return {auth: state.auth, apps: state.apps, alert: state.alert, modal: state.modal};
-        })(AppForm);
+        })(ServerForm);
 
         var loaded = this.state.loaded;
         const spinnerStyle = {
@@ -136,13 +139,13 @@ var Appp = React.createClass({
             <div className="app-containter">
                 <span className="spinner" style={spinnerStyle} ><i className="fa fa-spinner fa-spin fa-3x"></i></span>
                 <div style={blockStyle}>
-                    <AppFormRedux hosts = {this.state.hosts} states = {this.state.states} hostname = {this.state.hostname} role = {this.state.role} defaults = {this.state.defaults} options = {this.state.options} host_usage = {this.state.host_usage} getData = {this.getData} onChange = {this.onChange} onChangeRole = {this.onChangeRole} />
-                    <Bootstrap.PageHeader>Current apps <small>All specified apps</small></Bootstrap.PageHeader>
+                    <ServerFormRedux loaded={loaded} providers = {this.state.providers} states = {this.state.states} provider_name = {this.state.hostname} role = {this.state.role} defaults = {this.state.defaults} options = {this.state.options} provider_usage = {this.state.provider_usage} getData = {this.getData} onChange = {this.onChange} onChangeRole = {this.onChangeRole} />
+                    <Bootstrap.PageHeader>Current servers <small>All specified servers</small></Bootstrap.PageHeader>
                     <Bootstrap.Button onClick={this.openModal} className="tbl-btn">
                         <Bootstrap.Glyphicon glyph='plus' />
-                        Launch new app
+                        Create server 
                     </Bootstrap.Button>
-                    <Reactable.Table className="table striped" columns={['Hostname', 'IP', 'Size', 'Status', 'Host', 'Actions']} itemsPerPage={10} pageButtonLimit={10} noDataText="No matching records found." sortable={sf_cols} filterable={sf_cols} >
+                    <Reactable.Table className="table striped" columns={['Hostname', 'IP', 'Size', 'Status', 'Provider', 'Actions']} itemsPerPage={10} pageButtonLimit={10} noDataText="No matching records found." sortable={sf_cols} filterable={sf_cols} >
                         {app_rows}
                     </Reactable.Table>
                 </div>
@@ -184,13 +187,17 @@ var UserStep = React.createClass({
         }
 
         return (
-            <Bootstrap.Form ref="form" horizontal>
+            <form ref="form" className="form-horizontal">
                 <div className="radioGroup">
-                    <input type="radio" value="new" name="user" checked={this.state.user === "new"} onChange={this.radioChange} /> New user
-                    <input type="radio" value="existing" name="user" checked={this.state.user === "existing"} onChange={this.radioChange} /> Join to existing
+                    <label className="radio-inline">
+                        <input type="radio" value="new" name="user" checked={this.state.user === "new"} onChange={this.radioChange} /> New user
+                    </label>
+                    <label className="radio-inline">
+                        <input type="radio" value="existing" name="user" checked={this.state.user === "existing"} onChange={this.radioChange} /> Join to existing
+                    </label>
                 </div>
                 {fields}
-            </Bootstrap.Form>
+            </form>
         );
     },
     onSubmit: function() {
@@ -215,17 +222,132 @@ var UserStep = React.createClass({
 
 });
 
+var SSHStep = React.createClass({
+    getInitialState: function () {
+        return {progress: 0, auth: false};
+    },
+
+    toggleAuth: function (e) {
+        this.setState({auth: e.target.checked});
+    },
+
+    onSubmit: function() {
+        //e.preventDefault();
+        var me = this;
+        this.setState({progress: 0});
+        interval = setInterval(function(){
+            if(me.props.status == 'launching' && me.state.progress <= 80){
+                var newProgress = me.state.progress + 10;
+                me.setState({progress: newProgress})
+            }else{
+                clearInterval(interval);
+            }
+        }, 10000);
+        var data = {
+            step: 3,
+            ip: ReactDOM.findDOMNode(this.refs.ip).value,
+            port: ReactDOM.findDOMNode(this.refs.port).value,
+            hostname: ReactDOM.findDOMNode(this.refs.hostname).value,
+            username: ReactDOM.findDOMNode(this.refs.username).value
+        };
+        if(!this.state.auth)
+            data['password'] = ReactDOM.findDOMNode(this.refs.password).value;
+        Network.post('/api/apps/new/validate_fields', this.props.auth.token, data).done(function(data) {
+            //me.setState({status: 'launched'});
+            me.props.launchServer();
+        }).fail(function (msg) {
+            me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
+        });
+    },
+
+    render: function () {
+        var statusColor, statusDisplay, statusMessage;
+
+        if(this.props.status == 'launching'){
+            statusColor = 'yellow';
+            statusDisplay = 'block';
+            statusMessage = 'Launching... ' + this.state.progress + '%';
+        }else if(this.props.status == 'launched'){
+            statusColor = 'green';
+            statusDisplay = 'block';
+            statusMessage = 'Launched successfully!';
+        }else {
+            statusDisplay = 'none';
+        }
+
+        return (
+            <form ref="form" className="form-horizontal">
+                <Bootstrap.FormGroup>
+                    <Bootstrap.Col componentClass={Bootstrap.ControlLabel} sm={3}>
+                        IP address
+                    </Bootstrap.Col>
+                    <Bootstrap.Col sm={9}>
+                        <Bootstrap.FormControl type="text" ref='ip' />
+                    </Bootstrap.Col>
+                </Bootstrap.FormGroup>
+
+                <Bootstrap.FormGroup>
+                    <Bootstrap.Col componentClass={Bootstrap.ControlLabel} sm={3}>
+                        Hostname
+                    </Bootstrap.Col>
+                    <Bootstrap.Col sm={9}>
+                        <Bootstrap.FormControl type="text" ref='hostname' />
+                    </Bootstrap.Col>
+                </Bootstrap.FormGroup>
+
+                <Bootstrap.FormGroup>
+                    <Bootstrap.Col componentClass={Bootstrap.ControlLabel} sm={3}>
+                        SSH port
+                    </Bootstrap.Col>
+                    <Bootstrap.Col sm={9}>
+                        <Bootstrap.FormControl type="number" ref='port' />
+                    </Bootstrap.Col>
+                </Bootstrap.FormGroup>
+
+                <Bootstrap.FormGroup>
+                    <Bootstrap.Col componentClass={Bootstrap.ControlLabel} sm={3}>
+                        Username 
+                    </Bootstrap.Col>
+                    <Bootstrap.Col sm={9}>
+                        <Bootstrap.FormControl type="text" ref='username' />
+                    </Bootstrap.Col>
+                </Bootstrap.FormGroup>
+                
+                <Bootstrap.FormGroup>
+                    <div className="col-sm-offset-3 col-sm-9">
+                        <div className="checkbox">
+                            <label>
+                                <input type="checkbox" onChange={this.toggleAuth} />
+                                Use SSH Key Auth?
+                            </label>
+                        </div>
+                    </div>
+                </Bootstrap.FormGroup>
+
+                {!this.state.auth && <Bootstrap.FormGroup>
+                    <Bootstrap.Col componentClass={Bootstrap.ControlLabel} sm={3}>
+                        Password 
+                    </Bootstrap.Col>
+                    <Bootstrap.Col sm={9}>
+                        <Bootstrap.FormControl type="password" ref='password' />
+                    </Bootstrap.Col>
+                </Bootstrap.FormGroup>}
+            </form>
+        );
+    }
+});
+
 var HostStep = React.createClass({
     getInitialState: function () {
-        return {progress: 0, hostname: this.props.hostname, options: this.props.options, defaults: this.props.defaults, index: 0};
+        return {progress: 0, provider_name: this.props.hostname, options: this.props.options, defaults: this.props.defaults, index: 0};
     },
 
     onChange: function(e) {
         var value = e.target.value;
-        for(var i=0; i < this.props.hosts.length; i++){
-            var host = this.props.hosts[i];
-            if(host.hostname === value){
-                this.setState({hostname: value, options: {sizes: host.sizes, networks: host.networks, images: host.images, sec_groups: host.sec_groups}, defaults: host.defaults, index: i});
+        for(var i=0; i < this.props.providers.length; i++){
+            var provider = this.props.providers[i];
+            if(provider.provider_name === value){
+                this.setState({provider_name: value, options: {sizes: provider.sizes, networks: provider.networks, images: provider.images, sec_groups: provider.sec_groups}, defaults: provider.defaults, index: i});
                 break;
             }
         }
@@ -248,8 +370,8 @@ var HostStep = React.createClass({
 
         var me = this;
 
-        var host_rows = this.props.hosts.map(function(host, i) {
-            return <option key = {i}>{host.hostname}</option>
+        var provider_rows = this.props.providers.map(function(provider, i) {
+            return <option key = {i}>{provider.provider_name}</option>
         });
 
         var img_rows = this.state.options.images.map(function(img) {
@@ -275,14 +397,14 @@ var HostStep = React.createClass({
         return (
             <div>
                 <Bootstrap.Col xs={12} sm={7} md={7} className="app-column">
-                    <Bootstrap.Form ref="form" horizontal>
+                    <form ref="form" className="form-horizontal">
                         <Bootstrap.FormGroup>
                             <Bootstrap.Col componentClass={Bootstrap.ControlLabel} sm={3}>
-                                Host
+                                Provider 
                             </Bootstrap.Col>
                             <Bootstrap.Col sm={9}>
-                                <Bootstrap.FormControl componentClass="select" ref='hostname' onChange={this.onChange}>
-                                    {host_rows}
+                                <Bootstrap.FormControl componentClass="select" ref='provider_name' onChange={this.onChange}>
+                                    {provider_rows}
                                 </Bootstrap.FormControl>
                             </Bootstrap.Col>
                         </Bootstrap.FormGroup>
@@ -345,9 +467,9 @@ var HostStep = React.createClass({
                         <div style={{width: '100%', padding: 10, borderRadius: 5, background: statusColor, display: statusDisplay}}>
                             {statusMessage}
                         </div>
-                    </Bootstrap.Form>
+                    </form>
                 </Bootstrap.Col>
-                <StatsRedux hostname = {this.state.hostname} host_usage = {this.props.host_usage[this.state.index]} />
+                <StatsRedux provider_name = {this.state.hostname} provider_usage = {this.props.provider_usage[this.state.index]} />
             </div>
         );
     },
@@ -365,7 +487,7 @@ var HostStep = React.createClass({
         }, 10000);
         var data = {
             step: 3,
-            hostname: ReactDOM.findDOMNode(this.refs.hostname).value,
+            provider_name: ReactDOM.findDOMNode(this.refs.provider_name).value,
             size: ReactDOM.findDOMNode(this.refs.flavor).value,
             image: ReactDOM.findDOMNode(this.refs.image).value,
             storage: ReactDOM.findDOMNode(this.refs.storage).value,
@@ -375,7 +497,7 @@ var HostStep = React.createClass({
         };
         Network.post('/api/apps/new/validate_fields', this.props.auth.token, data).done(function(data) {
             //me.setState({status: 'launched'});
-            me.props.launchApp();
+            me.props.launchServer();
         }).fail(function (msg) {
             me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
         });
@@ -383,9 +505,9 @@ var HostStep = React.createClass({
 
 });
 
-var AppForm = React.createClass({
+var ServerForm = React.createClass({
     getInitialState: function () {
-        return {role: this.props.role, step2: false, stepIndex: 1, isLoading: false, errors: [], instance_name: "", status: 'none', btnDisable: false};
+        return {role: this.props.role, step2: false, standalone: false, stepIndex: 1, isLoading: false, errors: [], server_name: "", status: 'none', btnDisable: false};
     },
 
     onChangeRole: function(e) {
@@ -401,7 +523,7 @@ var AppForm = React.createClass({
         this.setState({stepIndex: 3});
     },
 
-    launchApp: function () {
+    launchServer: function () {
         //this.close();
         this.setState({btnDisable: true, status: 'launched'});
     },
@@ -409,10 +531,10 @@ var AppForm = React.createClass({
     nextStep: function () {
         if(this.state.stepIndex === 1){
             var nextStep = this.state.step2 ? 2 : 3;
-            var me = this, instance_name = ReactDOM.findDOMNode(this.refs.name).value;
-            var data = {step: 1, role: ReactDOM.findDOMNode(this.refs.role).value, instance_name: instance_name};
+            var me = this, server_name = ReactDOM.findDOMNode(this.refs.name).value;
+            var data = {step: 1, role: ReactDOM.findDOMNode(this.refs.role).value, server_name: server_name};
             Network.post('/api/apps/new/validate_fields', this.props.auth.token, data).done(function(d) {
-                me.setState({stepIndex: nextStep, instance_name: instance_name});
+                me.setState({stepIndex: nextStep, server_name: server_name});
             }).fail(function (msg) {
                 me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
             });
@@ -426,6 +548,10 @@ var AppForm = React.createClass({
         }
     },
 
+    toggleStandalone: function (e) {
+        this.setState({standalone: e.target.checked});
+    },
+
     render: function () {
         var me = this;
 
@@ -435,23 +561,39 @@ var AppForm = React.createClass({
         var HostStepRedux = connect(function(state){
             return {auth: state.auth, alert: state.alert};
         }, null, null, { withRef: true })(HostStep);
+        var SSHStepRedux = connect(function(state){
+            return {auth: state.auth, alert: state.alert};
+        }, null, null, { withRef: true })(SSHStep);
 
         var state_rows = Object.keys(this.props.states).map(function(state) {
             return <option key = {state}>{state}</option>
         });
 
-        var step2 = null;
+        var step2 = null, step3 = null;
         if(this.state.step2){
             step2 = (
                 <Bootstrap.Tab title='Choose user' eventKey={2}>
-                    <UserStepRedux fields = {this.props.states[this.state.role]} goToNextStep = {this.goToNextStep} ref="step2" instance_name = {this.state.instance_name} />
+                    <UserStepRedux fields = {this.props.states[this.state.role]} goToNextStep = {this.goToNextStep} ref="step2" server_name = {this.state.server_name} />
+                </Bootstrap.Tab>
+            );
+        }
+        if(this.state.standalone){
+            step3 = (
+                <Bootstrap.Tab title='Choose ssh' eventKey={3}>
+                    <SSHStepRedux ref="step3" status = {this.state.status} launchServer = {this.launchServer} />
+                </Bootstrap.Tab>
+            );
+        }else{
+            step3 = (
+                <Bootstrap.Tab title='Choose provider' eventKey={3}>
+                    <HostStepRedux provider_name = {this.props.hostname} providers = {this.props.providers} provider_usage = {this.props.provider_usage} options = {this.props.options} defaults = {this.props.defaults} ref="step3" changeStep = {this.changeStep} server_name = {this.state.server_name} status = {this.state.status}  launchServer = {this.launchServer} />
                 </Bootstrap.Tab>
             );
         }
 
 
         return (
-            <Bootstrap.Modal show={this.props.modal.isOpen} onHide={this.close}>
+            <Bootstrap.Modal show={this.props.loaded && this.props.modal.isOpen} onHide={this.close}>
                 <Bootstrap.Modal.Header closeButton>
                   <Bootstrap.Modal.Title>Launch new app</Bootstrap.Modal.Title>
                 </Bootstrap.Modal.Header>
@@ -459,7 +601,7 @@ var AppForm = React.createClass({
                 <Bootstrap.Modal.Body>
                     <Bootstrap.Tabs id="launch-app" activeKey={this.state.stepIndex}>
                         <Bootstrap.Tab title='Choose role' eventKey={1}>
-                            <Bootstrap.Form onSubmit={this.onSubmit} horizontal>
+                            <form onSubmit={this.onSubmit} className="form-horizontal">
                                 <Bootstrap.FormGroup>
                                     <Bootstrap.Col sm={4}>
                                         <Bootstrap.FormControl componentClass="select" ref='role' defaultValue={this.props.apps.select} onChange={this.onChangeRole}>
@@ -470,14 +612,18 @@ var AppForm = React.createClass({
                                         <Bootstrap.FormControl type="text" ref='name' placeholder='Instance name' />
                                     </Bootstrap.Col>
                                 </Bootstrap.FormGroup>
-                            </Bootstrap.Form>
+                            </form>
+                            <div className="checkbox">
+                                <label>
+                                    <input type="checkbox" onChange={this.toggleStandalone} />
+                                    Standalone?
+                                </label>
+                            </div>
                         </Bootstrap.Tab>
 
                         {step2}
+                        {step3}
 
-                        <Bootstrap.Tab title='Choose host' eventKey={3}>
-                            <HostStepRedux hostname = {this.props.hostname} hosts = {this.props.hosts} host_usage = {this.props.host_usage} options = {this.props.options} defaults = {this.props.defaults} ref="step3" changeStep = {this.changeStep} instance_name = {this.state.instance_name} status = {this.state.status}  launchApp = {this.launchApp} />
-                        </Bootstrap.Tab>
                     </Bootstrap.Tabs>
                 </Bootstrap.Modal.Body>
 
@@ -497,19 +643,19 @@ var Stats = React.createClass({
     render: function () {
         return (
             <Bootstrap.Col xs={12} sm={5} md={5}>
-                <h3>{this.props.hostname}</h3>
-                <label>CPU: </label>{this.props.host_usage.used_cpus} / {this.props.host_usage.max_cpus}<br/>
-                <label>RAM: </label>{this.props.host_usage.used_ram} / {this.props.host_usage.max_ram}<br/>
-                <label>DISK: </label>{this.props.host_usage.used_disk} / {this.props.host_usage.max_disk}<br/>
-                <label>INSTANCES: </label>{this.props.host_usage.used_instances} / {this.props.host_usage.max_instances}<br/>
+                <h3>{this.props.provider_name}</h3>
+                <label>CPU: </label>{this.props.provider_usage.used_cpus} / {this.props.provider_usage.max_cpus}<br/>
+                <label>RAM: </label>{this.props.provider_usage.used_ram} / {this.props.provider_usage.max_ram}<br/>
+                <label>DISK: </label>{this.props.provider_usage.used_disk} / {this.props.provider_usage.max_disk}<br/>
+                <label>INSTANCES: </label>{this.props.provider_usage.used_servers} / {this.props.provider_usage.max_servers}<br/>
             </Bootstrap.Col>
         );
 
     }
 });
 
-Apps = connect(function(state){
+Servers = connect(function(state){
     return {auth: state.auth, apps: state.apps, alert: state.alert};
-})(Appp);
+})(Servers);
 
-module.exports = Apps;
+module.exports = Servers;

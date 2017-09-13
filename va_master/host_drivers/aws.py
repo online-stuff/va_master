@@ -73,8 +73,8 @@ class AWSDriver(base.DriverBase):
         self.aws_config = AWS_CONFIG_TEMPLATE
 
 
-    def get_client(self, host):
-        session = boto3.session.Session(aws_access_key_id = host['aws_access_key_id'], aws_secret_access_key = host['aws_secret_access_key'], region_name = host['region'])
+    def get_client(self, provider):
+        session = boto3.session.Session(aws_access_key_id = provider['aws_access_key_id'], aws_secret_access_key = provider['aws_secret_access_key'], region_name = provider['region'])
         client = session.client('ec2')
         self.aws_client = client
         return client
@@ -88,7 +88,7 @@ class AWSDriver(base.DriverBase):
         raise tornado.gen.Return('AWS')
 
     @tornado.gen.coroutine
-    def new_host_step_descriptions(self):
+    def new_provider_step_descriptions(self):
         raise tornado.gen.Return([
             {'name': 'Host Info'},
             {'name': 'Security and region'}, 
@@ -97,7 +97,7 @@ class AWSDriver(base.DriverBase):
 
     @tornado.gen.coroutine
     def get_steps(self):
-        """ Adds a host_ip, tenant and region field to the first step. These are needed in order to get OpenStack values. """
+        """ Adds a provider_ip, tenant and region field to the first step. These are needed in order to get OpenStack values. """
 
         steps = yield super(AWSDriver, self).get_steps()
         steps[0].add_fields([
@@ -135,42 +135,42 @@ class AWSDriver(base.DriverBase):
         return networks
 
     @tornado.gen.coroutine
-    def get_instances(self, host):
-        client = self.get_client(host)
+    def get_servers(self, provider):
+        client = self.get_client(provider)
         result = client.describe_instances()
-        instances = result['Reservations']
-        raise tornado.gen.Return(instances)
+        servers = result['Reservations']
+        raise tornado.gen.Return(servers)
 
-        #TODO instances are returned in a format I don't yet know, need to create some so I can test this. 
+        #TODO servers are returned in a format I don't yet know, need to create some so I can test this. 
         #Should be like this: 
-#        instances = [
+#        servers = [
 #            {
 #                'hostname' : 'name', 
 #                'ipv4' : 'ipv4', 
 #                'local_gb' : 0, 
 #                'memory_mb' : 0, 
 #                'status' : 'n/a', 
-#            } for x in data['instances']
+#            } for x in data['servers']
 #        ]
 
 
     @tornado.gen.coroutine
-    def get_host_data(self, host, get_instances = True, get_billing = True):
-        client = self.get_client(host)
-        host_usage = {
+    def get_provider_data(self, provider, get_servers = True, get_billing = True):
+        client = self.get_client(provider)
+        provider_usage = {
             'total_disk_usage_gb' : 0, 
             'current_disk_usage_mb' : 0, 
             'cpus_usage' : 0
         }
-        instances = []
-        if get_instances:
-            instances = yield self.get_instances(host)
-        host_data = {
-            'instances' : instances, 
-            'host_usage' : host_usage, 
+        servers = []
+        if get_servers:
+            servers = yield self.get_servers(provider)
+        provider_data = {
+            'servers' : servers, 
+            'provider_usage' : provider_usage, 
             'status' : {'success' : True, 'message' : ''},
         }
-        raise tornado.gen.Return(host_data)
+        raise tornado.gen.Return(provider_data)
 
     @tornado.gen.coroutine
     def validate_field_values(self, step_index, field_values):
@@ -181,13 +181,13 @@ class AWSDriver(base.DriverBase):
             ))
         elif step_index == 0:
             self.provider_vars['VAR_REGION'] = field_values['region']
-            host = {}
+            provider = {}
             for x in ['aws_access_key_id', 'aws_secret_access_key', 'region']:
-                host[x] = field_values[x]
+                provider[x] = field_values[x]
                 self.provider_vars['VAR_' + x.upper()] = field_values[x]
 
-            self.get_client(host)
-            self.field_values.update(host)
+            self.get_client(provider)
+            self.field_values.update(provider)
         try:
             step_result = yield super(AWSDriver, self).validate_field_values(step_index, field_values)
         except:

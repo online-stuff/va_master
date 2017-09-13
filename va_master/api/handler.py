@@ -14,6 +14,8 @@ import json, datetime, syslog, pytz
 import dateutil.relativedelta
 import dateutil.parser
 
+from salt.client import LocalClient
+
 
 def invalid_url(deploy_handler, path, method):
     raise Exception('Invalid URL : ' + path +' with method : ' + method)
@@ -65,6 +67,16 @@ class ApiHandler(tornado.web.RequestHandler):
             return False
 
 
+    def fetch_func(self, method, path, data):
+        api_func = self.paths[method].get(path)
+
+        print ('Getting a call at ', path, ' with data ', data, ' and will call function: ', api_func)
+
+        if not api_func: 
+            api_func = {'function' : invalid_url, 'args' : ['path', 'method']}
+
+        return api_func
+
     @tornado.gen.coroutine
     def handle_user_auth(self):
         auth_successful = True
@@ -91,7 +103,6 @@ class ApiHandler(tornado.web.RequestHandler):
         try:
             api_func, api_kwargs = api_func.get('function'), api_func.get('args')       
             api_kwargs = {x : data.get(x) for x in api_kwargs if data.get(x)} or {}
-            print ('My kwargs is : ', api_kwargs, ' for ', api_func)
 
             result = yield api_func(self.config.deploy_handler, **api_kwargs)
 
@@ -125,15 +136,9 @@ class ApiHandler(tornado.web.RequestHandler):
         user = yield get_current_user(self)
         data['dash_user'] = user
 
-        api_func = self.paths[method].get(path)
+        api_func = self.fetch_func(method, path, data)
 
-        print ('Getting a call at ', path, ' with data ', data, ' and will call function: ', api_func)
-
-        if not api_func: 
-            data = {'path' : path, 'method' : method}
-            api_func = {'function' : invalid_url, 'args' : ['path', 'method']}
-
-        elif api_func['function'] != user_login: 
+        if api_func['function'] != user_login: 
             auth_successful = yield self.handle_user_auth()    
             if not auth_successful: 
                 raise tornado.gen.Return()
@@ -147,12 +152,10 @@ class ApiHandler(tornado.web.RequestHandler):
     @tornado.gen.coroutine
     def get(self, path):
         args = self.request.query_arguments
-        print ('Args before are : ', args)
         t_args = args
         for x in t_args: 
             if len(t_args[x]) == 1: 
                 args[x] = args[x][0]
-        print ('Args after are : ', args)
         try:
             result = yield self.exec_method('get', path, args)
         except: 
@@ -219,17 +222,42 @@ class ApiHandler(tornado.web.RequestHandler):
 
 
     @tornado.gen.coroutine
-    def serve_file(self, file_path, chunk_size = 4096):
+    def send_data(self, source, kwargs, chunk_size):
+        offset = 0
+        while True:
+           print ('Calling ', source, ' with ', kwargs)
+           data = source(**kwargs)
+           offset += chunk_size
+           if not data:
+               break
+           if type(data) == dict: #If using salt, it typically is formatted as {"minion" : "data"}
+               data = data[kwargs.get('tgt')]
+#           print ('Keys are : ', data.keys())
+
+           self.set_header('Content-Type', 'application/octet-stream')
+           self.set_header('Content-Disposition', 'attachment; filename=test.zip')
+
+           self.write(unicode(data, "ISO-8859-1"))
+           self.flush()
+       
+
+
+    @tornado.gen.coroutine
+    def serve_file(self, source, chunk_size = 10**6, salt_source = {}):
         try: 
-            self.set_header('Content-Type', 'application/octet-stream')
-            self.set_header('Content-Disposition', 'attachment; filename=' + file_path)
-            with open(file_path, 'r') as f:
-                while True:
-                    data = f.read(chunk_size)
-                    if not data:
-                        break
-                    self.write(data)
-            self.finish()
+            offset = 0
+
+            if salt_source: 
+                client = LocalClient()
+                source = client.cmd
+                kwargs = salt_source
+            else:
+                f = open(source, 'r')
+                source = f.read
+                kwargs = {"size" : chunk_size}
+
+            yield self.send_data(source, kwargs, chunk_size)
+#            self.finish()
         except: 
             import traceback
             traceback.print_exc()

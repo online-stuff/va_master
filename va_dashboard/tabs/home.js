@@ -76,7 +76,7 @@ var Home = React.createClass({
     },
     render: function () {
         var panels = this.state.data.filter(function(panel) {
-            if(panel.instances.length > 0){
+            if(panel.servers.length > 0){
                 return true;
             }
             return false;
@@ -84,17 +84,17 @@ var Home = React.createClass({
             var header = (
                 <span><i className={'fa ' + panel.icon} /> {panel.name} <i className='fa fa-angle-down pull-right' /></span>
             )
-            var instances = panel.instances.map(function(instance) {
+            var servers = panel.servers.map(function(server) {
                 var subpanels = panel.panels.admin.map(function(panel) {
                     return (
-                        <li key={panel.key}><NavLink to={'panel/' + panel.key + '/' + instance} activeKey={i}>
+                        <li key={panel.key}><NavLink to={'panel/' + panel.key + '/' + server} activeKey={i}>
                             <span>{panel.name}</span>
                         </NavLink></li>
                     );
                 });
                 return (
-                    <div key={instance}>
-                        <span className="panels-title">{instance}</span>
+                    <div key={server}>
+                        <span className="panels-title">{server}</span>
                         <ul className='left-menu'>
                             {subpanels}
                         </ul>
@@ -103,7 +103,7 @@ var Home = React.createClass({
             });
             return (
                 <Bootstrap.Panel key={panel.name} header={header} eventKey={i}>
-                    {instances}
+                    {servers}
                 </Bootstrap.Panel>
             );
         });
@@ -128,30 +128,29 @@ var Home = React.createClass({
                     <ul className='left-menu'>
                         <li>
                         <Router.IndexLink to='' activeClassName='active'>
-                        <Bootstrap.Glyphicon glyph='home' /> Overview</Router.IndexLink>
+                            <Bootstrap.Glyphicon glyph='home' /> Overview</Router.IndexLink>
                         </li>
                         <li>
-                        <NavLink to='hosts'>
-                        <Bootstrap.Glyphicon glyph='hdd' /> Hosts</NavLink>
+                        <NavLink to='providers'>
+                            <Bootstrap.Glyphicon glyph='hdd' /> Providers</NavLink>
                         </li>
-                        <li>
-                        <NavLink to='apps'>
-                        <Bootstrap.Glyphicon glyph='th' /> Apps</NavLink>
-                        </li>
+                        <NavLink to='servers'>
+                            <span><i className='fa fa-server' /> Servers</span>
+                        </NavLink>
                         <li>
                         <NavLink to='store'>
-                        <Bootstrap.Glyphicon glyph='cloud' /> Store</NavLink>
+                            <Bootstrap.Glyphicon glyph='th' /> Apps</NavLink>
                         </li>
                         <li>
                         <NavLink to='services'>
-                        <Bootstrap.Glyphicon glyph='cloud' /> Services</NavLink>
+                            <Bootstrap.Glyphicon glyph='cloud' /> Services</NavLink>
                         </li>
                         <li>
                         <NavLink to='vpn'>
                             <span><i className='fa fa-lock' /> VPN</span>
                         </NavLink>
                         <NavLink to='log'>
-                            <span><i className='fa fa-file-o' /> Log</span>
+                            <span><i className='fa fa-bar-chart' /> Log</span>
                         </NavLink>
                         <NavLink to='billing'>
                             <span><i className='fa fa-credit-card' /> Billing</span>

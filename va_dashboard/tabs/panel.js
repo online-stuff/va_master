@@ -17,14 +17,14 @@ var Panel = React.createClass({
         };
     },
 
-    getPanel: function (id, instance, args) {
+    getPanel: function (id, server, args) {
         var me = this;
-        var data = {'panel': id, 'instance_name': instance};
+        var data = {'panel': id, 'server_name': server};
         if(args !== ""){
             data['args'] = args.split(",");
-            this.props.dispatch({type: 'CHANGE_PANEL', panel: id, instance: instance, args: data['args']});
+            this.props.dispatch({type: 'CHANGE_PANEL', panel: id, server: server, args: data['args']});
         }else{
-            this.props.dispatch({type: 'CHANGE_PANEL', panel: id, instance: instance});
+            this.props.dispatch({type: 'CHANGE_PANEL', panel: id, server: server});
         }
         Network.post('/api/panels/get_panel', this.props.auth.token, data).done(function (data) {
             if(typeof data.tbl_source !== 'undefined'){
@@ -41,15 +41,15 @@ var Panel = React.createClass({
 
     componentDidMount: function () {
         var args = "args" in this.props.params && this.props.params.args ? this.props.params.args : "";
-        this.getPanel(this.props.params.id, this.props.params.instance, args);
+        this.getPanel(this.props.params.id, this.props.params.server, args);
     },
 
     componentWillReceiveProps: function (nextProps) {
-        if (nextProps.params.id !== this.props.params.id || nextProps.params.instance !== this.props.params.instance) {
+        if (nextProps.params.id !== this.props.params.id || nextProps.params.server !== this.props.params.server) {
             this.setState({loading: true});
             //this.props.dispatch({type: 'RESET_FILTER'});
             var args = "args" in nextProps.params && nextProps.params.args ? nextProps.params.args : "";
-            this.getPanel(nextProps.params.id, nextProps.params.instance, args);
+            this.getPanel(nextProps.params.id, nextProps.params.server, args);
         }
     },
 
@@ -92,7 +92,7 @@ var Panel = React.createClass({
             <div>
                 <span className="spinner" style={spinnerStyle} ><i className="fa fa-spinner fa-spin fa-3x" aria-hidden="true"></i></span>
                 <div key={this.props.params.id} style={blockStyle}>
-                    <Bootstrap.PageHeader>{this.state.template.title} <small>{this.props.params.instance}</small></Bootstrap.PageHeader>
+                    <Bootstrap.PageHeader>{this.state.template.title} <small>{this.props.params.server}</small></Bootstrap.PageHeader>
                     {elements}
                     <ModalRedux />
                 </div>

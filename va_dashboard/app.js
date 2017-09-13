@@ -133,13 +133,13 @@ function div(state, action){
 
 function panel(state, action){
     if(typeof state === 'undefined'){
-        return {panel: '', instance: '', args: ''};
+        return {panel: '', server: '', args: ''};
     }
 
     var newState = Object.assign({}, state);
     if(action.type == 'CHANGE_PANEL'){
         newState.panel = action.panel;
-        newState.instance = action.instance;
+        newState.server = action.server;
         if('args' in action){
             newState.args = action.args;
         }else{
@@ -198,8 +198,8 @@ var store = Redux.createStore(mainReducer);
 
 var Home = require('./tabs/home');
 var Overview = require('./tabs/overview');
-var Hosts = require('./tabs/hosts');
-var Apps = require('./tabs/apps');
+var Providers = require('./tabs/providers');
+var Servers = require('./tabs/servers');
 var Store = require('./tabs/store');
 var Panel = require('./tabs/panel');
 var Subpanel = require('./tabs/subpanel');
@@ -219,8 +219,8 @@ var App = React.createClass({
         <Router.Router history={Router.hashHistory}>
             <Router.Route path='/' component={Home}>
                 <Router.IndexRoute component={Overview} />
-                <Router.Route path='/hosts' component={Hosts} />
-                <Router.Route path='/apps' component={Apps} />
+                <Router.Route path='/providers' component={Providers} />
+                <Router.Route path='/servers' component={Servers} />
                 <Router.Route path='/store' component={Store} />
                 <Router.Route path='/vpn' component={Vpn} />
                 <Router.Route path='/vpn/list_logins/:username' component={VpnLogins} />
@@ -229,9 +229,9 @@ var App = React.createClass({
                 <Router.Route path='/log' component={Log} />
                 <Router.Route path='/billing' component={Billing} />
                 <Router.Route path='/services' component={Services} />
-                <Router.Route path='/panel/:id/:instance(/:args)' component={Panel} />
-                <Router.Route path='/subpanel/:id/:instance/:args' component={Subpanel} />
-                <Router.Route path='/chart_panel/:instance/:host/:service' component={ChartPanel} />
+                <Router.Route path='/panel/:id/:server(/:args)' component={Panel} />
+                <Router.Route path='/subpanel/:id/:server/:args' component={Subpanel} />
+                <Router.Route path='/chart_panel/:server/:provider/:service' component={ChartPanel} />
             </Router.Route>
             <Router.Route path='/login' component={Login} />
         </Router.Router>

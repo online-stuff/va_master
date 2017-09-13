@@ -4,16 +4,16 @@ def get_paths():
     paths = {
         'get' : {
             'triggers' : {'function' : list_triggers, 'args' : []},
-            'triggers/clear' : {'function' : clear_triggers, 'args' : ['hostname']}, #Just for resting!!!
+            'triggers/clear' : {'function' : clear_triggers, 'args' : ['provider_name']}, #Just for resting!!!
         },
         'post' : {
-            'triggers/add_trigger':  {'function' : add_trigger_api, 'args' : ['new_trigger', 'hostname']},
-            'triggers/triggered': {'function' : receive_trigger, 'args' : ['deploy_handler', 'hostname', 'service', 'level', 'extra_kwargs']},
-            'triggers/load_triggers' : {'function' : load_triggers, 'args' : ['hostname', 'triggers']},
-            'triggers/edit_trigger' : {'function' : edit_trigger, 'args' : ['hostname', 'trigger_id', 'trigger']},
+            'triggers/add_trigger':  {'function' : add_trigger_api, 'args' : ['new_trigger', 'provider_name']},
+            'triggers/triggered': {'function' : receive_trigger, 'args' : ['deploy_handler', 'provider_name', 'service', 'level', 'extra_kwargs']},
+            'triggers/load_triggers' : {'function' : load_triggers, 'args' : ['provider_name', 'triggers']},
+            'triggers/edit_trigger' : {'function' : edit_trigger, 'args' : ['provider_name', 'trigger_id', 'trigger']},
         },
         'delete' : {
-            'triggers/delete_trigger' : {'function' : delete_trigger, 'args' : ['hostname', 'trigger_id']},
+            'triggers/delete_trigger' : {'function' : delete_trigger, 'args' : ['provider_name', 'trigger_id']},
         },
     }
     return paths
@@ -40,89 +40,89 @@ def get_paths():
 #    }
     
 @tornado.gen.coroutine
-def add_trigger(deploy_handler, hostname, new_trigger):
+def add_trigger(deploy_handler, provider_name, new_trigger):
 
-    hosts = yield deploy_handler.list_hosts()
-    host = [x for x in hosts if x['hostname'] == hostname][0]
+    providers = yield deploy_handler.list_providers()
+    provider = [x for x in providers if x['provider_name'] == provider_name][0]
 
-    if not host.get('triggers'): host['triggers'] = []
-    triggers_ids = [x.get('id', -1) for x in host['triggers']] or [-1]
+    if not provider.get('triggers'): provider['triggers'] = []
+    triggers_ids = [x.get('id', -1) for x in provider['triggers']] or [-1]
     trigger_id = max(triggers_ids) + 1
 
     new_trigger['id'] = trigger_id
 
-    host['triggers'].append(new_trigger)
+    provider['triggers'].append(new_trigger)
 
-    yield deploy_handler.datastore.insert('hosts', hosts)
+    yield deploy_handler.datastore.insert('providers', providers)
 
     raise tornado.gen.Return(True)
 
 
 @tornado.gen.coroutine
-def add_trigger_api(deploy_handler, new_trigger, hostname):
-    result = yield add_trigger(deploy_handler, hostname, new_trigger)
+def add_trigger_api(deploy_handler, new_trigger, provider_name):
+    result = yield add_trigger(deploy_handler, provider_name, new_trigger)
     raise tornado.gen.Return(result)
 
 @tornado.gen.coroutine
-def delete_trigger(deploy_handler, hostname, trigger_id):
-    hosts = yield deploy_handler.list_hosts()
-    host = [x for x in hosts if x['hostname'] == hostname][0]
+def delete_trigger(deploy_handler, provider_name, trigger_id):
+    providers = yield deploy_handler.list_providers()
+    provider = [x for x in providers if x['provider_name'] == provider_name][0]
 
-    host['triggers'] = [x for x in host['triggers'] if x['id'] != trigger_id]
-    yield deploy_handler.datastore.insert('hosts', hosts)
+    provider['triggers'] = [x for x in provider['triggers'] if x['id'] != trigger_id]
+    yield deploy_handler.datastore.insert('providers', providers)
 
 
 @tornado.gen.coroutine
-def edit_trigger(deploy_handler, hostname, trigger_id, trigger):
-    hosts = yield deploy_handler.list_hosts()
-    host = [x for x in hosts if x['hostname'] == hostname][0]
+def edit_trigger(deploy_handler, provider_name, trigger_id, trigger):
+    providers = yield deploy_handler.list_providers()
+    provider = [x for x in providers if x['provider_name'] == provider_name][0]
 
-    edited_trigger_index = host['triggers'].index([x for x in host['triggers'] if x['id'] == trigger_id][0])
+    edited_trigger_index = provider['triggers'].index([x for x in provider['triggers'] if x['id'] == trigger_id][0])
     
-    trigger['id'] = host['triggers'][edited_trigger_index]['id']
-    host['triggers'][edited_trigger_index] = trigger
+    trigger['id'] = provider['triggers'][edited_trigger_index]['id']
+    provider['triggers'][edited_trigger_index] = trigger
 
-    yield deploy_handler.datastore.insert('hosts', hosts)
+    yield deploy_handler.datastore.insert('providers', providers)
 
 @tornado.gen.coroutine
-def clear_triggers(deploy_handler, hostname):
-    hosts = yield deploy_handler.list_hosts()
-    host = [x for x in hosts if x['hostname'] == hostname][0]
+def clear_triggers(deploy_handler, provider_name):
+    providers = yield deploy_handler.list_providers()
+    provider = [x for x in providers if x['provider_name'] == provider_name][0]
 
-    host['triggers'] = []
-    yield deploy_handler.datastore.insert('hosts', hosts)
+    provider['triggers'] = []
+    yield deploy_handler.datastore.insert('providers', providers)
 
     raise tornado.gen.Return(True)
 
 @tornado.gen.coroutine
-def load_triggers(deploy_handler, hostname, triggers):
+def load_triggers(deploy_handler, provider_name, triggers):
     yield clear_triggers(deploy_handler)
 
     for trigger in triggers: 
-        yield add_trigger(deploy_handler, hostname, trigger)
+        yield add_trigger(deploy_handler, provider_name, trigger)
 
     raise tornado.gen.Return(True)
 
 
 @tornado.gen.coroutine
 def list_triggers(deploy_handler):
-    hosts = yield deploy_handler.list_hosts()
+    providers = yield deploy_handler.list_providers()
     drivers = []
-    for host in hosts: 
-        driver = yield deploy_handler.get_driver_by_id(host['driver_name'])
-        host['functions'] = yield driver.get_driver_trigger_functions()
+    for provider in providers: 
+        driver = yield deploy_handler.get_driver_by_id(provider['driver_name'])
+        provider['functions'] = yield driver.get_driver_trigger_functions()
 
-    triggers = {h['hostname'] : {'triggers' : h.get('triggers', []), 'functions' : h.get('functions', [])} for h in hosts}
+    triggers = {h['provider_name'] : {'triggers' : h.get('triggers', []), 'functions' : h.get('functions', [])} for h in providers}
 #    print ('Triggers are : ', triggers)
     raise tornado.gen.Return(triggers)
 
 
 @tornado.gen.coroutine
-def receive_trigger(deploy_handler, hostname, service = '', level = '', extra_kwargs = {}):
+def receive_trigger(deploy_handler, provider_name, service = '', level = '', extra_kwargs = {}):
 #    raise tornado.gen.Return(True) # Uncomment to disable triggers
-    host, driver = yield deploy_handler.get_host_and_driver(handler.data['hostname'])
+    provider, driver = yield deploy_handler.get_provider_and_driver(handler.data['provider_name'])
     
-    triggers = yield deploy_handler.get_triggers(hostname)
+    triggers = yield deploy_handler.get_triggers(provider_name)
     triggers = [x for x in triggers if x['service'] == service and x['status'] == level]
 
     if not triggers: 
@@ -135,7 +135,7 @@ def receive_trigger(deploy_handler, hostname, service = '', level = '', extra_kw
         conditions_satisfied = True
         print ('Working with trigger: ', trigger)
         for condition in trigger['conditions']:
-            condition_kwargs = {'host' : host, 'instance_name' : instance_name}
+            condition_kwargs = {'provider' : provider, 'server_name' : server_name}
             for kwarg in trigger['extra_kwargs']: 
                 condition_kwargs[kwarg] = extra_kwargs.get(kwarg)
             result = yield getattr(driver, condition)(**condition_kwargs)
@@ -145,7 +145,7 @@ def receive_trigger(deploy_handler, hostname, service = '', level = '', extra_kw
                 break
         if conditions_satisfied:
             for action in trigger['actions']:
-                action_kwargs = {'instance_name' : instance_name, 'host' : host}
+                action_kwargs = {'server_name' : server_name, 'provider' : provider}
                 for kwarg in trigger['extra_kwargs'] : 
                     action_kwargs[kwarg] = extra_kwargs.get(kwarg)
                 try:
