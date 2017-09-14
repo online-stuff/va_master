@@ -223,23 +223,40 @@ class ApiHandler(tornado.web.RequestHandler):
 
     @tornado.gen.coroutine
     def send_data(self, source, kwargs, chunk_size):
-        if kwargs.get('args'): 
-            args = kwargs.pop('args')
+        args = []
+    
+        #kwargs has a 'source_args' field for placement arguments sent to the source. For instance, for file.read(), we have to send the "size" argument as a placement argument. 
+        if kwargs.get('source_args'): 
+            args = kwargs.pop('source_args')
+
+        #We assume that when streaming salt data, the last argument is the range_from argument. But we need to have an 'arg' field first. 
+        kwargs['kwarg'] = kwargs.get('kwarg', {})
+        kwargs['kwarg']['range_from'] = 0
+
         offset = 0
+        first_data = ''
         while True:
             if kwargs: 
                 kwargs['range_from'] = offset
             print ('Calling ', source, ' with ', kwargs)
             data = source(*args, **kwargs)
-            print ('Result is : ', data)
+
             offset += chunk_size
-             
-            if not data:
-                break
+            kwargs['kwarg']['range_from'] = offset            
+
             if type(data) == dict: #If using salt, it typically is formatted as {"minion" : "data"}
                 data = data[kwargs.get('tgt')]
- 
+            if not data:
+                break
+
+            print ('Data has ', len(data), ' characters. ')
+
             if type(data) == str:
+                if first_data == data: 
+                    print ('Data is same as before!')
+                else: 
+                    print ('Data is different. ')
+                    first_data = data
                 self.write(data)
                 self.flush()
        
@@ -261,7 +278,7 @@ class ApiHandler(tornado.web.RequestHandler):
             else:
                 f = open(source, 'r')
                 source = f.read
-                kwargs = {"args" : [chunk_size]}
+                kwargs = {"source_args" : [chunk_size]}
 
             yield self.send_data(source, kwargs, chunk_size)
             self.finish()
