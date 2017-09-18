@@ -31,6 +31,7 @@ class ApiHandler(tornado.web.RequestHandler):
         self.salt_client = None
 
     def json(self, obj, status=200):
+        print ('I am in json!')
         if not obj: 
             return
         self.set_header('Content-Type', 'application/json')
@@ -129,6 +130,7 @@ class ApiHandler(tornado.web.RequestHandler):
 
     @tornado.gen.coroutine
     def exec_method(self, method, path, data):
+        print ('I am in exec: ')
         self.data = data
         self.data['method'] = method
         self.data['handler'] = self
@@ -151,6 +153,7 @@ class ApiHandler(tornado.web.RequestHandler):
 
     @tornado.gen.coroutine
     def get(self, path):
+        print ('I am in get!')
         args = self.request.query_arguments
         t_args = args
         for x in t_args: 
