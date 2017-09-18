@@ -5,7 +5,7 @@ from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 
 from tornado.httpclient import AsyncHTTPClient, HTTPRequest
-from tornado.concurrent import run_on_executor
+from tornado.concurrent import run_on_executor, Future
 from concurrent.futures import ThreadPoolExecutor   # `pip install futures` for python2
 
 from . import url_handler
@@ -229,10 +229,6 @@ class ApiHandler(tornado.web.RequestHandler):
         if kwargs.get('source_args'): 
             args = kwargs.pop('source_args')
 
-        #We assume that when streaming salt data, the last argument is the range_from argument. But we need to have an 'arg' field first. 
-        kwargs['kwarg'] = kwargs.get('kwarg', {})
-        kwargs['kwarg']['range_from'] = 0
-
         offset = 0
         first_data = ''
         while True:
@@ -242,7 +238,8 @@ class ApiHandler(tornado.web.RequestHandler):
             data = source(*args, **kwargs)
 
             offset += chunk_size
-            kwargs['kwarg']['range_from'] = offset            
+            if kwargs['kwarg'].get('range_from'): 
+                kwargs['kwarg']['range_from'] = offset            
 
             if type(data) == dict: #If using salt, it typically is formatted as {"minion" : "data"}
                 data = data[kwargs.get('tgt')]
@@ -252,6 +249,7 @@ class ApiHandler(tornado.web.RequestHandler):
             print ('Data has ', len(data), ' characters. ')
 
             if type(data) == str:
+                #Just for debugging!
                 if first_data == data: 
                     print ('Data is same as before!')
                 else: 
@@ -259,11 +257,15 @@ class ApiHandler(tornado.web.RequestHandler):
                     first_data = data
                 self.write(data)
                 self.flush()
-       
+            elif type(data) == Future: 
+                data = yield data
+                break
+
+      
 
 
     @tornado.gen.coroutine
-    def serve_file(self, source, chunk_size = 10**6, salt_source = {}):
+    def serve_file(self, source, chunk_size = 10**6, salt_source = {}, proxy_source = {}):
 
         self.set_header('Content-Type', 'application/octet-stream')
         self.set_header('Content-Disposition', 'attachment; filename=test.zip')
@@ -275,6 +277,15 @@ class ApiHandler(tornado.web.RequestHandler):
                 client = LocalClient()
                 source = client.cmd
                 kwargs = salt_source
+                kwargs['kwarg'] = kwargs.get('kwarg', {})
+                kwargs['kwarg']['range_from'] = 0
+            elif proxy_url: 
+                def streaming_callback(chunk):
+                    self.write(chunk)
+                    self.flush()
+                source = AsyncHTTPClient().fetch
+                request = HTTPRequest(url = proxy_source['url'], streaming_callback = streaming_callback)
+                kwargs = {"request" : request, "streaming_callback" : streaming_callback}
             else:
                 f = open(source, 'r')
                 source = f.read

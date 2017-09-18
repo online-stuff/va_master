@@ -20,6 +20,7 @@ def get_paths():
             'panels/action' : {'function' : panel_action, 'args' : ['server_name', 'action', 'args', 'kwargs', 'module', 'dash_user']}, #must have server_name and action in data, 'args' : []}, ex: panels/action server_name=nino_dir action=list_users
             'panels/chart_data' : {'function' : get_chart_data, 'args' : ['server_name', 'args']},
             'panels/serve_file' : {'function' : salt_serve_file, 'args' : ['handler', 'server_name', 'action', 'args', 'kwargs', 'module']},
+            'panels/serve_file_from_url' : {'function' : "url_serve_file", 'args' : ['handler', 'server_name', 'url_function', 'module', 'args', 'kwargs']},
         }
     }
     return paths
@@ -72,14 +73,6 @@ def panel_action_execute(deploy_handler, server_name, action, args = [], dash_us
 
 @tornado.gen.coroutine
 def salt_serve_file(deploy_handler, handler, server_name, action, args = [], dash_user = '', kwargs = {}, module = None):
-
-#    result = yield panel_action_execute(deploy_handler, server_name, action, args, kwargs, dash_user, module)
-#    print ('Result is : ', result)
-#    path_to_file = '/tmp/some_salt_file'
-
-#    with open(path_to_file, 'w') as f: 
-#        f.write(result)
-
     server_info = yield apps.get_app_info(deploy_handler, server_name)
     state = server_info['role']
 
@@ -94,11 +87,22 @@ def salt_serve_file(deploy_handler, handler, server_name, action, args = [], das
     raise tornado.gen.Return({"data_type" : "file"})
 
 @tornado.gen.coroutine
-def get_ts_data(deploy_handler):
-    cl = salt.client.LocalClient()
+def url_serve_file(deploy_handler, handler, server_name, url_action, module = None, args = [], kwargs = {}):
+    server_info = yield apps.get_app_info(deploy_handler, server_name)
+    state = server_info['role']
 
-    result = cl.cmd('va-monitoring.evo.mk', 'monitoring.chart_data')
-    raise tornado.gen.Return(result)
+    states = yield deploy_handler.get_states()
+    state = [x for x in states if x['name'] == state] or [{'module' : 'openvpn'}]
+    state = state[0]
+
+    if not module:
+        module = state['module']
+
+    cl = salt.client.LocalClient()
+    url = cl.cmd(server_name, module + '.' + url_action, arg = args, kwarg = kwargs).get(server_name)
+
+    yield handler.serve_file('test', url_source = url)
+    raise tornado.gen.Return({"data_type" : "file"})
 
 @tornado.gen.coroutine
 def get_chart_data(deploy_handler, server_name, args = ['va-directory', 'Ping']):
