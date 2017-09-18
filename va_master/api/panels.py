@@ -11,7 +11,6 @@ def get_paths():
         'get' : {
             'panels' : {'function' : get_panels, 'args' : ['handler']}, 
             'panels/get_panel' : {'function' : get_panel_for_user, 'args' : ['server_name', 'panel', 'provider', 'handler', 'args', 'dash_user']},
-            'panels/ts_data' : {'function' : get_ts_data, 'args' : []},  
         },
         'post' : {
             'panels/get_panel' : {'function' : get_panel_for_user, 'args' : ['server_name', 'panel', 'provider', 'handler', 'args', 'dash_user']},
