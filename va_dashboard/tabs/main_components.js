@@ -184,9 +184,11 @@ var Table = React.createClass({
                 args.push(this.props.table.path[1]);
                 var rest = this.props.table.path.slice(2,);
                 var path = "", slash = rest.length > 0 ? '/' : '';
-                for(var i=0; i<rest.length; i++){
+                for(var i=1; i<rest.length; i++){
                     path += rest[i];
                 }
+                if(slash)
+                    args.push(rest[0]);
                 args.push(path + slash + id[0]);
             }else{
                 args.push(id[0]);
