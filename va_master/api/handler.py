@@ -10,6 +10,7 @@ from concurrent.futures import ThreadPoolExecutor   # `pip install futures` for 
 
 from . import url_handler
 from login import get_current_user, user_login
+from panels import url_serve_file_test
 import json, datetime, syslog, pytz
 import dateutil.relativedelta
 import dateutil.parser
@@ -129,7 +130,6 @@ class ApiHandler(tornado.web.RequestHandler):
 
     @tornado.gen.coroutine
     def exec_method(self, method, path, data):
-        print ('I am in exec: ')
         self.data = data
         self.data['method'] = method
         self.data['handler'] = self
@@ -139,7 +139,7 @@ class ApiHandler(tornado.web.RequestHandler):
 
         api_func = self.fetch_func(method, path, data)
 
-        if api_func['function'] != user_login: 
+        if api_func['function'] not in [user_login]:#, url_serve_file_test]: 
             auth_successful = yield self.handle_user_auth()    
             if not auth_successful: 
                 raise tornado.gen.Return()
@@ -231,42 +231,35 @@ class ApiHandler(tornado.web.RequestHandler):
             args = kwargs.pop('source_args')
 
         offset = 0
-        first_data = ''
         while True:
-            if kwargs: 
-                kwargs['range_from'] = offset
             print ('Calling ', source, ' with ', kwargs)
             data = source(*args, **kwargs)
 
             offset += chunk_size
-            if kwargs['kwarg'].get('range_from'): 
-                kwargs['kwarg']['range_from'] = offset            
+            if 'kwarg' in kwargs: 
+                if 'range_from' in kwargs['kwarg'].keys(): 
+                    kwargs['kwarg']['range_from'] = offset            
 
             if type(data) == dict: #If using salt, it typically is formatted as {"minion" : "data"}
-                data = data[kwargs.get('tgt')]
+                if kwargs.get('tgt') in data: 
+                    data = data[kwargs.get('tgt')]
             if not data:
                 break
 
-            print ('Data has ', len(data), ' characters. ')
-
             if type(data) == str:
-                #Just for debugging!
-                if first_data == data: 
-                    print ('Data is same as before!')
-                else: 
-                    print ('Data is different. ')
-                    first_data = data
                 self.write(data)
                 self.flush()
+
             elif type(data) == Future: 
+                self.flush()
                 data = yield data
-                break
+                raise tornado.gen.Return(data)
 
       
 
 
     @tornado.gen.coroutine
-    def serve_file(self, source, chunk_size = 10**6, salt_source = {}, proxy_source = {}):
+    def serve_file(self, source, chunk_size = 10**6, salt_source = {}, url_source = ''):
 
         self.set_header('Content-Type', 'application/octet-stream')
         self.set_header('Content-Disposition', 'attachment; filename=test.zip')
@@ -280,19 +273,20 @@ class ApiHandler(tornado.web.RequestHandler):
                 kwargs = salt_source
                 kwargs['kwarg'] = kwargs.get('kwarg', {})
                 kwargs['kwarg']['range_from'] = 0
-            elif proxy_url: 
+            elif url_source: 
                 def streaming_callback(chunk):
                     self.write(chunk)
                     self.flush()
                 source = AsyncHTTPClient().fetch
-                request = HTTPRequest(url = proxy_source['url'], streaming_callback = streaming_callback)
-                kwargs = {"request" : request, "streaming_callback" : streaming_callback}
+                request = HTTPRequest(url = url_source, streaming_callback = streaming_callback)
+                request = url_source
+                kwargs = {"request" : request, 'streaming_callback' : streaming_callback}
             else:
                 f = open(source, 'r')
                 source = f.read
                 kwargs = {"source_args" : [chunk_size]}
 
-            yield self.send_data(source, kwargs, chunk_size)
+            result = yield self.send_data(source, kwargs, chunk_size)
             self.finish()
         except: 
             import traceback

@@ -19,7 +19,7 @@ def get_paths():
             'panels/action' : {'function' : panel_action, 'args' : ['server_name', 'action', 'args', 'kwargs', 'module', 'dash_user']}, #must have server_name and action in data, 'args' : []}, ex: panels/action server_name=nino_dir action=list_users
             'panels/chart_data' : {'function' : get_chart_data, 'args' : ['server_name', 'args']},
             'panels/serve_file' : {'function' : salt_serve_file, 'args' : ['handler', 'server_name', 'action', 'args', 'kwargs', 'module']},
-            'panels/serve_file_from_url' : {'function' : "url_serve_file", 'args' : ['handler', 'server_name', 'url_function', 'module', 'args', 'kwargs']},
+            'panels/serve_file_from_url' : {'function' : url_serve_file, 'args' : ['handler', 'server_name', 'url_function', 'module', 'args', 'kwargs']},
         }
     }
     return paths
@@ -85,8 +85,34 @@ def salt_serve_file(deploy_handler, handler, server_name, action, args = [], das
     yield handler.serve_file('test', salt_source = {"tgt" : server_name, "fun" : module + '.' + action, "arg" :  args})
     raise tornado.gen.Return({"data_type" : "file"})
 
+
+#This is just temporary - trying to get backup download working properly. 
 @tornado.gen.coroutine
-def url_serve_file(deploy_handler, handler, server_name, url_action, module = None, args = [], kwargs = {}):
+def salt_serve_file_get(deploy_handler, handler, server_name, action, hostname, backupnumber, share, path, module = None):
+    server_info = yield apps.get_app_info(deploy_handler, server_name)
+    state = server_info['role']
+
+    states = yield deploy_handler.get_states()
+    state = [x for x in states if x['name'] == state] or [{'module' : 'openvpn'}]
+    state = state[0]
+
+    if not module:
+        module = state['module']
+
+    kwargs = {
+        'hostname' : hostname, 
+        'backupnumber' : backupnumber, 
+        'share' : share, 
+        'path' : path, 
+        'range_from' : 0,
+    }
+
+    yield handler.serve_file('test', salt_source = {"tgt" : server_name, "fun" : module + '.' + action, "kwarg" : kwargs})
+    raise tornado.gen.Return({"data_type" : "file"})
+
+
+@tornado.gen.coroutine
+def url_serve_file(deploy_handler, handler, server_name, url_function, module = None, args = [], kwargs = {}):
     server_info = yield apps.get_app_info(deploy_handler, server_name)
     state = server_info['role']
 
@@ -98,7 +124,7 @@ def url_serve_file(deploy_handler, handler, server_name, url_action, module = No
         module = state['module']
 
     cl = salt.client.LocalClient()
-    url = cl.cmd(server_name, module + '.' + url_action, arg = args, kwarg = kwargs).get(server_name)
+    url = cl.cmd(server_name, module + '.' + url_function, arg = args, kwarg = kwargs).get(server_name)
 
     yield handler.serve_file('test', url_source = url)
     raise tornado.gen.Return({"data_type" : "file"})
