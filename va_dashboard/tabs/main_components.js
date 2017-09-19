@@ -197,7 +197,8 @@ var Table = React.createClass({
             var me = this;
             if(typeof evtKey === 'object' && evtKey.type === "download"){
                 data.action = evtKey.name;
-                Network.download_file('/api/panels/serve_file', this.props.auth.token, data).done(function(d) {
+                data['url_function'] = 'get_backuppc_url';
+                Network.download_file('/api/panels/serve_file_from_url', this.props.auth.token, data).done(function(d) {
                     var data = new Blob([d], {type: 'octet/stream'});
                     var url = window.URL.createObjectURL(data);
                     tempLink = document.createElement('a');
