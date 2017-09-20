@@ -104,6 +104,7 @@ class ApiHandler(tornado.web.RequestHandler):
             api_func, api_kwargs = api_func.get('function'), api_func.get('args')       
             api_kwargs = {x : data.get(x) for x in api_kwargs if data.get(x)} or {}
 
+            print ('Kwargs are : ', api_kwargs)
             result = yield api_func(self.config.deploy_handler, **api_kwargs)
 
             if type(result) == dict: 
@@ -132,6 +133,7 @@ class ApiHandler(tornado.web.RequestHandler):
         self.data = data
         self.data['method'] = method
         self.data['handler'] = self
+        self.data['path'] = path
 
         user = yield get_current_user(self)
         data['dash_user'] = user
@@ -232,14 +234,14 @@ class ApiHandler(tornado.web.RequestHandler):
         offset = 0
         first_data = ''
         while True:
-            if kwargs: 
-                kwargs['range_from'] = offset
             print ('Calling ', source, ' with ', kwargs)
+            data = 'bowgeawoaadfs'
             data = source(*args, **kwargs)
 
             offset += chunk_size
-            if kwargs['kwarg'].get('range_from'): 
-                kwargs['kwarg']['range_from'] = offset            
+            print ('Changing range_from to : ', offset)
+            kwargs['kwarg']['range_from'] = offset            
+            print ('Kwargs now are : ', kwargs)
 
             if type(data) == dict: #If using salt, it typically is formatted as {"minion" : "data"}
                 data = data[kwargs.get('tgt')]
