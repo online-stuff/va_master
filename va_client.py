@@ -1,3 +1,4 @@
+from pprint import PrettyPrinter
 import argparse, json
 from va_api import APIManager
 
@@ -55,12 +56,20 @@ def services_function(user, password, command):
     services_mapping = {
         'list' : {
             'kwargs' : {"endpoint" : '/services'}, 
-            'ok' : {
-                "kwargs" : {'endpoint' : '/services/by_status', 'data' : '{"status" : "OK"}'}
-            },
+            'ok' : {"kwargs" : {'endpoint' : '/services/by_status', 'data' : '{"status" : "OK"}'}},
+            'critical' : {"kwargs" : {'endpoint' : '/services/by_status', 'data' : '{"status" : "CRITICAL"}'}},
         }
     }
     return call_function_with_mapping(user, password, services_mapping, command)
+
+def vpn_function(user, password, command):
+    vpn_mapping = {
+        'list' : {"kwargs" : {"endpoint" : '/apps/vpn_users'}}, 
+        'status' : {"kwargs" :  {"endpoint" : '/apps/vpn_status'}},
+        'add' : {"kwargs" : {'endpoint' : '/apps/add_vpn_user', 'data' : {"username" : "nekoj_username"}, 'method' : 'post'}}, 
+        'get-cert' : {"kwargs" : {'endpoint' : '/apps/download_vpn_cert', 'data' : {"nekoj_username"}, 'method' : 'post'}},
+    }
+    return call_function_with_mapping(user, password, vpn_mapping, command)
 
 def prepare_request_args(sub_parsers):
     api_request = sub_parsers.add_parser('request', description = 'Performs an api call on the va_master. ')
@@ -82,6 +91,18 @@ def prepare_apps_args(sub_parsers):
 
     apps.add_argument('command', nargs = '*', choices = ['list', 'running', 'available', 'directory', 'users', 'all', 'locked'])
 
+def prepare_services_args(sub_parsers):
+    services = sub_parsers.add_parser('services', description = 'Allows you to call various services related functions. ')
+    services.set_defaults(sub = 'services')
+
+    services.add_argument('command', nargs = '*', choices = ['list', 'ok', 'critical'])
+
+def prepare_vpn_args(sub_parsers):
+    vpn = sub_parsers.add_parser('vpn')
+    vpn.set_defaults(sub = 'vpn')
+
+    vpn.add_argument('command', nargs = '*', choices = ['list', 'status', 'add', 'get-cert'])
+
 def main():
     parser = argparse.ArgumentParser(description = 'VA client argument parse. ')
     parser.add_argument('--user', help = 'The username with which to make the request. ')
@@ -92,6 +113,8 @@ def main():
     prepare_request_args(sub_parsers)
     prepare_providers_args(sub_parsers)
     prepare_apps_args(sub_parsers)
+    prepare_services_args(sub_parsers)
+    prepare_vpn_args(sub_parsers)
 
     args = parser.parse_args()
     kwargs = vars(args)
@@ -105,6 +128,8 @@ def main():
     }
 
     result = functions[args.sub](**kwargs)
-    print result
+    pprinter = PrettyPrinter(indent = 4)
+    pprinter.pprint(result)
+#    print result
 
 main()
