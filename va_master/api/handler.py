@@ -10,7 +10,6 @@ from concurrent.futures import ThreadPoolExecutor   # `pip install futures` for 
 
 from . import url_handler
 from login import get_current_user, user_login
-from panels import url_serve_file_test
 import json, datetime, syslog, pytz
 import dateutil.relativedelta
 import dateutil.parser
