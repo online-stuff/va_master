@@ -97,9 +97,9 @@ var Overview = React.createClass({
             diagram[loc] = [];
         }
         for(var loc in this.state.providers) {
-            var provider = this.state.providers[loc], provider_servers = [];
+            var provider = this.state.providers[loc];
             for(var key=0; key < provider.length; key++){
-                var pp = provider[key];
+                var pp = provider[key], provider_servers = [];
                 for(var kkey=0; kkey < pp.servers.length; kkey++) {
                     var ii = pp.servers[kkey];
                     provider_servers.push( {name: ii.hostname, ip: ii.ip} );
@@ -171,14 +171,16 @@ var Diagram = React.createClass({
             ll++;
 
             for(var i=0; i<provider.length; i++){
-                var txt = provider[i].name, id = location + i;
+                var p = provider[i];
+                var txt = p.name, id = location + i;
                 txt = txt.length > 17 ? txt.substring(0,17) : txt;
 
                 graph.nodes.push({id: id, label: txt, shape: 'box', color: 'gray'});
                 graph.edges.push({from: location, to: id});
 
-                for(var j=0; j<provider[i].servers.length; j++){
-                    var txt = provider[i].servers[j].name + "\nIP: " + provider[i].servers[j].ip, newId = id + "/" + j;
+                for(var j=0; j<p.servers.length; j++){
+                    var server = p.servers[j];
+                    var txt = server.name + "\nIP: " + server.ip, newId = id + "/" + j;
                     graph.nodes.push({id: newId, label: txt, shape: 'box', color: 'green'});
                     graph.edges.push({from: id, to: newId});
                 }
