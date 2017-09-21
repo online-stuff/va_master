@@ -116,10 +116,23 @@ class DeployHandler(object):
             provider = yield self.get_provider(provider_name)
             driver = yield self.get_driver_by_id(provider['driver_name'])
         else: 
-            provider = yield self.get_provider('va_generic') 
+            provider = yield self.get_provider('va_standalone_servers') 
             driver = yield self.get_driver_by_id('generic_driver')
 
         raise tornado.gen.Return((provider, driver))
+
+    @tornado.gen.coroutine
+    def get_standalone_provider(self):
+        provider = yield self.get_provider('va_standalone_servers')
+        driver = yield self.get_driver_by_id('generic_driver')
+
+        provider['servers'] = yield driver.get_servers(provider)
+
+        provider['provider_name'] = ''
+        for x in provider['servers']: 
+            x['provider'] = ''
+
+        raise tornado.gen.Return(provider)
 
     @tornado.gen.coroutine
     def get_triggers(self, provider_name):
