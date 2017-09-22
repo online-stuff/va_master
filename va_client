@@ -1,8 +1,10 @@
+#!/usr/bin/python
+
 from pprint import PrettyPrinter
 import argparse, json
 from va_api import APIManager
 
-from va_client_utils import module_mappings, module_args, get_mapping_arguments
+from va_client_utils import module_mappings, module_args, get_mapping_arguments, extract_data_with_keys
 
 
 def call_function(user, password, endpoint, data = '{}', method = 'get'):
@@ -12,12 +14,24 @@ def call_function(user, password, endpoint, data = '{}', method = 'get'):
     api = APIManager(va_url='https://127.0.0.1:443', va_user=user, va_pass=password, verify=False)
     return api.api_call(endpoint, data = data, method = method)
 
-def call_function_with_mapping(user, password, mapping, command):
-    kwargs = get_mapping_arguments(mapping, command)
+def call_function_with_mapping(user, password, mapping, command, keys = []):
+    cmd_map = get_mapping_arguments(mapping, command)
+    kwargs = cmd_map['kwargs']
     kwargs['user'] = user
     kwargs['password'] = password
 
-    return call_function(**kwargs)
+    result = call_function(**kwargs)
+    if not result['success'] : 
+        raise Exception('API call failed : ', result['message'])
+
+    result = result['data']
+    print ('Result is : ', result)
+    if type(result) == dict: 
+        result = result[result.keys()[0]]
+
+    result = extract_data_with_keys(result, cmd_map.get('keys'))
+
+    return result
 
 def prepare_request_args(sub_parsers):
     api_request = sub_parsers.add_parser('request', description = 'Performs an api call on the va_master. ')
@@ -31,7 +45,8 @@ def main():
     parser = argparse.ArgumentParser(description = 'VA client argument parse. ')
     parser.add_argument('--user', help = 'The username with which to make the request. ')
     parser.add_argument('--password', help = 'The password with which to authenticate the request. ')
-
+#    parser.add_argument('--keys', nargs = '*')
+    
     sub_parsers = parser.add_subparsers()
     prepare_request_args(sub_parsers)
 
@@ -40,6 +55,7 @@ def main():
         m.set_defaults(sub = module)
 
         m.add_argument('command', nargs = '*', choices = module_args[module]['choices'], help = module_args[module].get('help', ''))
+
 
     args = parser.parse_args()
     kwargs = vars(args)
@@ -52,7 +68,8 @@ def main():
         kwargs['mapping'] = mapping
         result = call_function_with_mapping(**kwargs)
 
-    pprinter = PrettyPrinter(indent = 4)
-    pprinter.pprint(result)
+#    pprinter = PrettyPrinter(indent = 4)
+#    pprinter.pprint(result)
+    print result
 
 main()

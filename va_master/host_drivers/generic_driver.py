@@ -212,7 +212,7 @@ class GenericDriver(base.DriverBase):
         # services are added on the api side. 
         provider_datastore = yield self.datastore.get(provider['provider_name'])
         servers = provider_datastore.get('servers')
-        server = {"provider_name" : data["server_name"], "ip" : "", "local_gb" : 0, "memory_mb" : 0, "status" : "n/a" }
+        server = {"provider_name" : data["server_name"], "ip" : data.get('ip'), "local_gb" : 0, "memory_mb" : 0, "status" : "n/a" }
         servers.append(server)
 
         provider_datastore['servers'] = servers

@@ -2,17 +2,17 @@ import argparse, json
 
 module_mappings = {
     'providers' : {
-        'list' : {"kwargs" : {"endpoint" : "/providers", "data" : '{}'}},
+        'list' : {"kwargs" : {"endpoint" : "/providers", "data" : '{}'}, "keys" : ["provider_name", 'driver_name', 'location']},
     },
     'apps' : {
         'list' : {
-            'running' : {"kwargs" : {'endpoint' : '/providers/info', 'data' : '{}', 'method' : 'post'}}, 
-            'available' : {"kwargs" : {'endpoint' : '/providers/info', 'data' : '{}', 'method' : 'post'}}, 
+            'running' : {"kwargs" : {'endpoint' : '/providers/info', 'data' : '{}', 'method' : 'post'}, "keys" : ['provider_name', 'servers']}, 
+            'available' : {"kwargs" : {'endpoint' : '/providers/info', 'data' : '{}', 'method' : 'post'}, 'keys' : ['provider_name', 'servers']}, 
         }, 
         'directory' : {
             'users' : {
-                'list' : {"kwargs" : {'endpoint' : '/panels/action', 'data' : {'server_name' : 'va-directory', 'action' : 'list_users'}}}, 
-                'locked' : {"kwargs" : {'endpoint' : '/panels/action', 'data' : {'server_name' : 'va-directory', 'action' : 'list_users'}}},
+                'list' : {"kwargs" : {'endpoint' : '/panels/action', 'data' : {'server_name' : 'va-directory', 'action' : 'list_users'}, 'keys' : ['users']}}, 
+                'locked' : {"kwargs" : {'endpoint' : '/panels/action', 'data' : {'server_name' : 'va-directory', 'action' : 'list_users'}, 'keys' : ['users']}},
             }
         }
     },
@@ -60,4 +60,17 @@ def get_mapping_arguments(providers_mapping, command):
     if 'kwargs' not in providers_mapping.keys():
         raise Exception('Invalid command: ' + ' '.join(command) + '; Parsed the entire command but did not find a suitable function. Maybe add one of these keywords : ' + str(providers_mapping.keys()))
 
-    return providers_mapping['kwargs']
+    return providers_mapping
+
+def extract_data_with_keys(result, keys = []):
+    if not keys: return result
+
+    final_result = []
+    for data in result: 
+        print ('Data is : ', data)
+        for k in keys: 
+            if k not in data.keys(): 
+                raise Exception('Key ' + k + ' not found in ' + str(data.keys()))
+        data = {x : data[x] for x in keys}
+        final_result.append(data)
+    return final_result

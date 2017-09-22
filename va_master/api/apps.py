@@ -292,8 +292,8 @@ def launch_app(deploy_handler, handler):
         required_provider['servers'].append(minion_info)
         yield store.insert('providers', providers)
 
-    if not minion_info: 
-        raise tornado.gen.Return({"success" : False, "message" : "No minion_info, something probably went wrong with trying to start the instance. ", "data" : None})
+        if not minion_info: 
+            raise tornado.gen.Return({"success" : False, "message" : "No minion_info, something probably went wrong with trying to start the instance. ", "data" : None})
 
     raise tornado.gen.Return(result)
 

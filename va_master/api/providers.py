@@ -180,6 +180,7 @@ def get_provider_info(deploy_handler, handler, get_billing = True, get_servers =
         info[0]['location'] = info[1]['location']
 
     if sort_by_location: 
+        print (' I am sorting ')
         #Convert to {"location" : [list, of, providers], "location2" : [list, of, other, providers]}
         providers_info = {l : [x for x in providers_info if x['location'] == l] for l in [x['location'] for x in providers_info]}
 
