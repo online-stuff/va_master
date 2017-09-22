@@ -10,7 +10,7 @@ import tornado.gen
 import json
 import subprocess
 import os
-from paramiko import SSHClient
+from paramiko import SSHClient, AutoAddPolicy
 
 PROVIDER_TEMPLATE = ""
 PROFILE_TEMPLATE = ""
@@ -105,6 +105,10 @@ class GenericDriver(base.DriverBase):
     def get_servers(self, provider):
         servers = yield self.datastore.get(provider['provider_name'])
         servers = servers['servers']
+
+        if provider['provider_name'] == 'va_standalone_servers' : 
+            provider['provider_name'] = ''
+
         for i in servers: 
             i['provider'] = provider['provider_name']
         raise tornado.gen.Return(servers)
@@ -191,7 +195,7 @@ class GenericDriver(base.DriverBase):
         #TODO Connect to ssh://data.get('ip') -p data.get('port')[ -u data.get('user') -pass data.get('pass') || -key data.get('key')
         cl = SSHClient()
         cl.load_system_host_keys()
-
+        cl.set_missing_host_key_policy(AutoAddPolicy())
         connect_kwargs = {
             'username' : data.get('username'), 
         }
@@ -212,7 +216,7 @@ class GenericDriver(base.DriverBase):
         # services are added on the api side. 
         provider_datastore = yield self.datastore.get(provider['provider_name'])
         servers = provider_datastore.get('servers')
-        server = {"provider_name" : data["server_name"], "ip" : data.get('ip'), "local_gb" : 0, "memory_mb" : 0, "status" : "n/a" }
+        server = {"hostname" : data["server_name"], "ip" : data.get("ip"), "local_gb" : 0, "memory_mb" : 0, "status" : "n/a" }
         servers.append(server)
 
         provider_datastore['servers'] = servers
