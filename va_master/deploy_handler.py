@@ -107,6 +107,7 @@ class DeployHandler(object):
     @tornado.gen.coroutine
     def get_provider(self, provider_name):
         providers = yield self.datastore.get('providers')
+        print ('Trying to get ', provider_name)
         provider = [x for x in providers if x['provider_name'] == provider_name][0]
         raise tornado.gen.Return(provider)
 

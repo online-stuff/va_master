@@ -208,13 +208,14 @@ def validate_app_fields(deploy_handler, handler):
     """Creates a server by going through a validation scheme similar to that for adding providers. """
     
 
-    provider, driver = yield deploy_handler.get_provider_and_driver(handler.data.get('provider_name', 'host'))
+    provider, driver = yield deploy_handler.get_provider_and_driver(handler.data.get('provider_name', 'va_standalone_servers'))
 
     kwargs = handler.data
     step = handler.data.pop('step')
     handler = handler.data.pop('handler')
 
     fields = yield driver.validate_app_fields(step, **kwargs)
+    print ('Fields is : ', fields)
     if not fields: 
         raise Exception('Some fields were not entered properly. ')
 

@@ -122,7 +122,7 @@ class VMWareDriver(base.DriverBase):
         super(VMWareDriver, self).__init__(**kwargs)
 
     def get_datacenter(self, provider):
-        service_server = connect.SmartConnect(provider=provider['provider_ip'], user = provider['username'], port = int(provider['port']), pwd = provider['password'], protocol = provider['protocol'])
+        service_server = connect.SmartConnect(host=provider['provider_ip'], user = provider['username'], port = int(provider['port']), pwd = provider['password'], protocol = provider['protocol'])
         content = service_server.RetrieveContent()
         datacenter = [x for x in content.rootFolder.childEntity if x.name == provider['datacenter']] or [None]
         return datacenter[0]
@@ -195,7 +195,7 @@ class VMWareDriver(base.DriverBase):
     def get_servers(self, provider):
         """ Gets various information about the servers so it can be returned to provider_data. The format of the data for each server follows the same format as in the base driver description """
 
-        service_server = connect.SmartConnect(provider=provider['provider_ip'], user = provider['username'], port = int(provider['port']), pwd = provider['password'], protocol = provider['protocol'])
+        service_server = connect.SmartConnect(host=provider['provider_ip'], user = provider['username'], port = int(provider['port']), pwd = provider['password'], protocol = provider['protocol'])
 
         servers = []
         datacenter = self.get_datacenter(provider)
@@ -230,7 +230,6 @@ class VMWareDriver(base.DriverBase):
             for key in [('used_disk', 2**30), ('used_ram', 2**20), ('used_cpu', 1)]: 
                 if not server[key[0]]: server[key[0]] = 0
                 else: 
-                    print ('Dividing : ', (0.0 + server[key[0]]), ' / ', key[1], ' and got : ', float(server[key[0]]) / key[1])
                     server[key[0]] = round((0.0 + server[key[0]]) / key[1], 2)
 #                server[key[0]] = 0 if not server[key[0]] else float(server[key[0]]) / key[1]
             servers.append(server)
@@ -239,10 +238,10 @@ class VMWareDriver(base.DriverBase):
 
 
     @tornado.gen.coroutine
-    def get_provider_status(self, host):
+    def get_provider_status(self, provider):
         """ Tries to get the token for the provider. If not successful, returns an error message. """
         try:
-            service_server = connect.SmartConnect(provider=provider['provider_ip'], user = provider['username'], port = int(provider['port']), pwd = provider['password'], protocol = provider['protocol'])
+            service_server = connect.SmartConnect(host=provider['provider_ip'], user = provider['username'], port = int(provider['port']), pwd = provider['password'], protocol = provider['protocol'])
         except Exception as e: 
             raise tornado.gen.Return({'success' : False, 'message' : e.message})
 
@@ -251,13 +250,11 @@ class VMWareDriver(base.DriverBase):
     @tornado.gen.coroutine
     def get_provider_data(self, provider, get_servers = True, get_billing = True):
         """ Gets various data about the provider and all the servers using the get_openstack_value() method. Returns the data in the same format as defined in the base driver. """
-        service_server = connect.SmartConnect(provider=provider['provider_ip'], user = provider['username'], port = int(provider['port']), pwd = provider['password'], protocol = provider['protocol'])
+
+        service_server = connect.SmartConnect(host=provider['provider_ip'], user = provider['username'], port = int(provider['port']), pwd = provider['password'], protocol = provider['protocol'])
 
         if get_servers: 
             servers = yield self.get_servers(provider)
-            print ('cpu : ', [x['used_cpu'] for x in servers])
-            print ('ram : ', [x['used_ram'] for x in servers])
-            print ('disk : ', [x['used_disk'] for x in servers])
         else: 
             servers = []
 
@@ -278,7 +275,6 @@ class VMWareDriver(base.DriverBase):
             'free_servers' : 'n/a' 
         }
 
-        print ('Usage : ', provider_usage)
         provider_data = {
             'servers' : servers, 
             'provider_usage' : provider_usage,
@@ -309,7 +305,8 @@ class VMWareDriver(base.DriverBase):
             self.field_values['protocol'] = field_values['protocol']
             self.field_values['port'] = field_values['port']
 
-            service_server = connect.SmartConnect(provider='10.10.3.10', user = 'root', port = 443, pwd = 'm33dicina', protocol = 'https')
+#            service_server = connect.SmartConnect(host = '158.69.125.137', user = 'amerbank', port = 443, pwd = 'Password#1', protocol = 'https')
+            service_server = connect.SmartConnect(host = field_values['provider_ip'], user = field_values['username'], port = int(field_values['port']), pwd = field_values['password'], protocol = field_values['protocol'])
             content = service_server.RetrieveContent()
             datacenters = [x.name for x in content.rootFolder.childEntity]
             options = {'datacenter' : datacenters}
