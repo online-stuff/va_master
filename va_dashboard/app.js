@@ -104,7 +104,7 @@ function modal(state, action){
 
 function apps(state, action){
     if(typeof state === 'undefined'){
-        return {select: ""};
+        return {select: "-1"};
     }
 
     var newState = Object.assign({}, state);
@@ -112,7 +112,7 @@ function apps(state, action){
         newState.select = action.select;
     }
     if(action.type == 'RESET_APP'){
-        newState.select = "";
+        newState.select = "-1";
     }
 
     return newState;
@@ -193,7 +193,43 @@ function form(state, action){
     return newState;
 };
 
-var mainReducer = Redux.combineReducers({auth: auth, table: table, filter: filter, modal: modal, apps: apps, div: div, panel: panel, alert: alert, form: form});
+function sidebar(state, action){
+    if(typeof state === 'undefined'){
+        return {collapsed: 0};
+    }
+
+    var newState = Object.assign({}, state);
+    if(action.type == 'COLLAPSE'){
+        newState.collapsed = 1;
+    }
+    if(action.type == 'RESET_COLLAPSE'){
+        newState.collapsed = 0;
+    }
+
+    return newState;
+};
+
+function logs(state, action){
+    if(typeof state === 'undefined'){
+        return [];
+    }
+
+    var newState = state.slice(0);
+    if(action.type == 'INIT_LOGS'){
+        newState = action.logs;
+    }
+    else if(action.type == 'UDDATE_LOGS'){
+        newState = state.concat([action.logs]);
+    }
+    else if(action.type == 'RESET_LOGS'){
+        newState = [];
+    }
+
+
+    return newState;
+};
+
+var mainReducer = Redux.combineReducers({auth: auth, table: table, filter: filter, modal: modal, apps: apps, div: div, panel: panel, alert: alert, form: form, sidebar: sidebar, logs: logs});
 var store = Redux.createStore(mainReducer);
 
 var Home = require('./tabs/home');

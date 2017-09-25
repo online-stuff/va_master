@@ -9,6 +9,7 @@ var Bootstrap = require('react-bootstrap');
 var ReactDOM = require('react-dom');
 var Graph = require('react-graph-vis').default;
 
+Chart.defaults.global.defaultFontFamily = 'Ubuntu';
 Chart.pluginService.register({
     beforeDraw: function(chart) {
         if(chart.config.type === "doughnut"){
@@ -70,7 +71,29 @@ var Overview = React.createClass({
         defaults.global.legend.display = false;
         return {providers: {}, loading: true, index: 0};
     },
-    componentWillMount() {
+    initLog: function () {
+        var provider = window.location.host;
+        if(provider.indexOf(":") == 0){
+            provider += ":80";
+        }
+        var protocol =  window.location.protocol === "https:" ? "wss" : "ws";
+        this.ws = new WebSocket(protocol  +"://"+ provider +"/log");
+        var me = this;
+        this.ws.onmessage = function (evt) {
+            var data = JSON.parse(evt.data);
+            var logs = [];
+            if(data.type === "update")
+                me.props.dispatch({type: 'UDDATE_LOGS', logs: data.message});
+            else if(data.type === "init")
+                me.props.dispatch({type: 'INIT_LOGS', logs: data.logs.reverse()});
+        };
+        this.ws.onerror = function(evt){
+            me.ws.close();
+            me.props.dispatch({type: 'SHOW_ALERT', msg: "Socket error."});
+        };
+    },
+    componentDidMount: function () {
+        this.initLog();
         this.getProviders();
     },
     getProviders: function(){
@@ -83,14 +106,19 @@ var Overview = React.createClass({
         });
     },
     componentWillUnmount: function () {
-        this.refs.log.getWrappedInstance().close_socket();
+        //this.refs.log.getWrappedInstance().close_socket();
+        this.ws.close();
+        this.props.dispatch({type: 'RESET_LOGS'});
     },
     render: function() {
+        var DiagramRedux = connect(function(state){
+            return {auth: state.auth, sidebar: state.sidebar};
+        })(Diagram);
         var ProviderRowsRedux = connect(function(state){
             return {auth: state.auth};
         })(ProviderRows);
         var LogRedux = connect(function(state){
-            return {auth: state.auth, alert: state.alert};
+            return {auth: state.auth, logs: state.logs};
         }, null, null, { withRef: true })(Log);
         var diagram = {}, provider_rows = [];
         for(var loc in this.state.providers) {
@@ -105,7 +133,8 @@ var Overview = React.createClass({
                     provider_servers.push( {name: ii.hostname, ip: ii.ip} );
                 }
                 diagram[loc].push({name: pp.provider_name, servers: provider_servers});
-                provider_rows.push({name: pp.provider_name, servers: pp.servers, provider_usage: pp.provider_usage});
+                if(pp.provider_name)
+                    provider_rows.push({name: pp.provider_name, servers: pp.servers, provider_usage: pp.provider_usage});
             }
         }
         const spinnerStyle = {
@@ -118,7 +147,7 @@ var Overview = React.createClass({
         }
         return (
             <div>
-                <Diagram providers={diagram} />
+                <DiagramRedux providers={diagram} />
                 <div className="graph-block">
                     <span className="spinner" style={spinnerStyle} ><i className="fa fa-spinner fa-spin fa-3x" aria-hidden="true"></i></span>
                     {provider_redux}
@@ -139,49 +168,68 @@ var Diagram = React.createClass({
                     hierarchical: {
                         direction: "UD", 
                         sortMethod: "directed",
-                        //nodeSpacing: 60,
+                        nodeSpacing: 120,
                         levelSeparation: 50
                     }
                 },
                 edges: {
-                    color: "#000000"
+                    color: "#000000",
+                    arrows: {
+                        to: {
+                            enabled: false,
+                            scaleFactor: 0.5
+                        }
+                    }
                 },
                 nodes: {
                     size: 15,
                     font: {
-                        size : 12,
-                        color : '#ffffff'
+                        size : 11,
+                        color : 'white',
+                        face : 'Ubuntu'
+                    },
+                    margin: {
+                        top: 8,
+                        right: 8,
+                        left: 8,
+                        bottom: 8
                     }
                 },
-		physics: {
-		    enabled: false
-		}
+		        physics: {
+		            enabled: false,
+		        }
             }
         };
     },
+    redraw: function() {
+        console.log("RESIZE");
+        //this.forceUpdate();
+    },
     render: function() {
         var graph = {nodes: [], edges: []}, ll = 0;
-        graph.nodes.push({id: 'master', label: "va-master", shape: 'box'});
+        graph.nodes.push({id: 'master', label: "va-master", shape: 'box', color: '#337ab7'});
         for(var location in this.props.providers){
             var provider = this.props.providers[location];
             var txt = location;
             txt = txt.length > 17 ? txt.substring(0,17) : txt;
-            graph.nodes.push({id: location, label: txt, shape: 'box'});
+            graph.nodes.push({id: location, label: txt, shape: 'box', color: '#97c2fc'});
             graph.edges.push({from: 'master', to: location});
             ll++;
 
             for(var i=0; i<provider.length; i++){
-                var p = provider[i];
-                var txt = p.name, id = location + i;
-                txt = txt.length > 17 ? txt.substring(0,17) : txt;
-
-                graph.nodes.push({id: id, label: txt, shape: 'box', color: 'gray'});
-                graph.edges.push({from: location, to: id});
+                var p = provider[i], txt = p.name, id = location + "/" + txt;
+                if(txt){
+                    txt = txt.length > 17 ? txt.substring(0,17) : txt;
+                    graph.nodes.push({id: id, label: txt, shape: 'box', color: {border: '#696969', background: 'gray', highlight: {border: 'gray', background: '#909090'}}});
+                    graph.edges.push({from: location, to: id});
+                }else{
+                    id = location;
+                }
 
                 for(var j=0; j<p.servers.length; j++){
                     var server = p.servers[j];
-                    var txt = server.name + "\nIP: " + server.ip, newId = id + "/" + j;
-                    graph.nodes.push({id: newId, label: txt, shape: 'box', color: 'green'});
+                    var txt = server.name + "\nIP: " + server.ip, newId = id + "/" + server.name;
+                    graph.nodes.push({id: newId, label: txt, shape: 'box', color: '#4bae4f'});
                     graph.edges.push({from: id, to: newId});
                 }
             }
@@ -190,6 +238,7 @@ var Diagram = React.createClass({
         return (
             <Bootstrap.Panel ref="panel" header="Diagram" bsStyle='primary'>
                 <Graph graph={graph} options={this.state.options} style={style} events={{}} />
+                <div className="hidden">{this.props.sidebar.collapsed}</div>
             </Bootstrap.Panel>);
     }
 });
@@ -322,41 +371,12 @@ var DoughnutComponent = React.createClass({
 
 var Log = React.createClass({
     getInitialState: function () {
-        return {logs: [], category: ['info', 'warning', 'danger'] }
-    },
-    initLog: function () {
-        var provider = window.location.host;
-        if(provider.indexOf(":") == 0){
-            provider += ":80";
-        }
-        var protocol =  window.location.protocol === "https:" ? "wss" : "ws";
-        this.ws = new WebSocket(protocol  +"://"+ provider +"/log");
-        var me = this;
-        this.ws.onmessage = function (evt) {
-            var data = JSON.parse(evt.data);
-            var logs = [];
-            if(data.type === "update")
-                logs = me.state.logs.concat([data.message]);
-            else if(data.type === "init")
-                logs = data.logs.reverse();
-            me.setState({logs: logs});
-        };
-        this.ws.onerror = function(evt){
-            me.ws.close();
-            me.props.dispatch({type: 'SHOW_ALERT', msg: "Socket error."});
-        };
-    },
-    componentDidMount: function () {
-        if(!this.props.alert.show)
-            this.initLog();
-    },
-    close_socket: function () {
-        this.ws.close();
+        return {category: ['info', 'warning', 'danger'] }
     },
     render: function() {
         var times = [], currentDate = new Date(); //"2017-02-21T14:00:14+00:00"
         var prevHourTs = currentDate.setHours(currentDate.getHours()-1);
-        var logs = this.state.logs;
+        var logs = this.props.logs;
         var datasets = [{
             label: 'info',
             data: [],
@@ -502,7 +522,7 @@ var LogChart = React.createClass({
 });
 
 Overview = connect(function(state) {
-    return {auth: state.auth, alert: state.alert};
+    return {auth: state.auth};
 })(Overview);
 
 module.exports = Overview;
