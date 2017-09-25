@@ -17,12 +17,13 @@ def call_function(user, password, endpoint, va_master_url = "https://127.0.0.1:4
     api = APIManager(va_url=va_master_url, va_user=user, va_pass=password, verify=False)
     return api.api_call(endpoint, data = data, method = method)
 
-def call_function_with_mapping(user, password, mapping, command, **data):
+def call_function_with_mapping(user, password, mapping, command, va_master_url = 'https://127.0.0.1:443', **data):
     cmd_map = get_mapping_arguments(mapping, command)
     kwargs = cmd_map['kwargs']
     kwargs['user'] = user
     kwargs['password'] = password
     kwargs['data'] = data
+    kwargs['va_master_url'] = va_master_url
 
     result = call_function(**kwargs)
     if type(result) == dict: 
@@ -118,7 +119,7 @@ def main():
         kwargs['mapping'] = mapping
         result = call_function_with_mapping(**kwargs)
 
-    if type(result) == dict: 
+    if type(result) in [list, dict]: 
         pprinter = PrettyPrinter(indent = 4)
         pprinter.pprint(result)
     else: 
