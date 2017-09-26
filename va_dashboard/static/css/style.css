@@ -459,11 +459,18 @@ table tr.row-state-Unknown{
 }
 .date-range {
     display: inline;
+    margin-right: 20px;
 }
 .date-range > div {
     display: inline-block;
     margin-right: 20px;
     margin-left: 8px;
+}
+.date-range > input {
+    width: 170px;
+}
+.datepicker{
+    width: 170px;
 }
 /*.date-range > :first-child {
     margin-right: 20px;
@@ -473,6 +480,8 @@ table tr.row-state-Unknown{
 }
 #log-page > div:first-child{
     width: 70%;
+    display: flex;
+    align-items: center;
 }
 #log-btns button{
     width: 80px;
