@@ -208,7 +208,7 @@ def validate_app_fields(deploy_handler, handler):
     """Creates a server by going through a validation scheme similar to that for adding providers. """
     
 
-    provider, driver = yield deploy_handler.get_provider_and_driver(handler.data.get('provider_name', 'host'))
+    provider, driver = yield deploy_handler.get_provider_and_driver(handler.data.get('provider_name', ''))
 
     kwargs = handler.data
     step = handler.data.pop('step')
@@ -292,8 +292,8 @@ def launch_app(deploy_handler, handler):
         required_provider['servers'].append(minion_info)
         yield store.insert('providers', providers)
 
-    if not minion_info: 
-        raise tornado.gen.Return({"success" : False, "message" : "No minion_info, something probably went wrong with trying to start the instance. ", "data" : None})
+        if not minion_info: 
+            raise tornado.gen.Return({"success" : False, "message" : "No minion_info, something probably went wrong with trying to start the instance. ", "data" : None})
 
     raise tornado.gen.Return(result)
 

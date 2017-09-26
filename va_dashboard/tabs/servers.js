@@ -107,7 +107,7 @@ var Servers = React.createClass({
                         <Reactable.Td column="IP">{ipaddr}</Reactable.Td>
                         <Reactable.Td column="Size">{app.size}</Reactable.Td>
                         <Reactable.Td column="Status">{app.status}</Reactable.Td>
-                        <Reactable.Td column="Host">{app.provider}</Reactable.Td>
+                        <Reactable.Td column="Provider">{app.provider}</Reactable.Td>
                         <Reactable.Td column="Actions">
                             <Bootstrap.DropdownButton id={'dropdown-' + app.hostname} bsStyle='primary' title="Choose" onSelect = {this.btn_clicked.bind(this, app.hostname, app.provider)}>
                                 <Bootstrap.MenuItem eventKey="reboot">Reboot</Bootstrap.MenuItem>
@@ -248,7 +248,8 @@ var SSHStep = React.createClass({
             ip: ReactDOM.findDOMNode(this.refs.ip).value,
             port: ReactDOM.findDOMNode(this.refs.port).value,
             hostname: ReactDOM.findDOMNode(this.refs.hostname).value,
-            username: ReactDOM.findDOMNode(this.refs.username).value
+            username: ReactDOM.findDOMNode(this.refs.username).value,
+            location: ReactDOM.findDOMNode(this.refs.location).value
         };
         if(!this.state.auth)
             data['password'] = ReactDOM.findDOMNode(this.refs.password).value;
@@ -292,6 +293,15 @@ var SSHStep = React.createClass({
                     </Bootstrap.Col>
                     <Bootstrap.Col sm={9}>
                         <Bootstrap.FormControl type="text" ref='hostname' />
+                    </Bootstrap.Col>
+                </Bootstrap.FormGroup>
+
+                <Bootstrap.FormGroup>
+                    <Bootstrap.Col componentClass={Bootstrap.ControlLabel} sm={3}>
+                        Location
+                    </Bootstrap.Col>
+                    <Bootstrap.Col sm={9}>
+                        <Bootstrap.FormControl type="text" ref='location' />
                     </Bootstrap.Col>
                 </Bootstrap.FormGroup>
 
@@ -568,6 +578,7 @@ var ServerForm = React.createClass({
         var state_rows = Object.keys(this.props.states).map(function(state) {
             return <option key = {state}>{state}</option>
         });
+        state_rows.push( <option key='-1' value=''>none</option> );
 
         var step2 = null, step3 = null;
         if(this.state.step2){
