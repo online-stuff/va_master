@@ -33,15 +33,17 @@ class APIManager():
             'post' : {'data' : json.dumps(data)}
         }[method]
 
-       # print 'My base url : ', self.base_url
         kwargs['url'] = self.base_url + url
-       # print ('My url is : ', kwargs['url'])
         kwargs['headers'] = {'Content-type' : 'application/json', 'Authorization' : 'Token ' + self.token}
         kwargs['verify'] = self.verify
 
         response = getattr(requests, method)(**kwargs)
+        if response.headers['Content-type'] == 'application/json': 
+            result = response.json()
+        else: 
+            result = response.text
         # print ('Response is : ', response.text)
-        return response.json()
+        return result
 
     def mock_api_call(self, url, data, method):
         url = self.base_url + url

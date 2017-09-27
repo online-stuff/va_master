@@ -203,17 +203,17 @@ class VMWareDriver(base.DriverBase):
         content = service_server.RetrieveContent()
         vmFolder = datacenter.vmFolder
         vmList = vmFolder.childEntity
-        for vm in vmList:
-            print ('Instance is : ', {
-                'hostname' : vm.name,
-                'ip' : vm.guest.ipAddress ,
-                'size' : 'va-small',
-                'used_disk' : vm.summary.storage.committed,
-                'used_ram' : vm.summary.quickStats.hostMemoryUsage,
-                'used_cpu' : vm.summary.quickStats.overallCpuUsage,
-                'status' : vm.overallStatus,
-                'provider' : provider['provider_name'],
-            })
+#        for vm in vmList:
+#            print ('Instance is : ', {
+#                'hostname' : vm.name,
+#                'ip' : vm.guest.ipAddress ,
+#                'size' : 'va-small',
+#                'used_disk' : vm.summary.storage.committed,
+#                'used_ram' : vm.summary.quickStats.hostMemoryUsage,
+#                'used_cpu' : vm.summary.quickStats.overallCpuUsage,
+#                'status' : vm.overallStatus,
+#                'provider' : provider['provider_name'],
+#            })
 
         for vm in vmList:
             server = {

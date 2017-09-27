@@ -70,6 +70,10 @@ var Home = React.createClass({
     },
     collapse: function () {
         this.setState({collapse: !this.state.collapse});
+        var me = this;
+        setTimeout(function(){
+            me.props.dispatch({type: 'COLLAPSE'});
+        }, 300);
     },
     handleAlertDismiss() {
         this.props.dispatch({type: 'HIDE_ALERT'});
@@ -124,7 +128,7 @@ var Home = React.createClass({
                 </Bootstrap.Navbar.Collapse>
             </Bootstrap.Navbar>
             <div className='main-content'>
-                <div className='sidebar' style={this.state.collapse?{left: -210}:{left: 0}}>
+                <div className='sidebar' style={this.state.collapse?{left: '-15.4vw'}:{left: 0}}>
                     <ul className='left-menu'>
                         <li>
                         <Router.IndexLink to='' activeClassName='active'>
@@ -165,7 +169,7 @@ var Home = React.createClass({
                         </li>
                     </ul>
                 </div>
-                <div className="page-content" style={this.state.collapse?{'left': '15px', 'width': '95vw'}:{'left': '230px', 'width': '80vw'}}>
+                <div className="page-content" style={this.state.collapse?{'left': '0', 'width': '97.4vw'}:{'left': '15.4vw', 'width': '82vw'}}>
                     {this.props.children}
                 </div>
                 {this.props.alert.show && React.createElement(Bootstrap.Alert, {bsStyle: 'danger', onDismiss: this.handleAlertDismiss, className: "messages"}, this.props.alert.msg) }
