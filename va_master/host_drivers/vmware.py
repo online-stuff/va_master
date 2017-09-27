@@ -169,7 +169,7 @@ class VMWareDriver(base.DriverBase):
 
     @tornado.gen.coroutine
     def get_sec_groups(self):
-        sec_groups = ['List', 'of', 'security', 'groups']
+        sec_groups = ['VMWare has no security groups. ']
         raise tornado.gen.Return(sec_groups)
 
     @tornado.gen.coroutine
@@ -341,16 +341,10 @@ class VMWareDriver(base.DriverBase):
 
 
     @tornado.gen.coroutine
-    def create_server(self, provider, data):
+    def create_server(self, provider, data):        
         """ Works properly with the base driver method, but overwritten for bug tracking. """
         try:
-#            nova = client.Client('2', provider['username'], provider['password'], provider['tenant'], 'http://' + provider['provider_ip'] + '/v2.0')
-#            full_key_path = provider['salt_key_path'] + ('/' * provider['salt_key_path'][-1] != '/') + provider['salt_key_name'] + '.pub'
-#            f = ''
-#            with open(self.key_path + '.pub') as f: 
-#                key = f.read()
-#            keypair = nova.keypairs.create(name = self.key_name, public_key = key)
-#            print ('Creating server!')
+            self.profile_vars['VAR_DATACENTER'] = provider['datacenter']
             yield super(VMWareDriver, self).create_minion(provider, data)
         except:
             import traceback
