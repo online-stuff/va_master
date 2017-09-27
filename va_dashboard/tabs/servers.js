@@ -547,7 +547,7 @@ var ServerForm = React.createClass({
         if(this.state.stepIndex === 1){
             var nextStep = this.state.step2 ? 2 : 3;
             var me = this, server_name = ReactDOM.findDOMNode(this.refs.name).value;
-            var data = {step: 1, role: this.state.role, server_name: server_name, provider_name: this.state.provider_name};
+            var data = {step: 1, role: ReactDOM.findDOMNode(this.refs.role).value, server_name: server_name, provider_name: this.state.provider_name};
             Network.post('/api/apps/new/validate_fields', this.props.auth.token, data).done(function(d) {
                 me.setState({stepIndex: nextStep, server_name: server_name});
             }).fail(function (msg) {
