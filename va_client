@@ -33,7 +33,8 @@ def call_function_with_mapping(user, password, mapping, command, va_master_url =
         result = result['data']
         if type(result) == dict: 
             result = result[result.keys()[0]]
-            result = extract_data_with_keys(result, cmd_map.get('keys'))
+
+        result = extract_data_with_keys(result, cmd_map.get('keys', []))
 
     return result
 
@@ -71,12 +72,13 @@ def load_va_configuration(path):
 
 def get_credentials(args):
     conf = load_va_configuration(args.conf_path)
+    conf.update({'user' : args.user, 'password' : args.password})
     if conf: 
         return conf
     else: 
         print 'Could not find a va_master configuration - either the --load-conf path is incorrect, or a configuration has not been generated yet. Please answer the following prompts : '
-        user = raw_input("Enter the va_master username : ")
-        password = raw_input("Enter the va_master password : ")
+        user = args.user or raw_input("Enter the va_master username : ")
+        password = args.password or raw_input("Enter the va_master password : ")
         print 'Enter the VA master url. Include the http:// and the port, example : https://127.0.0.1:443'
         va_url = raw_input("VA master url : ")
 
@@ -86,8 +88,8 @@ def get_credentials(args):
 
 def main():
     parser = argparse.ArgumentParser(description = 'VA client argument parse. ')
-#    parser.add_argument('--user', help = 'The username with which to make the request. ', default = '')
-#    parser.add_argument('--password', help = 'The password with which to authenticate the request. ', default = '')
+    parser.add_argument('--user', help = 'The username with which to make the request. ', default = '')
+    parser.add_argument('--password', help = 'The password with which to authenticate the request. ', default = '')
     parser.add_argument('--conf-path', help = 'If you have a configuration file in a custom location, you can specify said location with this argument. You may also have multiple configurations and choose one with this. ', default = base_path + '/vapp_config.json')
 
     sub_parsers = parser.add_subparsers()
@@ -103,7 +105,7 @@ def main():
             m.add_argument(a)
 
 
-    args, unknown = parser.parse_known_args()
+    args = parser.parse_args()
     creds = get_credentials(args)
 
     kwargs = vars(args)
