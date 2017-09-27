@@ -113,6 +113,7 @@ class DeployHandler(object):
 
     @tornado.gen.coroutine
     def get_provider_and_driver(self, provider_name = ''):
+        print ('Getting provider ', provider_name)
         if provider_name: 
             provider = yield self.get_provider(provider_name)
             driver = yield self.get_driver_by_id(provider['driver_name'])

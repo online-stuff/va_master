@@ -282,47 +282,26 @@ def launch_app(deploy_handler, handler):
     if data.get('extra_fields', {}) : 
         write_pillar(data)
 
-#    result = yield driver.create_server(provider, data)
-    print ('This is where I would create a server... if I HAD ONE')
-    result = True
+    result = yield driver.create_server(provider, data)
+
     print ('Result is : ', result)
 
     if data.get('role', True):
-        #Dummy minion info, used temporarily for testing services. 
-        #TODO Change to minion_info = None for production. 
+
         minion_info = None
-#        minion_info = {
-#                "osrelease": "8.9", 
-#                "num_cpus": 1, 
-#                "fqdn": "va-dummy.master.backup.va.mk", 
-#                "ip4_interfaces": {
-#                    "lo": [
-#                        "127.0.0.1"
-#                    ], 
-#                    "eth0": [
-#                        "158.69.125.137"
-#                    ]
-#                }, 
-#                "cpu_model": "Intel Core Processor (Haswell)", 
-#                "osarch": "amd64", 
-#                "cpuarch": "x86_64", 
-#                "osmajorrelease": 8, 
-#                "role": "backup", 
-#                "virtual": "kvm", 
-#                "manufacturer": "OpenStack Foundation", 
-#                "os": "Debian", 
-#                "id": "va-dummy", 
-#                "mem_total": 1000
-#        }
+
+        retries = 0
         while not minion_info and retries < int(handler.data.get('mine_retries', '10')):
             minion_info = yield get_app_info(deploy_handler, handler.data['server_name'])
             minion_info.update({'type' : 'app'})
-            yield tornado.gen.sleep(10)
+            retries += 1
+            if not minion_info: 
+                yield tornado.gen.sleep(10)
 
         yield services.add_services_presets(deploy_handler, minion_info, ['ping'])
 
         add_panel_for_minion(data, minion_info)
-        required_provider['servers'].append(minion_info)
+        provider['servers'].append(minion_info)
         yield store.insert('providers', providers)
 
         if not minion_info: 
