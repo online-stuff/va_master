@@ -170,24 +170,34 @@ function alert(state, action){
 
 function form(state, action){
     if(typeof state === 'undefined'){
-        return {readonly: {}, dropdowns: {}};
+        return {readonly: {}, dropdowns: {}, data: {}, focus: ""};
     }
 
     var newState = Object.assign({}, state);
     if(action.type == 'SET_READONLY'){
         newState.readonly = action.readonly;
     }
-    if(action.type == 'RESET_FORM'){
+    else if(action.type == 'RESET_FORM'){
         newState.readonly = {};
     }
-    if(action.type == 'ADD_DROPDOWN'){
+    else if(action.type == 'ADD_DROPDOWN'){
         newState.dropdowns = action.dropdowns;
     }
-    if(action.type == 'SELECT'){
+    else if(action.type == 'SELECT'){
         newState.dropdowns[action.name].select = action.select;
     }
-    if(action.type == 'RESET_SELECTION'){
+    else if(action.type == 'RESET_SELECTION'){
         newState.dropdowns[action.name].select = "";
+    }
+    else if(action.type == 'INIT_FORM'){
+        newState.data[action.form_name] = action.form;
+    }
+    else if(action.type == 'UPDATE_FORM'){
+        newState.data[action.form_name][action.element] = action.value;
+        newState.focus = action.focus;
+    }
+    else if(action.type == 'RESET_FORM'){
+        newState.data = {};
     }
 
     return newState;

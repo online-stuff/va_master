@@ -5,7 +5,7 @@ var Network = require('../network');
 var ReactDOM = require('react-dom');
 var widgets = require('./main_components');
 
-var Panel = React.createClass({
+var PanelComponent = React.createClass({
     getInitialState: function () {
         return {
             template: {
@@ -15,6 +15,10 @@ var Panel = React.createClass({
                 "content": []
             }, loading: true
         };
+    },
+
+    shouldComponentUpdate: function(nextProps, nextState){
+        return this.state != nextState;
     },
 
     getPanel: function (id, server, args) {
@@ -69,7 +73,7 @@ var Panel = React.createClass({
                 var Component = widgets[element.type];
                 redux[element.type] = connect(function(state){
                     var newstate = {auth: state.auth};
-                    if(typeof element.reducers !== 'undefined'){
+                    if( "reducers" in element ){
                         var r = element.reducers;
                         for (var i = 0; i < r.length; i++) {
                             newstate[r[i]] = state[r[i]];
@@ -104,6 +108,6 @@ var Panel = React.createClass({
 
 Panel = connect(function(state){
     return {auth: state.auth, panel: state.panel, alert: state.alert, table: state.table, filter: state.filter};
-})(Panel);
+})(PanelComponent);
 
 module.exports = Panel;

@@ -438,27 +438,12 @@ var Table = React.createClass({
 var Modal = React.createClass({
 
     getInitialState: function () {
-        var content = this.props.modal.template.content, data = [], checks = {};
-        for(j=0; j<content.length; j++){
-            if(content[j].type == "Form"){
-                var elem = content[j].elements;
-                for(i=0; i<elem.length; i++){
-                    if(elem[i].type !== 'label')
-                        data[i] = elem[i].value;
-                    if(elem[i].type === 'checkbox')
-                        checks[i] = elem[i].name;
-                }
-            }
-        }
-        var args = [];
-        if("args" in this.props.modal.template){
-            args = this.props.modal.template.args;
+        var args = [], template = this.props.modal.template;
+        if("args" in template){
+            args = template.args;
         }
         return {
-            data: data,
-            focus: "",
-            args: args,
-            checks: checks
+            args: args
         };
     },
 
@@ -468,7 +453,7 @@ var Modal = React.createClass({
 
     action: function(action_name) {
         var args = this.state.data.slice(0);
-        var checks = this.state.checks, keys = Object.keys(checks);
+        /*var checks = this.state.checks, keys = Object.keys(checks);
         if(keys.length > 0){
             var j = 0, index = 0, length = args.length, check_vals = [];
             for(var i=0; i<length; i++){
@@ -482,7 +467,7 @@ var Modal = React.createClass({
                 index = i + 1 - j;
             }
             args.splice(keys[0], 0, check_vals);
-        }
+        }*/
         var data = {"server_name": this.props.panel.server, "action": action_name, "args": this.state.args.concat(args)};
         var me = this;
         Network.post("/api/panels/action", this.props.auth.token, data).done(function(d) {
@@ -504,20 +489,6 @@ var Modal = React.createClass({
         });
     },
 
-    form_changed: function(e) {
-        var name = e.target.name;
-        var val = e.target.value;
-        var id = e.target.id;
-        var data = this.state.data;
-        if(e.target.type == "checkbox"){
-            val = e.target.checked;
-        }else{
-            this.setState({focus: name});
-        }
-        data[id] = val;
-        this.setState({data: data});
-    },
-
     render: function () {
         var btns = this.props.modal.template.buttons.map(function(btn){
             if(btn.action == "cancel"){
@@ -532,11 +503,6 @@ var Modal = React.createClass({
         var elements = this.props.modal.template.content.map(function(element) {
             element.key = element.name;
             var Component = components[element.type];
-            if(element.type == "Form"){
-                element.data = this.state.data;
-                element.form_changed = this.form_changed;
-                element.focus = this.state.focus;
-            }
             redux[element.type] = connect(function(state){
                 var newstate = {auth: state.auth};
                 if(typeof element.reducers !== 'undefined'){
@@ -606,6 +572,17 @@ var Path = React.createClass({
 });
 
 var Form = React.createClass({
+    shouldComponentUpdate: function(nextProps, nextState){
+        return this.state != nextState;
+    },
+
+    componentDidMount: function(){
+        if("form" in this.props && this.props.name in this.props.form.data && this.props.form.focus){
+            var elem = this.refs[this.props.form.focus], pos = elem.value.length;
+            elem.focus();
+            elem.setSelectionRange(pos, pos);
+        }
+    },
 
     onSelect: function (action) {
         var dropdown = ReactDOM.findDOMNode(this.refs.dropdown);
@@ -628,14 +605,27 @@ var Form = React.createClass({
         });
     },
 
+    form_changed: function(e) {
+        var name = e.target.name;
+        var id = e.target.id;
+        var val = e.target.value;
+        if(e.target.type == "checkbox"){
+            val = e.target.checked;
+        }
+        this.props.dispatch({type: 'UPDATE_FORM', form_name: this.props.name, element: id, value: val, focus: name});
+    },
+
     render: function () {
         var redux = {};
 
         var inputs = this.props.elements.map(function(element, index) {
             var type = element.type;
             if(type.charAt(0) === type.charAt(0).toLowerCase()){
+                if(!this.props.name in this.props.form.data){
+                    return <form></form>;
+                }
                 if(type == "checkbox"){
-                    return ( <Bootstrap.Checkbox id={index} key={element.name} name={element.name} checked={this.props.data[index]} inline onChange={this.props.form_changed}>{element.label}</Bootstrap.Checkbox>);
+                    return ( <Bootstrap.Checkbox id={index} key={element.name} name={element.name} defaultChecked={this.props.form.data[this.props.name][index]} inline onChange={this.form_changed}>{element.label}</Bootstrap.Checkbox>);
                 }
                 if(type == "label"){
                     return ( <label id={index} key={element.name} name={element.name} className="block">{element.value.split('\n').map(function(item, key){
@@ -643,31 +633,26 @@ var Form = React.createClass({
                     })}</label>);
                 }
                 if(type == "multi_checkbox"){
-                    return ( <Bootstrap.Checkbox id={index} key={element.name} name={element.name} checked={this.props.data[index]} onChange={this.props.form_changed}>{element.label}</Bootstrap.Checkbox>);
+                    return ( <Bootstrap.Checkbox id={index} key={element.name} name={element.name} defaultChecked={this.props.form.data[this.props.name][index]} onChange={this.form_changed}>{element.label}</Bootstrap.Checkbox>);
                 }
                 if(type == "readonly_text"){
-                    return ( <Bootstrap.FormControl id={index} key={element.name} type={type} name={element.name} value={this.props.form.readonly[element.name]} disabled /> );
+                    return ( <Bootstrap.FormControl id={index} key={element.name} type={type} name={element.name} value={this.props.readonly[element.name]} disabled /> );
                 }
                 if(type == "dropdown"){
                     var action = "", defaultValue = "", values = [];
-                    if('form' in this.props && element.name in this.props.form.dropdowns){
-                        d_elem = this.props.form.dropdowns[element.name];
-                        defaultValue = d_elem.select;
-                        values = d_elem.values;
-                    }else{
-                        defaultValue = element.value[0];
-                        values = element.value;
-                    }
+                    d_elem = this.props.form.data[this.props.name][index];
+                    defaultValue = d_elem.select;
+                    values = d_elem.values;
                     if("action" in element){
                         action = this.onSelect.bind(this, element.action);
                     }
-                    return ( <select ref="dropdown" id={index} key={element.name} onChange={action} name={element.name} defaultValue={defaultValue}>
+                    return ( <select ref="dropdown" id={index} key={element.name} onChange={action} name={element.name} value={defaultValue}>
                         {values.map(function(option, i) {
                             return <option key={i} value={option}>{option}</option>
                         })}
                     </select> );
                 }
-                return ( <Bootstrap.FormControl id={index} key={element.name} type={type} name={element.name} value={this.props.data[index]} placeholder={element.label} onChange={this.props.form_changed} autoFocus={element.name == this.props.focus} /> );
+                return ( <input id={index} key={element.name} type={type} className="form-control" name={element.name} defaultValue={this.props.form.data[this.props.name][index]} placeholder={element.label} onChange={this.form_changed} ref={element.name} /> );
             }
             element.key = element.name;
             //if(Object.keys(redux).indexOf(type) < 0){
@@ -705,7 +690,7 @@ var Form = React.createClass({
         }.bind(this));
 
         return (
-            <form className={this.props.class}>
+            <form className={this.props.class} key={this.props.name}>
                 {inputs}
             </form>
         );

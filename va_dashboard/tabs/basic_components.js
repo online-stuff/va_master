@@ -28,9 +28,26 @@ var Filter = React.createClass({
 
 var Button = React.createClass({
 
+    shouldComponentUpdate: function(nextProps, nextState){
+        return this.state != nextState;
+    },
+
     openModal: function() {
         var modal = this.props.modalTemplate;
         this.props.dispatch({type: 'OPEN_MODAL', template: modal});
+        var content = modal.content, data = {};
+        for(j=0; j<content.length; j++){
+            var html_elem = content[j];
+            if(html_elem.type == "Form"){
+                var elem = html_elem.elements;
+                for(i=0; i<elem.length; i++){
+                    if(elem[i].type !== 'label')
+                        data[i] = elem[i].value;
+                }
+                this.props.dispatch({type: 'INIT_FORM', form_name: html_elem.name, form: data});
+                break;
+            }
+        }
     },
 
     showTarget: function(target) {
