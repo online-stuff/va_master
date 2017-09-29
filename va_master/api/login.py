@@ -112,6 +112,10 @@ def create_user(datastore, username, password, user_type = 'user'):
     except datastore.KeyNotFound:
         yield datastore.insert(datastore_handle, [])
         new_users = []
+
+    if any([x['username'] == username]): 
+        raise Exception('Username ' + username + ' is already taken ')
+
     crypted_pass = crypt(password)
     new_users.append({
         'username': username,
