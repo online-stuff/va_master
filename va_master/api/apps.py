@@ -5,6 +5,8 @@ import subprocess
 import requests
 import zipfile, tarfile
 
+from tornado.concurrent import run_on_executor, Future
+
 import salt_manage_pillar
 from salt.client import Caller, LocalClient
 
@@ -215,15 +217,13 @@ def validate_app_fields(deploy_handler, handler):
     handler = handler.data.pop('handler')
 
     fields = yield driver.validate_app_fields(step, **kwargs)
-    print ('Fields is : ', fields)
     if not fields: 
         raise Exception('Some fields were not entered properly. ')
 
     # If the state has extra fields, then there are 3 steps, otherwise just 2. 
     if step == 3: 
         handler.data.update(fields)
-        yield launch_app(deploy_handler, handler)
-
+        result = yield handler.executor.submit(launch_app, deploy_handler, handler)
     raise tornado.gen.Return(fields)
 
 
@@ -281,6 +281,7 @@ def launch_app(deploy_handler, handler):
 
     if data.get('extra_fields', {}) : 
         write_pillar(data)
+
 
     result = yield driver.create_server(provider, data)
 

@@ -13,6 +13,9 @@ from concurrent.futures import ProcessPoolExecutor
 
 
 class DeployHandler(object):
+
+    executor = ProcessPoolExecutor(1)
+
     def __init__(self, datastore, deploy_pool_count, ssh_key_name, ssh_key_path):
         self.ssh_key_name = ssh_key_name
         self.ssh_key_path = ssh_key_path
@@ -20,8 +23,7 @@ class DeployHandler(object):
         self.drivers = []
 
         self.deploy_pool_count = deploy_pool_count
-        self.pool = ProcessPoolExecutor(deploy_pool_count)
-        
+        self.executor = ProcessPoolExecutor(deploy_pool_count) 
 
     @tornado.gen.coroutine
     def init_vals(self, store, **kwargs):
@@ -107,13 +109,11 @@ class DeployHandler(object):
     @tornado.gen.coroutine
     def get_provider(self, provider_name):
         providers = yield self.datastore.get('providers')
-        print ('Trying to get ', provider_name)
         provider = [x for x in providers if x['provider_name'] == provider_name][0]
         raise tornado.gen.Return(provider)
 
     @tornado.gen.coroutine
     def get_provider_and_driver(self, provider_name = ''):
-        print ('Getting provider ', provider_name)
         if provider_name: 
             provider = yield self.get_provider(provider_name)
             driver = yield self.get_driver_by_id(provider['driver_name'])
