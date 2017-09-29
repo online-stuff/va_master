@@ -628,6 +628,14 @@ var Form = React.createClass({
         });
     },
 
+    componentDidMount: function(){
+        if("focus" in this.props && this.props.focus){
+            var elem = this.refs[this.props.focus], pos = elem.value.length;
+            elem.focus();
+            elem.setSelectionRange(pos, pos);
+        }
+    },
+
     render: function () {
         var redux = {};
 
@@ -646,7 +654,7 @@ var Form = React.createClass({
                     return ( <Bootstrap.Checkbox id={index} key={element.name} name={element.name} checked={this.props.data[index]} onChange={this.props.form_changed}>{element.label}</Bootstrap.Checkbox>);
                 }
                 if(type == "readonly_text"){
-                    return ( <Bootstrap.FormControl id={index} key={element.name} type={type} name={element.name} value={this.props.form.readonly[element.name]} disabled /> );
+                    return ( <input id={index} key={element.name} className="form-control" type={type} name={element.name} value={this.props.form.readonly[element.name]} disabled /> );
                 }
                 if(type == "dropdown"){
                     var action = "", defaultValue = "", values = [];
@@ -667,7 +675,7 @@ var Form = React.createClass({
                         })}
                     </select> );
                 }
-                return ( <Bootstrap.FormControl id={index} key={element.name} type={type} name={element.name} value={this.props.data[index]} placeholder={element.label} onChange={this.props.form_changed} autoFocus={element.name == this.props.focus} /> );
+                return ( <input id={index} key={element.name} type={type} name={element.name} className="form-control" value={this.props.data[index]} placeholder={element.label} onChange={this.props.form_changed} ref={element.name} /> );
             }
             element.key = element.name;
             //if(Object.keys(redux).indexOf(type) < 0){
