@@ -5,10 +5,12 @@ import subprocess
 import requests
 import zipfile, tarfile
 
+from tornado.concurrent import run_on_executor, Future
+
 import salt_manage_pillar
 from salt.client import Caller, LocalClient
 
-import panels
+import panels, services
 
 def get_paths():
     paths = {
@@ -221,8 +223,7 @@ def validate_app_fields(deploy_handler, handler):
     # If the state has extra fields, then there are 3 steps, otherwise just 2. 
     if step == 3: 
         handler.data.update(fields)
-        yield launch_app(deploy_handler, handler)
-
+        result = yield handler.executor.submit(launch_app, deploy_handler, handler)
     raise tornado.gen.Return(fields)
 
 
@@ -281,15 +282,27 @@ def launch_app(deploy_handler, handler):
     if data.get('extra_fields', {}) : 
         write_pillar(data)
 
+
     result = yield driver.create_server(provider, data)
+
     print ('Result is : ', result)
 
-    if data.get('role'):
-        minion_info = yield get_app_info(deploy_handler, handler.data['server_name'])
-        minion_info.update({'type' : 'app'})
+    if data.get('role', True):
+
+        minion_info = None
+
+        retries = 0
+        while not minion_info and retries < int(handler.data.get('mine_retries', '10')):
+            minion_info = yield get_app_info(deploy_handler, handler.data['server_name'])
+            minion_info.update({'type' : 'app'})
+            retries += 1
+            if not minion_info: 
+                yield tornado.gen.sleep(10)
+
+        yield services.add_services_presets(deploy_handler, minion_info, ['ping'])
 
         add_panel_for_minion(data, minion_info)
-        required_provider['servers'].append(minion_info)
+        provider['servers'].append(minion_info)
         yield store.insert('providers', providers)
 
         if not minion_info: 

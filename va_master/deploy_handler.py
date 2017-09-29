@@ -13,6 +13,9 @@ from concurrent.futures import ProcessPoolExecutor
 
 
 class DeployHandler(object):
+
+    executor = ProcessPoolExecutor(1)
+
     def __init__(self, datastore, deploy_pool_count, ssh_key_name, ssh_key_path):
         self.ssh_key_name = ssh_key_name
         self.ssh_key_path = ssh_key_path
@@ -20,8 +23,7 @@ class DeployHandler(object):
         self.drivers = []
 
         self.deploy_pool_count = deploy_pool_count
-        self.pool = ProcessPoolExecutor(deploy_pool_count)
-        
+        self.executor = ProcessPoolExecutor(deploy_pool_count) 
 
     @tornado.gen.coroutine
     def init_vals(self, store, **kwargs):

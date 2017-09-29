@@ -517,11 +517,16 @@ var HostStep = React.createClass({
 
 var ServerForm = React.createClass({
     getInitialState: function () {
-        return {role: this.props.role, step2: false, standalone: false, stepIndex: 1, isLoading: false, errors: [], server_name: "", status: 'none', btnDisable: false};
+        var provider_name = this.props.providers.length > 0 ? this.props.providers[0].provider_name : "";
+        return {role: this.props.role, provider_name: provider_name, step2: false, standalone: false, stepIndex: 1, isLoading: false, errors: [], server_name: "", status: 'none', btnDisable: false};
     },
 
     onChangeRole: function(e) {
         this.setState({role: e.target.value, step2: this.props.states[e.target.value].length > 0});
+    },
+
+    onChangeProvider: function(e){
+        this.setState({provider_name: e.target.value});
     },
 
     close: function() {
@@ -542,7 +547,7 @@ var ServerForm = React.createClass({
         if(this.state.stepIndex === 1){
             var nextStep = this.state.step2 ? 2 : 3;
             var me = this, server_name = ReactDOM.findDOMNode(this.refs.name).value;
-            var data = {step: 1, role: ReactDOM.findDOMNode(this.refs.role).value, server_name: server_name};
+            var data = {step: 1, role: ReactDOM.findDOMNode(this.refs.role).value, server_name: server_name, provider_name: this.state.provider_name};
             Network.post('/api/apps/new/validate_fields', this.props.auth.token, data).done(function(d) {
                 me.setState({stepIndex: nextStep, server_name: server_name});
             }).fail(function (msg) {
@@ -578,6 +583,9 @@ var ServerForm = React.createClass({
         var state_rows = Object.keys(this.props.states).map(function(state) {
             return <option key = {state}>{state}</option>
         });
+        var provider_rows = this.props.providers.map(function(provider, i) {
+            return <option key = {i}>{provider.provider_name}</option>
+        });
         state_rows.push( <option key='-1' value=''>none</option> );
 
         var step2 = null, step3 = null;
@@ -612,24 +620,36 @@ var ServerForm = React.createClass({
                 <Bootstrap.Modal.Body>
                     <Bootstrap.Tabs id="launch-app" activeKey={this.state.stepIndex}>
                         <Bootstrap.Tab title='Choose role' eventKey={1}>
-                            <form onSubmit={this.onSubmit} className="form-horizontal">
-                                <Bootstrap.FormGroup>
-                                    <Bootstrap.Col sm={4}>
-                                        <Bootstrap.FormControl componentClass="select" ref='role' defaultValue={this.props.apps.select} onChange={this.onChangeRole}>
+                            <form className="form-horizontal">
+                                <div class="form-group">
+                                    <div className="col-sm-4">
+                                        <select ref='role' className="form-control" defaultValue={this.props.apps.select} onChange={this.onChangeRole}>
                                             {state_rows}
-                                        </Bootstrap.FormControl>
-                                    </Bootstrap.Col>
-                                    <Bootstrap.Col sm={8}>
-                                        <Bootstrap.FormControl type="text" ref='name' placeholder='Instance name' />
-                                    </Bootstrap.Col>
-                                </Bootstrap.FormGroup>
+                                        </select>
+                                    </div>
+                                    <div className="col-sm-8">
+                                        <input type="text" ref='name' className="form-control" placeholder='Instance name' />
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label for="provider-select" className="col-sm-4 control-label">Provider</label>
+                                    <div className="col-sm-8">
+                                        <select id="provider-select" className="form-control" defaultValue='-1' onChange={this.onChangeProvider.bind(this)}>
+                                            {provider_rows}
+                                        </select>
+                                    </div>
+                                </div>
+                                <div className="form-group">
+                                    <div className="col-sm-12">
+                                        <div className="checkbox" style={{paddingLeft: "15px"}}>
+                                            <label>
+                                                <input type="checkbox" onChange={this.toggleStandalone} />
+                                                Standalone?
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
                             </form>
-                            <div className="checkbox">
-                                <label>
-                                    <input type="checkbox" onChange={this.toggleStandalone} />
-                                    Standalone?
-                                </label>
-                            </div>
                         </Bootstrap.Tab>
 
                         {step2}

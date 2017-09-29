@@ -2,6 +2,7 @@ import salt.cloud
 import abc, subprocess
 import tornado.gen
 from tornado.httpclient import AsyncHTTPClient, HTTPRequest
+import time
 
 class Step(object):
     def __init__(self, name):
@@ -419,7 +420,7 @@ class DriverBase(object):
         with open(profile_dir) as f: 
             profile_template = f.read()
 
-        self.profile_vars['VAR_ROLE'] = data['role']
+        self.profile_vars['VAR_ROLE'] = data.get('role', '')
         self.profile_vars['VAR_IMAGE'] = data['image']
         self.profile_vars['VAR_SIZE'] = data['size']
         self.profile_vars['VAR_NETWORK_ID'] = data['network']
