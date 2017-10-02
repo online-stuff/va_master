@@ -440,11 +440,11 @@ class DriverBase(object):
         new_minion_cmd = ['salt-cloud', '-p', new_profile, data['server_name']]
         minion_apply_state = ['salt', data['server_name'], 'state.highstate']
 
-        print ('Using sleep to simulate app start. Using time.sleep on purpose to test blocking calls. ')
-        time.sleep(120)
-        print ('Sleep time is done!')
-#        new_minion_values = subprocess.call(new_minion_cmd)
-#        new_minion_state_values = subprocess.call(minion_apply_state)
+#        print ('Using sleep to simulate app start. Using time.sleep on purpose to test blocking calls. ')
+#        time.sleep(120)
+#        print ('Sleep time is done!')
+        new_minion_values = subprocess.call(new_minion_cmd)
+        new_minion_state_values = subprocess.call(minion_apply_state)
 
 
 
