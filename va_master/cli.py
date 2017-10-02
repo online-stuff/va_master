@@ -185,6 +185,11 @@ def handle_store_init(cli_config, values, store):
     store_config = {x : store_config[x] for x in store_config if x not in ['admin_pass']}
 #            store_config = run_sync(functools.partial(store.insert, 'init_vals', store_config))
     run_sync(functools.partial(store.insert, 'init_vals', store_config))
+
+    #Add va_standalone_servers
+    run_sync(functools.partial(store.insert, 'providers', [{"username": "admin", "sizes": [], "servers": [], "images": [], "driver_name": "generic_driver", "location": "va_master", "defaults": {}, "sec_groups": [], "provider_name": "va_standalone_servers", "password": "admin", "ip_address": "127.0.0.1", "networks": []}]))
+    run_sync(functools.partial(store.insert, 'va_standalone_servers', [])
+
     return store_config
 
 def add_initial_panels(store):
