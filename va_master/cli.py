@@ -188,7 +188,7 @@ def handle_store_init(cli_config, values, store):
 
     #Add va_standalone_servers
     run_sync(functools.partial(store.insert, 'providers', [{"username": "admin", "sizes": [], "servers": [], "images": [], "driver_name": "generic_driver", "location": "va_master", "defaults": {}, "sec_groups": [], "provider_name": "va_standalone_servers", "password": "admin", "ip_address": "127.0.0.1", "networks": []}]))
-    run_sync(functools.partial(store.insert, 'va_standalone_servers', []))
+    run_sync(functools.partial(store.insert, 'va_standalone_servers', {"servers" : []}))
 
     return store_config
 

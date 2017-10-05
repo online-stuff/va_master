@@ -113,7 +113,7 @@ def create_user(datastore, username, password, user_type = 'user'):
         yield datastore.insert(datastore_handle, [])
         new_users = []
 
-    if any([x['username'] == username]): 
+    if any([x['username'] == username for x in [i['username'] for i in new_users]]): 
         raise Exception('Username ' + username + ' is already taken ')
 
     crypted_pass = crypt(password)
