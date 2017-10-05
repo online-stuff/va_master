@@ -11,3 +11,4 @@ vapp_config.json
 openstack_env_vars.sh
 dist/
 build/
+va_master/api/custom_modules/*
