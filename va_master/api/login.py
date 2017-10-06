@@ -113,9 +113,8 @@ def create_user(datastore, username, password, user_type = 'user'):
         yield datastore.insert(datastore_handle, [])
         new_users = []
 
-    if any([x['username'] == username for x in [i['username'] for i in new_users]]): 
+    if any([x['username'] == username for x in new_users]): 
         raise Exception('Username ' + username + ' is already taken ')
-
     crypted_pass = crypt(password)
     new_users.append({
         'username': username,
@@ -153,13 +152,11 @@ def user_login(deploy_handler, handler):
             datastore_handle = user_type + 's'
             try:
                 users = yield handler.datastore.get(datastore_handle)
-                break
             except handler.datastore.KeyNotFound:
                 print ('No users : ', datastore_handle)
                 users = []
 
         if not users: 
-            print ('There were no users!')
             raise tornado.gen.Return({'error': 'no_users: ' + datastore_handle})
             # TODO: handle this gracefully?
             raise tornado.gen.Return()
@@ -167,7 +164,6 @@ def user_login(deploy_handler, handler):
         account_info = None
         for user in users:
             if user['username'] == username:
-                print ('Trying to compate : ', user['username'], ' to : ', username)
                 account_info = user 
                 break
         invalid_acc_hash = crypt('__invalidpassword__')
@@ -179,10 +175,8 @@ def user_login(deploy_handler, handler):
                 'timestamp_created': 0
             }
         pw_hash = account_info['password_hash']
-        print ('Trying to login with : ', password)
         if crypt(password, pw_hash) == pw_hash:
             token = yield get_or_create_token(handler.datastore, username, user_type = user_type)
-            print ('Token gotted : ', token)
             raise tornado.gen.Return({'token': token})
         print ('Invalid pass. ')
         raise tornado.gen.Return({'error': 'invalid_password'})

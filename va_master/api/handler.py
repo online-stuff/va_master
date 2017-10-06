@@ -78,11 +78,10 @@ class ApiHandler(tornado.web.RequestHandler):
         return api_func
 
     @tornado.gen.coroutine
-    def handle_user_auth(self):
+    def handle_user_auth(self, path):
         auth_successful = True
         try: 
             user = yield get_current_user(self)
-
             if not user: 
                 self.json({'success' : False, 'message' : 'User not authenticated properly. ', 'data' : {}})
                 auth_successful = False
@@ -140,7 +139,7 @@ class ApiHandler(tornado.web.RequestHandler):
         api_func = self.fetch_func(method, path, data)
 
         if api_func['function'] not in [user_login]:#, url_serve_file_test]: 
-            auth_successful = yield self.handle_user_auth()    
+            auth_successful = yield self.handle_user_auth(path)
             if not auth_successful: 
                 raise tornado.gen.Return()
 
@@ -181,8 +180,7 @@ class ApiHandler(tornado.web.RequestHandler):
                     try:
                         data = json.loads(self.request.body)
                     except: 
-                        print ('Bad json in post request : ', self.request.body)
-                        raise tornado.gen.Return()
+                        raise Exception('Bad json in request body : ', self.request.body)
                 else:
                     data = {self.request.arguments[x][0] for x in self.request.arguments}
                     data.update(self.request.files)

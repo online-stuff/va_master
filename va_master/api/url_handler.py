@@ -16,11 +16,11 @@ def gather_paths():
 
     for api_module in get_modules():
         module_paths = api_module.get_paths()
+#        print ('Got paths : ', paths)
         for protocol in paths:
             paths[protocol].update(module_paths.get(protocol, {}))
         user_allowed += module_paths.get('user_allowed', [])
     
     paths['user_allowed'] = user_allowed
     return paths
-
 
