@@ -16,9 +16,9 @@ PROVIDER_TEMPLATE = ""
 PROFILE_TEMPLATE = ""
 
 class GenericDriver(base.DriverBase):
-    def __init__(self, provider_name = 'generic_provider', profile_name = 'generic_profile', host_ip = '192.168.80.39', key_name = 'va_master_key', key_path = '/root/va_master_key', datastore = None):
+    def __init__(self, provider_name = 'generic_provider', profile_name = 'generic_profile', host_ip = '192.168.80.39', key_name = 'va_master_key', key_path = '/root/va_master_key', datastore = None, driver_name = 'generic_driver'):
         kwargs = {
-            'driver_name' : 'generic_driver', 
+            'driver_name' : driver_name, 
             'provider_template' : PROVIDER_TEMPLATE, 
             'profile_template' : PROFILE_TEMPLATE, 
             'provider_name' : provider_name, 

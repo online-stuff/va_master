@@ -30,6 +30,18 @@ class ApiHandler(tornado.web.RequestHandler):
         self.paths = url_handler.gather_paths()
         self.salt_client = None
 
+    #Temporary for testing
+    #TODO remove in prod
+    def set_default_headers(self):
+        self.set_header("Access-Control-Allow-Origin", "*")
+        self.set_header("Access-Control-Allow-Headers", "x-requested-with")
+        self.set_header('Access-Control-Allow-Methods', 'POST, GET, DELETE, OPTIONS')
+
+    def options(self):
+        self.set_status(204)
+        self.finish()
+
+
     def json(self, obj, status=200):
         if not obj: 
             return
