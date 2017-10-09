@@ -313,18 +313,22 @@ class DeployHandler(object):
 
 
     @tornado.gen.coroutine
-    def add_user_salt_functions(self, user, functions):
-        all_funcs = yield self.datastore.get('users_salt_functions')
+    def add_user_functions(self, user, functions):
+        all_funcs = yield self.datastore.get('users_functions')
 
-        user_funcs = user_funcs.get(user, [])
-        user_funcs.update(functions)
+        user_funcs = all_funcs.get(user, [])
+        user_funcs += functions
         
         all_funcs[user] = user_funcs
 
-        yield self.datastore.insert('users_salt_functions', all_funcs)
+        yield self.datastore.insert('users_functions', all_funcs)
 
     @tornado.gen.coroutine
-    def get_user_salt_functions(self, user):
-        all_salt_functions = yield self.datastore.get('users_salt_functions')
-        user_funcs = all_salt_functions.get(user, [])
+    def get_user_functions(self, user, func_type = ''):
+        all_functions = yield self.datastore.get('users_functions')
+        print ('All functions are : ', all_functions, ' and I want user ', user)
+        user_funcs = all_functions.get(user, [])
+
+        user_funcs = [x['func_path'] for x in user_funcs if x.get('func_type', '') == func_type]
+
         raise tornado.gen.Return(user_funcs)

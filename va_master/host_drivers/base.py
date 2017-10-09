@@ -182,6 +182,7 @@ class DriverBase(object):
             ('provider_name', 'Name for the host', 'str'),
             ('username', 'Username', 'str'),
             ('password', 'Password', 'str'),
+            ('location', "Enter the host's location", 'str')
         ])
 
 

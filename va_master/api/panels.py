@@ -6,6 +6,7 @@ import login, apps
 
 from login import auth_only
 
+
 def get_paths():
     paths = {
         'get' : {
@@ -13,6 +14,7 @@ def get_paths():
             'panels/get_panel' : {'function' : get_panel_for_user, 'args' : ['server_name', 'panel', 'provider', 'handler', 'args', 'dash_user']},
         },
         'post' : {
+            'panels/add_user_functions' : {'function' : add_user_functions, 'args' : ['user', 'functions']},
             'panels/get_panel' : {'function' : get_panel_for_user, 'args' : ['server_name', 'panel', 'provider', 'handler', 'args', 'dash_user']},
             'panels/reset_panels': {'function' : reset_panels, 'args' : []}, #JUST FOR TESTING
             'panels/new_panel' : {'function' : new_panel, 'args' : ['panel_name', 'role']},
@@ -48,7 +50,7 @@ def list_panels(deploy_handler, handler):
 @tornado.gen.coroutine
 def panel_action_execute(deploy_handler, server_name, action, args = [], dash_user = '', kwargs = {}, module = None, timeout = 30):
     if dash_user.get('username'):
-        user_funcs = yield deploy_handler.get_user_salt_functions(dash_user['username'])
+        user_funcs = yield deploy_handler.get_user_salt_functions(dash_user['username'], func_type = 'salt')
         if action not in user_funcs and dash_user['type'] != 'admin':
             print ('Function not supported')
             #TODO actually not allow user to do anything. This is just for testing atm. 
@@ -181,5 +183,7 @@ def get_panel_for_user(deploy_handler, handler, panel, server_name, dash_user, a
     else: 
         raise tornado.gen.Return(False)
 
-
-
+#functions should have format [{"func_path" : "/panels/something", "func_type" : "salt"}, ...]
+@tornado.gen.coroutine
+def add_user_functions(deploy_handler, user, functions):
+    yield deploy_handler.add_user_functions(user, functions)
