@@ -220,6 +220,7 @@ def validate_app_fields(deploy_handler, handler):
     if not fields: 
         raise Exception('Some fields were not entered properly. ')
 
+    print ('In driver : ', driver)
     # If the state has extra fields, then there are 3 steps, otherwise just 2. 
     if step == 3: 
         handler.data.update(fields)

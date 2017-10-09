@@ -193,11 +193,13 @@ class GenericDriver(base.DriverBase):
     @tornado.gen.coroutine
     def create_server(self, provider, data):
         #TODO Connect to ssh://data.get('ip') -p data.get('port')[ -u data.get('user') -pass data.get('pass') || -key data.get('key')
+        print ('In create server. ')
+        raise tornado.gen.Return(True)
         cl = SSHClient()
         cl.load_system_host_keys()
         cl.set_missing_host_key_policy(AutoAddPolicy())
         connect_kwargs = {
-            'username' : data.get('username'), 
+            'username' : data.get('username', ''), 
         }
         if data.get('port'): 
             connect_kwargs['port'] = int(data.get('port'))
@@ -210,7 +212,8 @@ class GenericDriver(base.DriverBase):
 
 
         print ('Attempting connect with : ', connect_kwargs)
-        cl.connect(data.get('ip'), **connect_kwargs)
+#        cl.connect(data.get('ip'), **connect_kwargs)
+
         # distro = ssh_session.cmd(['get', 'distro', 'cmd'])
         # instal = ssh_session.cmd(['install', 'salt', 'stuff'])
         # services are added on the api side. 

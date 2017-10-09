@@ -346,8 +346,8 @@ class DriverBase(object):
                 if field_values[key]: 
                     self.field_values[key] = field_values[key]
 
-            self.provider_vars['VAR_USERNAME'] = field_values['username']
-            self.provider_vars['VAR_PASSWORD'] = field_values['password']
+            self.provider_vars['VAR_USERNAME'] = field_values.get('username', '')
+            self.provider_vars['VAR_PASSWORD'] = field_values.get('password', '')
 
             yield self.get_salt_configs(skip_profile = True)
             yield self.write_configs(skip_profile = True)	
@@ -390,8 +390,9 @@ class DriverBase(object):
             self.field_values['defaults']['image'] = field_values['image']
             self.field_values['defaults']['size'] = field_values['size']
 
-            yield self.get_salt_configs(base_profile = True)
-            yield self.write_configs()	
+            if self.provider_template and self.profile_template:
+                yield self.get_salt_configs(base_profile = True)
+                yield self.write_configs()	
 
             raise tornado.gen.Return(StepResult(
                 errors = [], new_step_index = -1, option_choices = options
@@ -433,8 +434,9 @@ class DriverBase(object):
         self.profile_vars['VAR_IMAGE_USERNAME'] = data.get('username', 'admin')
 #        self.profile_template = profile_template
 
-        yield self.get_salt_configs(skip_provider = True)
-        yield self.write_configs(skip_provider = True)
+        if self.profile_template:
+            yield self.get_salt_configs(skip_provider = True)
+            yield self.write_configs(skip_provider = True)
 
         #probably use salt.cloud somehow, but the documentation is terrible. 
         new_minion_cmd = ['salt-cloud', '-p', new_profile, data['server_name']]

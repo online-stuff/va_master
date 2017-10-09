@@ -152,7 +152,6 @@ class DeployHandler(object):
                 provider_status = yield driver.get_provider_status(provider)
                 provider['status'] = provider_status
         except self.datastore.KeyNotFound:
-            print ('No providers found. ')
             providers = []
         raise tornado.gen.Return(providers)
 
@@ -191,10 +190,8 @@ class DeployHandler(object):
             panels = yield self.datastore.get('panels')
         except: 
             panels = {'admin' : [], 'user' : []}
-        print ('States data is : ', states_data)
         get_panel_servers = lambda i, user_type: [x for x in panels.get(user_type) if x['name'] == i] or [{'servers' : []}]
 
-        print ('Panel servers for backup is : ', get_panel_servers('backup', 'admin'))
         user_panels, admin_panels = ([
             {
                 'name' : x['name'], 
@@ -247,22 +244,12 @@ class DeployHandler(object):
     def store_panel(self, panel):
         panels = yield self.datastore.get('panels')
 
-#        print ('Panels are : ', panels)
-        
         role_user_panels = filter(lambda x: x['name'] == panel['role'], panels['user'])[0]
-#        if panel['panel_name'] in role_user_panels['servers']: raise tornado.gen.Return()
-        print 'Role user panels are : ', role_user_panels
         role_user_panels['servers'].append(panel['panel_name'])
-        print 'They are now : ', role_user_panels
 
         role_admin_panels = filter(lambda x: x['name'] == panel['role'], panels['admin'])[0]
-        print 'ROle admin panels are : ', role_admin_panels
         role_admin_panels['servers'].append(panel['panel_name'])
-        print 'They are now : ', role_admin_panels
 
-#            panels['user'][panel['role']] = role_user_panels
-#            panels['admin'][panel['role']] = role_admin_panels
-#        print ('New panels are : ', panels)
         yield self.datastore.insert('panels', panels)
 
 

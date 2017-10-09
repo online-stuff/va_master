@@ -34,12 +34,8 @@ class ApiHandler(tornado.web.RequestHandler):
     #TODO remove in prod
     def set_default_headers(self):
         self.set_header("Access-Control-Allow-Origin", "*")
-        self.set_header("Access-Control-Allow-Headers", "x-requested-with")
+        self.set_header("Access-Control-Allow-Headers", "x-requested-with, Authorization")
         self.set_header('Access-Control-Allow-Methods', 'POST, GET, DELETE, OPTIONS')
-
-    def options(self):
-        self.set_status(204)
-        self.finish()
 
 
     def json(self, obj, status=200):
@@ -207,6 +203,12 @@ class ApiHandler(tornado.web.RequestHandler):
             import traceback
             traceback.print_exc()
 
+    @tornado.gen.coroutine
+    def options(self, path):
+        self.set_status(204)
+        self.finish()
+
+
 
     @tornado.gen.coroutine
     def log_message(self, path, data, func, result):
@@ -243,7 +245,6 @@ class ApiHandler(tornado.web.RequestHandler):
         offset = 0
         while True:
             print ('Calling ', source, ' with ', kwargs)
-            data = 'bowgeawoaadfs'
             data = source(*args, **kwargs)
 
             offset += chunk_size
