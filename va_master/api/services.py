@@ -11,6 +11,7 @@ def get_paths():
             'services' : {'function' : list_services, 'args' : []},
             'services/by_status' : {'function' : get_services_with_status, 'args' : ['status']},
             'services/by_service' : {'function' : get_service, 'args' : ['service']},
+            'services/get_monitoring_status' : {'function' : get_all_monitoring_data, 'args' : []},
 
         },
         'post' : {
@@ -109,3 +110,10 @@ def delete_services(deploy_handler, server):
 
     reload_systemctl()
     restart_consul()
+
+@tornado.gen.coroutine
+def get_all_monitoring_data(deploy_handler):
+    cl = LocalClient()
+    result = cl.cmd('G@role:monitoring', fun = 'monitoring.icinga2', tgt_type = 'compound')
+
+    return result
