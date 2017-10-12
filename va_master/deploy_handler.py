@@ -325,6 +325,8 @@ class DeployHandler(object):
 
     @tornado.gen.coroutine
     def get_user_functions(self, user, func_type = ''):
+        if not user: 
+            raise tornado.gen.Return([])
         all_functions = yield self.datastore.get('users_functions')
         print ('All functions are : ', all_functions, ' and I want user ', user)
         user_funcs = all_functions.get(user, [])

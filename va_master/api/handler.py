@@ -34,7 +34,7 @@ class ApiHandler(tornado.web.RequestHandler):
     #TODO remove in prod
     def set_default_headers(self):
         self.set_header("Access-Control-Allow-Origin", "*")
-        self.set_header("Access-Control-Allow-Headers", "x-requested-with, Authorization")
+        self.set_header("Access-Control-Allow-Headers", "x-requested-with, Authorization, Content-Type")
         self.set_header('Access-Control-Allow-Methods', 'POST, GET, DELETE, OPTIONS')
 
 
@@ -94,7 +94,6 @@ class ApiHandler(tornado.web.RequestHandler):
                 self.json({'success' : False, 'message' : 'User not authenticated properly. ', 'data' : {}})
                 auth_successful = False
             elif user['type'] == 'user' and path not in self.paths.get('user_allowed', []): 
-                print ('I only allow : ', self.paths.get('user_allowed'))
                 self.json({'success' : False, 'message' : 'User does not have appropriate privileges. ', 'data' : {}})
                 auth_successful = False
         except Exception as e: 
@@ -104,8 +103,7 @@ class ApiHandler(tornado.web.RequestHandler):
             self.json({'success' : False, 'message' : 'There was an error retrieving user data. ' + e.message, 'data' : {}})
             auth_successful = False
 
-        user_functions = yield self.config.deploy_handler.get_user_functions(user['username'])
-        print ('Users functions are : ', user_functions)
+        user_functions = yield self.config.deploy_handler.get_user_functions(user.get('username'))
         if user_functions and path not in user_functions: 
             self.json({'success' : False, 'message' : 'User ' + user['username'] + ' tried to access ' + path + ' but it is not in their allowed functions : ' + str(user_functions)})
             auth_successful = False
@@ -116,10 +114,8 @@ class ApiHandler(tornado.web.RequestHandler):
     def handle_func(self, api_func, data):
         try:
             api_func, api_kwargs = api_func.get('function'), api_func.get('args')       
-            print ('Want api kwargs ', api_kwargs, ' from data I can get ', data.keys())
             api_kwargs = {x : data.get(x) for x in api_kwargs if data.get(x)} or {}
 
-            print ('Kwargs are : ', api_kwargs)
             result = yield api_func(self.config.deploy_handler, **api_kwargs)
 
             if type(result) == dict: 
@@ -146,6 +142,7 @@ class ApiHandler(tornado.web.RequestHandler):
     @tornado.gen.coroutine
     def exec_method(self, method, path, data):
         self.data = data
+        print ('In exec method, data is : ', data)
         self.data['method'] = method
         self.data['handler'] = self
         self.data['path'] = path
