@@ -324,13 +324,28 @@ class DeployHandler(object):
         yield self.datastore.insert('users_functions', all_funcs)
 
     @tornado.gen.coroutine
+    def remove_user_functions(self, user, functions):
+        all_funcs = yield seflf.datastore.get('users_functions')
+
+        user_funcs = all_funcs.get(user, [])
+        user_funcs = [x for x in user_funcs for y in functions if x.get('func_path') != y.get('func_path', '') or x.get('func_name') != y.get('func_name') ]
+
+        all_funcs[user] = user_funcs
+
+        yield self.datastore.insert('users_functions', all_funcs)
+
+
+    @tornado.gen.coroutine
     def get_user_functions(self, user, func_type = ''):
         if not user: 
             raise tornado.gen.Return([])
         all_functions = yield self.datastore.get('users_functions')
-        print ('All functions are : ', all_functions, ' and I want user ', user)
         user_funcs = all_functions.get(user, [])
 
-        user_funcs = [x['func_path'] for x in user_funcs if x.get('func_type', '') == func_type]
+        user_group_functions = [x['functions'] for x in user_funcs if x.get('func_type', '') == 'function_group']
+
+        user_funcs = [
+            x.get('func_path') for x in user_funcs + user_group_functions 
+        if x.get('func_type', '') == func_type and x.get('func_path')]
 
         raise tornado.gen.Return(user_funcs)
