@@ -1,6 +1,8 @@
 import requests, json, subprocess
 
 import tornado.gen
+from salt.client import LocalClient
+
 
 consul_url = 'http://localhost:8500/v1'
 consul_dir = '/etc/consul.d'
@@ -9,6 +11,7 @@ def get_paths():
     paths = {
         'get' : {
             'services' : {'function' : list_services, 'args' : []},
+            'services/full_status' : {'function' : get_services_and_monitoring, 'args' : []},
             'services/by_status' : {'function' : get_services_with_status, 'args' : ['status']},
             'services/by_service' : {'function' : get_service, 'args' : ['service']},
             'services/get_monitoring_status' : {'function' : get_all_monitoring_data, 'args' : []},
@@ -28,6 +31,14 @@ def reload_systemctl():
 
 def restart_consul():
     subprocess.check_output(['consul', 'reload'])
+
+@tornado.gen.coroutine
+def get_services_and_monitoring(deploy_handler):
+    services = yield list_services(deploy_handler)
+    result = yield get_all_monitoring_data(deploy_handler)
+    result.update(services)
+
+    raise tornado.gen.Return(result)
 
 @tornado.gen.coroutine
 def list_services(deploy_handler):
