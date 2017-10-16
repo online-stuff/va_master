@@ -5,7 +5,7 @@ import traceback
 import functools
 import tornado
 import tornado.gen
-from host_drivers import openstack, aws, vcloud, libvirt_driver, generic_driver, century_link, gce, vmware, aek_driver
+from host_drivers import openstack, aws, vcloud, libvirt_driver, generic_driver, century_link, gce, vmware
 
 
 from Crypto.PublicKey import RSA
@@ -84,7 +84,6 @@ class DeployHandler(object):
                 gce.GCEDriver,
                 generic_driver.GenericDriver,
                 aws.AWSDriver,
-                aek_driver.AEKDriver,
             ]]
             kwargs['flavours'] = va_flavours
 

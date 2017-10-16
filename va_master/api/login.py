@@ -136,6 +136,7 @@ def create_user_api(handler, user, password):
 @tornado.gen.coroutine
 def user_login(deploy_handler, handler):
     body = None
+    all_users = []
     try: 
         try:
             body = json.loads(handler.request.body)
@@ -152,21 +153,24 @@ def user_login(deploy_handler, handler):
             datastore_handle = user_type + 's'
             try:
                 users = yield handler.datastore.get(datastore_handle)
+                print ('Found users : ', users, ' for handle : ', datastore_handle)
             except handler.datastore.KeyNotFound:
                 print ('No users : ', datastore_handle)
                 users = []
+            all_users += users
 
-        if not users: 
-            raise tornado.gen.Return({'error': 'no_users: ' + datastore_handle})
-            # TODO: handle this gracefully?
-            raise tornado.gen.Return()
 
         account_info = None
-        for user in users:
-            if user['username'] == username:
-                account_info = user 
-                break
         invalid_acc_hash = crypt('__invalidpassword__')
+
+        print ('Users are : ', users)
+        for user in all_users:
+            if user['username'] == username:
+        	account_info = user 
+                print ('Found user : ', user)
+        	break
+
+            print('No user found in ', all_users)
         if not account_info:
             # Prevent timing attacks
             account_info = {
@@ -175,6 +179,7 @@ def user_login(deploy_handler, handler):
                 'timestamp_created': 0
             }
         pw_hash = account_info['password_hash']
+        print ('Trying to test password')
         if crypt(password, pw_hash) == pw_hash:
             token = yield get_or_create_token(handler.datastore, username, user_type = user_type)
             raise tornado.gen.Return({'token': token})
