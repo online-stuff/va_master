@@ -5,10 +5,12 @@ import subprocess
 import requests
 import zipfile, tarfile
 
+from tornado.concurrent import run_on_executor, Future
+
 import salt_manage_pillar
 from salt.client import Caller, LocalClient
 
-import panels
+import panels, services
 
 def get_paths():
     paths = {
@@ -39,6 +41,8 @@ def get_paths():
     return paths
 
 def bytes_to_readable(num, suffix='B'):
+    """Converts bytes integer to human readable"""
+
     num = int(num)
     for unit in ['','Ki','Mi','Gi','Ti','Pi','Ei','Zi']:
         if abs(num) < 1024.0:
@@ -53,6 +57,8 @@ def add_app(deploy_handler, provider, server_name):
 
 @tornado.gen.coroutine
 def get_openvpn_users(deploy_handler):
+    """Gets openvpn users and current status. Then merges users to find currently active ones and their usage data. """
+
     salt_caller = Caller()
     openvpn_users = salt_caller.cmd('openvpn.list_users')
 
@@ -79,12 +85,16 @@ def get_openvpn_users(deploy_handler):
 
 @tornado.gen.coroutine
 def get_openvpn_status(deploy_handler):
+    """Just gets the openvpn status information, which lists the current clients. """
+
     cl = Caller()
     status = cl.cmd('openvpn.get_status')
     raise tornado.gen.Return(status)
 
 @tornado.gen.coroutine
 def add_openvpn_user(deploy_handler, username):
+    """Creates a new openvpn user. """
+
     cl = Caller()
     success = cl.cmd('openvpn.add_user', username = username)
     raise tornado.gen.Return(success)
@@ -97,12 +107,16 @@ def revoke_openvpn_user(deploy_handler, username):
 
 @tornado.gen.coroutine
 def list_user_logins(deploy_handler, username): 
+    """Provides a list of previous openvpn logins. """
+
     cl = Caller()
     success = cl.cmd('openvpn.list_user_logins', user = username)
     raise tornado.gen.Return(success)
 
 @tornado.gen.coroutine
 def download_vpn_cert(deploy_handler, username, handler):
+    """Downloads the vpn certificate for the required user. Works by copying the file to /tmp/{username}_vpn.cert and then serving it through Tornado. """
+
     cl = Caller()
     cert = cl.cmd('openvpn.get_config', username = username)
 
@@ -116,13 +130,18 @@ def download_vpn_cert(deploy_handler, username, handler):
 
 @tornado.gen.coroutine
 def perform_server_action(deploy_handler, provider_name, action, server_name): 
+    """Calls required action on the server through the driver. """
+
     provider, driver = yield deploy_handler.get_provider_and_driver(provider_name) 
     success = yield driver.server_action(provider, server_name, action)
     raise tornado.gen.Return(success)
 
 
+#TODO make all state inserts to save to key "states" instead of init_vas : "states". 
 @tornado.gen.coroutine
 def manage_states(deploy_handler, name, action = 'append'):
+    """Deletes or inserts a state based on the action argument. """
+
     current_states = yield deploy_handler.get_states()
 
     #TODO delete from /srv/salt
@@ -142,10 +161,14 @@ def get_states(deploy_handler):
 
 @tornado.gen.coroutine
 def reset_states(deploy_handler):
+    """Removes all states from the consul datastore. Only for testing purposes. """
+
     yield handler.config.deploy_handler.reset_states()
 
 @tornado.gen.coroutine
 def create_new_state(deploy_handler, file_contents, body, filename):
+    """Creates a new state from a file, unpack it to the state directory and add it to the datastore. """
+
     data = file_contents[0]
     files_archive = data['body']
     state_name = data['filename']
@@ -183,9 +206,11 @@ def create_new_state(deploy_handler, file_contents, body, filename):
 
 @tornado.gen.coroutine
 def validate_app_fields(deploy_handler, handler):
-    #Temporary
-    #In the end it should probably be like this
-    provider, driver = yield deploy_handler.get_provider_and_driver(handler.data.get('provider_name', 'host'))
+    #TODO finish documentation
+    """Creates a server by going through a validation scheme similar to that for adding providers. """
+    
+
+    provider, driver = yield deploy_handler.get_provider_and_driver(handler.data.get('provider_name', ''))
 
     kwargs = handler.data
     step = handler.data.pop('step')
@@ -195,16 +220,18 @@ def validate_app_fields(deploy_handler, handler):
     if not fields: 
         raise Exception('Some fields were not entered properly. ')
 
+    print ('In driver : ', driver)
     # If the state has extra fields, then there are 3 steps, otherwise just 2. 
     if step == 3: 
         handler.data.update(fields)
-        yield launch_app(deploy_handler, handler)
-
+        result = yield handler.executor.submit(launch_app, deploy_handler, handler)
     raise tornado.gen.Return(fields)
 
 
 @tornado.gen.coroutine
 def get_app_info(deploy_handler, server_name):
+    """Gets mine inventory for the provided instance. """
+
     cl = Caller()
     server_info = cl.cmd('mine.get', server_name, 'inventory') 
     server_info = server_info.get(server_name)
@@ -212,6 +239,8 @@ def get_app_info(deploy_handler, server_name):
 
 
 def write_pillar(data):
+    """Writes the supplied data as a yaml file in to a credentials file and adds it to the top credentials. """
+
     pillar_path = '/srv/pillar/%s-credentials.sls' % (data.get('server_name'))
     with open(pillar_path, 'w') as f: 
         pillar_str = ''
@@ -227,6 +256,8 @@ def write_pillar(data):
 
         
 def add_panel_for_minion(data, minion_info):
+    """Adds a panel for a minion based on its appinfo.json file. """
+
     init_vals = yield store.get('init_vals')
     states = init_vals['states']
     state = [x for x in states if x['name'] == data['role']][0]
@@ -239,6 +270,9 @@ def add_panel_for_minion(data, minion_info):
 ##@auth_only
 @tornado.gen.coroutine
 def launch_app(deploy_handler, handler):
+    """Launches a server based on the data supplied. """
+    #TODO finish documentation
+
     data = handler.data
     store = deploy_handler.datastore
     print ('Launching with : ', data)
@@ -249,19 +283,31 @@ def launch_app(deploy_handler, handler):
     if data.get('extra_fields', {}) : 
         write_pillar(data)
 
+
     result = yield driver.create_server(provider, data)
+
     print ('Result is : ', result)
 
-    if data.get('role'):
-        minion_info = yield get_app_info(deploy_handler, handler.data['server_name'])
-        minion_info.update({'type' : 'app'})
+    if data.get('role', True):
+
+        minion_info = None
+
+        retries = 0
+        while not minion_info and retries < int(handler.data.get('mine_retries', '10')):
+            minion_info = yield get_app_info(deploy_handler, handler.data['server_name'])
+            minion_info.update({'type' : 'app'})
+            retries += 1
+            if not minion_info: 
+                yield tornado.gen.sleep(10)
+
+        yield services.add_services_presets(deploy_handler, minion_info, ['ping'])
 
         add_panel_for_minion(data, minion_info)
-        required_provider['servers'].append(minion_info)
+        provider['servers'].append(minion_info)
         yield store.insert('providers', providers)
 
-    if not minion_info: 
-        raise tornado.gen.Return({"success" : False, "message" : "No minion_info, something probably went wrong with trying to start the instance. ", "data" : None})
+        if not minion_info: 
+            raise tornado.gen.Return({"success" : False, "message" : "No minion_info, something probably went wrong with trying to start the instance. ", "data" : None})
 
     raise tornado.gen.Return(result)
 

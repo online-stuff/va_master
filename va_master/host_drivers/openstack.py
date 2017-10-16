@@ -186,7 +186,12 @@ class OpenStackDriver(base.DriverBase):
 #        sess = session.Session = 
         with open(self.key_path + '.pub') as f: 
             key = f.read()
-        keypair = nova_cl.keypairs.create(name = self.keypair_name, public_key = key)
+        try:
+            keypair = nova_cl.keypairs.create(name = self.keypair_name, public_key = key)
+        except: 
+            import traceback
+            traceback.print_exc()
+        
 
 
     @tornado.gen.coroutine
@@ -398,7 +403,7 @@ class OpenStackDriver(base.DriverBase):
 
             self.keypair_name = field_values['provider_name'] + '_key'
             self.provider_vars['VAR_KEYPAIR_NAME'] = self.keypair_name
-            yield self.create_keypair(field_values['username'], field_values['password'], field_values['tenant'], field_values['host_ip'])
+            yield self.create_keypair(field_values['username'], field_values['password'], field_values['tenant'], field_values['provider_ip'])
 
         elif step_index == 1:
             for field in ['network', 'sec_group']:

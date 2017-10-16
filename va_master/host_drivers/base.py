@@ -2,6 +2,7 @@ import salt.cloud
 import abc, subprocess
 import tornado.gen
 from tornado.httpclient import AsyncHTTPClient, HTTPRequest
+import time
 
 class Step(object):
     def __init__(self, name):
@@ -181,6 +182,7 @@ class DriverBase(object):
             ('provider_name', 'Name for the host', 'str'),
             ('username', 'Username', 'str'),
             ('password', 'Password', 'str'),
+            ('location', "Enter the host's location", 'str')
         ])
 
 
@@ -345,8 +347,8 @@ class DriverBase(object):
                 if field_values[key]: 
                     self.field_values[key] = field_values[key]
 
-            self.provider_vars['VAR_USERNAME'] = field_values['username']
-            self.provider_vars['VAR_PASSWORD'] = field_values['password']
+            self.provider_vars['VAR_USERNAME'] = field_values.get('username', '')
+            self.provider_vars['VAR_PASSWORD'] = field_values.get('password', '')
 
             yield self.get_salt_configs(skip_profile = True)
             yield self.write_configs(skip_profile = True)	
@@ -389,8 +391,9 @@ class DriverBase(object):
             self.field_values['defaults']['image'] = field_values['image']
             self.field_values['defaults']['size'] = field_values['size']
 
-            yield self.get_salt_configs(base_profile = True)
-            yield self.write_configs()	
+            if self.provider_template and self.profile_template:
+                yield self.get_salt_configs(base_profile = True)
+                yield self.write_configs()	
 
             raise tornado.gen.Return(StepResult(
                 errors = [], new_step_index = -1, option_choices = options
@@ -419,7 +422,7 @@ class DriverBase(object):
         with open(profile_dir) as f: 
             profile_template = f.read()
 
-        self.profile_vars['VAR_ROLE'] = data['role']
+        self.profile_vars['VAR_ROLE'] = data.get('role', '')
         self.profile_vars['VAR_IMAGE'] = data['image']
         self.profile_vars['VAR_SIZE'] = data['size']
         self.profile_vars['VAR_NETWORK_ID'] = data['network']
@@ -432,13 +435,17 @@ class DriverBase(object):
         self.profile_vars['VAR_IMAGE_USERNAME'] = data.get('username', 'admin')
 #        self.profile_template = profile_template
 
-        yield self.get_salt_configs(skip_provider = True)
-        yield self.write_configs(skip_provider = True)
+        if self.profile_template:
+            yield self.get_salt_configs(skip_provider = True)
+            yield self.write_configs(skip_provider = True)
 
         #probably use salt.cloud somehow, but the documentation is terrible. 
         new_minion_cmd = ['salt-cloud', '-p', new_profile, data['server_name']]
         minion_apply_state = ['salt', data['server_name'], 'state.highstate']
 
+#        print ('Using sleep to simulate app start. Using time.sleep on purpose to test blocking calls. ')
+#        time.sleep(120)
+#        print ('Sleep time is done!')
         new_minion_values = subprocess.call(new_minion_cmd)
         new_minion_state_values = subprocess.call(minion_apply_state)
 
@@ -449,13 +456,15 @@ class DriverBase(object):
 
     @tornado.gen.coroutine
     def validate_app_fields(self, step, steps_fields = [], **fields):
-        print ('Steps fields are : ', steps_fields)
+        #These are passed by the handler, but we do not need them. 
+        fields.pop('dash_user')
+        fields.pop('path')
+        fields.pop('method')
+
         step -= 1
-#        if step == 2: 
-#            fields = {'extra_fields' : fields}
         self.app_fields.update(fields)
     
-        if 'role' in fields: 
+        if fields.get('role'): 
             states = yield self.datastore.get('init_vals')
             states = states['states']
             state = [x for x in states if x['name'] == fields.get('role')][0]
@@ -466,8 +475,9 @@ class DriverBase(object):
         # steps_fields is a list of lists such that the index of an element is the required fields for that step. We check if the app_fields contain all of those. 
         if not steps_fields: 
             steps_fields = [['role', 'server_name'], state_fields, ['sec_group', 'image', 'size', 'network']]
-        if not all([self.app_fields.get(x) for x in steps_fields[step]]):
+        if not all([x in self.app_fields.keys() for x in steps_fields[step]]):
             print ('Fields expected are : ', steps_fields[step], ' but have : ', self.app_fields.keys())
+            print ('Entire fields data : ', fields)
             raise tornado.gen.Return(False) 
     
         raise tornado.gen.Return(self.app_fields)

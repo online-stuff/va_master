@@ -174,18 +174,21 @@ var Chart = React.createClass({
 
 var Table = React.createClass({
     btn_clicked: function(id, evtKey){
-        if('args' in this.props.panel && this.props.panel.args !== ""){
+        var checkPath = 'path' in this.props.table && this.props.table.path.length > 0;
+        if(!checkPath && 'args' in this.props.panel && this.props.panel.args !== ""){
             id.unshift(this.props.panel.args);
         }
-        if('path' in this.props.table && this.props.table.path.length > 0){
+        if(checkPath){
             var args = [this.props.table.path[0]]
             if(this.props.table.path.length > 1){
                 args.push(this.props.table.path[1]);
                 var rest = this.props.table.path.slice(2,);
                 var path = "", slash = rest.length > 0 ? '/' : '';
-                for(var i=0; i<rest.length; i++){
+                for(var i=1; i<rest.length; i++){
                     path += rest[i];
                 }
+                if(slash)
+                    args.push(rest[0]);
                 args.push(path + slash + id[0]);
             }else{
                 args.push(id[0]);
@@ -194,7 +197,8 @@ var Table = React.createClass({
             var me = this;
             if(typeof evtKey === 'object' && evtKey.type === "download"){
                 data.action = evtKey.name;
-                Network.download_file('/api/panels/serve_file', this.props.auth.token, data).done(function(d) {
+                data['url_function'] = 'get_backuppc_url';
+                Network.download_file('/api/panels/serve_file_from_url', this.props.auth.token, data).done(function(d) {
                     var data = new Blob([d], {type: 'octet/stream'});
                     var url = window.URL.createObjectURL(data);
                     tempLink = document.createElement('a');
@@ -624,6 +628,14 @@ var Form = React.createClass({
         });
     },
 
+    componentDidMount: function(){
+        if("focus" in this.props && this.props.focus){
+            var elem = this.refs[this.props.focus], pos = elem.value.length;
+            elem.focus();
+            elem.setSelectionRange(pos, pos);
+        }
+    },
+
     render: function () {
         var redux = {};
 
@@ -642,7 +654,7 @@ var Form = React.createClass({
                     return ( <Bootstrap.Checkbox id={index} key={element.name} name={element.name} checked={this.props.data[index]} onChange={this.props.form_changed}>{element.label}</Bootstrap.Checkbox>);
                 }
                 if(type == "readonly_text"){
-                    return ( <Bootstrap.FormControl id={index} key={element.name} type={type} name={element.name} value={this.props.form.readonly[element.name]} disabled /> );
+                    return ( <input id={index} key={element.name} className="form-control" type={type} name={element.name} value={this.props.form.readonly[element.name]} disabled /> );
                 }
                 if(type == "dropdown"){
                     var action = "", defaultValue = "", values = [];
@@ -663,7 +675,7 @@ var Form = React.createClass({
                         })}
                     </select> );
                 }
-                return ( <Bootstrap.FormControl id={index} key={element.name} type={type} name={element.name} value={this.props.data[index]} placeholder={element.label} onChange={this.props.form_changed} autoFocus={element.name == this.props.focus} /> );
+                return ( <input id={index} key={element.name} type={type} name={element.name} className="form-control" value={this.props.data[index]} placeholder={element.label} onChange={this.props.form_changed} ref={element.name} /> );
             }
             element.key = element.name;
             //if(Object.keys(redux).indexOf(type) < 0){

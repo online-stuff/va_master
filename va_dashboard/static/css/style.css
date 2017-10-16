@@ -5,7 +5,7 @@ html, body, .main-content {
 }
 body{
     margin: 0;
-    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-family: Ubuntu, sans-serif;
 }
 
 body.login {
@@ -114,7 +114,7 @@ ul.left-menu a.active{
     border-right: 1px solid #dddddd;
     min-height: calc(100vh - 50px);
     height: 100%;
-    width: 210px;
+    width: 15.4vw;
     left: 0px;
     transition: left 350ms ease-in-out;
 }
@@ -129,8 +129,8 @@ ul.left-menu a.active{
 .page-content{
     position: relative;
     display: block;
-    width: 80vw;
-    left: 230px;
+    margin-left: 1.3vw;
+    margin-right: 1.3vw;
     transition: left 350ms ease-in-out, width 350ms ease-in-out;
 }
 
@@ -270,9 +270,8 @@ ul.left-menu div{
 }
 
 .graph-block{
-    min-width: 60%;
     width: 60%;
-    margin-right: 30px;
+    margin-right: 2%;
     position: relative;
     padding-right: 20px;
     padding-top: 10px;
@@ -288,16 +287,14 @@ display: table-row;
 .tbl-cell{
 display: table-cell;
 }
-
 .log-block{
-    width: 37%;
+    width: 38%;
     float: left;
     margin-top: 10px;
 }
 .log-chart{
     height: 100px;
 }
-
 .messages {
     position: fixed;
     z-index: 9999;
@@ -310,6 +307,9 @@ display: table-cell;
 .logs{
     margin-bottom: 10px;
     font-size: 11px;
+    line-height: 1.4em;
+    height: 2.8em;
+    overflow: hidden;
 }
 .logs:last-of-type{
     margin-bottom: 0px!important;
@@ -459,11 +459,18 @@ table tr.row-state-Unknown{
 }
 .date-range {
     display: inline;
+    margin-right: 20px;
 }
 .date-range > div {
     display: inline-block;
     margin-right: 20px;
     margin-left: 8px;
+}
+.date-range > input {
+    width: 170px;
+}
+.datepicker{
+    width: 170px;
 }
 /*.date-range > :first-child {
     margin-right: 20px;
@@ -473,6 +480,8 @@ table tr.row-state-Unknown{
 }
 #log-page > div:first-child{
     width: 70%;
+    display: flex;
+    align-items: center;
 }
 #log-btns button{
     width: 80px;

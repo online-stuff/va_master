@@ -462,7 +462,6 @@ class LibVirtDriver(base.DriverBase):
         
         """
         print ('Creating libvirt server. ')
-        print ('App fields are : ', self.app_fields)
         data.update(self.app_fields)
         provider_url = provider['provider_protocol'] + '://' + provider['provider_ip'] + '/system'
         conn = libvirt.open(provider_url)
