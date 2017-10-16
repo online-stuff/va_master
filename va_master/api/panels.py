@@ -12,6 +12,8 @@ def get_paths():
         'get' : {
             'panels' : {'function' : get_panels, 'args' : ['handler']}, 
             'panels/get_panel' : {'function' : get_panel_for_user, 'args' : ['server_name', 'panel', 'provider', 'handler', 'args', 'dash_user']},
+            'panels/users' : {'function' : get_users, 'args' : ['users_type']},
+            'panels/get_all_functions' : {'function' : get_all_functions, 'args' : ['handler']},
         },
         'post' : {
             'panels/add_user_functions' : {'function' : add_user_functions, 'args' : ['user', 'functions']},
@@ -182,6 +184,20 @@ def get_panel_for_user(deploy_handler, handler, panel, server_name, dash_user, a
         raise tornado.gen.Return(panel)
     else: 
         raise tornado.gen.Return(False)
+
+@tornado.gen.coroutine
+def get_users(deploy_handler, users_type = 'users'):
+    users = yield deploy_handler.get_users(users_type)
+    raise tornado.gen.Return(users)
+
+@tornado.gen.coroutine
+def get_all_functions(deploy_handler, handler):
+    functions = {m : handler.paths[m].keys() for m in ['post', 'get']}
+    salt_functions = {} #TODO salt functinos should look like {backuppc:[list, of, functions], owncloud : [list, of, ofunctions]}
+
+    functions.update(salt_functions)
+
+    raise tornado.gen.Return(functions)
 
 #functions should have format [{"func_path" : "/panels/something", "func_type" : "salt"}, ...]
 @tornado.gen.coroutine

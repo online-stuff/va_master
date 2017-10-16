@@ -309,6 +309,12 @@ class DeployHandler(object):
         actions = all_actions[:number_actions] if number_actions else all_actions
         raise tornado.gen.Return(all_actions[:number_actions])
 
+    @tornado.gen.coroutine
+    def get_users(self, user_type = 'users'):
+        users = yield self.datastore.get(user_type)
+        users = [x['username'] for x in users]
+        raise tornado.gen.Return(users)
+
 
     @tornado.gen.coroutine
     def add_user_functions(self, user, functions):
