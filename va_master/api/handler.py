@@ -90,7 +90,6 @@ class ApiHandler(tornado.web.RequestHandler):
         auth_successful = True
         try: 
             user = yield get_current_user(self)
-            print ('User is : ', user)
             if not user: 
                 self.json({'success' : False, 'message' : 'User not authenticated properly. ', 'data' : {}})
                 auth_successful = False
@@ -104,6 +103,7 @@ class ApiHandler(tornado.web.RequestHandler):
             self.json({'success' : False, 'message' : 'There was an error retrieving user data. ' + e.message, 'data' : {}})
             auth_successful = False
 
+        print ('User is : ', user)
         user_functions = yield self.config.deploy_handler.get_user_functions(user.get('username'))
         if user_functions and path not in user_functions: 
             self.json({'success' : False, 'message' : 'User ' + user['username'] + ' tried to access ' + path + ' but it is not in their allowed functions : ' + str(user_functions)})
@@ -143,7 +143,6 @@ class ApiHandler(tornado.web.RequestHandler):
     @tornado.gen.coroutine
     def exec_method(self, method, path, data):
         self.data = data
-        print ('In exec method, data is : ', data)
         self.data['method'] = method
         self.data['handler'] = self
         self.data['path'] = path
@@ -152,7 +151,6 @@ class ApiHandler(tornado.web.RequestHandler):
         data['dash_user'] = user
 
         api_func = self.fetch_func(method, path, data)
-
         if api_func['function'] not in [user_login]:#, url_serve_file_test]: 
             auth_successful = yield self.handle_user_auth(path)
             if not auth_successful: 
