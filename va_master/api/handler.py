@@ -90,6 +90,7 @@ class ApiHandler(tornado.web.RequestHandler):
         auth_successful = True
         try: 
             user = yield get_current_user(self)
+            print ('User is : ', user)
             if not user: 
                 self.json({'success' : False, 'message' : 'User not authenticated properly. ', 'data' : {}})
                 auth_successful = False

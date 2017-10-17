@@ -44,14 +44,18 @@ def get_or_create_token(datastore, username, user_type = 'admin'):
 
 @tornado.gen.coroutine
 def get_current_user(handler):
+    print ('Auth handler is : ', handler.request.headers.get('Authorization', ''))
     token = handler.request.headers.get('Authorization', '')
 
     token = token.replace('Token ', '')    
  
     for t in ['user', 'admin']: # add other types as necessary, maybe from datastore. 
+        print ('Checking token in : ', t)
         token_valid = yield is_token_valid(handler.datastore, token, t)
+        print ('It is valid!')
         if token_valid: 
             user = yield handler.datastore.get('tokens/%s/by_token/%s' % (t, token))
+            print ('My user is : ', user)
             raise tornado.gen.Return({'username' : user['username'], 'type' : t})
     raise tornado.gen.Return(None)
 
@@ -65,15 +69,19 @@ def get_user_type(handler):
 
 @tornado.gen.coroutine
 def is_token_valid(datastore, token, user_type = 'admin'):
+    print ('Checking token : ', token)
     valid = True
     try:
-        res = yield datastore.get('tokens/%s/by_token/%s' % (user_type, token))
+        user_handle = 'tokens/%s/by_token/%s' % (user_type, token)
+        print ('Handle is : ', user_handle)
+        res = yield datastore.get(user_handle)
     except datastore.KeyNotFound:
         raise tornado.gen.Return(False)
     except Exception as e: 
         import traceback
         traceback.print_exc()
     valid = (res['username'] != '__invalid__')
+    print ('Valid is : ', valid)
     raise tornado.gen.Return(valid)
 
 #So far, one kwarg is used: user_allowed. 
@@ -136,7 +144,6 @@ def create_user_api(handler, user, password):
 @tornado.gen.coroutine
 def user_login(deploy_handler, handler):
     body = None
-    all_users = []
     try: 
         try:
             body = json.loads(handler.request.body)
@@ -153,24 +160,20 @@ def user_login(deploy_handler, handler):
             datastore_handle = user_type + 's'
             try:
                 users = yield handler.datastore.get(datastore_handle)
-                print ('Found users : ', users, ' for handle : ', datastore_handle)
+                account_info = None
+		for user in users:
+                    if user['username'] == username:
+                	account_info = user 
+                	break
+                if account_info: break
             except handler.datastore.KeyNotFound:
                 print ('No users : ', datastore_handle)
                 users = []
-            all_users += users
 
 
         account_info = None
         invalid_acc_hash = crypt('__invalidpassword__')
 
-        print ('Users are : ', users)
-        for user in all_users:
-            if user['username'] == username:
-        	account_info = user 
-                print ('Found user : ', user)
-        	break
-
-            print('No user found in ', all_users)
         if not account_info:
             # Prevent timing attacks
             account_info = {
