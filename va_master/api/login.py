@@ -67,7 +67,8 @@ def get_user_type(handler):
 def is_token_valid(datastore, token, user_type = 'admin'):
     valid = True
     try:
-        res = yield datastore.get('tokens/%s/by_token/%s' % (user_type, token))
+        user_handle = 'tokens/%s/by_token/%s' % (user_type, token)
+        res = yield datastore.get(user_handle)
     except datastore.KeyNotFound:
         raise tornado.gen.Return(False)
     except Exception as e: 
@@ -136,7 +137,6 @@ def create_user_api(handler, user, password):
 @tornado.gen.coroutine
 def user_login(deploy_handler, handler):
     body = None
-    all_users = []
     try: 
         try:
             body = json.loads(handler.request.body)
@@ -153,24 +153,19 @@ def user_login(deploy_handler, handler):
             datastore_handle = user_type + 's'
             try:
                 users = yield handler.datastore.get(datastore_handle)
-                print ('Found users : ', users, ' for handle : ', datastore_handle)
+                account_info = None
+
+                for user in users:
+                    if user['username'] == username:
+                        account_info = user 
+                        break
+                if account_info: break
             except handler.datastore.KeyNotFound:
-                print ('No users : ', datastore_handle)
                 users = []
-            all_users += users
 
 
-        account_info = None
         invalid_acc_hash = crypt('__invalidpassword__')
 
-        print ('Users are : ', users)
-        for user in all_users:
-            if user['username'] == username:
-        	account_info = user 
-                print ('Found user : ', user)
-        	break
-
-            print('No user found in ', all_users)
         if not account_info:
             # Prevent timing attacks
             account_info = {
@@ -179,7 +174,6 @@ def user_login(deploy_handler, handler):
                 'timestamp_created': 0
             }
         pw_hash = account_info['password_hash']
-        print ('Trying to test password')
         if crypt(password, pw_hash) == pw_hash:
             token = yield get_or_create_token(handler.datastore, username, user_type = user_type)
             raise tornado.gen.Return({'token': token})
