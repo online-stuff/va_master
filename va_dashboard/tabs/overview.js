@@ -49,7 +49,7 @@ Chart.pluginService.register({
                 if(chart.titleBlock.options.text == "MEMORY"){
                     text = chart.config.options.customInnerData + " GB";
                 }else if(chart.titleBlock.options.text == "USERS"){
-                    text = allData[0] + "/" + allData[1];
+                    text = allData[0] + "+" + allData[1];
                 }else{
                     text = chart.config.options.customInnerData;
                 }

@@ -323,7 +323,7 @@ class LibVirtDriver(base.DriverBase):
                 'servers' : [],
                 'limits' : {},
                 'provider_usage' : {},
-                'status' : {'success' : False, 'message' : 'Could not connect to the libvirt provider. ' + e}
+                'status' : {'success' : False, 'message' : 'Could not connect to the libvirt provider. ' + str(e)}
             }
             raise tornado.gen.Return(provider_data)
 
