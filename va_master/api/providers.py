@@ -191,7 +191,6 @@ def get_provider_info(deploy_handler, handler, get_billing = True, get_servers =
     standalone_servers = standalone_provider['servers']
 
     if sort_by_location: 
-        print (' I am sorting ')
         #Convert to {"location" : [list, of, providers], "location2" : [list, of, other, providers]}
         standalone_locations = set([x['location'] for x in standalone_servers])
         standalone_providers = [
