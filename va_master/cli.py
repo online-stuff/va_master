@@ -155,7 +155,7 @@ def check_datastore_connection(values, store):
 
     try:
         cli_info('Trying to start VPN. ')
-        cli_environment.write_vpn_pillar(values['fqdn']) 
+        cli_environment.write_vpn_pillar(values['domain_name']) 
         cli_success('VPN is running. ')
     except: 
         cli_error('Failed to start VPN. Error was : ')
@@ -176,8 +176,6 @@ def handle_store_init(cli_config, values, store):
     states_data = run_sync(functools.partial(cli_config.deploy_handler.get_states_data))
     values.update({'states' : states_data})
 
-#    handle_store_config(values)
-
     try:
         store_config = run_sync(functools.partial(store.get, 'init_vals')) or {}
     except: 
@@ -187,6 +185,11 @@ def handle_store_init(cli_config, values, store):
     store_config = {x : store_config[x] for x in store_config if x not in ['admin_pass']}
 #            store_config = run_sync(functools.partial(store.insert, 'init_vals', store_config))
     run_sync(functools.partial(store.insert, 'init_vals', store_config))
+
+    #Add va_standalone_servers
+    run_sync(functools.partial(store.insert, 'providers', [{"username": "admin", "sizes": [], "servers": [], "images": [], "driver_name": "generic_driver", "location": "va_master", "defaults": {}, "sec_groups": [], "provider_name": "va_standalone_servers", "password": "admin", "ip_address": "127.0.0.1", "networks": []}]))
+    run_sync(functools.partial(store.insert, 'va_standalone_servers', {"servers" : []}))
+
     return store_config
 
 def add_initial_panels(store):
@@ -197,17 +200,12 @@ def add_initial_panels(store):
 
 def create_ssh_keys(store_config):
     try: 
-        try: 
-            os.mkdir(store_config.ssh_key_path)
-            key_full_path = cli_config.ssh_key_path + cli_config.ssh_key_name
-
-            ssh_cmd = ['ssh-keygen', '-t', 'rsa', '-f', key_full_path, '-N', '']
-
-            subprocess.call(ssh_cmd)
-            subprocess.call(['mv', key_full_path, key_full_path + '.pem'])
-
-        except: 
-            pass
+#            os.mkdir(cli_config.ssh_key_path)
+        key_full_path = cli_config.ssh_key_path + cli_config.ssh_key_name
+        ssh_cmd = ['ssh-keygen', '-t', 'rsa', '-f', key_full_path, '-N', '']
+        
+        subprocess.call(ssh_cmd)
+        subprocess.call(['mv', key_full_path, key_full_path + '.pem'])
     except: 
         import traceback
         print ('Could not generate a key. Probably already exists. ')
@@ -289,14 +287,15 @@ def handle_add_module(args):
     cli_success('Module copied to : ' + api_path + file_name)
         
     
-def handle_new_admin(args):
+def handle_new_user(args):
     from .api import login
     cli_config = config.Config()
 
     store = cli_config.datastore
 
     run_sync = tornado.ioloop.IOLoop.instance().run_sync
-    create_user = functools.partial(login.create_user, store, args['username'], args['password'], 'admin')
+    user_type = 'user' if args.get('ordinary_user') else 'admin'
+    create_user = functools.partial(login.create_user, store, args['username'], args['password'], user_type)
     create_user_run = run_sync(create_user)
    
 def handle_test_api(args):
@@ -346,11 +345,12 @@ def entry():
 
     add_module.set_defaults(sub='add_module')
 
-    new_admin = subparsers.add_parser('new_admin', help='Creates a new admin user.  ')
-    new_admin.add_argument('--username', help = 'The username for the admin. ')
-    new_admin.add_argument('--password', help = 'The password. Will be hashed in the datastore.  ')
+    new_user = subparsers.add_parser('new_user', help='Creates a new user.  ')
+    new_user.add_argument('--username', help = 'The username for the user. ')
+    new_user.add_argument('--password', help = 'The password. Will be hashed in the datastore.  ')
+    new_user.add_argument('--ordinary-user', help = 'If set, will create a normal user instead of an admin. ', action = 'store_true', default = False)
 
-    new_admin.set_defaults(sub='new_admin')
+    new_user.set_defaults(sub='new_user')
 
     test_api = subparsers.add_parser('test-api', help='Runs through (some of) the API endpoints and tests their results. ')
     test_api.add_argument('--token', help = 'Enter the token which the test suite will use. ')
@@ -364,7 +364,7 @@ def entry():
         'init': handle_init,
         'jsbuild': handle_jsbuild,
         'add_module' : handle_add_module,
-        'new_admin' : handle_new_admin,
+        'new_user' : handle_new_user,
         'test_api' : handle_test_api,
         'stop': lambda x: None
     }

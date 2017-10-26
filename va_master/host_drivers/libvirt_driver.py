@@ -43,6 +43,7 @@ users:
 
 salt_minion:
   conf:
+    startup_states: highstate
     master: VAR_IP
     grains:
       role: VAR_ROLE
@@ -222,7 +223,7 @@ class LibVirtDriver(base.DriverBase):
         """ Works like the Base get_steps, but adds the provider_ip and provider_protocol fields. Also, there are no security groups in LibVirt, so that field is removed. """
         steps = yield super(LibVirtDriver, self).get_steps()
         steps[0].add_fields([
-            ('provider_ip', 'Host ip', 'str'),
+            ('provider_ip', 'Provider ip', 'str'),
             ('provider_protocol', 'Protocol; use qemu with Cert or qemu+tcp for no auth', 'options'),
         ])
         del steps[1].fields[2]
@@ -240,7 +241,7 @@ class LibVirtDriver(base.DriverBase):
     @tornado.gen.coroutine
     def get_sec_groups(self):
         """ The list of security groups is empty. """
-        sec_groups = []
+        sec_groups = ['Libvirt has no security groups']
         raise tornado.gen.Return(sec_groups)
 
     @tornado.gen.coroutine
@@ -322,7 +323,7 @@ class LibVirtDriver(base.DriverBase):
                 'servers' : [],
                 'limits' : {},
                 'provider_usage' : {},
-                'status' : {'success' : False, 'message' : 'Could not connect to the libvirt provider. ' + e}
+                'status' : {'success' : False, 'message' : 'Could not connect to the libvirt provider. ' + str(e)}
             }
             raise tornado.gen.Return(provider_data)
 
@@ -427,6 +428,23 @@ class LibVirtDriver(base.DriverBase):
         raise tornado.gen.Return(step_result)
 
 
+#    @tornado.gen.coroutine
+#    def validate_app_fields(self, step, **fields):
+#        if 'role' in fields:
+#            states = yield self.datastore.get('init_vals')
+#            states = states['states']
+#            state = [x for x in states if x['name'] == fields.get('role')][0]
+#            self.app_fields['state'] = state
+#            state_fields = [x['name'] for x in state.get('fields', [])]
+#        else:
+#            state_fields = []
+#        steps_fields = [['role', 'server_name'], state_fields, ['sec_group', 'image', 'size', 'network']]
+#        print ('Steps are : ', steps_fields)
+#
+#        result = yield super(LibVirtDriver, self).validate_app_fields(step, steps_fields = steps_fields, **fields)
+#        raise tornado.gen.Return(result)
+
+
 
     @tornado.gen.coroutine
     def create_server(self, provider, data):
@@ -443,7 +461,8 @@ class LibVirtDriver(base.DriverBase):
             8. Create permanent server. 
         
         """
-        print ('Creating minion. ')
+        print ('Creating libvirt server. ')
+        data.update(self.app_fields)
         provider_url = provider['provider_protocol'] + '://' + provider['provider_ip'] + '/system'
         conn = libvirt.open(provider_url)
         storage = [x for x in conn.listAllStoragePools() if x.name() == 'default'][0]
@@ -451,7 +470,6 @@ class LibVirtDriver(base.DriverBase):
         storage_disk = data.get('storage_disk', 0)
 
         config_drive = yield self.create_config_drive(provider, data)
-
         old_vol = [x for x in storage.listAllVolumes() if x.name() == data['image']][0]
         new_vol = yield self.clone_libvirt_volume(storage, flavour['vol_capacity'], old_vol, data['server_name'] + '-volume.qcow2')
         disks = [new_vol.name()]
@@ -466,15 +484,14 @@ class LibVirtDriver(base.DriverBase):
 
         new_xml = yield self.create_domain_xml(data['server_name'], disks, iso_image)
 
-        try:
-            new_img = conn.defineXML(new_xml)
-            new_img.setMemory = flavour['memory']
-            new_img.setMaxMemory = flavour['max_memory']
-            new_img.setVcpus = flavour['num_cpus']
-            new_img.create()
-        except:
-            import traceback
-            traceback.print_exc()
+        new_img = conn.defineXML(new_xml)
+        new_img.setMemory = flavour['memory']
+        new_img.setMaxMemory = flavour['max_memory']
+        new_img.setVcpus = flavour['num_cpus']
+        new_img.create()
+
+        self.config_drive = BASE_CONFIG_DRIVE
+
 
 
     @tornado.gen.coroutine
@@ -584,7 +601,7 @@ class LibVirtDriver(base.DriverBase):
 
     @tornado.gen.coroutine
     def create_config_drive(self, provider, data):
-        print ('Creating config. ')
+        print ('Creating config with ', data)
         minion_dir = self.config_path + data['server_name']
         config_dir = minion_dir + '/config_drive'
         server_dir = config_dir + '/openstack/2012-08-10'
@@ -599,7 +616,10 @@ class LibVirtDriver(base.DriverBase):
         with open(pub_key_path + '.pub', 'r') as f:
             pub_key = f.read()
             pub_key_cp_cmd = ['cp',pub_key_path + '.pub', '/etc/salt/pki/minion/' + data['server_name']]
+            pub_key_cp_master_cmd = ['cp',pub_key_path + '.pub', '/etc/salt/pki/master/minions/' + data['server_name']]
+
             subprocess.call(pub_key_cp_cmd)
+            subprocess.call(pub_key_cp_master_cmd)
 
         pri_key = ''
         with open(minion_dir + '/' +  data['server_name'] + '.pem', 'r') as f:
@@ -611,7 +631,7 @@ class LibVirtDriver(base.DriverBase):
 
         config_dict = {
             'VAR_INSTANCE_NAME' : data['server_name'],
-            'VAR_IP' : self.provider_ip, 
+            'VAR_IP' : self.host_ip, 
             'VAR_SSH_KEY' : auth_key,
             'VAR_PUBLIC_KEY' : '\n'.join([' ' * 4 + line for line in pub_key.split('\n')]),
             'VAR_PRIVATE_KEY' : '\n'.join([' ' * 4 + line for line in pri_key.split('\n')]),
@@ -633,7 +653,7 @@ class LibVirtDriver(base.DriverBase):
             }],
             'salt-minion' : {
                 'conf' : {
-                    'master' : self.provider_ip
+                    'master' : self.host_ip
                 },
                 'public_key' : pub_key,
                 'private_key' : pri_key,
@@ -647,6 +667,10 @@ class LibVirtDriver(base.DriverBase):
         with open(server_dir + '/user_data', 'w') as f:
             f.write(self.config_drive)
 
-        os.symlink(server_dir, config_dir + '/openstack/latest')
+#        minion_dir = self.config_path + data['server_name']
+#        config_dir = minion_dir + '/config_drive'
+#        server_dir = config_dir + '/openstack/2012-08-10'
+
+        os.symlink('../openstack/2012-08-10', config_dir + '/openstack/latest')
 
         raise tornado.gen.Return(config_dir)

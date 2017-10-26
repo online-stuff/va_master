@@ -119,7 +119,7 @@ var TS = React.createClass({
                 <div className="flex-box">
                 <DoughnutRedux height={200} data={[cpu_util, 100-cpu_util]} innerData={this.props.chartData['data']['CPU Count']} status={this.props.chartData['status']['cpu']['output']} labels={['Avg Utilisation CPU_Total', 'Free CPU']} colors={this.state.colors[0]} title="CPU" />
                 <DoughnutRedux height={200} data={[mem_util, 100-mem_util]} innerData={this.props.chartData['data']['Physical Memory Total']} status={this.props.chartData['status']['memory']['output']} labels={['Physical Memory Utilisation', 'Free Memory']} colors={this.state.colors[1]} title="MEMORY"  />
-                <DoughnutRedux height={200} data={[this.props.chartData['data']['ActiveSessions'], this.props.chartData['data']['InactiveSessions']]} status={this.props.chartData['status']['users']['output']} labels={['ActiveSessions', 'InactiveSessions']} colors={this.state.colors[2]} title="USERS"  />
+                <DoughnutRedux height={200} data={[this.props.chartData['data']['ActiveSessions'], this.props.chartData['data']['InactiveSessions2']]} status={this.props.chartData['status']['users']['output']} labels={['ActiveSessions', 'InactiveSessions2']} colors={this.state.colors[2]} title="USERS"  />
                 </div>
             </Bootstrap.Panel>
         );

@@ -7,6 +7,9 @@ node_modules/
 pip-log.txt
 ami_images
 aws_images
+vapp_config.json
 openstack_env_vars.sh
 dist/
 build/
+va_master/api/custom_modules/*
+va_master/host_drivers/aek_driver.py

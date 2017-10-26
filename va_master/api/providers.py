@@ -18,7 +18,7 @@ def get_paths():
         },
         'post' : {
             'providers' : {'function' : list_providers, 'args' : []},
-            'providers/info' : {'function' : get_provider_info, 'args' : ['handler', 'datastore_handler', 'required_providers', 'get_billing', 'get_servers', 'sort_by_location']},
+            'providers/info' : {'function' : get_provider_info, 'args' : ['handler', 'required_providers', 'get_billing', 'get_servers', 'sort_by_location']},
             'providers/new/validate_fields' : {'function' : validate_new_provider_fields, 'args' : ['handler']},
             'providers/delete' : {'function' : delete_provider, 'args' : ['provider_name']},
             'providers/add_provider' : {'function' : add_provider, 'args' : ['datastore_handler', 'field_values', 'driver_name']},
@@ -75,12 +75,15 @@ def list_providers(deploy_handler):
         hidden_servers = yield deploy_handler.datastore.get('hidden_servers')
     except: 
         hidden_servers = []
+    hidden_servers += ['va_standalone_servers']
 
     for provider in providers: 
         driver = yield deploy_handler.get_driver_by_id(provider['driver_name'])
         provider['servers'] = yield driver.get_servers(provider)
         if hidden_servers: 
             provider['servers'] = [x for x in provider['servers'] if x['hostname'] not in hidden_servers]
+
+    providers = [x for x in providers if x['provider_name']]
 
     raise tornado.gen.Return({'providers': providers})
 
@@ -151,12 +154,13 @@ def validate_new_provider_fields(deploy_handler, handler):
 
 
 @tornado.gen.coroutine
-def get_provider_info(deploy_handler, handler, datastore_handler, get_billing = True, get_servers = True, required_providers = [], sort_by_location = False):
+def get_provider_info(deploy_handler, handler, get_billing = True, get_servers = True, required_providers = [], sort_by_location = False):
     store = deploy_handler.datastore
     try:
         hidden_servers = yield store.get('hidden_servers')
     except: 
         hidden_servers = []
+    hidden_servers += ['va_standalone_servers']
 
     providers = yield datastore_handler.list_providers()
 
@@ -167,17 +171,41 @@ def get_provider_info(deploy_handler, handler, datastore_handler, get_billing = 
     providers_data = [x[0].get_provider_data(provider = x[1], get_servers = get_servers, get_billing = get_billing) for x in zip(provider_drivers, providers)]
     providers_info = yield providers_data
     
-    if hidden_servers: 
-        for provider in providers_info:
+    states = yield panels.get_panels(deploy_handler, handler)
+
+    for provider in providers_info:
+        if hidden_servers: 
             provider['servers'] = [x for x in provider['servers'] if x['hostname'] not in hidden_servers]
+
+        for server in provider['servers']:
+            server_panel = [x for x in states if server.get('hostname', '') in x['servers']] or [{'icon' : 'fa-server'}]
+            server['icon'] = server_panel[0]['icon']
 
     for info in zip(providers_info, providers): 
         info[0]['provider_name'] = info[1]['provider_name']
         info[0]['location'] = info[1]['location']
 
+    providers_info = [x for x in providers_info if x['provider_name']]
+
+    standalone_provider = yield deploy_handler.get_standalone_provider()
+    standalone_servers = standalone_provider['servers']
+
     if sort_by_location: 
+        print (' I am sorting ')
         #Convert to {"location" : [list, of, providers], "location2" : [list, of, other, providers]}
-        providers_info = {l : [x for x in providers_info if x['location'] == l] for l in [x['location'] for x in providers_info]}
+        standalone_locations = set([x['location'] for x in standalone_servers])
+        standalone_providers = [
+            {
+                "provider_name" : "", 
+                "servers" : [x for x in standalone_servers if x['location'] == l], 
+                "location" : l,
+            } for l in standalone_locations]
+
+        providers_info += standalone_providers
+
+        providers_info = {l : 
+            [x for x in providers_info if x['location'] == l] for l in [x['location']
+         for x in providers_info]}
 
     raise tornado.gen.Return(providers_info)
 

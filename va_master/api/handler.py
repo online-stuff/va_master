@@ -5,7 +5,7 @@ from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 
 from tornado.httpclient import AsyncHTTPClient, HTTPRequest
-from tornado.concurrent import run_on_executor
+from tornado.concurrent import run_on_executor, Future
 from concurrent.futures import ThreadPoolExecutor   # `pip install futures` for python2
 
 from . import url_handler
@@ -23,18 +23,32 @@ class ApiHandler(tornado.web.RequestHandler):
     executor = ThreadPoolExecutor(max_workers= 4)
 
     def initialize(self, config, include_version=False):
-        self.config = config
-        self.datastore = config.datastore
-        self.data = {}
-        self.paths = url_handler.gather_paths()
-        self.datastore_handler = DatastoreHandler(datastore = self.datastore, datastore_spec_path = '/opt/va_master/consul_spec.json')
+        try:
+            self.config = config
+            self.datastore = config.datastore
+            self.data = {}
+            self.paths = url_handler.gather_paths()
+            self.datastore_handler = DatastoreHandler(datastore = self.datastore, datastore_spec_path = '/opt/va_master/consul_spec.json')
+        except: 
+            import traceback
+            traceback.print_exc()
+
+    #Temporary for testing
+    #TODO remove in prod
+    def set_default_headers(self):
+        self.set_header("Access-Control-Allow-Origin", "*")
+        self.set_header("Access-Control-Allow-Headers", "x-requested-with, Authorization, Content-Type")
+        self.set_header('Access-Control-Allow-Methods', 'POST, GET, DELETE, OPTIONS')
+
 
     def json(self, obj, status=200):
+        if not obj: 
+            return
         self.set_header('Content-Type', 'application/json')
         self.set_status(status)
-#        print ('I am in json with ', json.dumps(obj))
         self.write(json.dumps(obj))
-        self.finish()
+        self.flush()
+#        self.finish()
 
 
     def has_error(self, result):
@@ -46,7 +60,10 @@ class ApiHandler(tornado.web.RequestHandler):
             "ERROR",
         ]
         if type(result) == str: 
-            return any([i in result for i in exceptions])
+            has_error =  any([i in result for i in exceptions])
+            if has_error: 
+                print ('Salt error: ', result)
+            return has_error
         else: return False
 
 
@@ -61,12 +78,25 @@ class ApiHandler(tornado.web.RequestHandler):
             return False
 
 
+    def fetch_func(self, method, path, data):
+        try:
+            api_func = self.paths[method].get(path)
+
+            print ('Getting a call at ', path, ' with data ', data, ' and will call function: ', api_func)
+    
+            if not api_func: 
+                api_func = {'function' : invalid_url, 'args' : ['path', 'method']}
+
+        except: 
+            import traceback
+            traceback.print_exc()
+        return api_func
+
     @tornado.gen.coroutine
-    def handle_user_auth(self):
+    def handle_user_auth(self, path):
         auth_successful = True
         try: 
             user = yield get_current_user(self)
-
             if not user: 
                 self.json({'success' : False, 'message' : 'User not authenticated properly. ', 'data' : {}})
                 auth_successful = False
@@ -79,7 +109,13 @@ class ApiHandler(tornado.web.RequestHandler):
 
             self.json({'success' : False, 'message' : 'There was an error retrieving user data. ' + e.message, 'data' : {}})
             auth_successful = False
-    
+
+        print ('User is : ', user)
+        user_functions = yield self.config.deploy_handler.get_user_functions(user.get('username'))
+        if user_functions and path not in user_functions: 
+            self.json({'success' : False, 'message' : 'User ' + user['username'] + ' tried to access ' + path + ' but it is not in their allowed functions : ' + str(user_functions)})
+            auth_successful = False
+   
         raise tornado.gen.Return(auth_successful)   
 
     @tornado.gen.coroutine
@@ -87,7 +123,6 @@ class ApiHandler(tornado.web.RequestHandler):
         try:
             api_func, api_kwargs = api_func.get('function'), api_func.get('args')       
             api_kwargs = {x : data.get(x) for x in api_kwargs if data.get(x)} or {}
-            print ('My kwargs is : ', api_kwargs, ' for ', api_func)
 
             print ('Calling with kwargs : ', api_kwargs)
             result = yield api_func(**api_kwargs)
@@ -145,17 +180,18 @@ class ApiHandler(tornado.web.RequestHandler):
 
     @tornado.gen.coroutine
     def get(self, path):
-        args = self.request.query_arguments
-        t_args = args
-        for x in t_args: 
-            if len(t_args[x]) == 1: 
-                args[x] = args[x][0]
         try:
-            result = yield self.exec_method('get', path, args)
 
+            args = self.request.query_arguments
+            t_args = args
+            for x in t_args: 
+                if len(t_args[x]) == 1: 
+                    args[x] = args[x][0]
+            result = yield self.exec_method('get', path, args)
         except: 
             import traceback
             traceback.print_exc()
+
 
     @tornado.gen.coroutine
     def delete(self, path):
@@ -174,8 +210,7 @@ class ApiHandler(tornado.web.RequestHandler):
                     try:
                         data = json.loads(self.request.body)
                     except: 
-                        print ('Bad json in post request : ', self.request.body)
-                        raise tornado.gen.Return()
+                        raise Exception('Bad json in request body : ', self.request.body)
                 else:
                     data = {self.request.arguments[x][0] for x in self.request.arguments}
                     data.update(self.request.files)
@@ -189,6 +224,12 @@ class ApiHandler(tornado.web.RequestHandler):
         except: 
             import traceback
             traceback.print_exc()
+
+    @tornado.gen.coroutine
+    def options(self, path):
+        self.set_status(204)
+        self.finish()
+
 
 
     @tornado.gen.coroutine
@@ -217,27 +258,46 @@ class ApiHandler(tornado.web.RequestHandler):
 
     @tornado.gen.coroutine
     def send_data(self, source, kwargs, chunk_size):
+        args = []
+    
+        #kwargs has a 'source_args' field for placement arguments sent to the source. For instance, for file.read(), we have to send the "size" argument as a placement argument. 
+        if kwargs.get('source_args'): 
+            args = kwargs.pop('source_args')
+
         offset = 0
         while True:
-           print ('Calling ', source, ' with ', kwargs)
-           data = source(**kwargs)
-           offset += chunk_size
-           if not data:
-               break
-           if type(data) == dict: #If using salt, it typically is formatted as {"minion" : "data"}
-               data = data[kwargs.get('tgt')]
-#           print ('Keys are : ', data.keys())
+            print ('Calling ', source, ' with ', kwargs)
+            data = source(*args, **kwargs)
 
-           self.set_header('Content-Type', 'application/octet-stream')
-           self.set_header('Content-Disposition', 'attachment; filename=test.zip')
+            offset += chunk_size
+            if 'kwarg' in kwargs: 
+                if 'range_from' in kwargs['kwarg'].keys(): 
+                    kwargs['kwarg']['range_from'] = offset            
 
-           self.write(unicode(data, "ISO-8859-1"))
-           self.flush()
-       
+            if type(data) == dict: #If using salt, it typically is formatted as {"minion" : "data"}
+                if kwargs.get('tgt') in data: 
+                    data = data[kwargs.get('tgt')]
+            if not data:
+                break
+
+            if type(data) == str:
+                self.write(data)
+                self.flush()
+
+            elif type(data) == Future: 
+                self.flush()
+                data = yield data
+                raise tornado.gen.Return(data)
+
+      
 
 
     @tornado.gen.coroutine
-    def serve_file(self, source, chunk_size = 10**6, salt_source = []):
+    def serve_file(self, source, chunk_size = 10**6, salt_source = {}, url_source = ''):
+
+        self.set_header('Content-Type', 'application/octet-stream')
+        self.set_header('Content-Disposition', 'attachment; filename=test.zip')
+
         try: 
             offset = 0
 
@@ -245,13 +305,23 @@ class ApiHandler(tornado.web.RequestHandler):
                 client = LocalClient()
                 source = client.cmd
                 kwargs = salt_source
+                kwargs['kwarg'] = kwargs.get('kwarg', {})
+                kwargs['kwarg']['range_from'] = 0
+            elif url_source: 
+                def streaming_callback(chunk):
+                    self.write(chunk)
+                    self.flush()
+                source = AsyncHTTPClient().fetch
+                request = HTTPRequest(url = url_source, streaming_callback = streaming_callback)
+                request = url_source
+                kwargs = {"request" : request, 'streaming_callback' : streaming_callback}
             else:
                 f = open(source, 'r')
                 source = f.read
-                kwargs = [chunk_size]
+                kwargs = {"source_args" : [chunk_size]}
 
-            yield self.send_data(source, kwargs, chunk_size)
-#            self.finish()
+            result = yield self.send_data(source, kwargs, chunk_size)
+            self.finish()
         except: 
             import traceback
             traceback.print_exc()

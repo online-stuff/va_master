@@ -75,7 +75,7 @@ var Log = React.createClass({
             <div id="log-page">
             	<div>
                     <DateRange updateLogs={this.updateLogs} />
-                    <input type='text' placeholder='Search...' value={this.state.value} onChange={this.filter} style={{float: 'right'}}/>
+                    <input type='text' placeholder='Search...' value={this.state.value} onChange={this.filter}/>
 	    		</div>
                 <FilterBtns changeTable={this.changeTable} />
             	<TableRedux logs={logs} filterBy={this.state.value} checked={this.state.checked}/>
@@ -110,6 +110,7 @@ var DateRange = React.createClass({
             <div className="date-range">
                 From: 
                 <DatePicker
+                    className="datepicker"
                     dateFormat="DD/MM/YYYY"
                     selected={this.state.startDate}
                     selectsStart
@@ -119,6 +120,7 @@ var DateRange = React.createClass({
                 />
                 To: 
                 <DatePicker
+                    className="datepicker"
                     dateFormat="DD/MM/YYYY"
                     selected={this.state.endDate}
                     selectsEnd

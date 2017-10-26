@@ -104,7 +104,7 @@ function modal(state, action){
 
 function apps(state, action){
     if(typeof state === 'undefined'){
-        return {select: ""};
+        return {select: "-1"};
     }
 
     var newState = Object.assign({}, state);
@@ -112,7 +112,7 @@ function apps(state, action){
         newState.select = action.select;
     }
     if(action.type == 'RESET_APP'){
-        newState.select = "";
+        newState.select = "-1";
     }
 
     return newState;
@@ -133,13 +133,13 @@ function div(state, action){
 
 function panel(state, action){
     if(typeof state === 'undefined'){
-        return {panel: '', instance: '', args: ''};
+        return {panel: '', server: '', args: ''};
     }
 
     var newState = Object.assign({}, state);
     if(action.type == 'CHANGE_PANEL'){
         newState.panel = action.panel;
-        newState.instance = action.instance;
+        newState.server = action.server;
         if('args' in action){
             newState.args = action.args;
         }else{
@@ -193,13 +193,49 @@ function form(state, action){
     return newState;
 };
 
-var mainReducer = Redux.combineReducers({auth: auth, table: table, filter: filter, modal: modal, apps: apps, div: div, panel: panel, alert: alert, form: form});
+function sidebar(state, action){
+    if(typeof state === 'undefined'){
+        return {collapsed: 0};
+    }
+
+    var newState = Object.assign({}, state);
+    if(action.type == 'COLLAPSE'){
+        newState.collapsed = 1;
+    }
+    if(action.type == 'RESET_COLLAPSE'){
+        newState.collapsed = 0;
+    }
+
+    return newState;
+};
+
+function logs(state, action){
+    if(typeof state === 'undefined'){
+        return [];
+    }
+
+    var newState = state.slice(0);
+    if(action.type == 'INIT_LOGS'){
+        newState = action.logs;
+    }
+    else if(action.type == 'UDDATE_LOGS'){
+        newState = state.concat([action.logs]);
+    }
+    else if(action.type == 'RESET_LOGS'){
+        newState = [];
+    }
+
+
+    return newState;
+};
+
+var mainReducer = Redux.combineReducers({auth: auth, table: table, filter: filter, modal: modal, apps: apps, div: div, panel: panel, alert: alert, form: form, sidebar: sidebar, logs: logs});
 var store = Redux.createStore(mainReducer);
 
 var Home = require('./tabs/home');
 var Overview = require('./tabs/overview');
-var Hosts = require('./tabs/hosts');
-var Apps = require('./tabs/apps');
+var Providers = require('./tabs/providers');
+var Servers = require('./tabs/servers');
 var Store = require('./tabs/store');
 var Panel = require('./tabs/panel');
 var Subpanel = require('./tabs/subpanel');
@@ -211,6 +247,7 @@ var Ts_status = require('./tabs/ts_status');
 var Log = require('./tabs/log');
 var Billing = require('./tabs/billing');
 var Services = require('./tabs/services');
+var Users = require('./tabs/users');
 
 var Login = require('./login');
 var App = React.createClass({
@@ -219,8 +256,8 @@ var App = React.createClass({
         <Router.Router history={Router.hashHistory}>
             <Router.Route path='/' component={Home}>
                 <Router.IndexRoute component={Overview} />
-                <Router.Route path='/hosts' component={Hosts} />
-                <Router.Route path='/apps' component={Apps} />
+                <Router.Route path='/providers' component={Providers} />
+                <Router.Route path='/servers' component={Servers} />
                 <Router.Route path='/store' component={Store} />
                 <Router.Route path='/vpn' component={Vpn} />
                 <Router.Route path='/vpn/list_logins/:username' component={VpnLogins} />
@@ -229,9 +266,10 @@ var App = React.createClass({
                 <Router.Route path='/log' component={Log} />
                 <Router.Route path='/billing' component={Billing} />
                 <Router.Route path='/services' component={Services} />
-                <Router.Route path='/panel/:id/:instance(/:args)' component={Panel} />
-                <Router.Route path='/subpanel/:id/:instance/:args' component={Subpanel} />
-                <Router.Route path='/chart_panel/:instance/:host/:service' component={ChartPanel} />
+                <Router.Route path='/users' component={Users} />
+                <Router.Route path='/panel/:id/:server(/:args)' component={Panel} />
+                <Router.Route path='/subpanel/:id/:server/:args' component={Subpanel} />
+                <Router.Route path='/chart_panel/:server/:provider/:service' component={ChartPanel} />
             </Router.Route>
             <Router.Route path='/login' component={Login} />
         </Router.Router>
