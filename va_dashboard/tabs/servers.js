@@ -544,7 +544,9 @@ var ServerForm = React.createClass({
         if(this.state.stepIndex === 1){
             var nextStep = this.state.step2 ? 2 : 3;
             var me = this, server_name = ReactDOM.findDOMNode(this.refs.name).value;
-            var data = {step: 1, role: ReactDOM.findDOMNode(this.refs.role).value, server_name: server_name, provider_name: this.state.provider_name};
+            var data = {step: 1, role: ReactDOM.findDOMNode(this.refs.role).value, server_name: server_name};
+            if(!this.state.standalone)
+                data.provider_name = this.state.provider_name;
             Network.post('/api/apps/new/validate_fields', this.props.auth.token, data).done(function(d) {
                 me.setState({stepIndex: nextStep, server_name: server_name});
             }).fail(function (msg) {
@@ -628,14 +630,14 @@ var ServerForm = React.createClass({
                                         <input type="text" ref='name' className="form-control" placeholder='Instance name' />
                                     </div>
                                 </div>
-                                <div class="form-group">
+                                {!this.state.standalone && <div class="form-group">
                                     <label for="provider-select" className="col-sm-4 control-label">Provider</label>
                                     <div className="col-sm-8">
                                         <select id="provider-select" className="form-control" defaultValue='-1' onChange={this.onChangeProvider.bind(this)}>
                                             {provider_rows}
                                         </select>
                                     </div>
-                                </div>
+                                </div>}
                                 <div className="form-group">
                                     <div className="col-sm-12">
                                         <div className="checkbox" style={{paddingLeft: "15px"}}>
