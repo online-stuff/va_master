@@ -7,6 +7,7 @@ import tornado
 import tornado.gen
 from host_drivers import openstack, aws, vcloud, libvirt_driver, generic_driver, century_link, gce, vmware
 
+from va_master.datastore_handler import DatastoreHandler
 
 from Crypto.PublicKey import RSA
 from concurrent.futures import ProcessPoolExecutor
@@ -17,6 +18,8 @@ class DeployHandler(object):
         self.ssh_key_name = ssh_key_name
         self.ssh_key_path = ssh_key_path
         self.datastore = datastore
+
+        self.datastore_handler = DatastoreHandler(datastore = self.datastore, datastore_spec_path = '/opt/va_master/consul_spec.json')
         self.drivers = []
 
         self.deploy_pool_count = deploy_pool_count
@@ -105,52 +108,6 @@ class DeployHandler(object):
 
 
     @tornado.gen.coroutine
-    def get_provider(self, provider_name):
-        providers = yield self.datastore.get('providers')
-        provider = [x for x in providers if x['provider_name'] == provider_name][0]
-        raise tornado.gen.Return(provider)
-
-    @tornado.gen.coroutine
-    def get_provider_and_driver(self, provider_name):
-        provider = yield self.get_provider(provider_name)
-        driver = yield self.get_driver_by_id(provider['driver_name'])
-
-        raise tornado.gen.Return((provider, driver))
-
-    @tornado.gen.coroutine
-    def get_triggers(self, provider_name):
-        providers = yield self.list_providers()
-        provider = [x for x in providers if x['provider_name'] == provider_name][0]
-        raise tornado.gen.Return(provider['triggers'])
-
-    @tornado.gen.coroutine
-    def list_providers(self):
-        try:
-            providers = yield self.datastore.get('providers')
-            for provider in providers: 
-                driver = yield self.get_driver_by_id(provider['driver_name'])
-                provider_status = yield driver.get_provider_status(provider)
-                provider['status'] = provider_status
-        except self.datastore.KeyNotFound:
-            print ('No providers found. ')
-            providers = []
-        raise tornado.gen.Return(providers)
-
-    @tornado.gen.coroutine
-    def create_provider(self, driver):
-        try:
-            new_providers = yield self.datastore.get('providers')
-        except self.datastore.KeyNotFound:
-            new_providers = []
-        try: 
-            if not any([x['provider_name'] == driver.field_values['provider_name'] for x in new_providers]):
-                new_providers.append(driver.field_values)
-                yield self.datastore.insert('providers', new_providers)
-        except: 
-            import traceback
-            traceback.print_exc()
-
-    @tornado.gen.coroutine
     def get_states_data(self, states = []):
         states_data = []
         subdirs = glob.glob('/srv/salt/*')
@@ -186,85 +143,13 @@ class DeployHandler(object):
         yield self.datastore.insert('panels', panels)
         raise tornado.gen.Return(states_data)
 
-
     @tornado.gen.coroutine
-    def get_states(self):
-        try: 
-            states_data = yield self.datastore.get('init_vals')
-            states_data = states_data['states']
-        except self.datastore.KeyNotFound:
-            states_data = yield self.get_states_data()
-            yield self.datastore.insert('states', states_data)
-        except: 
-            import traceback
-            traceback.print_exc()
-        raise tornado.gen.Return(states_data)
-    
+    def get_provider_and_driver(self, provider_name = 'va_standalone_servers'):
+        provider = yield self.datastore_handler.get_provider(provider_name)
+        driver = yield self.get_driver_by_id(provider['driver_name'])
 
-    @tornado.gen.coroutine
-    def reset_states(self):
-        try: 
-            yield self.datastore.delete('states')
-            states_data = yield self.get_states_data()
-            yield self.datastore.insert('states', states_data)
-        except: 
-            import traceback
-            traceback.print_exc()
+        raise tornado.gen.Return((provider, driver))
 
-
-    def delete_panel(self, panel_name): 
-        try: 
-            panels = yield self.datastore.get('panels')
-            del panels['user'][panel_name]
-            del panels['admin'][panel_name]
-            yield self.datastore.insert('panels', panels)
-        except: 
-            import traceback
-            traceback.print_exc()
-
-
-    @tornado.gen.coroutine
-    def store_panel(self, panel):
-        panels = yield self.datastore.get('panels')
-
-#        print ('Panels are : ', panels)
-        
-        role_user_panels = filter(lambda x: x['name'] == panel['role'], panels['user'])[0]
-#        if panel['panel_name'] in role_user_panels['servers']: raise tornado.gen.Return()
-        print 'Role user panels are : ', role_user_panels
-        role_user_panels['servers'].append(panel['panel_name'])
-        print 'They are now : ', role_user_panels
-
-        role_admin_panels = filter(lambda x: x['name'] == panel['role'], panels['admin'])[0]
-        print 'ROle admin panels are : ', role_admin_panels
-        role_admin_panels['servers'].append(panel['panel_name'])
-        print 'They are now : ', role_admin_panels
-
-#            panels['user'][panel['role']] = role_user_panels
-#            panels['admin'][panel['role']] = role_admin_panels
-#        print ('New panels are : ', panels)
-        yield self.datastore.insert('panels', panels)
-
-
-    @tornado.gen.coroutine
-    def reset_panels(self):
-        try: 
-            yield self.datastore.delete('panels')
-        except: 
-            import traceback
-            traceback.print_exc()
-
-
-    @tornado.gen.coroutine
-    def store_app(self, app, provider):
-        try: 
-            providers = yield self.datastore.get('providers')
-            provider = [h for h in providers if h['provider_name'] == provider][0]
-            provider['servers'].append(app)
-            yield self.datastore.insert('providers', provider)
-        except: 
-            import traceback
-            traceback.print_exc()
 
     @tornado.gen.coroutine
     def generate_top_sls(self):
@@ -282,43 +167,3 @@ class DeployHandler(object):
             import traceback
             traceback.print_exc()
 
-
-    @tornado.gen.coroutine
-    def store_action(self, user, path, data):
-        try: 
-            actions = yield self.datastore.get('actions')
-        except: 
-            actions = []
-        actions.append({
-            'username' : user['username'], 
-            'type' : user['type'], 
-            'path' : path, 
-            'data' : str(data), 
-            'time' : str(datetime.datetime.now())
-        })
-        yield self.datastore.insert('actions', actions)
-
-    @tornado.gen.coroutine
-    def get_actions(self, number_actions, filters = {}):
-        all_actions = yield self.datastore.get('actions')
-        actions = all_actions[:number_actions] if number_actions else all_actions
-        raise tornado.gen.Return(all_actions[:number_actions])
-
-
-    @tornado.gen.coroutine
-    def add_user_salt_functions(self, user, functions):
-        all_funcs = yield self.datastore.get('users_salt_functions')
-
-        user_funcs = user_funcs.get(user, [])
-        user_funcs.update(functions)
-        
-        all_funcs[user] = user_funcs
-
-        yield self.datastore.insert('users_salt_functions', all_funcs)
-
-    @tornado.gen.coroutine
-    def get_user_salt_functions(self, user):
-        print ('User is  :', user)
-        all_salt_functions = yield self.datastore.get('users_salt_functions')
-        user_funcs = all_salt_functions.get(user, [])
-        raise tornado.gen.Return(user_funcs)

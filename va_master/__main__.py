@@ -26,8 +26,6 @@ def bootstrap():
     http_server = tornado.httpserver.HTTPServer(app, ssl_options=ssl_ctx)
     http_server.listen(443)
     tornado.ioloop.IOLoop.current().start()
-#    tornado.ioloop.IOLoop.instance().start()
-#    app.listen(my_config.server_port)
 
 if __name__ == '__main__':
     if 'start' in sys.argv: 

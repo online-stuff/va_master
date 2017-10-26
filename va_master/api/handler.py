@@ -14,8 +14,7 @@ import json, datetime, syslog, pytz
 import dateutil.relativedelta
 import dateutil.parser
 
-from salt.client import LocalClient
-
+from va_master.datastore_handler import DatastoreHandler
 
 def invalid_url(deploy_handler, path, method):
     raise Exception('Invalid URL : ' + path +' with method : ' + method)
@@ -27,13 +26,8 @@ class ApiHandler(tornado.web.RequestHandler):
         self.config = config
         self.datastore = config.datastore
         self.data = {}
-        try:
-            self.paths = url_handler.gather_paths()
-        except: 
-            import traceback
-            traceback.print_exc()
-            return
-        self.salt_client = None
+        self.paths = url_handler.gather_paths()
+        self.datastore_handler = DatastoreHandler(datastore = self.datastore, datastore_spec_path = '/opt/va_master/consul_spec.json')
 
     def json(self, obj, status=200):
         self.set_header('Content-Type', 'application/json')
@@ -95,7 +89,8 @@ class ApiHandler(tornado.web.RequestHandler):
             api_kwargs = {x : data.get(x) for x in api_kwargs if data.get(x)} or {}
             print ('My kwargs is : ', api_kwargs, ' for ', api_func)
 
-            result = yield api_func(self.config.deploy_handler, **api_kwargs)
+            print ('Calling with kwargs : ', api_kwargs)
+            result = yield api_func(**api_kwargs)
 
             if type(result) == dict: 
                 if result.get('data_type', 'json') == 'file' : 
@@ -120,31 +115,33 @@ class ApiHandler(tornado.web.RequestHandler):
 
     @tornado.gen.coroutine
     def exec_method(self, method, path, data):
-        self.data = data
-        self.data['method'] = method
-        self.data['handler'] = self
+        try:
+            self.data = data
+            self.data['method'] = method
+            self.data['handler'] = self
+            self.data['path'] = path
+            self.data['datastore_handler'] = self.datastore_handler
+            self.data['deploy_handler'] = self.config.deploy_handler
+            self.data['datastore'] = self.config.deploy_handler.datastore
 
-        user = yield get_current_user(self)
-        data['dash_user'] = user
 
-        api_func = self.paths[method].get(path)
+            user = yield get_current_user(self)
+            data['dash_user'] = user
 
-        print ('Getting a call at ', path, ' with data ', data, ' and will call function: ', api_func)
+            api_func = self.fetch_func(method, path, data)
+            if api_func['function'] not in [user_login]:#, url_serve_file_test]: 
+                auth_successful = yield self.handle_user_auth(path)
+                if not auth_successful: 
+                    raise tornado.gen.Return()
 
-        if not api_func: 
-            data = {'path' : path, 'method' : method}
-            api_func = {'function' : invalid_url, 'args' : ['path', 'method']}
+            result = yield self.handle_func(api_func, data)
 
-        elif api_func['function'] != user_login: 
-            auth_successful = yield self.handle_user_auth()    
-            if not auth_successful: 
-                raise tornado.gen.Return()
+            yield self.log_message(path = path, data = data, func = api_func['function'], result = result)
 
-        result = yield self.handle_func(api_func, data)
-
-        yield self.log_message(path = path, data = data, func = api_func['function'], result = result)
-
-        self.json(result)
+            self.json(result)
+        except: 
+            import traceback
+            traceback.print_exc()
 
     @tornado.gen.coroutine
     def get(self, path):
