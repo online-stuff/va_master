@@ -1,4 +1,5 @@
 @import url('react-datepicker.css');
+@import url('react-select-plus.css');
 
 html, body, .main-content {
     height: 100%;

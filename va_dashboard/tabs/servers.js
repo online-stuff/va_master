@@ -91,10 +91,7 @@ var Servers = React.createClass({
                 ipaddr = app.ip;
                 if(Array.isArray(ipaddr)){
                     if(ipaddr.length > 0){
-                        var ips = "";
-                        for(j=0; j<ipaddr.length; j++){
-                            ips += ipaddr[j].addr + ", ";
-                        }
+                        var ips = ipaddr.join(", ");
                         ipaddr = ips.slice(0, -2);
                     }else{
                         ipaddr = "";

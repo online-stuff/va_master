@@ -64,9 +64,11 @@ var Home = React.createClass({
             this.setState({activeKey: parseInt(activeKey)});
         }
     },
-    logOut: function (key, event) {
+    navbar_click: function (key, event) {
         if(key === 'logout')
-        this.props.dispatch({type: 'LOGOUT'});
+            this.props.dispatch({type: 'LOGOUT'});
+        else if(key === 'users')
+            Router.hashHistory.push('/users');
     },
     collapse: function () {
         this.setState({collapse: !this.state.collapse});
@@ -121,7 +123,8 @@ var Home = React.createClass({
                 </Bootstrap.Navbar.Header>
                 <Bootstrap.Navbar.Collapse>
                     <Bootstrap.Nav pullRight={true}>
-                        <Bootstrap.NavDropdown title={this.props.auth.username} onSelect={this.logOut} id="nav-dropdown">
+                        <Bootstrap.NavDropdown title={this.props.auth.username} onSelect={this.navbar_click} id="nav-dropdown">
+                                <Bootstrap.MenuItem eventKey='users'>Users</Bootstrap.MenuItem>
                                 <Bootstrap.MenuItem eventKey='logout'>Logout</Bootstrap.MenuItem>
                         </Bootstrap.NavDropdown>
                     </Bootstrap.Nav>
