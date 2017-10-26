@@ -4,7 +4,7 @@ import salt.client
 import tornado.gen
 import login, apps
 
-from login import auth_only
+from login import auth_only, create_user_api
 
 
 def get_paths():
@@ -14,9 +14,15 @@ def get_paths():
             'panels/get_panel' : {'function' : get_panel_for_user, 'args' : ['server_name', 'panel', 'provider', 'handler', 'args', 'dash_user']},
             'panels/users' : {'function' : get_users, 'args' : ['users_type']},
             'panels/get_all_functions' : {'function' : get_all_functions, 'args' : ['handler']},
+            'panels/get_all_function_groups' : {'function' : get_all_function_groups, 'args' : ['handler']},
         },
         'post' : {
             'panels/add_user_functions' : {'function' : add_user_functions, 'args' : ['user', 'functions']},
+            'panels/create_user_group' : {'function' : create_user_group, 'args' : ['group_name', 'functions']},
+            'panels/create_user_with_group' : {'function' : create_user_with_group, 'args' : ['handler', 'user', 'password', 'user_type', 'functions', 'groups']},
+            'panels/delete_user' : {'function' : delete_user, 'args' : ['user']}, 
+            'panels/update_user' : {'function' : update_user, 'args' : ['user', 'functions', 'groups', 'password']}, 
+
             'panels/get_panel' : {'function' : get_panel_for_user, 'args' : ['server_name', 'panel', 'provider', 'handler', 'args', 'dash_user']},
             'panels/reset_panels': {'function' : reset_panels, 'args' : []}, #JUST FOR TESTING
             'panels/new_panel' : {'function' : new_panel, 'args' : ['panel_name', 'role']},
@@ -188,7 +194,19 @@ def get_panel_for_user(deploy_handler, handler, panel, server_name, dash_user, a
 @tornado.gen.coroutine
 def get_users(deploy_handler, users_type = 'users'):
     users = yield deploy_handler.get_users(users_type)
-    raise tornado.gen.Return(users)
+    result = []
+    for u in users: 
+        u_all_functions = yield deploy_handler.get_all_user_functions(u)
+        print ('u_all_functions are : ', u_all_functions)
+        u_groups = [x.get('func_name') for x in u_all_functions if x.get('func_type', '') == 'function_group']
+        u_functions = [x.get('func_path') for x in u_all_functions if x.get('func_type', '') == '']
+        user_data = {
+            'user' : u, 
+            'functions' : u_functions, 
+            'groups' : u_groups
+        }
+        result.append(user_data)
+    raise tornado.gen.Return(result)
 
 @tornado.gen.coroutine
 def get_all_functions(deploy_handler, handler):
@@ -197,9 +215,45 @@ def get_all_functions(deploy_handler, handler):
 
     functions.update(salt_functions)
 
+    functions = [
+            { 'label' : f, 'options' : [{'label' : i, 'value' : i} for i in functions[f]] }
+    for f in functions]
+
     raise tornado.gen.Return(functions)
+
+
+@tornado.gen.coroutine
+def get_all_function_groups(deploy_handler, handler):
+    groups = yield deploy_handler.get_function_groups()
+    for g in groups: 
+        g['functions'] = [x.get('func_path') for x in g['functions']]
+    raise tornado.gen.Return(groups)
+
+@tornado.gen.coroutine
+def update_user(deploy_handler, user, functions = [], groups = [], password = ''):
+    if password: 
+        yield deploy_handler.update_user(user, password)
+    yield deploy_handler.update_user_functions(user, functions, groups)
+
 
 #functions should have format [{"func_path" : "/panels/something", "func_type" : "salt"}, ...]
 @tornado.gen.coroutine
 def add_user_functions(deploy_handler, user, functions):
     yield deploy_handler.add_user_functions(user, functions)
+    
+@tornado.gen.coroutine
+def create_user_group(deploy_handler, group_name, functions):
+    yield deploy_handler.create_user_group(group_name, functions)
+
+@tornado.gen.coroutine
+def create_user_with_group(deploy_handler, handler, user, password, user_type, functions = [], groups = []):
+    yield create_user_api(handler, user, password, user_type)
+    all_groups = yield deploy_handler.get_function_groups()
+    for g in groups: 
+        required_group = [x for x in all_groups if x.get('func_name', '') == g]
+        functions += required_group
+    yield add_user_functions(deploy_handler, user, functions)
+
+@tornado.gen.coroutine
+def delete_user(deploy_handler, user):
+    yield deploy_handler.delete_user(user)

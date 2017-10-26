@@ -93,9 +93,15 @@ class ApiHandler(tornado.web.RequestHandler):
             if not user: 
                 self.json({'success' : False, 'message' : 'User not authenticated properly. ', 'data' : {}})
                 auth_successful = False
-            elif user['type'] == 'user' and path not in self.paths.get('user_allowed', []): 
-                self.json({'success' : False, 'message' : 'User does not have appropriate privileges. ', 'data' : {}})
-                auth_successful = False
+            elif user['type'] == 'user' : 
+                user_functions = yield self.config.deploy_handler.get_user_functions(user.get('username'))
+                user_functions += self.paths.get('user_allowed', [])
+
+                if path not in user_functions: 
+                    self.json({'success' : False, 'message' : 'User ' + user['username'] + ' tried to access ' + path + ' but it is not in their allowed functions : ' + str(user_functions)})
+                    auth_successful = False
+
+#                self.json({'success' : False, 'message' : 'User does not have appropriate privileges. ', 'data' : {}})
         except Exception as e: 
             import traceback
             traceback.print_exc()
@@ -103,12 +109,6 @@ class ApiHandler(tornado.web.RequestHandler):
             self.json({'success' : False, 'message' : 'There was an error retrieving user data. ' + e.message, 'data' : {}})
             auth_successful = False
 
-        print ('User is : ', user)
-        user_functions = yield self.config.deploy_handler.get_user_functions(user.get('username'))
-        if user_functions and path not in user_functions: 
-            self.json({'success' : False, 'message' : 'User ' + user['username'] + ' tried to access ' + path + ' but it is not in their allowed functions : ' + str(user_functions)})
-            auth_successful = False
-   
         raise tornado.gen.Return(auth_successful)   
 
     @tornado.gen.coroutine

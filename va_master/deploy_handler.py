@@ -10,6 +10,8 @@ from host_drivers import openstack, aws, vcloud, libvirt_driver, generic_driver,
 from Crypto.PublicKey import RSA
 from concurrent.futures import ProcessPoolExecutor
 
+from pbkdf2 import crypt
+
 
 class DeployHandler(object):
 
@@ -315,9 +317,39 @@ class DeployHandler(object):
         users = [x['username'] for x in users]
         raise tornado.gen.Return(users)
 
+    @tornado.gen.coroutine
+    def update_user(self, user, password):
+        all_users = yield self.datastore.get('users')
+        edited_user = [x for x in all_users if x['username'] == user]
+
+        if not edited_user: 
+            raise Exception('Tried to edit user ' + user + ' but not found in datastore. ')
+
+        edited_user = edited_user[0]
+        crypted_pass = crypt(password)
+        edited_user['password'] = crypted_pass
+        yield self.datastore.insert('users', all_users)
+
+    @tornado.gen.coroutine
+    def update_user_functions(self, user, functions, groups = []):
+        all_groups = yield self.datastore.get('user_groups')
+        try:
+            functions = [{"func_path" : x.get('value')} if x.get('value') else x for x in functions]
+        except AttributeError:
+            functions = [{"func_path" : x} for x in functions]
+        for g in groups: 
+            required_group = [x for x in all_groups if x.get('func_name', '') == g]
+            functions += required_group
+
+        all_funcs = yield self.datastore.get('users_functions')
+        all_funcs[user] = functions
+
+        yield self.datastore.insert('users_functions', all_funcs)
 
     @tornado.gen.coroutine
     def add_user_functions(self, user, functions):
+        functions = [{"func_path" : x.get('value')} if x.get('value') else x for x in functions]
+            
         all_funcs = yield self.datastore.get('users_functions')
 
         user_funcs = all_funcs.get(user, [])
@@ -326,6 +358,12 @@ class DeployHandler(object):
         all_funcs[user] = user_funcs
 
         yield self.datastore.insert('users_functions', all_funcs)
+
+    @tornado.gen.coroutine
+    def delete_user(self, user):
+        users = yield self.datastore.get('users')
+        users = [x for x in users if x['username'] != user]
+        yield self.datastore.insert('users', users)
 
     @tornado.gen.coroutine
     def remove_user_functions(self, user, functions):
@@ -340,11 +378,17 @@ class DeployHandler(object):
 
 
     @tornado.gen.coroutine
+    def get_all_user_functions(self, user):
+        all_functions = yield self.datastore.get('users_functions')
+        user_funcs = all_functions.get(user, [])
+
+        raise tornado.gen.Return(user_funcs)
+
+    @tornado.gen.coroutine
     def get_user_functions(self, user, func_type = ''):
         if not user: 
             raise tornado.gen.Return([])
-        all_functions = yield self.datastore.get('users_functions')
-        user_funcs = all_functions.get(user, [])
+        user_functions = yield get_all_user_functions(user)
 
         user_group_functions = [x['functions'] for x in user_funcs if x.get('func_type', '') == 'function_group']
 
@@ -353,3 +397,14 @@ class DeployHandler(object):
         if x.get('func_type', '') == func_type and x.get('func_path')]
 
         raise tornado.gen.Return(user_funcs)
+
+    @tornado.gen.coroutine
+    def create_user_group(self, group_name, functions):
+        old_groups = yield self.datastore.get('user_groups')
+        old_groups.append({'func_name' : group_name, 'func_type' : 'function_group', 'functions' : functions})
+        yield self.datastore.insert('user_groups', old_groups)
+    
+    @tornado.gen.coroutine
+    def get_function_groups(self):
+        groups = yield self.datastore.get('user_groups')
+        raise tornado.gen.Return(groups)
