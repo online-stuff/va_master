@@ -25,7 +25,7 @@ def get_paths():
 
             'panels/get_panel' : {'function' : get_panel_for_user, 'args' : ['server_name', 'panel', 'provider', 'handler', 'args', 'dash_user']},
             'panels/reset_panels': {'function' : reset_panels, 'args' : []}, #JUST FOR TESTING
-            'panels/new_panel' : {'function' : new_panel, 'args' : ['panel_name', 'role']},
+            'panels/new_panel' : {'function' : new_panel, 'args' : ['datastore_handler', 'panel_name', 'role']},
             'panels/action' : {'function' : panel_action, 'args' : ['server_name', 'action', 'args', 'kwargs', 'module', 'dash_user']}, #must have server_name and action in data, 'args' : []}, ex: panels/action server_name=nino_dir action=list_users
             'panels/chart_data' : {'function' : get_chart_data, 'args' : ['server_name', 'args']},
             'panels/serve_file' : {'function' : salt_serve_file, 'args' : ['handler', 'server_name', 'action', 'args', 'kwargs', 'module']},

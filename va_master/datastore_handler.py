@@ -38,8 +38,6 @@ class DatastoreHandler(object):
         new_object_spec = self.spec[object_type]
 
         handle_data = handle_data.get('handle_data', handle_data)
-        print ('Handle data : ', handle_data)
-        print ('ANd spec if : ', new_object_spec)
         new_object_handle = new_object_spec['consul_handle'].format(**handle_data)
 
         #TODO check data to be as designed in the spec
@@ -197,28 +195,30 @@ class DatastoreHandler(object):
         raise tornado.gen.Return(panels)
 
     @tornado.gen.coroutine
-    def store_panel(self, user_type, panel):
-        yield self.store_object(panel_type, data = panel, user_type = user_type, role = panel['role'])
+    def store_panel(self, user_type, panel, role):
+        panel_type = user_type + '_panel'
+        yield self.insert_object(panel_type, data = panel, role = role)
 
     @tornado.gen.coroutine
-    def get_panel(self, panel_name, user_type = 'user'):
-        panel = yield self.datastore.get_object(panel_type, panel_name = panel_name, user_type = user_type)
+    def get_panel(self, role, user_type = 'user'):
+        panel_type = user_type + '_panel'
+        panel = yield self.get_object(panel_type, role = role)
 
         raise tornado.gen.Return(panel)
 
     @tornado.gen.coroutine
-    def add_panel(self, user_type, panel_name, role):
+    def add_panel(self, panel_name, role):
         states = yield self.get_states_data()
         panel_state = [x for x in states if x['name'] == role][0]
 
-        user_panel = yield self.get_panel('user', panel_name)
-        admin_panel = yield self.get_panel('admin', panel_name)
+        user_panel = yield self.get_panel(role, 'user')
+        admin_panel = yield self.get_panel(role, 'admin')
 
-        user_panel['servers'].append(panel_state['panels']['user'])
-        admin_panel['servers'].append(panel_state['panels']['admin'])
+        user_panel['servers'].append(panel_name)
+        admin_panel['servers'].append(panel_name)
 
-        yield self.store_panel('user', user_panel)
-        yield self.store_panel('admin', admin_panel)
+        yield self.store_panel('user', user_panel, role)
+        yield self.store_panel('admin', admin_panel, role)
 
     @tornado.gen.coroutine
     def get_states_data(self, states = []):
