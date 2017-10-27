@@ -1,19 +1,19 @@
 {
     "admin" : {
-            "consul_handle" : "admins/{username}", 
-            "username" : "",
-            "timestamp_created" : 0,
-            "password_hash" : ""
+        "consul_handle" : "admins/{username}", 
+        "username" : "",
+        "timestamp_created" : 0,
+        "password_hash" : ""
     },
     "by_token" : {
-            "consul_handle" : "tokens/{user_type}/by_token/{token}",
-            "username": "", 
-            "token": ""
+        "consul_handle" : "tokens/{user_type}/by_token/{token}",
+        "username": "", 
+        "token": ""
     },
     "by_username" : {
-            "consul_handle" : "tokens/{user_type}/by_username/{token}",
-            "username": "", 
-            "token": ""
+        "consul_handle" : "tokens/{user_type}/by_username/{token}",
+        "username": "", 
+        "token": ""
     },
     "generic_provider" : {
         "consul_handle" : "{provider_name}_instances",
@@ -29,24 +29,42 @@
             ]
     },
     "provider" : {
-            "consul_handle" : "providers/{provider_name}",
-            "username" : "", 
-            "sizes" : [], 
-            "servers" : [], 
-            "images" : [], 
-            "networks" : [], 
-            "driver_name" : "",
-            "location" : "va_master", 
-            "defaults" : {}, 
-            "sec_groups" : [], 
-            "provider_name" : "", 
-            "password" : ""
+        "consul_handle" : "providers/{provider_name}",
+        "username" : "", 
+        "sizes" : [], 
+        "servers" : [], 
+        "images" : [], 
+        "networks" : [], 
+        "driver_name" : "",
+        "location" : "va_master", 
+        "defaults" : {}, 
+        "sec_groups" : [], 
+        "provider_name" : "", 
+        "password" : ""
     },
     "user" :{ 
-            "consul_handle" : "users/{username}",
-            "username" : "",
-            "timestamp_created" : 0,
-            "password_hash" : "",
-            "allowed_functions" : []
+        "consul_handle" : "users/{username}",
+        "username" : "",
+        "timestamp_created" : 0,
+        "password_hash" : "",
+        "allowed_functions" : []
+    }, 
+    "admin_panel" : {
+        "consul_handle" : "panels/admin/{name}", 
+        "name" : "", 
+        "icon" : "", 
+        "servers" : [], 
+        "panels" : []
+    }, 
+    "user_panel" : {
+        "consul_handle" : "panels/user/{name}", 
+        "name" : "", 
+        "icon" : "", 
+        "servers" : [], 
+        "panels" : []
+    }, 
+    "user_group" : {
+        "consul_handle" : "user_groups/{group_name}", 
+        "functions" : []
     }
 }

@@ -52,11 +52,29 @@ class DatastoreHandler(object):
         object_spec = self.spec[object_type]
         object_handle = object_spec['consul_handle'].format(**handle_data)
         result = yield self.datastore.get(object_handle)
+        raise tornado.gen.Return(result)
 
     @tornado.gen.coroutine
     def get_provider(self, provider_name):
         provider = yield self.get_object('provider', provider_name = provider_name)
         raise tornado.gen.Return(provider)
+
+    @tornado.gen.coroutine
+    def get_triggers(self, provider_name):
+        provider = yield self.get_provider(provider_name)
+        raise tornado.gen.coroutine(provider.get('triggers', []))
+
+    @tornado.gen.coroutine
+    def get_hidden_servers(self):
+        try:
+            servers = yield self.datastore.get('hidden_servers')
+        except: 
+            yield self.datastore.insert('hidden_servers', [])
+            servers = []
+
+        servers += ['va_standalone_servers']
+        raise tornado.gen.Return(servers)
+
 
     @tornado.gen.coroutine
     def get_provider_and_driver(self, provider_name):
@@ -66,7 +84,6 @@ class DatastoreHandler(object):
     @tornado.gen.coroutine
     def list_providers(self):
         providers = yield self.datastore.get_recurse('providers/')
-        print ('In list : ', providers)
         raise tornado.gen.Return(providers)
 
     @tornado.gen.coroutine
@@ -106,41 +123,49 @@ class DatastoreHandler(object):
 
     @tornado.gen.coroutine
     def get_users(self, user_type = 'users'):
-        users = yield self.datastore.get(user_type)
+        users = yield self.datastore.get_recurse(user_type + '/')
         users = [x['username'] for x in users]
         raise tornado.gen.Return(users)
 
 
     @tornado.gen.coroutine
-    def add_user_functions(self, user, functions):
-        all_funcs = yield self.datastore.get('users_functions')
+    def update_user(self, user, password):
+        edited_user = yield self.get_object('user', username = user)
 
-        user_funcs = all_funcs.get(user, [])
-        user_funcs += functions
-        
-        all_funcs[user] = user_funcs
-
-        yield self.datastore.insert('users_functions', all_funcs)
+        crypted_pass = crypt(password)
+        edited_user['password'] = crypted_pass
+        yield self.insert_object('user', data = edited_user, username = user) 
 
     @tornado.gen.coroutine
-    def remove_user_functions(self, user, functions):
-        all_funcs = yield seflf.datastore.get('users_functions')
+    def delete_user(self, user):
+        yield self.datastore.delete_user('users/' + user)
 
-        user_funcs = all_funcs.get(user, [])
-        user_funcs = [x for x in user_funcs for y in functions if x.get('func_path') != y.get('func_path', '') or x.get('func_name') != y.get('func_name') ]
+    @tornado.gen.coroutine
+    def set_user_functions(self, user, functions):
+        edited_user = yield self.get_object('user', username = user)
 
-        all_funcs[user] = user_funcs
+        functions = [{"func_path" : x.get('value')} if x.get('value') else x for x in functions]
 
-        yield self.datastore.insert('users_functions', all_funcs)
+        edited_user['functions'] = edited_user
+        yield self.insert_object('user', data = edited_user, username = user) 
 
+
+    @tornado.gen.coroutine
+    def add_user_functions(self, user, functions):
+        edited_user = yield self.get_object('user', username = user)
+        functions += edited_user.get('functions', [])
+
+        yield self.set_user_functions(user, functions)
 
     @tornado.gen.coroutine
     def get_user_functions(self, user, func_type = ''):
-        if not user: 
-            raise tornado.gen.Return([])
-        all_functions = yield self.datastore.get('users_functions')
-        user_funcs = all_functions.get(user, [])
+        edited_user = yield self.get_object('user', username = user)
+        functions = [{"func_path" : x.get('value')} if x.get('value') else x for x in functions]
 
+        user_funcs = edited_user['functions'] 
+
+        #Get all functions from the user groups to return in a single list. 
+        #i.e. instead of [{group_name : group, functions : [{group_func1}, ...]}, func1, func2, ...] we want [group_func1, ..., func1, func2, ...]
         user_group_functions = [x['functions'] for x in user_funcs if x.get('func_type', '') == 'function_group']
 
         user_funcs = [
@@ -148,3 +173,99 @@ class DatastoreHandler(object):
         if x.get('func_type', '') == func_type and x.get('func_path')]
 
         raise tornado.gen.Return(user_funcs)
+
+    @tornado.gen.coroutine
+    def get_user(self, username, user_type = 'user'):
+        try:
+            user = yield self.get_object(user_type, username = username)
+        except: 
+            user = None
+
+        raise tornado.gen.Return(user)
+
+    @tornado.gen.coroutine
+    def find_user(self, username):
+        for user_type in ['user', 'admin']:
+            user = yield self.get_user(username, user_type)
+            if user: 
+                user['user_type'] = user_type
+                raise tornado.gen.Return(user)
+
+    @tornado.gen.coroutine
+    def get_panels(self, user_type):
+        panels = yield self.datastore.get_recurse('panels/' + user_type)
+        raise tornado.gen.Return(panels)
+
+    @tornado.gen.coroutine
+    def store_panel(self, user_type, panel):
+        yield self.store_object(panel_type, data = panel, user_type = user_type, role = panel['role'])
+
+    @tornado.gen.coroutine
+    def get_panel(self, panel_name, user_type = 'user'):
+        panel = yield self.datastore.get_object(panel_type, panel_name = panel_name, user_type = user_type)
+
+        raise tornado.gen.Return(panel)
+
+    @tornado.gen.coroutine
+    def add_panel(self, user_type, panel_name, role):
+        states = yield self.get_states_data()
+        panel_state = [x for x in states if x['name'] == role][0]
+
+        user_panel = yield self.get_panel('user', panel_name)
+        admin_panel = yield self.get_panel('admin', panel_name)
+
+        user_panel['servers'].append(panel_state['panels']['user'])
+        admin_panel['servers'].append(panel_state['panels']['admin'])
+
+        yield self.store_panel('user', user_panel)
+        yield self.store_panel('admin', admin_panel)
+
+    @tornado.gen.coroutine
+    def get_states_data(self, states = []):
+        states_data = []
+        subdirs = glob.glob('/srv/salt/*')
+        for state in subdirs:
+            try:
+                with open(state + '/appinfo.json') as f:
+                    print ('Opening ', state)
+                    states_data.append(json.loads(f.read()))
+            except IOError as e:
+                print (state, ' does not have an appinfo file, skipping. ')
+            except:
+                print ('error with ', state)
+                import traceback
+                traceback.print_exc()
+
+        if states:
+            states_data = [x for x in states_data if x['name'] in states]
+
+        raise tornado.gen.Return(states_data)
+
+
+    @tornado.gen.coroutine
+    def import_states_from_states_data(self, states = []):
+        states_data = yield self.get_states_data(states)
+
+        empty_panel = {'admin' : [], 'user' : []}
+
+        for user_type in ['admin', 'user']: 
+            for state in states_data: 
+                old_panel = yield self.get_panel(panel_name = state['name'])
+                panel = {
+                    'name' : state['name'], 
+                    'icon' : state['icon'], 
+                    'servers' : old_panel['servers'],
+                    'panels' : state.get('panels', empty_panel)[user_type]
+                }
+                yield self.store_panel(panel, user_type)
+
+        raise tornado.gen.Return(states_data)
+
+    @tornado.gen.coroutine
+    def get_user_groups(self):
+        groups = yield self.datastore.get_recurse('user_groups/')
+        raise tornado.gen.Return(groups)
+
+    @tornado.gen.coroutine
+    def create_user_group(self, group_name, functions):
+        yield self.insert_object('user_group', data = {"functions" : functions}, group_name = group_name)

@@ -10,8 +10,8 @@ from login import auth_only, create_user_api
 def get_paths():
     paths = {
         'get' : {
-            'panels' : {'function' : get_panels, 'args' : ['handler']}, 
-            'panels/get_panel' : {'function' : get_panel_for_user, 'args' : ['server_name', 'panel', 'provider', 'handler', 'args', 'dash_user']},
+            'panels' : {'function' : get_panels, 'args' : ['datastore_handler', 'dash_user']}, 
+            'panels/get_panel' : {'function' : get_panel_for_user, 'args' : ['deploy_handler', 'server_name', 'panel', 'provider', 'handler', 'args', 'dash_user']},
             'panels/users' : {'function' : get_users, 'args' : ['users_type']},
             'panels/get_all_functions' : {'function' : get_all_functions, 'args' : ['handler']},
             'panels/get_all_function_groups' : {'function' : get_all_function_groups, 'args' : ['handler']},
@@ -39,19 +39,13 @@ def reset_panels(deploy_handler):
     yield deploy_handler.reset_panels()
 
 @tornado.gen.coroutine
-def new_panel(deploy_handler, panel_name, role):
-    states = yield deploy_handler.get_states_data()
-    panel = {'panel_name' : panel_name, 'role' : role}
-    panel.update([x for x in states if x['name'] == role][0]['panels'])
-    yield deploy_handler.store_panel(panel)
+def new_panel(datastore_handler, panel_name, role):
+    yield datastore_handler.add_panel(panel_name, role)
 
 
 @tornado.gen.coroutine
-def list_panels(deploy_handler, handler): 
-    user_group = yield login.get_user_type(handler)
-
-    panels = yield deploy_handler.datastore.get('panels')
-    panels = panels[user_group]
+def list_panels(datastore_handler, dash_user):
+    panels = yield datastore_handler.get_panels(dash_user['type'])
 
     raise tornado.gen.Return(panels)
 
@@ -163,8 +157,8 @@ def panel_action(deploy_handler, actions_list = [], server_name = '', action = '
 
 
 @tornado.gen.coroutine
-def get_panels(deploy_handler, handler):
-    panels = yield list_panels(deploy_handler, handler)
+def get_panels(datastore_handler, dash_user):
+    panels = yield list_panels(datastore_handler, dash_user)
     raise tornado.gen.Return(panels)
 
 @tornado.gen.coroutine

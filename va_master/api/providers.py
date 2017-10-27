@@ -10,14 +10,14 @@ def get_paths():
     paths = {
         'get' : {
             'providers/reset' : {'function' : reset_providers, 'args' : []},
-            'drivers' : {'function' : list_drivers, 'args' : []},
+            'drivers' : {'function' : list_drivers, 'args' : ['deploy_handler']},
             'providers/get_trigger_functions': {'function' : get_providers_triggers, 'args' : ['provider_name']},
             'providers/get_provider_billing' : {'function' : get_provider_billing, 'args' : ['provider_name']},
-            'providers' : {'function' : list_providers, 'args' : []},
+            'providers' : {'function' : list_providers, 'args' : ['handler']},
 
         },
         'post' : {
-            'providers' : {'function' : list_providers, 'args' : []},
+            'providers' : {'function' : list_providers, 'args' : ['handler']},
             'providers/info' : {'function' : get_provider_info, 'args' : ['handler', 'required_providers', 'get_billing', 'get_servers', 'sort_by_location']},
             'providers/new/validate_fields' : {'function' : validate_new_provider_fields, 'args' : ['handler']},
             'providers/delete' : {'function' : delete_provider, 'args' : ['provider_name']},
@@ -68,14 +68,12 @@ def get_providers_triggers(deploy_handler, provider_name):
     raise tornado.gen.Return(result)
 
 @tornado.gen.coroutine
-def list_providers(deploy_handler):
-    providers = yield deploy_handler.list_providers()
+def list_providers(handler):
+    datastore_handler = handler.datastore_handler
+    deploy_handler = handler.deploy_handler
 
-    try:
-        hidden_servers = yield deploy_handler.datastore.get('hidden_servers')
-    except: 
-        hidden_servers = []
-    hidden_servers += ['va_standalone_servers']
+    providers = yield datastore_handler.list_providers()
+    hidden_servers = yield datastore_handler.get_hidden_servers()
 
     for provider in providers: 
         driver = yield deploy_handler.get_driver_by_id(provider['driver_name'])
@@ -154,13 +152,11 @@ def validate_new_provider_fields(deploy_handler, handler):
 
 
 @tornado.gen.coroutine
-def get_provider_info(deploy_handler, handler, get_billing = True, get_servers = True, required_providers = [], sort_by_location = False):
-    store = deploy_handler.datastore
-    try:
-        hidden_servers = yield store.get('hidden_servers')
-    except: 
-        hidden_servers = []
-    hidden_servers += ['va_standalone_servers']
+def get_provider_info(handler, get_billing = True, get_servers = True, required_providers = [], sort_by_location = False):
+    deploy_handler = handler.deploy_handler
+    datastore_handler = handler.datastore_handler
+
+    hidden_servers = yield datastore_handler.get_hidden_servers()
 
     providers = yield datastore_handler.list_providers()
 

@@ -1,5 +1,6 @@
 from abc import ABCMeta, abstractmethod
 from tornado.httpclient import AsyncHTTPClient, HTTPRequest
+from tornado.httputil import url_concat
 import tornado.gen
 import tornado.ioloop
 import json
@@ -80,10 +81,12 @@ class ConsulStore(DataStore):
             raise StoreError(e)
 
     @tornado.gen.coroutine
-    def get(self, doc_id):
+    def get(self, doc_id, params = {}):
         is_ok = False
         try:
             url = '%s/v1/kv/%s' % (self.path, doc_id)
+            if params: 
+                url = url_concat(url, params)
             resp = yield self.client.fetch(url)
             resp = [x['Value'] for x in json.loads(resp.body)]
             resp = [json.loads(base64.b64decode(x)) for x in resp]
@@ -101,8 +104,7 @@ class ConsulStore(DataStore):
 
     @tornado.gen.coroutine
     def get_recurse(self, doc_id):
-        doc_id += '?recurse=true'
-        result = yield self.get(doc_id)
+        result = yield self.get(doc_id, params = {"recurse" : True})
         raise tornado.gen.Return(result)
 
     @tornado.gen.coroutine
