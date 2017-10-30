@@ -91,7 +91,7 @@ var Home = React.createClass({
                 <span><i className={'fa ' + panel.icon} /> {panel.name} <i className='fa fa-angle-down pull-right' /></span>
             )
             var servers = panel.servers.map(function(server) {
-                var subpanels = panel.panels.admin.map(function(panel) {
+                var subpanels = panel.panels.map(function(panel) {
                     return (
                         <li key={panel.key}><NavLink to={'panel/' + panel.key + '/' + server} activeKey={i}>
                             <span>{panel.name}</span>
