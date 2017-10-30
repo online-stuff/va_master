@@ -53,6 +53,13 @@ class DatastoreHandler(object):
         raise tornado.gen.Return(result)
 
     @tornado.gen.coroutine
+    def delete_object(self, object_type, **handle_data):
+        object_spec = self.spec[object_type]
+        object_handle = object_spec['consul_handle'].format(**handle_data)
+        result = yield self.datastore.delete(object_handle)
+        raise tornado.gen.Return(result)
+
+    @tornado.gen.coroutine
     def get_provider(self, provider_name):
         provider = yield self.get_object('provider', provider_name = provider_name)
         raise tornado.gen.Return(provider)
@@ -92,6 +99,10 @@ class DatastoreHandler(object):
     @tornado.gen.coroutine
     def create_provider(self, field_values):
         yield self.insert_object('provider', data = field_values, provider_name = field_values['provider_name'])
+
+    @tornado.gen.coroutine
+    def delete_provider(self, provider_name):
+        yield self.delete_object('provider', provider_name = provider_name)
 
     @tornado.gen.coroutine
     def add_generic_server(provider_name, base_server):
@@ -192,6 +203,7 @@ class DatastoreHandler(object):
     @tornado.gen.coroutine
     def get_panels(self, user_type):
         panels = yield self.datastore.get_recurse('panels/' + user_type)
+        print ('Panels are : ', panels)
         raise tornado.gen.Return(panels)
 
     @tornado.gen.coroutine
@@ -241,6 +253,15 @@ class DatastoreHandler(object):
 
         raise tornado.gen.Return(states_data)
 
+    @tornado.gen.coroutine
+    def get_state(self, name):
+        states = yield self.get_states_data()
+
+        state = [x for x in states if x['name'] == state] or [None]
+        state = state[0]
+
+        raise tornado.gen.Return(state)
+
 
     @tornado.gen.coroutine
     def import_states_from_states_data(self, states = []):
@@ -269,3 +290,10 @@ class DatastoreHandler(object):
     @tornado.gen.coroutine
     def create_user_group(self, group_name, functions):
         yield self.insert_object('user_group', data = {"functions" : functions}, group_name = group_name)
+
+    @tornado.gen.coroutine
+    def get_user_salt_functions(self, username):
+        user = yield self.find_user(username)
+        salt_functions = [x for x in user['functions'] if x.get('func_type', '') == 'salt']
+
+        raise tornado.gen.Return(salt_functions)

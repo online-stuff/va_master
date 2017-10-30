@@ -175,6 +175,7 @@ class ApiHandler(tornado.web.RequestHandler):
                     raise tornado.gen.Return()
 
             result = yield self.handle_func(api_func, data)
+            print ('Result : ', result)
             yield self.log_message(path = path, data = data, func = api_func['function'], result = result)
 
             self.json(result)
