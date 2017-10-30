@@ -43,6 +43,7 @@ class DatastoreHandler(object):
         #TODO check data to be as designed in the spec
         new_object = data
 
+        print ('Inserting : ', new_object, ' at : ', new_object_handle)
         yield self.datastore.insert(new_object_handle, new_object)
 
     @tornado.gen.coroutine
@@ -98,6 +99,7 @@ class DatastoreHandler(object):
 
     @tornado.gen.coroutine
     def create_provider(self, field_values):
+        print ('Creating provider with : ', field_values)
         yield self.insert_object('provider', data = field_values, provider_name = field_values['provider_name'])
 
     @tornado.gen.coroutine
@@ -168,10 +170,9 @@ class DatastoreHandler(object):
 
     @tornado.gen.coroutine
     def get_user_functions(self, user, func_type = ''):
-        edited_user = yield self.get_object('user', username = user)
-        functions = [{"func_path" : x.get('value')} if x.get('value') else x for x in functions]
+        user = yield self.get_object('user', username = user)
 
-        user_funcs = edited_user['functions'] 
+        user_funcs = user.get('functions', [])
 
         #Get all functions from the user groups to return in a single list. 
         #i.e. instead of [{group_name : group, functions : [{group_func1}, ...]}, func1, func2, ...] we want [group_func1, ..., func1, func2, ...]
@@ -206,14 +207,15 @@ class DatastoreHandler(object):
         raise tornado.gen.Return(panels)
 
     @tornado.gen.coroutine
-    def store_panel(self, user_type, panel, role):
+    def store_panel(self, panel, user_type, name = ''):
+        if not name: name = panel['name']
         panel_type = user_type + '_panel'
-        yield self.insert_object(panel_type, data = panel, role = role)
+        yield self.insert_object(panel_type, data = panel, name = name)
 
     @tornado.gen.coroutine
-    def get_panel(self, role, user_type = 'user'):
+    def get_panel(self, name, user_type = 'user'):
         panel_type = user_type + '_panel'
-        panel = yield self.get_object(panel_type, role = role)
+        panel = yield self.get_object(panel_type, name = name)
 
         raise tornado.gen.Return(panel)
 
@@ -253,24 +255,16 @@ class DatastoreHandler(object):
         raise tornado.gen.Return(states_data)
 
     @tornado.gen.coroutine
-    def get_state(self, name):
-        states = yield self.get_states_data()
-
-        state = [x for x in states if x['name'] == state] or [None]
-        state = state[0]
-
-        raise tornado.gen.Return(state)
-
-
-    @tornado.gen.coroutine
     def import_states_from_states_data(self, states = []):
+        print ('Importing. ')
         states_data = yield self.get_states_data(states)
 
         empty_panel = {'admin' : [], 'user' : []}
 
-        for user_type in ['admin', 'user']: 
-            for state in states_data: 
-                old_panel = yield self.get_panel(panel_name = state['name'])
+        for state in states_data: 
+            for user_type in ['admin', 'user']: 
+ 
+                old_panel = yield self.get_panel(name = state['name'])
                 panel = {
                     'name' : state['name'], 
                     'icon' : state['icon'], 
@@ -278,8 +272,24 @@ class DatastoreHandler(object):
                     'panels' : state.get('panels', empty_panel)[user_type]
                 }
                 yield self.store_panel(panel, user_type)
+            print ('Storing : ', state)
+            yield self.store_state(state)
 
         raise tornado.gen.Return(states_data)
+
+    @tornado.gen.coroutine
+    def get_states(self):
+        states = yield self.datastore.get_recurse('state/')
+        raise tornado.gen.Return(states)
+
+    @tornado.gen.coroutine
+    def store_state(self, state):
+        yield self.insert_object('state', state, name = state['name'])
+
+    @tornado.gen.coroutine
+    def get_state(self, name):
+        state = yield self.get_object('state', name = name)
+        raise tornado.gen.Return(state)
 
     @tornado.gen.coroutine
     def get_user_groups(self):
@@ -288,7 +298,7 @@ class DatastoreHandler(object):
 
     @tornado.gen.coroutine
     def create_user_group(self, group_name, functions):
-        yield self.insert_object('user_group', data = {"functions" : functions}, group_name = group_name)
+        yield self.insert_object('user_group', data = {"func_name" : group_name, "functions" : functions}, group_name = group_name)
 
     @tornado.gen.coroutine
     def get_user_salt_functions(self, username):

@@ -65,6 +65,8 @@ def convert_all():
     old_to_new_datastore('admin_panel', 'panels/admin/{name}', ['name'], get_key = 'admin', special_data_parsing = panel_parsing, special_data_kwargs = {"user_type" : "admin"}, old_key = 'panels')
     old_to_new_datastore('user_panel', 'panels/user/{name}', ['name'], get_key = 'user', special_data_parsing = panel_parsing, special_data_kwargs = {"user_type" : "user"}, old_key = 'panels')
     old_to_new_datastore('user_group', 'user_groups/{group_name}', ['group_name'])
+    old_to_new_datastore('state', 'state/{name}', ['name'], get_key = 'states', old_key = 'init_vals')
+
 
  
 if __name__ == '__main__' : 

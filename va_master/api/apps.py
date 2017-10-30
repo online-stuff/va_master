@@ -24,7 +24,7 @@ def get_paths():
             'apps/get_user_salt_functions' : {'function' : get_user_salt_functions, 'args' : ['dash_user']},
             'apps/get_all_salt_functions' : {'function' : get_all_salt_functions, 'args' : []},
 
-            'states' : {'function' : get_states, 'args' : []},
+            'states' : {'function' : get_states, 'args' : ['datastore_handler']},
             'states/reset' : {'function' : reset_states, 'args' : []},#Just for testing
 
         },
@@ -180,8 +180,8 @@ def manage_states(deploy_handler, name, action = 'append'):
     yield deploy_handler.generate_top_sls()
 
 @tornado.gen.coroutine
-def get_states(deploy_handler):
-    states_data = yield deploy_handler.get_states()
+def get_states(datastore_handler):
+    states_data = yield datastore_handler.get_states()
     raise tornado.gen.Return(states_data)
 
 @tornado.gen.coroutine

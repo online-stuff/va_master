@@ -12,9 +12,9 @@ def get_paths():
         'get' : {
             'panels' : {'function' : get_panels, 'args' : ['handler', 'dash_user']}, 
             'panels/get_panel' : {'function' : get_panel_for_user, 'args' : ['handler', 'server_name', 'panel', 'provider', 'handler', 'args', 'dash_user']},
-            'panels/users' : {'function' : get_users, 'args' : ['users_type']},
+            'panels/users' : {'function' : get_users, 'args' : ['handler', 'users_type']},
             'panels/get_all_functions' : {'function' : get_all_functions, 'args' : ['handler']},
-            'panels/get_all_function_groups' : {'function' : get_all_function_groups, 'args' : ['handler']},
+            'panels/get_all_function_groups' : {'function' : get_all_function_groups, 'args' : ['datastore_handler']},
         },
         'post' : {
             'panels/add_user_functions' : {'function' : add_user_functions, 'args' : ['datastore_handler', 'user', 'functions']},
@@ -195,7 +195,7 @@ def get_users(handler, user_type = 'users'):
     users = yield datastore_handler.get_users(user_type)
     result = []
     for u in users: 
-        u_all_functions = yield datastore_handler.get_all_user_functions(u)
+        u_all_functions = yield datastore_handler.get_user_functions(u)
         print ('u_all_functions are : ', u_all_functions)
         u_groups = [x.get('func_name') for x in u_all_functions if x.get('func_type', '') == 'function_group']
         u_functions = [x.get('func_path') for x in u_all_functions if x.get('func_type', '') == '']
@@ -223,8 +223,8 @@ def get_all_functions(handler):
 
 @tornado.gen.coroutine
 def get_all_function_groups(datastore_handler):
-    groups = yield datastore_handler.get_function_groups()
-    for g in groups: 
+    groups = yield datastore_handler.get_user_groups()
+    for g in groups:
         g['functions'] = [x.get('func_path') for x in g['functions']]
     raise tornado.gen.Return(groups)
 
@@ -248,7 +248,7 @@ def create_user_group(datastore_handler, group_name, functions):
 def create_user_with_group(handler, user, password, user_type, functions = [], groups = []):
     datastore_handler = handler.datastore_handler
     yield create_user_api(handler, user, password, user_type)
-    all_groups = yield datastore_handler.get_function_groups()
+    all_groups = yield datastore_handler.get_user_groups()
     for g in groups: 
         required_group = [x for x in all_groups if x.get('func_name', '') == g]
         functions += required_group

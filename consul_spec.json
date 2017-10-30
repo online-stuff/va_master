@@ -65,6 +65,16 @@
     }, 
     "user_group" : {
         "consul_handle" : "user_groups/{group_name}", 
-        "functions" : []
+        "functions" : [], 
+        "group_name" : ""
+    }, 
+    "state" : {
+        "consul_handle" : "state/{name}", 
+        "name": "", 
+        "description": "", 
+        "module": "",
+        "dependency": "",
+        "version": "", 
+        "path": ""
     }
 }
