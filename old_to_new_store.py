@@ -35,7 +35,7 @@ def old_to_new_datastore(object_name, object_handle_unformatted, object_handle_i
     if not old_key:
         old_key = object_name + 's'
     old_data = datastore_get(old_key, get_key)
-    print old_data
+    print 'Old data is : ', old_data
     for data in old_data:
         handles = {x : data.get(x) for x in object_handle_ids}
         object_handle = object_handle_unformatted.format(**handles)
@@ -43,7 +43,7 @@ def old_to_new_datastore(object_name, object_handle_unformatted, object_handle_i
         if special_data_parsing: 
             data = special_data_parsing(data, **special_data_kwargs)
 
-        print 'Want to insert : ', data, ' in : ', object_handle
+        print 'Want to insert : ', data, ' in : ', object_handle, ' with handles : ', handles
         run_sync(functools.partial(datastore_handler.insert_object, object_name, data = data, handle_data = handles))
 
 def panel_parsing(data, user_type):

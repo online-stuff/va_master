@@ -203,7 +203,6 @@ class DatastoreHandler(object):
     @tornado.gen.coroutine
     def get_panels(self, user_type):
         panels = yield self.datastore.get_recurse('panels/' + user_type)
-        print ('Panels are : ', panels)
         raise tornado.gen.Return(panels)
 
     @tornado.gen.coroutine

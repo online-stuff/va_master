@@ -50,14 +50,14 @@
         "allowed_functions" : []
     }, 
     "admin_panel" : {
-        "consul_handle" : "panels/admin/{role}", 
+        "consul_handle" : "panels/admin/{name}", 
         "name" : "", 
         "icon" : "", 
         "servers" : [], 
         "panels" : []
     }, 
     "user_panel" : {
-        "consul_handle" : "panels/user/{role}", 
+        "consul_handle" : "panels/user/{name}", 
         "name" : "", 
         "icon" : "", 
         "servers" : [], 
