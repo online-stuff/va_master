@@ -174,7 +174,9 @@ var Groups = React.createClass({
     getInitialState: function () {
         return {
             groups: Object.assign([], this.props.groups),
-            modal_open: false
+            modal_open: false,
+            update: false,
+            selected_group: {}
         }
     },
 
@@ -202,24 +204,64 @@ var Groups = React.createClass({
         this.setState({modal_open: false, groups: groups});
     },
 
+    updateGroup: function(index, data) {
+        var groups = Object.assign([], this.state.groups);
+        if(data.functions.length > 0 && typeof data.functions[0] === 'object'){
+            data.functions = data.functions.map(function(f){
+                return f.value;
+            });
+        }
+        groups[index] = data;
+        this.setState({modal_open: false, groups: groups});
+    },
+
     closeModal: function() {
         this.setState({modal_open: false});
     },
 
+    btn_clicked: function(index, evtKey){
+        var groups = Object.assign([], this.state.groups);
+        var group = groups[index];
+        if(evtKey === "remove"){
+            var data = {group_name: group.func_name}, me = this;
+            Network.post('/api/panels/delete_group', this.props.auth.token, data).done(function(d) {
+                groups.splice(index, 1);
+                me.setState({groups: groups});
+            }).fail(function (msg) {
+                me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
+            });
+        }else{
+            this.setState({modal_open: true, update: index, selected_group: group});
+        }
+    },
+
     render: function () {
-        var group_rows = this.state.groups.map(function(group) {
+        var group_rows = this.state.groups.map(function(group, index) {
             var funcs = group.functions.join(', ');
             return (
                 <Reactable.Tr key={group.func_name}>
                     <Reactable.Td column="Group name">{group.func_name}</Reactable.Td>
                     <Reactable.Td column="Functions">{funcs}</Reactable.Td>
+                    <Reactable.Td column="Actions">
+                        <Bootstrap.DropdownButton bsStyle='primary' title="Choose" onSelect = {this.btn_clicked.bind(null, index)}>
+                            <Bootstrap.MenuItem eventKey="remove">Remove</Bootstrap.MenuItem>
+                            <Bootstrap.MenuItem eventKey="update">Update</Bootstrap.MenuItem>
+                        </Bootstrap.DropdownButton>
+                    </Reactable.Td>
                 </Reactable.Tr>
             );
-        });
+        }, this);
 
         var ModalRedux = connect(function(state){
             return {auth: state.auth, alert: state.alert};
         })(Modal);
+
+        var modal;
+        if(typeof this.state.update === "number"){
+            modal = <ModalRedux type = {4} isOpen = {this.state.modal_open} update = {this.updateGroup} index = {this.state.update} selected_group = {this.state.selected_group} close = {this.closeModal} funcs = {this.props.funcs} />
+        }else{
+            modal = <ModalRedux type = {2} isOpen = {this.state.modal_open} add = {this.addGroup} close = {this.closeModal} funcs = {this.props.funcs} />
+        }
 
         return (
             <div style={{position: 'relative'}}>
@@ -228,8 +270,8 @@ var Groups = React.createClass({
                     <Bootstrap.Glyphicon glyph='plus' />
                     Add group
                 </Bootstrap.Button>
-                <ModalRedux type = {2} isOpen = {this.state.modal_open} add = {this.addGroup} close = {this.closeModal} funcs = {this.props.funcs} />
-                <Reactable.Table className="table striped" columns={['Group name', 'Functions']} itemsPerPage={10} pageButtonLimit={10} noDataText="No matching records found." sortable={true} filterable={['Group name', 'Functions']}>
+                {modal}
+                <Reactable.Table className="table striped" columns={['Group name', 'Functions', 'Actions']} itemsPerPage={10} pageButtonLimit={10} noDataText="No matching records found." sortable={true} filterable={['Group name', 'Functions', 'Actions']}>
                     {group_rows}
                 </Reactable.Table>
             </div>
@@ -245,11 +287,16 @@ var Modal = React.createClass({
             value: null,
             group: null
         };
-        if(this.props.type === 3){
+        var type = this.props.type;
+        if(type === 3){
             var user = this.props.selected_user;
             data.value = user.functions;
             data.group = user.groups;
             data.user = user.user;
+        }else if(type === 4){
+            var group = this.props.selected_group;
+            data.value = group.functions;
+            data.group = group.func_name;
         }
         return data;
     },
@@ -266,11 +313,9 @@ var Modal = React.createClass({
         if(type == 1 || type == 3){
             url =(type == 1) ? "/api/panels/create_user_with_group" : "/api/panels/update_user";
             var funcs = Object.assign([], this.state.value);
-            if(funcs.length > 0){
-                if(typeof funcs[0] === 'object'){
-                    for(var i=0; i<funcs.length; i++){
-                        funcs[i].group = funcs[i].group.label;
-                    }
+            if(funcs.length > 0 && typeof funcs[0] === 'object'){
+                for(var i=0; i<funcs.length; i++){
+                    funcs[i].group = funcs[i].group.label;
                 }
             }
             data["functions"] = funcs;
@@ -287,8 +332,10 @@ var Modal = React.createClass({
             data["groups"] = g_arr;
         }else{
             var funcs = Object.assign([], this.state.value);
-            for(var i=0; i<funcs.length; i++){
-                funcs[i].group = funcs[i].group.label;
+            if(funcs.length > 0 && typeof funcs[0] === 'object'){
+                for(var i=0; i<funcs.length; i++){
+                    funcs[i].group = funcs[i].group.label;
+                }
             }
             data["functions"] = funcs;
         }
@@ -343,13 +390,21 @@ var Modal = React.createClass({
                     <Select name="functions" options={this.props.funcs} multi={true} placeholder="Select functions" value={this.state.value} onChange={this.onChange} />
                 </div>
             );
-        }else{
+        }else if(type === 3){
             var title="Update user", btn_text = "Update user", help_text = "Fill the form to update the user";
             form = (
                 <div>
                     <Bootstrap.FormControl type='text' name="user" value={this.state.user} disabled={true} />
                     <Bootstrap.FormControl type='password' name="password" placeholder="Password" />
                     <Select name="groups" options={this.props.groups} multi={true} placeholder="Select groups" value={this.state.group} onChange={this.onChangeGroup} />
+                    <Select name="functions" options={this.props.funcs} multi={true} placeholder="Select functions" value={this.state.value} onChange={this.onChange} />
+                </div>
+            );
+        }else{
+            var title="Update group", btn_text = "Update group", help_text = "Fill the form to update the group";
+            form = (
+                <div>
+                    <Bootstrap.FormControl type='text' name="group_name" value={this.state.group} />
                     <Select name="functions" options={this.props.funcs} multi={true} placeholder="Select functions" value={this.state.value} onChange={this.onChange} />
                 </div>
             );
