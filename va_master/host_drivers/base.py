@@ -361,6 +361,7 @@ class DriverBase(object):
             self.field_values['location'] = field_values.get('location', 'va_master')                
 
 
+
             options.update({
                     'network': self.field_values['networks'],
                     'sec_group': self.field_values['sec_groups'],
