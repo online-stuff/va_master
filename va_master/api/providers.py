@@ -10,74 +10,85 @@ def get_paths():
     paths = {
         'get' : {
             'providers/reset' : {'function' : reset_providers, 'args' : []},
-            'drivers' : {'function' : list_drivers, 'args' : []},
+            'drivers' : {'function' : list_drivers, 'args' : ['deploy_handler']},
             'providers/get_trigger_functions': {'function' : get_providers_triggers, 'args' : ['provider_name']},
             'providers/get_provider_billing' : {'function' : get_provider_billing, 'args' : ['provider_name']},
-            'providers' : {'function' : list_providers, 'args' : []},
+            'providers' : {'function' : list_providers, 'args' : ['handler']},
 
         },
         'post' : {
-            'providers' : {'function' : list_providers, 'args' : []},
-            'providers/info' : {'function' : get_provider_info, 'args' : ['handler', 'required_providers', 'get_billing', 'get_servers', 'sort_by_location']},
+            'providers' : {'function' : list_providers, 'args' : ['handler']},
+            'providers/info' : {'function' : get_provider_info, 'args' : ['handler', 'dash_user', 'required_providers', 'get_billing', 'get_servers', 'sort_by_location']},
             'providers/new/validate_fields' : {'function' : validate_new_provider_fields, 'args' : ['handler']},
-            'providers/delete' : {'function' : delete_provider, 'args' : ['provider_name']},
-            'providers/add_provider' : {'function' : add_provider, 'args' : ['field_values', 'driver_name']},
-            'providers/generic_add_server' : {'function' : add_generic_server, 'args' : ['provider_name', 'server']},
+            'providers/delete' : {'function' : delete_provider, 'args' : ['datastore_handler', 'provider_name']},
+            'providers/add_provider' : {'function' : add_provider, 'args' : ['datastore_handler', 'field_values', 'driver_name']},
+            'providers/generic_add_server' : {'function' : add_generic_server, 'args' : ['datastore_handler', 'provider_name', 'server']},
         }
     }
     return paths
 
 
 @tornado.gen.coroutine
-def add_provider(deploy_handler, field_values, driver_name):
+def get_provider_and_driver(handler, provider_name = 'va_standalone_servers'):
+    provider = yield handler.datastore_handler.get_provider(provider_name = provider_name)
+    driver = yield handler.deploy_handler.get_driver_by_id(provider['driver_id'])
+
+    raise tornado.gen.Return((provider, driver))
+
+@tornado.gen.coroutine
+def add_provider(datastore_handler, field_values, driver_name):
     provider_field_values = {"username": "user", "sizes": [], "images": [], "provider_name": "sample_provider", "servers": [], "driver_name": "generic_driver", "defaults": {}, "sec_groups": [], "password": "pass", "ip_address": "127.0.0.1", "networks": []}
     provider_field_values.update(field_values)
 
-    driver = yield deploy_handler.get_driver_by_id(driver_name)
-    driver.field_values = provider_field_values
+#    driver = yield deploy_handler.get_driver_by_id(driver_name)
+#    driver.field_values = provider_field_values
 
-    yield deploy_handler.create_provider(driver)
-    if provider_field_values['driver_name'] == 'generic_driver' : 
-        deploy_handler.datastore.insert(provider_field_values['provider_name'], {"servers" : []})
+    yield datastore_handler.create_provider(provider_field_values)
+#    if provider_field_values['driver_name'] == 'generic_driver' : 
+#        deploy_handler.datastore.insert(provider_field_values['provider_name'], {"servers" : []})
 
 
     raise tornado.gen.Return(True)
 
 
 @tornado.gen.coroutine
-def add_generic_server(deploy_handler, provider_name, server):
+def add_generic_server(datastore_handler, provider_name, server):
     base_server = {"hostname" : "", "ip" : "", "local_gb" : 0, "memory_mb" : 0, "status" : "n/a" }
     base_server.update(server)
 
-    servers = yield deploy_handler.datastore.get(provider_name)
-    servers['servers'].append(base_server)
-    yield deploy_handler.datastore.insert(provider_name, servers)
+    yield datastore_handler.add_generic_server(provider_name, base_server)
+
+#    servers = yield deploy_handler.datastore.get(provider_name)
+#    servers['servers'].append(base_server)
+#    yield deploy_handler.datastore.insert(provider_name, servers)
 
 @tornado.gen.coroutine
-def get_provider_billing(deploy_handler):
-    provider, driver = yield deploy_handler.get_provider_and_driver(provider_name)
+def get_provider_billing(handler, provider_name):
+    provider, driver = yield get_provider_and_driver(handler, provider_name)
     result = yield driver.get_provider_billing(provider)
     raise tornado.gen.Return(result)
 
 @tornado.gen.coroutine
-def get_providers_triggers(deploy_handler, provider_name):
-    provider, driver = yield deploy_handler.get_provider_and_driver(provider_name)
+def get_providers_triggers(handler, provider_name):
+    provider, driver = yield get_provider_and_driver(handler, provider_name)
     result = yield driver.get_driver_trigger_functions()
     raise tornado.gen.Return(result)
 
 @tornado.gen.coroutine
-def list_providers(deploy_handler):
-    providers = yield deploy_handler.list_providers()
+def list_providers(handler):
+    datastore_handler = handler.datastore_handler
+    deploy_handler = handler.deploy_handler
 
-    try:
-        hidden_servers = yield deploy_handler.datastore.get('hidden_servers')
-    except: 
-        hidden_servers = []
-    hidden_servers += ['va_standalone_servers']
+    providers = yield datastore_handler.list_providers()
+    hidden_servers = yield datastore_handler.get_hidden_servers()
 
     for provider in providers: 
         driver = yield deploy_handler.get_driver_by_id(provider['driver_name'])
         provider['servers'] = yield driver.get_servers(provider)
+        
+        provider_status = yield driver.get_provider_status(provider)
+        provider['status'] = provider_status
+
         if hidden_servers: 
             provider['servers'] = [x for x in provider['servers'] if x['hostname'] not in hidden_servers]
 
@@ -92,11 +103,8 @@ def reset_providers(deploy_handler):
 
 
 @tornado.gen.coroutine
-def delete_provider(deploy_handler, provider_name):
-    providers = yield deploy_handler.datastore.get('providers')
-    providers = [x for x in providers if not x['provider_name'] == provider_name]
-    yield deploy_handler.datastore.insert('providers', providers)
-
+def delete_provider(datastore_handler, provider_name):
+    yield datastore_handler.delete_provider(provider_name)
 
 @tornado.gen.coroutine
 def list_drivers(deploy_handler):
@@ -112,7 +120,9 @@ def list_drivers(deploy_handler):
     raise tornado.gen.Return(out)
 
 @tornado.gen.coroutine
-def validate_new_provider_fields(deploy_handler, handler):
+def validate_new_provider_fields(handler):
+    deploy_handler = handler.deploy_handler
+    datastore_handler = handler.datastore_handler
     ok = True
     try:
         body = json.loads(handler.request.body)
@@ -139,7 +149,8 @@ def validate_new_provider_fields(deploy_handler, handler):
             if step_index < 0 or driver_steps[step_index].validate(field_values):
                 result = yield found_driver.validate_field_values(step_index, field_values)
                 if result.new_step_index == -1:
-                    deploy_handler.create_provider(found_driver)
+                    print ('Creating ', found_driver, ' with ', datastore_handler)
+                    datastore_handler.create_provider(found_driver.field_values)
                 raise tornado.gen.Return(result.serialize())
             else:
                 result = {
@@ -152,15 +163,13 @@ def validate_new_provider_fields(deploy_handler, handler):
 
 
 @tornado.gen.coroutine
-def get_provider_info(deploy_handler, handler, get_billing = True, get_servers = True, required_providers = [], sort_by_location = False):
-    store = deploy_handler.datastore
-    try:
-        hidden_servers = yield store.get('hidden_servers')
-    except: 
-        hidden_servers = []
-    hidden_servers += ['va_standalone_servers']
+def get_provider_info(handler, dash_user, get_billing = True, get_servers = True, required_providers = [], sort_by_location = False):
+    deploy_handler = handler.deploy_handler
+    datastore_handler = handler.datastore_handler
 
-    providers = yield deploy_handler.list_providers()
+    hidden_servers = yield datastore_handler.get_hidden_servers()
+
+    providers = yield datastore_handler.list_providers()
 
     if required_providers: 
         providers = [provider for provider in providers if provider['provider_name'] in required_providers]
@@ -169,7 +178,7 @@ def get_provider_info(deploy_handler, handler, get_billing = True, get_servers =
     providers_data = [x[0].get_provider_data(provider = x[1], get_servers = get_servers, get_billing = get_billing) for x in zip(provider_drivers, providers)]
     providers_info = yield providers_data
     
-    states = yield panels.get_panels(deploy_handler, handler)
+    states = yield panels.get_panels(handler, dash_user)
 
     for provider in providers_info:
         if hidden_servers: 

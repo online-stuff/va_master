@@ -20,10 +20,11 @@ def get_paths():
             'apps/vpn_status' : {'function' : get_openvpn_status, 'args' : []},
             'apps/add_app' : {'function' : add_app, 'args' : ['provider', 'server_name']},
             'apps/get_actions' : {'function' : get_user_actions, 'args' : []},
+
             'apps/get_user_salt_functions' : {'function' : get_user_salt_functions, 'args' : ['dash_user']},
             'apps/get_all_salt_functions' : {'function' : get_all_salt_functions, 'args' : []},
 
-            'states' : {'function' : get_states, 'args' : []},
+            'states' : {'function' : get_states, 'args' : ['datastore_handler']},
             'states/reset' : {'function' : reset_states, 'args' : []},#Just for testing
 
         },
@@ -36,9 +37,33 @@ def get_paths():
             'apps/revoke_vpn_user': {'function' : revoke_openvpn_user, 'args' : ['username']},
             'apps/list_user_logins': {'function' : list_user_logins, 'args' : ['username']},
             'apps/download_vpn_cert': {'function' : download_vpn_cert, 'args' : ['username', 'handler']},
+            'apps/datastore_tester' : {'function' : test_datastore, 'args' : ['datastore_handler', 'func', 'kwargs']},
+            'apps/datastore_converter' : {'function' : old_to_new_datastore, 'args' : ['datastore_handler', 'object_name', 'object_handle_unformatted', 'object_handle_ids']},
         }
     }
     return paths
+
+
+#TODO just for testing - will remove when I know it works
+@tornado.gen.coroutine
+def test_datastore(datastore_handler, func, kwargs = {}):
+    result = yield getattr(datastore_handler, func)(**kwargs)
+    print ('Result : ', result)
+    raise tornado.gen.Return(result)
+
+
+@tornado.gen.coroutine
+def old_to_new_datastore(deploy_handler, datastore_handler, object_name, object_handle_unformatted, object_handle_ids = []):
+    old_data = yield deploy_handler.datastore.get(object_name)
+
+    for data in old_data: 
+        handles = {x : data.get(x) for x in object_handle_ids}
+        object_handle = object_handle_unformatted.format(**handles)
+
+        yield datastore_handler.insert_object(object_name[:-1], data = data, handle_data = handles)
+#        print ('Want to save : ', data, ' in handle : ', object_handle)
+#        yield datastore_handler.create_provider(data)
+    
 
 def bytes_to_readable(num, suffix='B'):
     """Converts bytes integer to human readable"""
@@ -51,12 +76,12 @@ def bytes_to_readable(num, suffix='B'):
     return "%.1f%s%s" % (num, 'Yi', suffix)
 
 @tornado.gen.coroutine
-def add_app(deploy_handler, provider, server_name):
-    app = yield get_app_info(deploy_handler, server_name)
+def add_app(provider, server_name):
+    app = yield get_app_info(server_name)
     yield handler.config.deploy_handler.store_app(app, provider)
 
 @tornado.gen.coroutine
-def get_openvpn_users(deploy_handler):
+def get_openvpn_users():
     """Gets openvpn users and current status. Then merges users to find currently active ones and their usage data. """
 
     salt_caller = Caller()
@@ -84,7 +109,7 @@ def get_openvpn_users(deploy_handler):
     raise tornado.gen.Return(users)
 
 @tornado.gen.coroutine
-def get_openvpn_status(deploy_handler):
+def get_openvpn_status():
     """Just gets the openvpn status information, which lists the current clients. """
 
     cl = Caller()
@@ -92,7 +117,7 @@ def get_openvpn_status(deploy_handler):
     raise tornado.gen.Return(status)
 
 @tornado.gen.coroutine
-def add_openvpn_user(deploy_handler, username):
+def add_openvpn_user(username):
     """Creates a new openvpn user. """
 
     cl = Caller()
@@ -100,13 +125,13 @@ def add_openvpn_user(deploy_handler, username):
     raise tornado.gen.Return(success)
 
 @tornado.gen.coroutine
-def revoke_openvpn_user(deploy_handler, username):
+def revoke_openvpn_user(username):
     cl = Caller()
     success = cl.cmd('openvpn.revoke_user', username = username)
     raise tornado.gen.Return(success)   
 
 @tornado.gen.coroutine
-def list_user_logins(deploy_handler, username): 
+def list_user_logins(username): 
     """Provides a list of previous openvpn logins. """
 
     cl = Caller()
@@ -114,7 +139,7 @@ def list_user_logins(deploy_handler, username):
     raise tornado.gen.Return(success)
 
 @tornado.gen.coroutine
-def download_vpn_cert(deploy_handler, username, handler):
+def download_vpn_cert(username, handler):
     """Downloads the vpn certificate for the required user. Works by copying the file to /tmp/{username}_vpn.cert and then serving it through Tornado. """
 
     cl = Caller()
@@ -129,10 +154,10 @@ def download_vpn_cert(deploy_handler, username, handler):
 
 
 @tornado.gen.coroutine
-def perform_server_action(deploy_handler, provider_name, action, server_name): 
+def perform_server_action(datastore_handler, provider_name, action, server_name): 
     """Calls required action on the server through the driver. """
 
-    provider, driver = yield deploy_handler.get_provider_and_driver(provider_name) 
+    provider, driver = yield datastore_handler.get_provider_and_driver(provider_name) 
     success = yield driver.server_action(provider, server_name, action)
     raise tornado.gen.Return(success)
 
@@ -155,8 +180,8 @@ def manage_states(deploy_handler, name, action = 'append'):
     yield deploy_handler.generate_top_sls()
 
 @tornado.gen.coroutine
-def get_states(deploy_handler):
-    states_data = yield deploy_handler.get_states()
+def get_states(datastore_handler):
+    states_data = yield datastore_handler.get_states()
     raise tornado.gen.Return(states_data)
 
 @tornado.gen.coroutine
@@ -229,7 +254,7 @@ def validate_app_fields(deploy_handler, handler):
 
 
 @tornado.gen.coroutine
-def get_app_info(deploy_handler, server_name):
+def get_app_info(server_name):
     """Gets mine inventory for the provided instance. """
 
     cl = Caller()
@@ -338,7 +363,7 @@ def add_user_salt_functions(deploy_handler, dash_user, functions):
     yield deploy_handler.add_user_salt_functions(dash_user['username'], functions)
 
 @tornado.gen.coroutine
-def set_settings(deploy_handler, settings):
+def set_settings(settings):
     pillar_file = '/srv/pillar/nekoj.sls'
     with open(pillar_file, 'r') as f:
         a = yaml.load(f.read())
@@ -347,4 +372,5 @@ def set_settings(deploy_handler, settings):
 
     with open(pillar_file, 'w') as f:
         f.write(yaml.dump(a, default_flow_style=False))
+
 
