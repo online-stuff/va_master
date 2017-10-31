@@ -149,7 +149,6 @@ def validate_new_provider_fields(handler):
             if step_index < 0 or driver_steps[step_index].validate(field_values):
                 result = yield found_driver.validate_field_values(step_index, field_values)
                 if result.new_step_index == -1:
-                    print ('Creating ', found_driver, ' with ', datastore_handler)
                     datastore_handler.create_provider(found_driver.field_values)
                 raise tornado.gen.Return(result.serialize())
             else:

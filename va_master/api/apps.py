@@ -164,10 +164,13 @@ def perform_server_action(datastore_handler, provider_name, action, server_name)
 
 #TODO make all state inserts to save to key "states" instead of init_vas : "states". 
 @tornado.gen.coroutine
-def manage_states(deploy_handler, name, action = 'append'):
+def manage_states(handler, name, action = 'append'):
     """Deletes or inserts a state based on the action argument. """
 
-    current_states = yield deploy_handler.get_states()
+    deploy_handler = handler.deploy_handler
+    datastore_handler = handler.datastore_handler
+
+    current_states = yield get_states(datastore_handler)
 
     #TODO delete from /srv/salt
     getattr(current_states, action)(name)
