@@ -303,6 +303,6 @@ class DatastoreHandler(object):
     @tornado.gen.coroutine
     def get_user_salt_functions(self, username):
         user = yield self.find_user(username)
-        salt_functions = [x for x in user['functions'] if x.get('func_type', '') == 'salt']
+        salt_functions = [x for x in user.get('functions', []) if x.get('func_type', '') == 'salt']
 
         raise tornado.gen.Return(salt_functions)

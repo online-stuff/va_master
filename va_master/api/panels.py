@@ -168,13 +168,15 @@ def get_panels(handler, dash_user):
 @tornado.gen.coroutine
 def get_panel_for_user(handler, panel, server_name, dash_user, args = [], provider = None, kwargs = {}):
 
-    user_panels = yield list_panels(handler, dash_user)
+    user_panels = yield list_panels(handler.datastore_handler, dash_user)
     server_info = yield apps.get_app_info(server_name)
     state = server_info['role']
 
-    #This is usually for get requests. Any arguments in the url that are not arguments of this function are assumed to be keyword arguments for salt. 
+    #This is usually for get requests. Any arguments in the url that are not arguments of this function are assumed to be keyword arguments for salt.
+    #TODO Also this is pretty shabby, and I need to find a better way to make GET salt requests work. 
     if not args: 
-        kwargs = {x : handler.data[x] for x in handler.data if x not in ['handler', 'panel', 'instance_name', 'dash_user', 'method', 'server_name', 'path']}
+        ignored_kwargs = ['datastore', 'handler', 'datastore_handler', 'deploy_handler', 'panel', 'instance_name', 'dash_user', 'method', 'server_name', 'path']
+        kwargs = {x : handler.data[x] for x in handler.data if x not in ignored_kwargs}
     else: 
         kwargs = {}
 
