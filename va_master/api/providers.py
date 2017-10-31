@@ -85,6 +85,10 @@ def list_providers(handler):
     for provider in providers: 
         driver = yield deploy_handler.get_driver_by_id(provider['driver_name'])
         provider['servers'] = yield driver.get_servers(provider)
+        
+        provider_status = yield driver.get_provider_status(provider)
+        provider['status'] = provider_status
+
         if hidden_servers: 
             provider['servers'] = [x for x in provider['servers'] if x['hostname'] not in hidden_servers]
 
@@ -119,7 +123,6 @@ def list_drivers(deploy_handler):
 def validate_new_provider_fields(handler):
     deploy_handler = handler.deploy_handler
     datastore_handler = handler.datastore_handler
-
     ok = True
     try:
         body = json.loads(handler.request.body)
@@ -146,7 +149,7 @@ def validate_new_provider_fields(handler):
             if step_index < 0 or driver_steps[step_index].validate(field_values):
                 result = yield found_driver.validate_field_values(step_index, field_values)
                 if result.new_step_index == -1:
-                    yield datastore_handler.create_provider(found_driver)
+                    datastore_handler.create_provider(found_driver.field_values)
                 raise tornado.gen.Return(result.serialize())
             else:
                 result = {

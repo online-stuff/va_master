@@ -12,9 +12,9 @@ def get_paths():
         'get' : {
             'panels' : {'function' : get_panels, 'args' : ['handler', 'dash_user']}, 
             'panels/get_panel' : {'function' : get_panel_for_user, 'args' : ['handler', 'server_name', 'panel', 'provider', 'handler', 'args', 'dash_user']},
-            'panels/users' : {'function' : get_users, 'args' : ['users_type']},
+            'panels/users' : {'function' : get_users, 'args' : ['handler', 'users_type']},
             'panels/get_all_functions' : {'function' : get_all_functions, 'args' : ['handler']},
-            'panels/get_all_function_groups' : {'function' : get_all_function_groups, 'args' : ['handler']},
+            'panels/get_all_function_groups' : {'function' : get_all_function_groups, 'args' : ['datastore_handler']},
         },
         'post' : {
             'panels/add_user_functions' : {'function' : add_user_functions, 'args' : ['datastore_handler', 'user', 'functions']},
@@ -26,7 +26,7 @@ def get_paths():
             'panels/get_panel' : {'function' : get_panel_for_user, 'args' : ['server_name', 'panel', 'provider', 'handler', 'args', 'dash_user']},
             'panels/reset_panels': {'function' : reset_panels, 'args' : []}, #JUST FOR TESTING
             'panels/new_panel' : {'function' : new_panel, 'args' : ['datastore_handler', 'panel_name', 'role']},
-            'panels/action' : {'function' : panel_action, 'args' : ['server_name', 'action', 'args', 'kwargs', 'module', 'dash_user']}, #must have server_name and action in data, 'args' : []}, ex: panels/action server_name=nino_dir action=list_users
+            'panels/action' : {'function' : panel_action, 'args' : ['handler', 'server_name', 'action', 'args', 'kwargs', 'module', 'dash_user']}, #must have server_name and action in data, 'args' : []}, ex: panels/action server_name=nino_dir action=list_users
             'panels/chart_data' : {'function' : get_chart_data, 'args' : ['server_name', 'args']},
             'panels/serve_file' : {'function' : salt_serve_file, 'args' : ['handler', 'server_name', 'action', 'args', 'kwargs', 'module']},
             'panels/serve_file_from_url' : {'function' : url_serve_file, 'args' : ['handler', 'server_name', 'url_function', 'module', 'args', 'kwargs']},
@@ -168,13 +168,15 @@ def get_panels(handler, dash_user):
 @tornado.gen.coroutine
 def get_panel_for_user(handler, panel, server_name, dash_user, args = [], provider = None, kwargs = {}):
 
-    user_panels = yield list_panels(handler, dash_user)
+    user_panels = yield list_panels(handler.datastore_handler, dash_user)
     server_info = yield apps.get_app_info(server_name)
     state = server_info['role']
 
-    #This is usually for get requests. Any arguments in the url that are not arguments of this function are assumed to be keyword arguments for salt. 
+    #This is usually for get requests. Any arguments in the url that are not arguments of this function are assumed to be keyword arguments for salt.
+    #TODO Also this is pretty shabby, and I need to find a better way to make GET salt requests work. 
     if not args: 
-        kwargs = {x : handler.data[x] for x in handler.data if x not in ['handler', 'panel', 'instance_name', 'dash_user', 'method', 'server_name', 'path']}
+        ignored_kwargs = ['datastore', 'handler', 'datastore_handler', 'deploy_handler', 'panel', 'instance_name', 'dash_user', 'method', 'server_name', 'path']
+        kwargs = {x : handler.data[x] for x in handler.data if x not in ignored_kwargs}
     else: 
         kwargs = {}
 
@@ -195,7 +197,7 @@ def get_users(handler, user_type = 'users'):
     users = yield datastore_handler.get_users(user_type)
     result = []
     for u in users: 
-        u_all_functions = yield datastore_handler.get_all_user_functions(u)
+        u_all_functions = yield datastore_handler.get_user_functions(u)
         print ('u_all_functions are : ', u_all_functions)
         u_groups = [x.get('func_name') for x in u_all_functions if x.get('func_type', '') == 'function_group']
         u_functions = [x.get('func_path') for x in u_all_functions if x.get('func_type', '') == '']
@@ -223,8 +225,8 @@ def get_all_functions(handler):
 
 @tornado.gen.coroutine
 def get_all_function_groups(datastore_handler):
-    groups = yield datastore_handler.get_function_groups()
-    for g in groups: 
+    groups = yield datastore_handler.get_user_groups()
+    for g in groups:
         g['functions'] = [x.get('func_path') for x in g['functions']]
     raise tornado.gen.Return(groups)
 
@@ -248,7 +250,7 @@ def create_user_group(datastore_handler, group_name, functions):
 def create_user_with_group(handler, user, password, user_type, functions = [], groups = []):
     datastore_handler = handler.datastore_handler
     yield create_user_api(handler, user, password, user_type)
-    all_groups = yield datastore_handler.get_function_groups()
+    all_groups = yield datastore_handler.get_user_groups()
     for g in groups: 
         required_group = [x for x in all_groups if x.get('func_name', '') == g]
         functions += required_group

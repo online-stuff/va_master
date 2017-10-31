@@ -50,14 +50,14 @@
         "allowed_functions" : []
     }, 
     "admin_panel" : {
-        "consul_handle" : "panels/admin/{role}", 
+        "consul_handle" : "panels/admin/{name}", 
         "name" : "", 
         "icon" : "", 
         "servers" : [], 
         "panels" : []
     }, 
     "user_panel" : {
-        "consul_handle" : "panels/user/{role}", 
+        "consul_handle" : "panels/user/{name}", 
         "name" : "", 
         "icon" : "", 
         "servers" : [], 
@@ -65,6 +65,16 @@
     }, 
     "user_group" : {
         "consul_handle" : "user_groups/{group_name}", 
-        "functions" : []
+        "functions" : [], 
+        "group_name" : ""
+    }, 
+    "state" : {
+        "consul_handle" : "state/{name}", 
+        "name": "", 
+        "description": "", 
+        "module": "",
+        "dependency": "",
+        "version": "", 
+        "path": ""
     }
 }
