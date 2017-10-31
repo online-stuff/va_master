@@ -24,7 +24,7 @@ def get_paths():
             'apps/get_user_salt_functions' : {'function' : get_user_salt_functions, 'args' : ['dash_user']},
             'apps/get_all_salt_functions' : {'function' : get_all_salt_functions, 'args' : []},
 
-            'states' : {'function' : get_states, 'args' : []},
+            'states' : {'function' : get_states, 'args' : ['datastore_handler']},
             'states/reset' : {'function' : reset_states, 'args' : []},#Just for testing
 
         },
@@ -164,10 +164,13 @@ def perform_server_action(datastore_handler, provider_name, action, server_name)
 
 #TODO make all state inserts to save to key "states" instead of init_vas : "states". 
 @tornado.gen.coroutine
-def manage_states(deploy_handler, name, action = 'append'):
+def manage_states(handler, name, action = 'append'):
     """Deletes or inserts a state based on the action argument. """
 
-    current_states = yield deploy_handler.get_states()
+    deploy_handler = handler.deploy_handler
+    datastore_handler = handler.datastore_handler
+
+    current_states = yield get_states(datastore_handler)
 
     #TODO delete from /srv/salt
     getattr(current_states, action)(name)
@@ -180,8 +183,8 @@ def manage_states(deploy_handler, name, action = 'append'):
     yield deploy_handler.generate_top_sls()
 
 @tornado.gen.coroutine
-def get_states(deploy_handler):
-    states_data = yield deploy_handler.get_states()
+def get_states(datastore_handler):
+    states_data = yield datastore_handler.get_states()
     raise tornado.gen.Return(states_data)
 
 @tornado.gen.coroutine

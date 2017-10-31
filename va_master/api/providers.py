@@ -20,7 +20,7 @@ def get_paths():
             'providers' : {'function' : list_providers, 'args' : ['handler']},
             'providers/info' : {'function' : get_provider_info, 'args' : ['handler', 'dash_user', 'required_providers', 'get_billing', 'get_servers', 'sort_by_location']},
             'providers/new/validate_fields' : {'function' : validate_new_provider_fields, 'args' : ['handler']},
-            'providers/delete' : {'function' : delete_provider, 'args' : ['provider_name']},
+            'providers/delete' : {'function' : delete_provider, 'args' : ['datastore_handler', 'provider_name']},
             'providers/add_provider' : {'function' : add_provider, 'args' : ['datastore_handler', 'field_values', 'driver_name']},
             'providers/generic_add_server' : {'function' : add_generic_server, 'args' : ['datastore_handler', 'provider_name', 'server']},
         }
@@ -116,7 +116,10 @@ def list_drivers(deploy_handler):
     raise tornado.gen.Return(out)
 
 @tornado.gen.coroutine
-def validate_new_provider_fields(deploy_handler, handler):
+def validate_new_provider_fields(handler):
+    deploy_handler = handler.deploy_handler
+    datastore_handler = handler.datastore_handler
+
     ok = True
     try:
         body = json.loads(handler.request.body)
@@ -143,7 +146,7 @@ def validate_new_provider_fields(deploy_handler, handler):
             if step_index < 0 or driver_steps[step_index].validate(field_values):
                 result = yield found_driver.validate_field_values(step_index, field_values)
                 if result.new_step_index == -1:
-                    deploy_handler.create_provider(found_driver)
+                    yield datastore_handler.create_provider(found_driver)
                 raise tornado.gen.Return(result.serialize())
             else:
                 result = {
