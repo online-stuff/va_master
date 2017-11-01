@@ -6,15 +6,13 @@ import warnings
 
 
 class TestClass(unittest.TestCase):
-#    api = APIManager(va_url='https://127.0.0.1/api',token='daeebbeddbc0471d8d7f5ae2e7b5429c', verify=False)
-    api = APIManager(va_url='https://127.0.0.1:443', va_user='admin', va_pass='admin', verify=False)
+    api = APIManager(va_url='https://127.0.0.1/api',token='1a882c9e22c2462d95dcadb8a127bb8d', verify=False)
+#    api = APIManager(va_url='https://127.0.0.1:443', va_user='admin', va_pass='admin', verify=False)
     warnings = []
-
-
 
     def tearDown(self):
         if self.warnings: 
-            print "\nWARNINGS ===================="
+            print "\nWARNINGS\n================\n"
             warnings.warn('\n'.join(self.warnings))
 
     def test_states_stores(self):
@@ -24,7 +22,7 @@ class TestClass(unittest.TestCase):
         required_keys = {'name', 'icon', 'dependency', 'version', 'path', 'description'}
         warning_keys = {'module', 'panels'}
         for s in states['data']:
-            self.assertTrue(set(s.keys()).issuperset(required_keys))
+            self.assertTrue(set(s.keys()).issuperset(required_keys), msg = "Failed key test for  " + s['name'] + " : " + str(s.keys()) + " don't contain " + str(required_keys))
             if not set(s.keys()).issuperset(warning_keys):
                 warning_str = "Expected to see 'module' and 'panels' key in state " + s['name'] + " but didn't. "
                 self.warnings.append(warning_str)
@@ -39,10 +37,12 @@ class TestClass(unittest.TestCase):
             self.assertTrue(set(p.keys()).issuperset(required_keys))
 
     def test_list_providers(self):
-        a = self.api.api_call('/providers/info', method='post', data={})
-        print ('Info : -----------')
-        print (a)
-        self.assertTrue(a['success'])
+        providers = self.api.api_call('/providers/info', method='post', data={})
+        self.assertTrue(providers['success'])
+
+        required_keys = ['status', 'provider_name', 'servers', 'provider_usage']
+        for p in providers['data']: 
+            self.assertTrue(set(p.keys()).issuperset(required_keys), msg = p.get('provider_name', '<MISSING NAME>') + " has keys: " + str(p.keys()) + " butdoes not contain keys : " + str(required_keys))
 
     def test_list_vpn_users(self):
         a = self.api.api_call('/apps/vpn_users', method='get', data={})
@@ -52,6 +52,7 @@ class TestClass(unittest.TestCase):
         a = self.api.api_call('/apps/vpn_status', method='get', data={})
         self.assertTrue(a['success'])
 
+    @unittest.skip('Skipping temporarily. ')
     def test_add_provider(self):
         providers =  self.api.api_call('/providers/info', method='post', data={})
 
@@ -72,9 +73,10 @@ class TestClass(unittest.TestCase):
         diff_providers = [x for x in new_providers if x not in providers]
         self.assertNotEqual(len(providers['data']), len(new_providers['data']))
 
+    @unittest.skip('Skipping temporarily. ')
     def test_delete_provider(self):
         providers = self.api.api_call('/providers/info', method='post', data={})
-        a = self.api.api_call('/providers/delete', method='post', data={"provider_name": "va-os"})
+        a = self.api.api_call('/providers/delete', method='post', data={"provider_name": "va-osasdf"})
         new_providers = self.api.api_call('/providers/info', method='post', data={})
         self.assertNotEqual(len(providers['data']), len(new_providers['data']))
 
