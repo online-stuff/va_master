@@ -10,7 +10,7 @@ from tornado.concurrent import run_on_executor, Future
 import salt_manage_pillar
 from salt.client import Caller, LocalClient
 
-import panels, services
+import panels, services, providers
 
 def get_paths():
     paths = {
@@ -233,16 +233,15 @@ def create_new_state(deploy_handler, file_contents, body, filename):
 
 
 @tornado.gen.coroutine
-def validate_app_fields(deploy_handler, handler):
+def validate_app_fields(handler):
     #TODO finish documentation
     """Creates a server by going through a validation scheme similar to that for adding providers. """
-    
+    deploy_handler = handler.deploy_handler
 
-    provider, driver = yield deploy_handler.get_provider_and_driver(handler.data.get('provider_name', ''))
+    provider, driver = yield providers.get_provider_and_driver(handler, handler.data.get('provider_name', 'va_standalone_servers'))
 
     kwargs = handler.data
     step = handler.data.pop('step')
-    handler = handler.data.pop('handler')
 
     fields = yield driver.validate_app_fields(step, **kwargs)
     if not fields: 
@@ -253,6 +252,7 @@ def validate_app_fields(deploy_handler, handler):
     if step == 3: 
         handler.data.update(fields)
         result = yield handler.executor.submit(launch_app, deploy_handler, handler)
+    print ('Fields : ', fields)
     raise tornado.gen.Return(fields)
 
 

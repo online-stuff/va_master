@@ -126,8 +126,11 @@ class ApiHandler(tornado.web.RequestHandler):
     @tornado.gen.coroutine
     def handle_func(self, api_func, data):
         try:
-            api_func, api_kwargs = api_func.get('function'), api_func.get('args')       
-            api_kwargs = {x : data.get(x) for x in api_kwargs if data.get(x)} or {}
+            api_func, api_args = api_func.get('function'), api_func.get('args')       
+            api_kwargs = {x : data.get(x) for x in api_args if data.get(x)} or {}
+            print ('Api kwargs before update : ', api_kwargs, ' with args : ', api_kwargs.keys())
+            api_kwargs.update({x : self.utils[x] for x in api_args if x in self.utils})
+            print ('Api kwargs after update : ', api_kwargs, ' with : ', self.utils)
 
             result = yield api_func(**api_kwargs)
 
@@ -156,13 +159,17 @@ class ApiHandler(tornado.web.RequestHandler):
     def exec_method(self, method, path, data):
         try:
             self.data = data
-            self.data['method'] = method
-            self.data['handler'] = self
-            self.data['path'] = path
-            self.data['datastore_handler'] = self.datastore_handler
-            self.data['deploy_handler'] = self.deploy_handler
-            self.data['datastore'] = self.deploy_handler.datastore
+            self.data.update({
+                'method' :  method,
+                'path' : path
+            })
 
+            self.utils = {
+                'handler' : self,
+                'datastore_handler' : self.datastore_handler,
+                'deploy_handler' : self.deploy_handler,
+                'datastore' : self.deploy_handler.datastore,
+            }
 
             user = yield get_current_user(self)
             data['dash_user'] = user

@@ -198,9 +198,10 @@ def get_users(handler, user_type = 'users'):
     result = []
     for u in users: 
         u_all_functions = yield datastore_handler.get_user_functions(u)
-        print ('u_all_functions are : ', u_all_functions)
+        print ('u_all_functions are : ', u_all_functions, ' for user : ', u)
         u_groups = [x.get('func_name') for x in u_all_functions if x.get('func_type', '') == 'function_group']
         u_functions = [x.get('func_path') for x in u_all_functions if x.get('func_type', '') == '']
+        print ('Functinos are : ', u_functions)
         user_data = {
             'user' : u, 
             'functions' : u_functions, 
@@ -234,7 +235,15 @@ def get_all_function_groups(datastore_handler):
 def update_user(datastore_handler, user, functions = [], groups = [], password = ''):
     if password: 
         yield datastore_handler.update_user(user, password)
-    yield datastore_handler.set_user_functions(user, functions, groups)
+    print ('Groups are : ', groups, ' and funcs : ', functions)
+    group_funcs = [datastore_handler.get_user_group(x) for x in groups]
+    group_funcs = yield group_funcs
+    [x.update({'func_type' : 'function_group'}) for x in group_funcs]
+    print ('Funcs are : ', group_funcs)
+    functions += group_funcs
+    print ('Updating ', user, ' with ', functions)
+
+    yield datastore_handler.set_user_functions(user, functions)
 
 
 #functions should have format [{"func_path" : "/panels/something", "func_type" : "salt"}, ...]

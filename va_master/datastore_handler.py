@@ -5,6 +5,8 @@ import traceback
 import tornado
 import tornado.gen
 
+from pbkdf2 import crypt
+
 #def compare_dicts(d1, d2):
 #    for key in d1:
 #        if key not in d2 or type(d1.get(key)) != type(d2.get(key)):
@@ -149,15 +151,15 @@ class DatastoreHandler(object):
 
     @tornado.gen.coroutine
     def delete_user(self, user):
-        yield self.datastore.delete_user('users/' + user)
+        yield self.datastore.delete('users/' + user)
 
     @tornado.gen.coroutine
     def set_user_functions(self, user, functions):
         edited_user = yield self.get_object('user', username = user)
 
         functions = [{"func_path" : x.get('value')} if x.get('value') else x for x in functions]
-
-        edited_user['functions'] = edited_user
+        print ('Functions are : ', functions)
+        edited_user['functions'] = functions 
         yield self.insert_object('user', data = edited_user, username = user) 
 
 
@@ -176,11 +178,11 @@ class DatastoreHandler(object):
 
         #Get all functions from the user groups to return in a single list. 
         #i.e. instead of [{group_name : group, functions : [{group_func1}, ...]}, func1, func2, ...] we want [group_func1, ..., func1, func2, ...]
-        user_group_functions = [x['functions'] for x in user_funcs if x.get('func_type', '') == 'function_group']
+#        user_group_functions = [x['functions'] for x in user_funcs if x.get('func_type', '') == 'function_group']
 
-        user_funcs = [
-            x.get('func_path') for x in user_funcs + user_group_functions 
-        if x.get('func_type', '') == func_type and x.get('func_path')]
+#        user_funcs = [
+#            x.get('func_path') for x in user_funcs + user_group_functions 
+#        if x.get('func_type', '') == func_type and x.get('func_path')]
 
         raise tornado.gen.Return(user_funcs)
 
@@ -295,6 +297,11 @@ class DatastoreHandler(object):
     def get_user_groups(self):
         groups = yield self.datastore.get_recurse('user_groups/')
         raise tornado.gen.Return(groups)
+
+    @tornado.gen.coroutine
+    def get_user_group(self, group_name):
+        group = yield self.get_object('user_group', group_name = group_name)
+        raise tornado.gen.Return(group)
 
     @tornado.gen.coroutine
     def create_user_group(self, group_name, functions):

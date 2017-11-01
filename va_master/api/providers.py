@@ -31,7 +31,7 @@ def get_paths():
 @tornado.gen.coroutine
 def get_provider_and_driver(handler, provider_name = 'va_standalone_servers'):
     provider = yield handler.datastore_handler.get_provider(provider_name = provider_name)
-    driver = yield handler.deploy_handler.get_driver_by_id(provider['driver_id'])
+    driver = yield handler.deploy_handler.get_driver_by_id(provider['driver_name'])
 
     raise tornado.gen.Return((provider, driver))
 
