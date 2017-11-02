@@ -10,6 +10,7 @@ from concurrent.futures import ThreadPoolExecutor   # `pip install futures` for 
 
 from . import url_handler
 from login import get_current_user, user_login
+from panels import get_panel_for_user
 import json, datetime, syslog, pytz
 import dateutil.relativedelta
 import dateutil.parser
@@ -181,7 +182,11 @@ class ApiHandler(tornado.web.RequestHandler):
                     raise tornado.gen.Return()
 
             result = yield self.handle_func(api_func, data)
-            yield self.log_message(path = path, data = data, func = api_func['function'], result = result)
+            log_result = result
+            if api_func['function'] in [get_panel_for_user]:
+                log_result = {}
+
+            yield self.log_message(path = path, data = data, func = api_func['function'], result = log_result)
 
             self.json(result)
         except: 
@@ -424,6 +429,8 @@ class LogMessagingSocket(tornado.websocket.WebSocketHandler):
                 to_date = datetime.datetime.now()
 
             messages = self.get_messages(from_date, to_date)
+            for m in messages: 
+                m['data'] = str(m.get('data', ''))[:100]
             messages = {'type' : 'init', 'logs' : messages}
             self.write_message(json.dumps(messages))
 

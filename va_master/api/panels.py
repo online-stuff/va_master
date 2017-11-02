@@ -200,7 +200,7 @@ def get_users(handler, user_type = 'users'):
         u_all_functions = yield datastore_handler.get_user_functions(u)
         print ('u_all_functions are : ', u_all_functions, ' for user : ', u)
         u_groups = [x.get('func_name') for x in u_all_functions if x.get('func_type', '') == 'function_group']
-        u_functions = [x.get('func_path') for x in u_all_functions if x.get('func_type', '') == '']
+        u_functions = [x.get('func_path') for x in u_all_functions if x.get('func_path')]
         print ('Functinos are : ', u_functions)
         user_data = {
             'user' : u, 
@@ -263,6 +263,7 @@ def create_user_with_group(handler, user, password, user_type, functions = [], g
     for g in groups: 
         required_group = [x for x in all_groups if x.get('func_name', '') == g]
         functions += required_group
+    print ('Functions are : ', functions)
     yield add_user_functions(datastore_handler, user, functions)
 
 @tornado.gen.coroutine

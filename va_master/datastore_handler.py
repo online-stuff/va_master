@@ -294,6 +294,10 @@ class DatastoreHandler(object):
         raise tornado.gen.Return(state)
 
     @tornado.gen.coroutine
+    def create_user(self, user_data, user_type = 'user'):
+        yield self.insert_object(user_type, data = user_data, username = user_data['username'])
+
+    @tornado.gen.coroutine
     def get_user_groups(self):
         groups = yield self.datastore.get_recurse('user_groups/')
         raise tornado.gen.Return(groups)
@@ -305,7 +309,7 @@ class DatastoreHandler(object):
 
     @tornado.gen.coroutine
     def create_user_group(self, group_name, functions):
-        yield self.insert_object('user_group', data = {"func_name" : group_name, "functions" : functions}, group_name = group_name)
+        yield self.insert_object('user_group', data = {"func_name" : group_name, "functions" : functions, "func_type" : "function_group"}, group_name = group_name)
 
     @tornado.gen.coroutine
     def get_user_salt_functions(self, username):

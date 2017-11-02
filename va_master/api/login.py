@@ -104,32 +104,24 @@ def auth_only(*args, **kwargs):
 
 
 @tornado.gen.coroutine
-def create_user(datastore, username, password, user_type = 'user'):
-    datastore_handle = user_type + 's' #Basically, make it plural (admin -> admins, user -> users)
-    if len(username) < 1 or len(password) < 1:
-        raise ValueError('Username and password must not be empty.')
-    try:
-        new_users = yield datastore.get(datastore_handle)
-    except datastore.KeyNotFound:
-        yield datastore.insert(datastore_handle, [])
-        new_users = []
-
-    if any([x['username'] == username for x in new_users]): 
+def create_user(datastore_handler, username, password, user_type = 'user'):
+    user = yield datastore_handler.find_user(username)
+    if user: 
         raise Exception('Username ' + username + ' is already taken ')
     crypted_pass = crypt(password)
-    new_users.append({
+    user = {
         'username': username,
         'password_hash': crypted_pass,
         'timestamp_created': long(time.time())
-    })
-    yield datastore.insert(datastore_handle, new_users)
-    token = yield get_or_create_token(datastore, username, user_type = user_type)
+    }
+    yield datastore_handler.create_user(user, user_type)
+    token = yield get_or_create_token(datastore_handler.datastore, username, user_type = user_type)
 
     raise tornado.gen.Return(token)
 
 @tornado.gen.coroutine
 def create_user_api(handler, user, password, user_type = 'user'):
-    token = yield create_user(handler.config.deploy_handler.datastore, user, password, user_type) 
+    token = yield create_user(handler.datastore_handler, user, password, user_type) 
     raise tornado.gen.Return(token)
 
 
