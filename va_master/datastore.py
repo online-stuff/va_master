@@ -1,6 +1,7 @@
 from abc import ABCMeta, abstractmethod
 from tornado.httpclient import AsyncHTTPClient, HTTPRequest
-from tornado.gen import coroutine, Return
+from tornado.httputil import url_concat
+import tornado.gen
 import tornado.ioloop
 import json
 import base64
@@ -28,23 +29,23 @@ class DataStore(object):
     StoreError = StoreError
 
     @abstractmethod
-    @coroutine
+    @tornado.gen.coroutine
     def check_connection(self): pass
 
     @abstractmethod
-    @coroutine
+    @tornado.gen.coroutine
     def insert(self, doc_id, document): pass
 
     @abstractmethod
-    @coroutine
+    @tornado.gen.coroutine
     def update(self, doc_id, document): pass
 
     @abstractmethod
-    @coroutine
+    @tornado.gen.coroutine
     def get(self, doc_id): pass
 
     @abstractmethod
-    @coroutine
+    @tornado.gen.coroutine
     def delete(self, doc_id): pass
 
 class ConsulStore(DataStore):
@@ -54,15 +55,15 @@ class ConsulStore(DataStore):
         self.path = path
         self.client = AsyncHTTPClient()
 
-    @coroutine
+    @tornado.gen.coroutine
     def check_connection(self):
         try:
             result = yield self.client.fetch('%s/v1/status/leader' % self.path)
         except:
-            raise Return(False)
-        raise Return(result.code == 200 and result.body != '""')
+            raise tornado.gen.Return(False)
+        raise tornado.gen.Return(result.code == 200 and result.body != '""')
 
-    @coroutine
+    @tornado.gen.coroutine
     def insert(self, doc_id, document):
         document_json = json.dumps(document)
         req = HTTPRequest('%s/v1/kv/%s' % (self.path, doc_id), method='PUT',
@@ -72,22 +73,24 @@ class ConsulStore(DataStore):
         except Exception as e:
             raise StoreError(e)
 
-    @coroutine
+    @tornado.gen.coroutine
     def update(self, doc_id, document):
         try:
             yield self.insert(doc_id, document)
         except Exception as e:
             raise StoreError(e)
 
-    @coroutine
-    def __get_helper(self, doc_id):
-        '''This is a helper method to get a document that does the
-        network call, but doesn't do any processing.'''
-
+    @tornado.gen.coroutine
+    def get_exec(self, doc_id, params = {}):
         is_ok = False
         try:
-            resp = yield self.client.fetch('%s/v1/kv/%s' % (self.path, doc_id))
-            resp = json.loads(resp.body)
+            url = '%s/v1/kv/%s' % (self.path, doc_id)
+            if params: 
+                url = url_concat(url, params)
+            resp = yield self.client.fetch(url)
+            resp = [x['Value'] for x in json.loads(resp.body)]
+            resp = [json.loads(base64.b64decode(x)) for x in resp]
+#            if len(resp) == 1: resp = resp[0]
             is_ok = True
         except tornado.httpclient.HTTPError as e:
             if e.code == 404:
@@ -97,29 +100,26 @@ class ConsulStore(DataStore):
         except Exception as e:
             raise StoreError(e)
         if is_ok:
-            raise Return(resp)
+            raise tornado.gen.Return(resp)
 
-    @coroutine
+    @tornado.gen.coroutine
     def get(self, doc_id):
-        resp = yield self.__get_helper(doc_id)
-        resp = resp[0]['Value']
-        resp = json.loads(base64.b64decode(resp))
-        raise Return(resp)
+        result = yield self.get_exec(doc_id)
+        result = result[0]
+        raise tornado.gen.Return(result)
 
-    @coroutine
-    def list_subkeys(self, key):
-        res = yield self.__get_helper('{}?keys'.format(key))
-        if res:
-            def filter_key(c_key):
-                '''The response is in the format ['key/a', 'key/b', 'key/c']
-                but we want ['a', 'b', 'c'], so we filter the prefix.'''
-                prefix = key
-                if prefix[-1] != '/': prefix+= '/'
-                return c_key.replace(prefix, '', 1)
-            res = [filter_key(x) for x in res]
-        raise Return(res)
+    @tornado.gen.coroutine
+    def get_recurse(self, doc_id):
+        try: 
+            result = yield self.get_exec(doc_id, params = {"recurse" : True})
+        #Normally we would be careful with missing keys, but when getting with recurse, it means there's no elements. 
+        except KeyNotFound: 
+            result = []
+        except: 
+            raise
+        raise tornado.gen.Return(result)
 
-    @coroutine
+    @tornado.gen.coroutine
     def delete(self, doc_id):
         try:
             req = HTTPRequest('%s/v1/kv/%s' % (self.path, doc_id), method='DELETE')
