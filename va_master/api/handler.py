@@ -129,9 +129,7 @@ class ApiHandler(tornado.web.RequestHandler):
         try:
             api_func, api_args = api_func.get('function'), api_func.get('args')       
             api_kwargs = {x : data.get(x) for x in api_args if data.get(x)} or {}
-            print ('Api kwargs before update : ', api_kwargs, ' with args : ', api_kwargs.keys())
             api_kwargs.update({x : self.utils[x] for x in api_args if x in self.utils})
-            print ('Api kwargs after update : ', api_kwargs, ' with : ', self.utils)
 
             result = yield api_func(**api_kwargs)
 

@@ -475,7 +475,7 @@ class DriverBase(object):
             state_fields = []
         # steps_fields is a list of lists such that the index of an element is the required fields for that step. We check if the app_fields contain all of those. 
         if not steps_fields: 
-            steps_fields = [['role', 'server_name'], state_fields, ['sec_group', 'image', 'size', 'network']]
+            steps_fields = [['role', 'server_name'], state_fields, ['sec_group', 'image', 'size', 'network', 'location']]
         if not all([x in self.app_fields.keys() for x in steps_fields[step]]):
             print ('Fields expected are : ', steps_fields[step], ' but have : ', self.app_fields.keys())
             print ('Entire fields data : ', fields)
