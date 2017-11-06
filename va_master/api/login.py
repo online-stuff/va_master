@@ -121,6 +121,7 @@ def create_user(datastore_handler, username, password, user_type = 'user'):
 
 @tornado.gen.coroutine
 def create_user_api(handler, user, password, user_type = 'user'):
+    """Creates a user with the specified user_type if it doesn't exist yet. Returns the user's token. """
     token = yield create_user(handler.datastore_handler, user, password, user_type) 
     raise tornado.gen.Return(token)
 
@@ -128,6 +129,8 @@ def create_user_api(handler, user, password, user_type = 'user'):
 
 @tornado.gen.coroutine
 def user_login(datastore_handler, username, password):
+    """Looks for a user with the specified username and checks the specified password against the found user's password. Creates a token if the login is successful. """
+
     body = None
     try: 
         if '@' in username: 
@@ -136,7 +139,6 @@ def user_login(datastore_handler, username, password):
 
 
         account_info = yield datastore_handler.find_user(username)
-        print ('Account info is : ', account_info)
 
         invalid_acc_hash = crypt('__invalidpassword__')
 
