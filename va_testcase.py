@@ -6,8 +6,8 @@ import warnings
 
 
 class TestClass(unittest.TestCase):
-    api = APIManager(va_url='https://127.0.0.1/api',token='1a882c9e22c2462d95dcadb8a127bb8d', verify=False)
-#    api = APIManager(va_url='https://127.0.0.1:443', va_user='admin', va_pass='admin', verify=False)
+#    api = APIManager(va_url='https://127.0.0.1/api',token='1a882c9e22c2462d95dcadb8a127bb8d', verify=False)
+    api = APIManager(va_url='https://127.0.0.1:443', va_user='admin', va_pass='admin', verify=False)
     warnings = []
 
     def tearDown(self):
