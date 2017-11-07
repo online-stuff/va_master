@@ -6,19 +6,18 @@ var ReactDOM = require('react-dom');
 var Router = require('react-router');
 var Reactable = require('reactable');
 
-var Vpn = React.createClass({
+var VpnUsers = React.createClass({
     getInitialState: function () {
         return {
             active: [],
             revoked: [],
-            status: [],
         };
     },
 
     getCurrentVpns: function () {
         var me = this;
         Network.get('/api/apps/vpn_users', this.props.auth.token).done(function (data) {
-            me.setState({active: data.active, revoked: data.revoked, status: data.status});
+            me.setState({active: data.active, revoked: data.revoked});
         }).fail(function (msg) {
             me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
         });
@@ -31,6 +30,10 @@ var Vpn = React.createClass({
     componentDidMount: function () {
         this.getCurrentVpns();
     },
+
+    /*componentWillUnmount: function () {
+        this.props.dispatch({type: 'RESET_TABS'});
+    },*/
 
     btn_clicked: function(username, evtKey){
         var data = {username: username};
@@ -105,18 +108,9 @@ var Vpn = React.createClass({
                 </Reactable.Tr>
             );
         });
-
-        var status_rows = this.state.status.map(function(vpn) {
-            return (
-                <Reactable.Tr key={vpn['Common Name']}>
-                    <Reactable.Td column="Name">{vpn['Common Name']}</Reactable.Td>
-                    <Reactable.Td column="Connected since">{vpn['Connected Since']}</Reactable.Td>
-                    <Reactable.Td column="Virtual IP">{vpn['Real Address']}</Reactable.Td>
-                    <Reactable.Td column="Bytes in">{vpn['Bytes Received']}</Reactable.Td>
-                    <Reactable.Td column="Bytes out">{vpn['Bytes Sent']}</Reactable.Td>
-                </Reactable.Tr>
-            );
-        });
+        var a_len = active_rows.length, r_len = revoked_rows.length;
+        var rowNum = a_len > r_len ? r_len : a_len;
+        rowNum = rowNum > 10 ? 10 : rowNum;
 
         var ModalRedux = connect(function(state){
             return {auth: state.auth, modal: state.modal, alert: state.alert};
@@ -125,21 +119,21 @@ var Vpn = React.createClass({
 
         return (
             <div>
-                <Bootstrap.PageHeader>VPN status</Bootstrap.PageHeader>
-                <Reactable.Table className="table table-striped" columns={['Name', 'Connected since', 'Virtual IP', 'Bytes in', 'Bytes out']} itemsPerPage={10} pageButtonLimit={10} noDataText="No matching records found." sortable={true} filterable={['Name', 'Connected since', 'Virtual IP', 'Bytes in', 'Bytes out']}>
-                    {status_rows}
-                </Reactable.Table>
-                <div style={{position: 'relative'}}>
                 <Bootstrap.PageHeader>VPN Users</Bootstrap.PageHeader>
-                <h4>Active users</h4>
-                <ModalRedux addVpn = {this.addVpn} />
-                <Reactable.Table className="table table-striped" columns={['Name', 'Connected', 'Actions']} itemsPerPage={10} pageButtonLimit={10} noDataText="No matching records found." sortable={sf_cols} filterable={sf_cols} btnName="Add user" btnClick={this.openModal}>
-                    {active_rows}
-                </Reactable.Table>
-                <h4>Revoked users</h4>
-                <Reactable.Table className="table table-striped" columns={['Name', 'Connected']} itemsPerPage={10} pageButtonLimit={10} noDataText="No matching records found." sortable={true} filterable={['Name', 'Connected']}>
-                    {revoked_rows}
-                </Reactable.Table>
+                <div className="container-block">
+                    <div className="block">
+                        <h4>Active users</h4>
+                        <ModalRedux addVpn = {this.addVpn} />
+                        <Reactable.Table className="table table-striped" columns={['Name', 'Connected', 'Actions']} itemsPerPage={rowNum} pageButtonLimit={10} noDataText="No matching records found." sortable={sf_cols} filterable={sf_cols} btnName="Add user" btnClick={this.openModal}>
+                            {active_rows}
+                        </Reactable.Table>
+                    </div>
+                    <div className="block">
+                        <h4>Revoked users</h4>
+                        <Reactable.Table id="revoked-tbl" className="table table-striped" columns={['Name', 'Connected']} itemsPerPage={rowNum} pageButtonLimit={10} noDataText="No matching records found." sortable={true} filterable={['Name', 'Connected']}>
+                            {revoked_rows}
+                        </Reactable.Table>
+                    </div>
                 </div>
             </div>
         );
@@ -207,8 +201,8 @@ var Modal = React.createClass({
     }
 });
 
-Vpn = connect(function(state){
+VpnUsers = connect(function(state){
     return {auth: state.auth, alert: state.alert};
-})(Vpn);
+})(VpnUsers);
 
-module.exports = Vpn;
+module.exports = VpnUsers;
