@@ -186,7 +186,7 @@ class GenericDriver(base.DriverBase):
      
     @tornado.gen.coroutine
     def validate_app_fields(self, step, **fields):
-        steps_fields = [['role', 'server_name'], [], ['username', 'ip', 'port']]
+        steps_fields = [['role', 'server_name'], [], ['username', 'ip', 'port', 'location']]
         result = yield super(GenericDriver, self).validate_app_fields(step, steps_fields = steps_fields, **fields)
         raise tornado.gen.Return(result)
 
@@ -194,7 +194,6 @@ class GenericDriver(base.DriverBase):
     def create_server(self, provider, data):
         #TODO Connect to ssh://data.get('ip') -p data.get('port')[ -u data.get('user') -pass data.get('pass') || -key data.get('key')
         print ('In create server. ')
-        raise tornado.gen.Return(True)
         cl = SSHClient()
         cl.load_system_host_keys()
         cl.set_missing_host_key_policy(AutoAddPolicy())
@@ -203,7 +202,6 @@ class GenericDriver(base.DriverBase):
         }
         if data.get('port'): 
             connect_kwargs['port'] = int(data.get('port'))
-
 
         if data.get('password'): 
             connect_kwargs['password'] = data['password']

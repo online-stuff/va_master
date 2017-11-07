@@ -110,13 +110,7 @@ class ConsulStore(DataStore):
 
     @tornado.gen.coroutine
     def get_recurse(self, doc_id):
-        try: 
-            result = yield self.get_exec(doc_id, params = {"recurse" : True})
-        #Normally we would be careful with missing keys, but when getting with recurse, it means there's no elements. 
-        except KeyNotFound: 
-            result = []
-        except: 
-            raise
+        result = yield self.get_exec(doc_id, params = {"recurse" : True})
         raise tornado.gen.Return(result)
 
     @tornado.gen.coroutine

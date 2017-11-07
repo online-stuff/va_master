@@ -24,7 +24,7 @@ def get_paths():
             'panels/update_user' : {'function' : update_user, 'args' : ['datastore_handler', 'user', 'functions', 'groups', 'password']}, 
 
             'panels/get_panel' : {'function' : get_panel_for_user, 'args' : ['server_name', 'panel', 'provider', 'handler', 'args', 'dash_user']},
-            'panels/reset_panels': {'function' : reset_panels, 'args' : []}, #JUST FOR TESTING
+#            'panels/reset_panels': {'function' : reset_panels, 'args' : []}, #JUST FOR TESTING
             'panels/new_panel' : {'function' : new_panel, 'args' : ['datastore_handler', 'panel_name', 'role']},
             'panels/action' : {'function' : panel_action, 'args' : ['handler', 'server_name', 'action', 'args', 'kwargs', 'module', 'dash_user']}, #must have server_name and action in data, 'args' : []}, ex: panels/action server_name=nino_dir action=list_users
             'panels/chart_data' : {'function' : get_chart_data, 'args' : ['server_name', 'args']},
@@ -36,21 +36,29 @@ def get_paths():
 
 @tornado.gen.coroutine
 def reset_panels(deploy_handler): 
+    """ Testing function - deletes all functions. Currently not usable. """
     yield deploy_handler.reset_panels()
 
 @tornado.gen.coroutine
 def new_panel(datastore_handler, panel_name, role):
+    """ Adds the panel_name to the list of servers for the specified role. """
+
     yield datastore_handler.add_panel(panel_name, role)
 
 
 @tornado.gen.coroutine
 def list_panels(datastore_handler, dash_user):
+    """ Returns a list of the panels for the logged in user. """
     panels = yield datastore_handler.get_panels(dash_user['type'])
 
     raise tornado.gen.Return(panels)
 
 @tornado.gen.coroutine
 def panel_action_execute(handler, server_name, action, args = [], dash_user = '', kwargs = {}, module = None, timeout = 30):
+    """ 
+    Executes the function from the action key on the minion specified by server_name by passing the args and kwargs. 
+    If module is not passed, looks up the panels and retrieves the module from there. 
+    """
     datastore_handler = handler.datastore_handler
     if dash_user.get('username'):
         user_funcs = yield datastore_handler.get_user_salt_functions(dash_user['username'])
@@ -76,6 +84,7 @@ def panel_action_execute(handler, server_name, action, args = [], dash_user = ''
 
 @tornado.gen.coroutine
 def salt_serve_file(handler, server_name, action, args = [], dash_user = '', kwargs = {}, module = None):
+    """Serves a file by using a salt module. The module function but be able to be called with range_from and range_to arguments. """
     datastore_handler = handler.datastore_handler
     server_info = yield apps.get_app_info(server_name)
     state = server_info['role']
@@ -116,9 +125,17 @@ def salt_serve_file_get(handler, server_name, action, hostname, backupnumber, sh
     yield handler.serve_file('test', salt_source = {"tgt" : server_name, "fun" : module + '.' + action, "kwarg" : kwargs})
     raise tornado.gen.Return({"data_type" : "file"})
 
+    if not module:
+        module = state['module']
 
+    yield handler.serve_file('test', salt_source = {"tgt" : server_name, "fun" : module + '.' + action, "arg" :  args})
+    raise tornado.gen.Return({"data_type" : "file"})
+
+
+#This is just temporary - trying to get backup download working properly. 
 @tornado.gen.coroutine
 def url_serve_file(handler, server_name, url_function, module = None, args = [], kwargs = {}):
+    """Serves a file by utilizing a url. The server must have a function which returns the url. This will call that function with the supplied args and kwargs. """
     datastore_handler = handler.datastore_handler
     server_info = yield apps.get_app_info(server_name)
     state = server_info['role']
@@ -138,6 +155,7 @@ def url_serve_file(handler, server_name, url_function, module = None, args = [],
 
 @tornado.gen.coroutine
 def get_chart_data(server_name, args = ['va-directory', 'Ping']):
+    """Gets chart data for the specified server."""
     cl = salt.client.LocalClient()
 
     result = cl.cmd(server, 'monitoring_stats.parse' , args)
@@ -145,6 +163,7 @@ def get_chart_data(server_name, args = ['va-directory', 'Ping']):
 
 @tornado.gen.coroutine
 def panel_action(handler, actions_list = [], server_name = '', action = '', args = [], kwargs = {}, module = None, dash_user = {}):
+    """Performs a list of actions on multiple servers. If actions_list is not supplied, will use the rest of the arguments to call a single function on one server. """
     if not actions_list: 
         actions_list = [{"server_name" : server_name, "action" : action, "args" : args, 'kwargs' : {}, 'module' : module}]
 
@@ -161,12 +180,14 @@ def panel_action(handler, actions_list = [], server_name = '', action = '', args
 
 @tornado.gen.coroutine
 def get_panels(handler, dash_user):
+    """Returns all panels for the logged in user. """
     datastore_handler = handler.datastore_handler
     panels = yield list_panels(datastore_handler, dash_user)
     raise tornado.gen.Return(panels)
 
 @tornado.gen.coroutine
 def get_panel_for_user(handler, panel, server_name, dash_user, args = [], provider = None, kwargs = {}):
+    """Returns the required panel from the server for the logged in user. A list of args may be provided for the panel. """
 
     user_panels = yield list_panels(handler.datastore_handler, dash_user)
     server_info = yield apps.get_app_info(server_name)
@@ -193,15 +214,14 @@ def get_panel_for_user(handler, panel, server_name, dash_user, args = [], provid
 
 @tornado.gen.coroutine
 def get_users(handler, user_type = 'users'):
+    """Returns a list of users along with their allowed functions and user groups. """
     datastore_handler = handler.datastore_handler
     users = yield datastore_handler.get_users(user_type)
     result = []
     for u in users: 
         u_all_functions = yield datastore_handler.get_user_functions(u)
-        print ('u_all_functions are : ', u_all_functions, ' for user : ', u)
         u_groups = [x.get('func_name') for x in u_all_functions if x.get('func_type', '') == 'function_group']
         u_functions = [x.get('func_path') for x in u_all_functions if x.get('func_path')]
-        print ('Functinos are : ', u_functions)
         user_data = {
             'user' : u, 
             'functions' : u_functions, 
@@ -212,13 +232,14 @@ def get_users(handler, user_type = 'users'):
 
 @tornado.gen.coroutine
 def get_all_functions(handler):
-    functions = {m : handler.paths[m].keys() for m in ['post', 'get']}
+    """Gets all functions returned by the get_functions methods for all the api modules and formats them properly for the dashboard. """
+    functions = {m : handler.paths[m] for m in ['post', 'get']}
     salt_functions = {} #TODO salt functinos should look like {backuppc:[list, of, functions], owncloud : [list, of, ofunctions]}
 
     functions.update(salt_functions)
 
     functions = [
-            { 'label' : f, 'options' : [{'label' : i, 'value' : i} for i in functions[f]] }
+            { 'label' : f, 'options' : [{'label' : i, 'value' : i, 'description' : functions[f][i]['function'].__doc__} for i in functions[f]] }
     for f in functions]
 
     raise tornado.gen.Return(functions)
@@ -226,6 +247,7 @@ def get_all_functions(handler):
 
 @tornado.gen.coroutine
 def get_all_function_groups(datastore_handler):
+    """Returns all user function groups from the datastore. """
     groups = yield datastore_handler.get_user_groups()
     for g in groups:
         g['functions'] = [x.get('func_path') for x in g['functions']]
@@ -233,15 +255,13 @@ def get_all_function_groups(datastore_handler):
 
 @tornado.gen.coroutine
 def update_user(datastore_handler, user, functions = [], groups = [], password = ''):
+    """Updates a user, allowing an admin to change the password or set functions / user groups for the user. """
     if password: 
         yield datastore_handler.update_user(user, password)
-    print ('Groups are : ', groups, ' and funcs : ', functions)
     group_funcs = [datastore_handler.get_user_group(x) for x in groups]
     group_funcs = yield group_funcs
     [x.update({'func_type' : 'function_group'}) for x in group_funcs]
-    print ('Funcs are : ', group_funcs)
     functions += group_funcs
-    print ('Updating ', user, ' with ', functions)
 
     yield datastore_handler.set_user_functions(user, functions)
 
@@ -249,23 +269,26 @@ def update_user(datastore_handler, user, functions = [], groups = [], password =
 #functions should have format [{"func_path" : "/panels/something", "func_type" : "salt"}, ...]
 @tornado.gen.coroutine
 def add_user_functions(datastore_handler, user, functions):
+    """Adds the list of functions to the list of functions already in the datastore. """
     yield datastore_handler.add_user_functions(user, functions)
     
 @tornado.gen.coroutine
 def create_user_group(datastore_handler, group_name, functions):
+    """Creates a new user group with the specified group_name and list of functions. """
     yield datastore_handler.create_user_group(group_name, functions)
 
 @tornado.gen.coroutine
 def create_user_with_group(handler, user, password, user_type, functions = [], groups = []):
+    """Creates a new user and adds the functions and user groups to the user's allowed functions. """
     datastore_handler = handler.datastore_handler
     yield create_user_api(handler, user, password, user_type)
     all_groups = yield datastore_handler.get_user_groups()
     for g in groups: 
         required_group = [x for x in all_groups if x.get('func_name', '') == g]
         functions += required_group
-    print ('Functions are : ', functions)
     yield add_user_functions(datastore_handler, user, functions)
 
 @tornado.gen.coroutine
 def delete_user(datastore_handler, user):
+    """Deletes the user from the datastore. """
     yield datastore_handler.delete_user(user)
