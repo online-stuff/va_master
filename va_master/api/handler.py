@@ -128,9 +128,11 @@ class ApiHandler(tornado.web.RequestHandler):
     def handle_func(self, api_func, data):
         try:
             api_func, api_args = api_func.get('function'), api_func.get('args')       
-            api_kwargs = {x : data.get(x) for x in api_args if data.get(x)} or {}
+            api_kwargs = {x : data.get(x) for x in api_args if x in data.keys()} or {}
+            print ('Kwarge before update : ', api_kwargs)
             api_kwargs.update({x : self.utils[x] for x in api_args if x in self.utils})
 
+            print ('Kwargs are : ', api_kwargs)
             result = yield api_func(**api_kwargs)
 
             if type(result) == dict: 
