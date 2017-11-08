@@ -45,9 +45,10 @@ def list_panels(deploy_handler, handler):
     raise tornado.gen.Return(panels)
 
 @tornado.gen.coroutine
-def panel_action_execute(deploy_handler, instance_name, action, args = [], kwargs = {}, module = None):
+def panel_action_execute(deploy_handler, instance_name, action, args = [], kwargs = {}, module = None, timeout = 30):
     try:
 
+        print ('INstance name is : ', instance_name)
         instance_info = yield apps.get_app_info(deploy_handler, instance_name)
         state = instance_info['role']
 
@@ -59,7 +60,8 @@ def panel_action_execute(deploy_handler, instance_name, action, args = [], kwarg
 
         cl = salt.client.LocalClient()
         print ('Calling salt module ', module + '.' + action, ' on ', instance_name, ' with args : ', args, ' and kwargs : ', kwargs)
-        result = cl.cmd(instance_name, module + '.' + action , args, kwargs = kwargs)
+        result = cl.cmd(instance_name, module + '.' + action , args, kwargs = kwargs, timeout = timeout)
+        result = result.get(instance_name)
     except: 
         import traceback 
         traceback.print_exc()
@@ -115,7 +117,7 @@ def panel_action(deploy_handler, actions_list = [], instance_name = '', action =
         instance_result = yield panel_action_execute(deploy_handler, action['instance_name'], action['action'], action.get('args', []), action.get('kwargs', {}), action.get('module'))
         results[action['instance_name']] = instance_result
 
-    if len(results) == 1: 
+    if len(results.keys()) == 1: 
         results = results[results.keys()[0]]
     raise tornado.gen.Return(results)
 
@@ -147,7 +149,7 @@ def get_panel_for_user(deploy_handler, handler, panel, instance_name, args = [],
             import traceback
             traceback.print_exc()
 
-        panel = panel[instance_name]
+#        panel = panel[instance_name]
         raise tornado.gen.Return(panel)
     else: 
         raise tornado.gen.Return(False)

@@ -227,8 +227,7 @@ var Table = React.createClass({
                     me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
                 });
             }else{
-                Network.post('/api/panels/action', this.props.auth.token, data).done(function(d) {
-                    var msg = d[me.props.panel.instance];
+                Network.post('/api/panels/action', this.props.auth.token, data).done(function(msg) {
                     if(typeof msg === 'string'){
                         me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
                     }
@@ -265,8 +264,7 @@ var Table = React.createClass({
         }else{
             var data = send_action(this.props.panel.instance, evtKey, id);
             var me = this;
-            Network.post('/api/panels/action', this.props.auth.token, data).done(function(d) {
-                var msg = d[me.props.panel.instance];
+            Network.post('/api/panels/action', this.props.auth.token, data).done(function(msg) {
                 if(typeof msg === 'string'){
                     me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
                 }else{
@@ -275,8 +273,7 @@ var Table = React.createClass({
                     if('args' in me.props.panel && me.props.panel.args !== ""){
                         data.args = [me.props.panel.args];
                     }
-                    Network.post('/api/panels/action', me.props.auth.token, data).done(function(d) {
-                        var msg = d[data.instance_name];
+                    Network.post('/api/panels/action', me.props.auth.token, data).done(function(msg) {
                         if(typeof msg !== 'string'){
                             me.props.dispatch({type: 'CHANGE_DATA', data: msg, name: me.props.name});
                         }else{
@@ -293,13 +290,12 @@ var Table = React.createClass({
         var colVal = event.currentTarget.textContent;
         if(action == 'link' && "panels" in this.props && 'link' in this.props.panels){
             this.props.dispatch({type: 'SELECT', select: colVal});
-            Router.hashHistory.push('/panel/' + this.props.panels['link'] + '/' + this.props.panel.instance + '/' + [colVal]);
+            Router.hashHistory.push('/subpanel/' + this.props.panels['link'] + '/' + this.props.panel.instance + '/' + [colVal]);
         }else{
             var args = this.props.table.path.concat(colVal);
             var data = send_action(this.props.panel.instance, action, args);
             var me = this;
-            Network.post('/api/panels/action', this.props.auth.token, data).done(function(d) {
-                var msg = d[me.props.panel.instance];
+            Network.post('/api/panels/action', this.props.auth.token, data).done(function(msg) {
                 if(typeof msg === 'string'){
                     me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
                 }else{
@@ -502,8 +498,7 @@ var Modal = React.createClass({
                 var args = [];
                 if(me.props.panel.args !== "") args = [me.props.panel.args];
                 var data = {"instance_name": me.props.panel.instance, "action": me.props.modal.template.refresh_action, "args": args};
-                Network.post('/api/panels/action', me.props.auth.token, data).done(function(d) {
-                    var msg = d[data.instance_name];
+                Network.post('/api/panels/action', me.props.auth.token, data).done(function(msg) {
                     if(typeof msg !== 'string'){
                         me.props.dispatch({type: 'CHANGE_DATA', data: msg, name: me.props.modal.template.table_name});
                     }else{
@@ -588,8 +583,7 @@ var Path = React.createClass({
         var args = this.props.table.path.slice(0, parseInt(evt.currentTarget.id) + 1);
         var data = {"instance_name": this.props.panel.instance, "action": this.props.action, "args": args};
         var me = this;
-        Network.post('/api/panels/action', this.props.auth.token, data).done(function(d) {
-            var msg = d[me.props.panel.instance];
+        Network.post('/api/panels/action', this.props.auth.token, data).done(function(msg) {
             if(typeof msg === 'string'){
                 me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
             }else{
@@ -620,8 +614,7 @@ var Form = React.createClass({
         var host = ReactDOM.findDOMNode(this.refs.dropdown).value.trim();
         var data = {"instance_name": this.props.panel.instance, "action": action, "args": [host]};
         var me = this;
-        Network.post('/api/panels/action', this.props.auth.token, data).done(function(d) {
-            var msg = d[me.props.panel.instance];
+        Network.post('/api/panels/action', this.props.auth.token, data).done(function(msg) {
             if(typeof msg === 'string'){
                 me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
             }else{
