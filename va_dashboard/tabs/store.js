@@ -38,11 +38,22 @@ var Store = React.createClass({
     },
     render: function () {
         var states_rows = this.state.states.map(function(state, index) {
+            var description = state.description;
+            if(description.length > 106){
+                desc = description.slice(0, 106);
+                desc += '...';
+                popover = (
+                    <Bootstrap.Popover id={'popover' + index} title="App description">
+                        {description}
+                    </Bootstrap.Popover>
+                );
+                description = (<Bootstrap.OverlayTrigger trigger="click" placement="bottom" overlay={popover}><div>{desc}</div></Bootstrap.OverlayTrigger>);
+            }
             return (
                 <Bootstrap.Col xs={12} sm={6} md={3} key={state.name}>
                     <Bootstrap.Panel header={state.name} bsStyle='primary'>
                         <div>Version: {state.version}</div>
-                        <div className="description">{state.description}</div>
+                        <div className="description">{description}</div>
                         <Bootstrap.Button bsStyle='primary' onClick={this.launchApp} value={state.name}>
                             Launch
                         </Bootstrap.Button>
@@ -61,11 +72,13 @@ var Store = React.createClass({
 
         return (
             <div>
-                <Bootstrap.Button onClick={this.openModal}>
-                    <Bootstrap.Glyphicon glyph='plus' />
-                    Add app 
-                </Bootstrap.Button>
-                <Bootstrap.PageHeader>Available apps</Bootstrap.PageHeader>
+                <div className="page-header">
+                    <h1 style={{display: 'inline', verticalAlign: 'middle'}}>Available apps</h1>
+                    <Bootstrap.Button style={{float: 'right', marginRight: '20px'}} onClick={this.openModal}>
+                        <Bootstrap.Glyphicon glyph='plus' />
+                        Add app 
+                    </Bootstrap.Button>
+                </div>
                 <div className="container-fluid">
                     <Bootstrap.Row>
                         {states_rows}
@@ -89,7 +102,7 @@ var NewStateForm = React.createClass({
                 </Bootstrap.Modal.Header>
 
                 <Bootstrap.Modal.Body>
-                    <form onSubmit={this.onSubmit} ref="uploadForm" encType="multipart/form-data">
+                    <form onSubmit={this.onSubmit} ref="uploadForm" encType="multipart/form-data" style={{width: '100%', padding: '0 20px'}}>
                         <Bootstrap.FormGroup>
                             <Bootstrap.ControlLabel >App name</Bootstrap.ControlLabel>
                             <Bootstrap.FormControl type='text' ref="name" />

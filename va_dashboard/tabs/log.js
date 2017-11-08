@@ -74,12 +74,12 @@ var Log = React.createClass({
         });
         return (
             <div id="log-page">
-            	<div>
-                    <DateRange updateLogs={this.updateLogs} />
-                    <input type='text' placeholder='Search...' value={this.state.value} onChange={this.filter} style={{marginLeft: '30px'}}/>
-	    		</div>
-                <FilterBtns changeTable={this.changeTable} />
-            	<TableRedux logs={logs} filterBy={this.state.value} checked={this.state.checked}/>
+                <DateRange updateLogs={this.updateLogs} />
+                <div id='filter-log'>
+                    <FilterBtns changeTable={this.changeTable} />
+                    <input type='text' placeholder='Search...' value={this.state.value} onChange={this.filter} className='pull-right'/>
+                </div>
+                <TableRedux logs={logs} filterBy={this.state.value} checked={this.state.checked}/>
             </div>
 	);
     }
@@ -117,6 +117,7 @@ var DateRange = React.createClass({
                 onDatesChange={this.handleChange}
                 focusedInput={this.state.focusedInput}
                 onFocusChange={this.focusChange}
+                isOutsideRange={function(){return false}}
             />
         );
     }
@@ -124,37 +125,27 @@ var DateRange = React.createClass({
 
 var FilterBtns = React.createClass({
     getInitialState: function () {
+        var severities = ["emerg", "alert", "crit", "err", "warning", "notice", "info", "debug"];
         return {
-            severities: ["emerg", "alert", "crit", "err", "warning", "notice", "info", "debug"],
-            btnStatus: Array.apply(null, Array(8)).map(function(){return true})
+            severities: severities,
+            values: Object.assign([], severities)
         }
     },
 
-	btnClick: function (key) {
-        var btnStatus = this.state.btnStatus.slice(0);
-        btnStatus[key] = !btnStatus[key];
-        this.setState({btnStatus: btnStatus});
-        var checked = [], s = this.state.severities;
-        for(var i=0; i<btnStatus.length; i++){
-            if(btnStatus[i]) checked.push(s[i]);
-        };
-        this.props.changeTable(checked);
+	onChange: function (values) {
+        this.setState({values: values});
+        this.props.changeTable(values);
 	},
 
     render: function () {
-        var btnStyle = {
-			display: 'inline',
-			marginRight: '10px',
-            backgroundColor: '#fff'
-		};
-        var btnStatus = this.state.btnStatus, me = this;
-		var btns = this.state.severities.map(function(val, key){
-            var style = Object.assign({}, btnStyle);
-            if(btnStatus[key]) style['backgroundColor'] = '#eee';
-			return <Bootstrap.Button key={key} onClick={me.btnClick.bind(me, key)} style={style}>{val}</Bootstrap.Button>;
+        var me = this;
+		var btns = this.state.severities.map(function(val){
+			return <Bootstrap.ToggleButton key={val} value={val}>{val}</Bootstrap.ToggleButton>;
 		});
 		return (
-			<div id="log-btns">Severity: {btns}</div>
+            <Bootstrap.ToggleButtonGroup type="checkbox" value={this.state.values} onChange={this.onChange}>
+			    {btns}
+            </Bootstrap.ToggleButtonGroup>
 		);
     }
 });
@@ -180,9 +171,10 @@ var Table = React.createClass({
 
     render: function () {
         var logs = this.props.logs.map(function(log, index) {
-            var msg;
+            var msg = log.message, className = "";
             try{
-                msg = JSON.parse(log.message), className = "";
+                var log_json = JSON.parse(msg);
+                msg = msg.function;
             }catch (e){
                 console.log("JSON error ", index.toString());
                 console.log(log.message);
@@ -192,7 +184,7 @@ var Table = React.createClass({
             return (
                 <Reactable.Tr key={log.timestamp} id={log.timestamp} className={className} onClick={this.rowSelected}>
                     <Reactable.Td column="Timestamp">{log.timestamp.substring(0,19)}</Reactable.Td>
-                    <Reactable.Td column="Message">{msg.function}</Reactable.Td>
+                    <Reactable.Td column="Message">{msg}</Reactable.Td>
                     <Reactable.Td column="Severity">{log.severity}</Reactable.Td>
                     <Reactable.Td column="Host">{log.host}</Reactable.Td>
                     <Reactable.Td column="Facility">{log.facility}</Reactable.Td>

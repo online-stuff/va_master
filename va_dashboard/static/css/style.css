@@ -616,6 +616,16 @@ table tr.row-provider-Offline{
 #revoked-tbl > .reactable-data > tr{
     height: 48px;
 }
-.DateInput__display-text--has-input{
+/*.DateInput__display-text--has-input{
     height: 24px;
+}*/
+.DateRangePicker__picker{
+    z-index: 1000!important;
+}
+#filter-log{
+    width: 70%;
+}
+#filter-log > input{
+    vertical-align: top;
+    margin-top: 3.5px;
 }
