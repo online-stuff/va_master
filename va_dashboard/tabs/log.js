@@ -4,7 +4,8 @@ var connect = require('react-redux').connect;
 var Network = require('../network');
 var ReactDOM = require('react-dom');
 var Router = require('react-router');
-var DatePicker = require('react-datepicker').default;
+//var DatePicker = require('react-datepicker').default;
+var DateRangePicker = require('react-dates').DateRangePicker;
 var moment = require('moment');
 var Reactable = require('reactable');
 
@@ -75,7 +76,7 @@ var Log = React.createClass({
             <div id="log-page">
             	<div>
                     <DateRange updateLogs={this.updateLogs} />
-                    <input type='text' placeholder='Search...' value={this.state.value} onChange={this.filter}/>
+                    <input type='text' placeholder='Search...' value={this.state.value} onChange={this.filter} style={{marginLeft: '30px'}}/>
 	    		</div>
                 <FilterBtns changeTable={this.changeTable} />
             	<TableRedux logs={logs} filterBy={this.state.value} checked={this.state.checked}/>
@@ -88,48 +89,35 @@ var DateRange = React.createClass({
     getInitialState: function () {
         return {
             startDate: moment().subtract(1, 'days'),
-            endDate: moment()
+            endDate: moment(),
+            focusedInput: null
         }
     },
-    handleChangeStart: function(date) {
+    handleChange: function(obj) {
         this.setState({
-            startDate: date
+            startDate: obj.startDate,
+            endDate: obj.endDate
         });
+        this.props.updateLogs(obj.startDate.format('YYYY-MM-DD'), obj.endDate.format('YYYY-MM-DD'));
     },
 
-    handleChangeEnd: function(date) {
-        this.setState({
-            endDate: date
-        });
+    focusChange: function(focusedInput){
+        this.setState({focusedInput: focusedInput});
     },
+
     btnClick: function(){
         this.props.updateLogs(this.state.startDate.format('YYYY-MM-DD'), this.state.endDate.format('YYYY-MM-DD'));
     },
     render: function () {
         return (
-            <div className="date-range">
-                From: 
-                <DatePicker
-                    className="datepicker"
-                    dateFormat="DD/MM/YYYY"
-                    selected={this.state.startDate}
-                    selectsStart
-                    startDate={this.state.startDate}
-                    endDate={this.state.endDate}
-                    onChange={this.handleChangeStart}
-                />
-                To: 
-                <DatePicker
-                    className="datepicker"
-                    dateFormat="DD/MM/YYYY"
-                    selected={this.state.endDate}
-                    selectsEnd
-                    startDate={this.state.startDate}
-                    endDate={this.state.endDate}
-                    onChange={this.handleChangeEnd}
-                />
-                <Bootstrap.Button onClick={this.btnClick}>Update logs</Bootstrap.Button>
-	   </div>
+            <DateRangePicker
+                displayFormat="DD/MM/YYYY"
+                startDate={this.state.startDate}
+                endDate={this.state.endDate}
+                onDatesChange={this.handleChange}
+                focusedInput={this.state.focusedInput}
+                onFocusChange={this.focusChange}
+            />
         );
     }
 });

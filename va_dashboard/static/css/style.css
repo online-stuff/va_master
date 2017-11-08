@@ -1,8 +1,10 @@
-@import url('react-datepicker.css');
 @import url('react-select-plus.css');
+@import url('_datepicker.css');
 
 html, body, .main-content {
     height: 100%;
+    background-color: #fafafa;
+    box-sizing: border-box;
 }
 body{
     margin: 0;
@@ -613,4 +615,7 @@ table tr.row-provider-Offline{
 }
 #revoked-tbl > .reactable-data > tr{
     height: 48px;
+}
+.DateInput__display-text--has-input{
+    height: 24px;
 }
