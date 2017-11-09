@@ -64,7 +64,7 @@ class TestClass(unittest.TestCase):
         self.handle_keys_in_set(users['data'], required_keys, data_id_key = 'user')
 
 
-    @unittest.skip('Skipping temporarily. ')
+#    @unittest.skip('Skipping temporarily. ')
     def test_add_provider(self):
         providers =  self.api.api_call('/providers/info', method='post', data={})
 
@@ -85,10 +85,11 @@ class TestClass(unittest.TestCase):
         diff_providers = [x for x in new_providers if x not in providers]
         self.assertNotEqual(len(providers['data']), len(new_providers['data']))
 
-    @unittest.skip('Skipping temporarily. ')
+#    @unittest.skip('Skipping temporarily. ')
     def test_delete_provider(self):
         providers = self.api.api_call('/providers/info', method='post', data={})
-        a = self.api.api_call('/providers/delete', method='post', data={"provider_name": "va-osasdf"})
+        result = self.api.api_call('/providers/delete', method='post', data={"provider_name": "va-os"})
+        print 'Result from delete is : ', result
         new_providers = self.api.api_call('/providers/info', method='post', data={})
         self.assertNotEqual(len(providers['data']), len(new_providers['data']))
 
