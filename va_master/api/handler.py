@@ -429,8 +429,8 @@ class LogMessagingSocket(tornado.websocket.WebSocketHandler):
                 to_date = datetime.datetime.now()
 
             messages = self.get_messages(from_date, to_date)
-            for m in messages: 
-                m['data'] = str(m.get('data', ''))[:100]
+#            for m in messages: 
+#                m['data'] = str(m.get('data', ''))[:100]
             messages = {'type' : 'init', 'logs' : messages}
             self.write_message(json.dumps(messages))
 
