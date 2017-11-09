@@ -10,12 +10,15 @@ var Servers = React.createClass({
         return {
             loaded: false,
             providers: [],
+            servers: [],
             states: [],
             provider_name: "",
             role: "",
             defaults: {image: "", network: "", sec_group: "", size: ""},
             options: {sizes: [], networks: [], images: [], sec_groups: []},
-            provider_usage: [{used_cpus: "", max_cpus: "", used_ram: "", max_ram: "", used_disk: "", max_disk: "", used_servers: "", max_servers: ""}]
+            provider_usage: [{used_cpus: "", max_cpus: "", used_ram: "", max_ram: "", used_disk: "", max_disk: "", used_servers: "", max_servers: ""}],
+            popupShow: false,
+            popupData: ['','','']
         };
     },
 
@@ -53,7 +56,7 @@ var Servers = React.createClass({
                     states[state.name] = state.fields;
                 }
             }
-            me.setState({provider_usage: provider_usage, providers: providers, provider_name: first_provider.provider_name, options: {sizes: first_provider.sizes, networks: first_provider.networks, images: first_provider.images, sec_groups: first_provider.sec_groups}, defaults: first_provider.defaults, states: states, role: role, loaded: true});
+            me.setState({provider_usage: provider_usage, providers: providers, provider_name: first_provider.provider_name, options: {sizes: first_provider.sizes, networks: first_provider.networks, images: first_provider.images, sec_groups: first_provider.sec_groups}, defaults: first_provider.defaults, states: states, role: role, loaded: true, servers: resp1});
         });
     },
 
@@ -65,12 +68,12 @@ var Servers = React.createClass({
         this.props.dispatch({type: 'RESET_APP'});
     },
 
-    btn_clicked: function(provider_name, provider, evtKey){
+    btn_clicked: function(provider, server, evtKey){
         var me = this;
-        var data = {provider_name: provider, server_name: hostname, action: evtKey};
+        var data = {provider_name: provider, server_name: server, action: evtKey};
         Network.post('/api/apps/action', this.props.auth.token, data).done(function(d) {
             Network.post('/api/providers/info', me.props.auth.token, {providers: []}).done(function(data) {
-                me.setState({providers: data});
+                me.setState({providers: data, popupShow: false});
             }).fail(function (msg) {
                 me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
             });
@@ -79,15 +82,26 @@ var Servers = React.createClass({
         });
     },
 
+    confirm_action: function(provider, server, evtKey){
+        if(evtKey == 'reboot' || evtKey == 'delete')
+            this.setState({popupShow: true, popupData: [provider, server, evtKey]});
+        else
+            this.btn_clicked(provider, server, evtKey);
+    },
+
+    popupClose: function() {
+        this.setState({popupShow: false});
+    },
+
     openModal: function () {
         this.props.dispatch({type: 'OPEN_MODAL'});
     },
 
     render: function () {
         var app_rows = [];
-        for(var i = 0; i < this.state.providers.length; i++){
+        for(var i = 0; i < this.state.servers.length; i++){
             // provider_name = this.state.providers[i].provider_name;
-            var rows = this.state.providers[i].servers.map(function(app) {
+            var rows = this.state.servers[i].servers.map(function(app) {
                 ipaddr = app.ip;
                 if(Array.isArray(ipaddr)){
                     if(ipaddr.length > 0){
@@ -106,9 +120,9 @@ var Servers = React.createClass({
                         <Reactable.Td column="Status">{app.status}</Reactable.Td>
                         <Reactable.Td column="Provider">{app.provider}</Reactable.Td>
                         <Reactable.Td column="Actions">
-                            <Bootstrap.DropdownButton id={'dropdown-' + app.hostname} bsStyle='primary' title="Choose" onSelect = {this.btn_clicked.bind(this, app.hostname, app.provider)}>
-                                <Bootstrap.MenuItem eventKey="reboot">Reboot</Bootstrap.MenuItem>
-                                <Bootstrap.MenuItem eventKey="delete">Delete</Bootstrap.MenuItem>
+                            <Bootstrap.DropdownButton id={'dropdown-' + app.hostname} bsStyle='primary' title="Choose" onSelect = {this.confirm_action.bind(null, app.provider, app.hostname)}>
+                                <Bootstrap.MenuItem className="danger" eventKey="reboot">Reboot</Bootstrap.MenuItem>
+                                <Bootstrap.MenuItem className="danger" eventKey="delete">Delete</Bootstrap.MenuItem>
                                 <Bootstrap.MenuItem eventKey="start">Start</Bootstrap.MenuItem>
                                 <Bootstrap.MenuItem eventKey="stop">Stop</Bootstrap.MenuItem>
                             </Bootstrap.DropdownButton>
@@ -137,16 +151,35 @@ var Servers = React.createClass({
                 <span className="spinner" style={spinnerStyle} ><i className="fa fa-spinner fa-spin fa-3x"></i></span>
                 <div style={blockStyle}>
                     <ServerFormRedux loaded={loaded} providers = {this.state.providers} states = {this.state.states} provider_name = {this.state.hostname} role = {this.state.role} defaults = {this.state.defaults} options = {this.state.options} provider_usage = {this.state.provider_usage} getData = {this.getData} onChange = {this.onChange} onChangeRole = {this.onChangeRole} />
-                    <Bootstrap.PageHeader>Current servers <small>All specified servers</small></Bootstrap.PageHeader>
-                    <Bootstrap.Button onClick={this.openModal} className="tbl-btn">
-                        <Bootstrap.Glyphicon glyph='plus' />
-                        Create server 
-                    </Bootstrap.Button>
-                    <Reactable.Table className="table striped" columns={['Hostname', 'IP', 'Size', 'Status', 'Provider', 'Actions']} itemsPerPage={10} pageButtonLimit={10} noDataText="No matching records found." sortable={sf_cols} filterable={sf_cols} >
+                    <Bootstrap.PageHeader>Current servers</Bootstrap.PageHeader>
+                    <Reactable.Table className="table striped" columns={['Hostname', 'IP', 'Size', 'Status', 'Provider', 'Actions']} itemsPerPage={10} pageButtonLimit={10} noDataText="No matching records found." sortable={sf_cols} filterable={sf_cols} btnName="Create server" btnClick={this.openModal}>
                         {app_rows}
                     </Reactable.Table>
+                    <ConfirmPopup show={this.state.popupShow} data={this.state.popupData} close={this.popupClose} action={this.btn_clicked} />
                 </div>
             </div>
+        );
+    }
+});
+
+var ConfirmPopup = React.createClass({
+    render: function () {
+        var data = this.props.data;
+        return (
+            <Bootstrap.Modal show={this.props.show} onHide={this.props.close}>
+                <Bootstrap.Modal.Header closeButton>
+                  <Bootstrap.Modal.Title>Confirm action</Bootstrap.Modal.Title>
+                </Bootstrap.Modal.Header>
+
+                <Bootstrap.Modal.Body>
+                    <p>Please confirm action: {data[2]} server {data[0]}</p>
+                </Bootstrap.Modal.Body>
+
+                <Bootstrap.Modal.Footer>
+                    <Bootstrap.Button onClick={this.props.close}>Cancel</Bootstrap.Button>
+                    <Bootstrap.Button onClick={this.props.action.bind(null, data[0],data[1],data[2])} bsStyle = "primary">Confirm</Bootstrap.Button>
+                </Bootstrap.Modal.Footer>
+            </Bootstrap.Modal>
         );
     }
 });
@@ -519,7 +552,7 @@ var ServerForm = React.createClass({
     },
 
     onChangeRole: function(e) {
-        this.setState({role: e.target.value, step2: this.props.states[e.target.value].length > 0});
+        this.setState({role: e.target.value, step2: e.target.value && this.props.states[e.target.value].length > 0});
     },
 
     onChangeProvider: function(e){
@@ -620,7 +653,7 @@ var ServerForm = React.createClass({
                     <Bootstrap.Tabs id="launch-app" activeKey={this.state.stepIndex}>
                         <Bootstrap.Tab title='Choose role' eventKey={1}>
                             <form className="form-horizontal">
-                                <div class="form-group">
+                                <div className="form-group">
                                     <div className="col-sm-4">
                                         <select ref='role' className="form-control" defaultValue={this.props.apps.select} onChange={this.onChangeRole}>
                                             {state_rows}
@@ -630,8 +663,8 @@ var ServerForm = React.createClass({
                                         <input type="text" ref='name' className="form-control" placeholder='Instance name' />
                                     </div>
                                 </div>
-                                {!this.state.standalone && <div class="form-group">
-                                    <label for="provider-select" className="col-sm-4 control-label">Provider</label>
+                                {!this.state.standalone && <div className="form-group">
+                                    <label htmlFor="provider-select" className="col-sm-4 control-label">Provider</label>
                                     <div className="col-sm-8">
                                         <select id="provider-select" className="form-control" defaultValue='-1' onChange={this.onChangeProvider.bind(this)}>
                                             {provider_rows}

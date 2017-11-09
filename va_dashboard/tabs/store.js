@@ -31,8 +31,13 @@ var Store = React.createClass({
     openModal: function () {
         this.props.dispatch({type: 'OPEN_MODAL'});
     },
+    openPanel: function(e){
+        var index = e.target.value;
+        var state = this.state.states[index];
+        Router.hashHistory.push('/panel/' + state.panels[0].key + '/' + state.servers[0]);
+    },
     render: function () {
-        var states_rows = this.state.states.map(function(state) {
+        var states_rows = this.state.states.map(function(state, index) {
             return (
                 <Bootstrap.Col xs={12} sm={6} md={3} key={state.name}>
                     <Bootstrap.Panel header={state.name} bsStyle='primary'>
@@ -41,6 +46,10 @@ var Store = React.createClass({
                         <Bootstrap.Button bsStyle='primary' onClick={this.launchApp} value={state.name}>
                             Launch
                         </Bootstrap.Button>
+                        {'servers' in state && state.servers.length > 0 && <Bootstrap.Button bsStyle='success' onClick={this.openPanel} value={index} style={{marginLeft: '10px'}}>
+                            Open
+                        </Bootstrap.Button>
+                        }
                     </Bootstrap.Panel>
                 </Bootstrap.Col>
             )

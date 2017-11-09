@@ -41,14 +41,10 @@ var UserGroupPanel = React.createClass({
         var UserRedux = connect(function(state){
             return {auth: state.auth, alert: state.alert};
         })(Users);
-        var GroupRedux = connect(function(state){
-            return {auth: state.auth, alert: state.alert};
-        })(Groups);
 
         return (
             <div>
                 <UserRedux funcs = {this.state.funcs} groups = {this.state.group_opt} />
-                <GroupRedux funcs = {this.state.funcs} groups = {this.state.groups} />
             </div>
         )
     }
@@ -157,12 +153,8 @@ var Users = React.createClass({
         return ( 
             <div>
                 <Bootstrap.PageHeader>Dashboard Users</Bootstrap.PageHeader>
-                <Bootstrap.Button type="button" bsStyle='default' className="tbl-btn" onClick={this.openModal}>
-                    <Bootstrap.Glyphicon glyph='plus' />
-                    Add user
-                </Bootstrap.Button>
                 {modal}
-                <Reactable.Table className="table striped" columns={['Username', 'Groups', 'Functions', 'Actions']} itemsPerPage={10} pageButtonLimit={10} noDataText="No matching records found." sortable={true} filterable={['Username', 'Groups', 'Functions', 'Actions']}>
+                <Reactable.Table className="table striped" columns={['Username', 'Groups', 'Functions', 'Actions']} itemsPerPage={10} pageButtonLimit={10} noDataText="No matching records found." sortable={true} filterable={['Username', 'Groups', 'Functions', 'Actions']} btnName="Add user" btnClick={this.openModal}>
                     {user_rows}
                 </Reactable.Table> 
             </div> 
@@ -266,12 +258,8 @@ var Groups = React.createClass({
         return (
             <div style={{position: 'relative'}}>
                 <Bootstrap.PageHeader>Dashboard Groups</Bootstrap.PageHeader>
-                <Bootstrap.Button type="button" bsStyle='default' className="tbl-btn" style={{top: '80px'}} onClick={this.openModal}>
-                    <Bootstrap.Glyphicon glyph='plus' />
-                    Add group
-                </Bootstrap.Button>
                 {modal}
-                <Reactable.Table className="table striped" columns={['Group name', 'Functions', 'Actions']} itemsPerPage={10} pageButtonLimit={10} noDataText="No matching records found." sortable={true} filterable={['Group name', 'Functions', 'Actions']}>
+                <Reactable.Table className="table striped" columns={['Group name', 'Functions', 'Actions']} itemsPerPage={10} pageButtonLimit={10} noDataText="No matching records found." sortable={true} filterable={['Group name', 'Functions', 'Actions']} btnName="Add group" btnClick={this.openModal}>
                     {group_rows}
                 </Reactable.Table>
             </div>
@@ -441,4 +429,12 @@ UserGroupPanel = connect(function(state){
     return {auth: state.auth, alert: state.alert};
 })(UserGroupPanel);
 
-module.exports = UserGroupPanel;
+var GroupRedux = connect(function(state){
+    return {auth: state.auth, alert: state.alert};
+})(Groups);
+
+
+module.exports = {
+    Panel: UserGroupPanel,
+    Group: GroupRedux
+};

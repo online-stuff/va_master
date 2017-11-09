@@ -166,7 +166,7 @@ var FilterBtns = React.createClass({
 			return <Bootstrap.Button key={key} onClick={me.btnClick.bind(me, key)} style={style}>{val}</Bootstrap.Button>;
 		});
 		return (
-			<div id="log-btns">{btns}</div>
+			<div id="log-btns">Severity: {btns}</div>
 		);
     }
 });
@@ -191,8 +191,14 @@ var Table = React.createClass({
     },
 
     render: function () {
-        var logs = this.props.logs.map(function(log) {
-            var msg = JSON.parse(log.message), className = "";
+        var logs = this.props.logs.map(function(log, index) {
+            var msg;
+            try{
+                msg = JSON.parse(log.message), className = "";
+            }catch (e){
+                console.log("JSON error ", index.toString());
+                console.log(log.message);
+            }
             if(this.state.selected_log.timestamp === log.timestamp)
                 className = "info";
             return (
@@ -220,6 +226,7 @@ var Table = React.createClass({
                 {logs}
             </Reactable.Table>
             <div className="selected-block">
+                <label>Log Details</label>
                 {selected_log}
             </div>
         </div> );
