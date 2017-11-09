@@ -1,5 +1,6 @@
 from abc import ABCMeta, abstractmethod
 from tornado.httpclient import AsyncHTTPClient, HTTPRequest
+from tornado.httputil import url_concat
 import tornado.gen
 import tornado.ioloop
 import json
@@ -80,12 +81,16 @@ class ConsulStore(DataStore):
             raise StoreError(e)
 
     @tornado.gen.coroutine
-    def get(self, doc_id):
+    def get_exec(self, doc_id, params = {}):
         is_ok = False
         try:
-            resp = yield self.client.fetch('%s/v1/kv/%s' % (self.path, doc_id))
-            resp = json.loads(resp.body)[0]['Value']
-            resp = json.loads(base64.b64decode(resp))
+            url = '%s/v1/kv/%s' % (self.path, doc_id)
+            if params: 
+                url = url_concat(url, params)
+            resp = yield self.client.fetch(url)
+            resp = [x['Value'] for x in json.loads(resp.body)]
+            resp = [json.loads(base64.b64decode(x)) for x in resp]
+#            if len(resp) == 1: resp = resp[0]
             is_ok = True
         except tornado.httpclient.HTTPError as e:
             if e.code == 404:
@@ -96,6 +101,17 @@ class ConsulStore(DataStore):
             raise StoreError(e)
         if is_ok:
             raise tornado.gen.Return(resp)
+
+    @tornado.gen.coroutine
+    def get(self, doc_id):
+        result = yield self.get_exec(doc_id)
+        result = result[0]
+        raise tornado.gen.Return(result)
+
+    @tornado.gen.coroutine
+    def get_recurse(self, doc_id):
+        result = yield self.get_exec(doc_id, params = {"recurse" : True})
+        raise tornado.gen.Return(result)
 
     @tornado.gen.coroutine
     def delete(self, doc_id):

@@ -5,40 +5,56 @@ from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 
 from tornado.httpclient import AsyncHTTPClient, HTTPRequest
-from tornado.concurrent import run_on_executor
+from tornado.concurrent import run_on_executor, Future
 from concurrent.futures import ThreadPoolExecutor   # `pip install futures` for python2
 
 from . import url_handler
 from login import get_current_user, user_login
+from panels import get_panel_for_user
 import json, datetime, syslog, pytz
 import dateutil.relativedelta
 import dateutil.parser
 
+from va_master.datastore_handler import DatastoreHandler
 
-def invalid_url(deploy_handler, path, method):
+def invalid_url(path, method):
     raise Exception('Invalid URL : ' + path +' with method : ' + method)
 
 class ApiHandler(tornado.web.RequestHandler):
     executor = ThreadPoolExecutor(max_workers= 4)
 
     def initialize(self, config, include_version=False):
-        self.config = config
-        self.datastore = config.datastore
-        self.data = {}
         try:
+#            self.config = config
+            self.datastore = config.datastore
+            self.deploy_handler = config.deploy_handler
+            self.data = {}
             self.paths = url_handler.gather_paths()
+            self.datastore_handler = DatastoreHandler(datastore = self.datastore, datastore_spec_path = '/opt/va_master/consul_spec.json')
         except: 
             import traceback
             traceback.print_exc()
-            return
-        self.salt_client = None
+
+    #Temporary for testing
+    #TODO remove in prod
+    def set_default_headers(self):
+        self.set_header("Access-Control-Allow-Origin", "*")
+        self.set_header("Access-Control-Allow-Headers", "x-requested-with, Authorization, Content-Type")
+        self.set_header('Access-Control-Allow-Methods', 'POST, GET, DELETE, OPTIONS')
+
 
     def json(self, obj, status=200):
-        self.set_header('Content-Type', 'application/json')
-        self.set_status(status)
-#        print ('I am in json with ', json.dumps(obj))
-        self.write(json.dumps(obj))
-        self.finish()
+        try:
+            if not obj: 
+                return
+            self.set_header('Content-Type', 'application/json')
+            self.set_status(status)
+            self.write(json.dumps(obj))
+            self.flush()
+        except: 
+            import traceback
+            traceback.print_exc()
+#        self.finish()
 
 
     def has_error(self, result):
@@ -47,9 +63,13 @@ class ApiHandler(tornado.web.RequestHandler):
             "The minion function caused an exception",
             "is not available",
             "Passed invalid arguments to",
+            "ERROR",
         ]
         if type(result) == str: 
-            return any([i in result for i in exceptions])
+            has_error =  any([i in result for i in exceptions])
+            if has_error: 
+                print ('Salt error: ', result)
+            return has_error
         else: return False
 
 
@@ -63,35 +83,56 @@ class ApiHandler(tornado.web.RequestHandler):
 #            print ('Error with testing formatted result - probably is ok. ')
             return False
 
-    @tornado.gen.coroutine
-    def exec_method(self, method, path, data):
-        self.data = data
-        self.data['method'] = method
-        self.data['handler'] = self
-        api_func = self.paths[method].get(path)
 
-        print ('Getting a call at ', path, ' with data ', data, ' and will call function: ', api_func)
-
-        if not api_func: 
-            data = {'path' : path, 'method' : method}
-            api_func = {'function' : invalid_url, 'args' : ['path', 'method']}
-        elif api_func['function'] != user_login: 
-            try: 
-                yield self.log_message(path = path, data = data, func = api_func['function'])
-
-                user = yield get_current_user(self)
-
-                if not user: 
-                    self.json({'success' : False, 'message' : 'User not authenticated properly. ', 'data' : {}})
-                elif user['type'] == 'user' and path not in self.paths.get('user_allowed', []): 
-                    self.json({'success' : False, 'message' : 'User does not have appropriate privileges. ', 'data' : {}})
-            except: 
-                import traceback
-                traceback.print_exc()
+    def fetch_func(self, method, path, data):
         try:
-            api_func, api_kwargs = api_func.get('function'), api_func.get('args')       
-            api_kwargs = {x : data.get(x) for x in api_kwargs if data.get(x)} or {}
-            result = yield api_func(self.config.deploy_handler, **api_kwargs)
+            api_func = self.paths[method].get(path)
+
+            print ('Getting a call at ', path, ' with data ', data, ' and will call function: ', api_func)
+    
+            if not api_func: 
+                api_func = {'function' : invalid_url, 'args' : ['path', 'method']}
+
+        except: 
+            import traceback
+            traceback.print_exc()
+        return api_func
+
+    @tornado.gen.coroutine
+    def handle_user_auth(self, path):
+        auth_successful = True
+        try: 
+            user = yield get_current_user(self)
+            if not user: 
+                self.json({'success' : False, 'message' : 'User not authenticated properly. ', 'data' : {}})
+                auth_successful = False
+            elif user['type'] == 'user' : 
+                user_functions = yield self.config.deploy_handler.get_user_functions(user.get('username'))
+                user_functions += self.paths.get('user_allowed', [])
+
+                if path not in user_functions: 
+                    self.json({'success' : False, 'message' : 'User ' + user['username'] + ' tried to access ' + path + ' but it is not in their allowed functions : ' + str(user_functions)})
+                    auth_successful = False
+
+#                self.json({'success' : False, 'message' : 'User does not have appropriate privileges. ', 'data' : {}})
+        except Exception as e: 
+            import traceback
+            traceback.print_exc()
+
+            self.json({'success' : False, 'message' : 'There was an error retrieving user data. ' + e.message, 'data' : {}})
+            auth_successful = False
+
+        raise tornado.gen.Return(auth_successful)   
+
+    @tornado.gen.coroutine
+    def handle_func(self, api_func, data):
+        try:
+            api_func, api_args = api_func.get('function'), api_func.get('args')       
+            api_kwargs = {x : data.get(x) for x in api_args if data.get(x)} or {}
+            api_kwargs.update({x : self.utils[x] for x in api_args if x in self.utils})
+
+            result = yield api_func(**api_kwargs)
+
             if type(result) == dict: 
                 if result.get('data_type', 'json') == 'file' : 
                     raise tornado.gen.Return(None)
@@ -108,23 +149,62 @@ class ApiHandler(tornado.web.RequestHandler):
             traceback.print_exc()
 
             result = {'success' : False, 'message' : 'There was an error performing a request : ' + str(e.message), 'data' : {}}
+        raise tornado.gen.Return(result)
+        
 
-        self.json(result)
+
 
     @tornado.gen.coroutine
-    def get(self, path):
-        args = self.request.query_arguments
-        t_args = args
-        for x in t_args: 
-            if len(t_args[x]) == 1: 
-                args[x] = args[x][0]
+    def exec_method(self, method, path, data):
         try:
-#            result = yield self.exec_method('get', path, {x : args[x][0] for x in args})
-            result = yield self.exec_method('get', path, args)
+            self.data = data
+            self.data.update({
+                'method' :  method,
+                'path' : path
+            })
 
+            self.utils = {
+                'handler' : self,
+                'datastore_handler' : self.datastore_handler,
+                'deploy_handler' : self.deploy_handler,
+                'datastore' : self.deploy_handler.datastore,
+            }
+
+            user = yield get_current_user(self)
+            data['dash_user'] = user
+
+            api_func = self.fetch_func(method, path, data)
+            if api_func['function'] not in [user_login]:#, url_serve_file_test]: 
+                auth_successful = yield self.handle_user_auth(path)
+                if not auth_successful: 
+                    raise tornado.gen.Return()
+
+            result = yield self.handle_func(api_func, data)
+            log_result = result
+            if api_func['function'] in [get_panel_for_user]:
+                log_result = {}
+
+            yield self.log_message(path = path, data = data, func = api_func['function'], result = log_result)
+
+            self.json(result)
         except: 
             import traceback
             traceback.print_exc()
+
+    @tornado.gen.coroutine
+    def get(self, path):
+        try:
+
+            args = self.request.query_arguments
+            t_args = args
+            for x in t_args: 
+                if len(t_args[x]) == 1: 
+                    args[x] = args[x][0]
+            result = yield self.exec_method('get', path, args)
+        except: 
+            import traceback
+            traceback.print_exc()
+
 
     @tornado.gen.coroutine
     def delete(self, path):
@@ -143,8 +223,7 @@ class ApiHandler(tornado.web.RequestHandler):
                     try:
                         data = json.loads(self.request.body)
                     except: 
-                        print ('Bad json in post request : ', self.request.body)
-                        raise tornado.gen.Return()
+                        raise Exception('Bad json in request body : ', self.request.body)
                 else:
                     data = {self.request.arguments[x][0] for x in self.request.arguments}
                     data.update(self.request.files)
@@ -159,12 +238,20 @@ class ApiHandler(tornado.web.RequestHandler):
             import traceback
             traceback.print_exc()
 
+    @tornado.gen.coroutine
+    def options(self, path):
+        self.set_status(204)
+        self.finish()
+
+
 
     @tornado.gen.coroutine
-    def log_message(self, path, data, func):
+    def log_message(self, path, data, func, result):
 
         data = {x : str(data[x]) for x in data}
         user = yield url_handler.login.get_current_user(self)
+        if not user: 
+            user = {'username' : 'unknown', 'type' : 'unknown'}
         message = json.dumps({
             'type' : data['method'], 
             'function' : func.func_name,
@@ -173,6 +260,7 @@ class ApiHandler(tornado.web.RequestHandler):
             'path' : path, 
             'data' : data, 
             'time' : str(datetime.datetime.now()),
+            'result' : result,
         })
         try:
             syslog.syslog(syslog.LOG_INFO | syslog.LOG_LOCAL0, message)
@@ -182,16 +270,70 @@ class ApiHandler(tornado.web.RequestHandler):
 
 
     @tornado.gen.coroutine
-    def serve_file(self, file_path, chunk_size = 4096):
+    def send_data(self, source, kwargs, chunk_size):
+        args = []
+    
+        #kwargs has a 'source_args' field for placement arguments sent to the source. For instance, for file.read(), we have to send the "size" argument as a placement argument. 
+        if kwargs.get('source_args'): 
+            args = kwargs.pop('source_args')
+
+        offset = 0
+        while True:
+            print ('Calling ', source, ' with ', kwargs)
+            data = source(*args, **kwargs)
+
+            offset += chunk_size
+            if 'kwarg' in kwargs: 
+                if 'range_from' in kwargs['kwarg'].keys(): 
+                    kwargs['kwarg']['range_from'] = offset            
+
+            if type(data) == dict: #If using salt, it typically is formatted as {"minion" : "data"}
+                if kwargs.get('tgt') in data: 
+                    data = data[kwargs.get('tgt')]
+            if not data:
+                break
+
+            if type(data) == str:
+                self.write(data)
+                self.flush()
+
+            elif type(data) == Future: 
+                self.flush()
+                data = yield data
+                raise tornado.gen.Return(data)
+
+      
+
+
+    @tornado.gen.coroutine
+    def serve_file(self, source, chunk_size = 10**6, salt_source = {}, url_source = ''):
+
+        self.set_header('Content-Type', 'application/octet-stream')
+        self.set_header('Content-Disposition', 'attachment; filename=test.zip')
+
         try: 
-            self.set_header('Content-Type', 'application/octet-stream')
-            self.set_header('Content-Disposition', 'attachment; filename=' + file_path)
-            with open(file_path, 'r') as f:
-                while True:
-                    data = f.read(chunk_size)
-                    if not data:
-                        break
-                    self.write(data)
+            offset = 0
+
+            if salt_source: 
+                client = LocalClient()
+                source = client.cmd
+                kwargs = salt_source
+                kwargs['kwarg'] = kwargs.get('kwarg', {})
+                kwargs['kwarg']['range_from'] = 0
+            elif url_source: 
+                def streaming_callback(chunk):
+                    self.write(chunk)
+                    self.flush()
+                source = AsyncHTTPClient().fetch
+                request = HTTPRequest(url = url_source, streaming_callback = streaming_callback)
+                request = url_source
+                kwargs = {"request" : request, 'streaming_callback' : streaming_callback}
+            else:
+                f = open(source, 'r')
+                source = f.read
+                kwargs = {"source_args" : [chunk_size]}
+
+            result = yield self.send_data(source, kwargs, chunk_size)
             self.finish()
         except: 
             import traceback
@@ -203,16 +345,18 @@ class LogHandler(FileSystemEventHandler):
         super(LogHandler, self).__init__()
 
     def on_modified(self, event):
-        log_file = event.src_path + '/va-master.log'
-        print ('Log file is : ', log_file)
+        log_file = event.src_path
         with open(log_file) as f: 
             log_file = [x for x in f.read().split('\n') if x]
-        last_line = json.loads(log_file[-1])
         try:
+            last_line = log_file[-1]
+            last_line = json.loads(last_line)
+
             msg = {"type" : "update", "message" : last_line}
-            self.socket.write_message(json.dumps(msg))
+#            self.socket.write_message(json.dumps(msg))
         except: 
-            pass
+            import traceback
+            traceback.print_exc()
 
 
 class LogMessagingSocket(tornado.websocket.WebSocketHandler):
@@ -220,12 +364,12 @@ class LogMessagingSocket(tornado.websocket.WebSocketHandler):
     #Socket gets messages when opened
     @tornado.web.asynchronous
     @tornado.gen.engine
-    def open(self, no_messages = 0, logfile = '/var/log/vapourapps/va-master.log'):
+    def open(self, no_messages = 0, log_path = '/var/log/vapourapps/', log_file = 'va-master.log'):
         print ('Trying to open socket. ')
         try: 
-            self.logfile = logfile
+            self.logfile = log_path + log_file
             try:
-                with open(logfile) as f: 
+                with open(self.logfile) as f: 
                     self.messages = f.read().split('\n')
             except: 
                 self.messages = []
@@ -234,19 +378,21 @@ class LogMessagingSocket(tornado.websocket.WebSocketHandler):
                 try:
                     j_msg = json.loads(message)
                 except: 
-                    pass
+                    continue
                 json_msgs.append(j_msg)
             self.messages = json_msgs 
             yesterday = datetime.datetime.now() + dateutil.relativedelta.relativedelta(days = -1)
 
             init_messages = self.get_messages(yesterday, datetime.datetime.now())
+
             msg = {"type" : "init", "logs" : init_messages}
             self.write_message(json.dumps(msg))
 
             log_handler = LogHandler(self)
             observer = Observer()
-            observer.schedule(log_handler, path = '/'.join(logfile.split('/')[:-1]))
+            observer.schedule(log_handler, path = log_path)
             observer.start()
+            print ('Started observer. ')
         except: 
             import traceback
             traceback.print_exc()
@@ -281,6 +427,8 @@ class LogMessagingSocket(tornado.websocket.WebSocketHandler):
                 to_date = datetime.datetime.now()
 
             messages = self.get_messages(from_date, to_date)
+            for m in messages: 
+                m['data'] = str(m.get('data', ''))[:100]
             messages = {'type' : 'init', 'logs' : messages}
             self.write_message(json.dumps(messages))
 

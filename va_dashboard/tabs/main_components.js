@@ -9,22 +9,6 @@ var Router = require('react-router');
 var LineChart = require("react-chartjs-2").Line;
 var defaults = require("react-chartjs-2").defaults;
 
-function send_action(instance, action, args){
-    var data = {};
-    if(Array.isArray(action)){
-        var d = [];
-        d[0] = {"instance_name": instance, "action": action[0], "args": args};
-        for(var i=1; i < action.length; i++){
-            var a = action[i].split(":");
-	    d.push({"instance_name": a[0], "action": a[1], "args": args});
-        }
-        data['actions_list'] = d;
-    }else{
-        data = {"instance_name": instance, "action": action, "args": args};
-    }
-    return data;
-}
-
 var Div = React.createClass({
 
     render: function () {
@@ -158,14 +142,14 @@ var Chart = React.createClass({
         return color;
     },
     btn_click: function(period, interval, unit, step) {
-        var instance_name = this.props.panel.instance;
-        var data = {"instance_name": instance_name, "args": [this.props.host, this.props.service, period, interval]};
+        var server_name = this.props.panel.server;
+        var data = {"server_name": server_name, "args": [this.props.host, this.props.service, period, interval]};
         var me = this;
         Network.post('/api/panels/chart_data', this.props.auth.token, data).done(function(d) {
             var chartOptions = Object.assign({}, me.state.chartOptions);
             chartOptions.scales.xAxes[0].time.unit = unit;
             chartOptions.scales.xAxes[0].time.unitStepSize = step;
-            me.setState({chartData: me.getData(d[instance_name], true), chartOptions: chartOptions});
+            me.setState({chartData: me.getData(d[server_name], true), chartOptions: chartOptions});
         }).fail(function (msg) {
             me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
         });
@@ -190,27 +174,31 @@ var Chart = React.createClass({
 
 var Table = React.createClass({
     btn_clicked: function(id, evtKey){
-        if('args' in this.props.panel && this.props.panel.args !== ""){
+        var checkPath = 'path' in this.props.table && this.props.table.path.length > 0;
+        if(!checkPath && 'args' in this.props.panel && this.props.panel.args !== ""){
             id.unshift(this.props.panel.args);
         }
-        if('path' in this.props.table && this.props.table.path.length > 0){
+        if(checkPath){
             var args = [this.props.table.path[0]]
             if(this.props.table.path.length > 1){
                 args.push(this.props.table.path[1]);
                 var rest = this.props.table.path.slice(2,);
                 var path = "", slash = rest.length > 0 ? '/' : '';
-                for(var i=0; i<rest.length; i++){
+                for(var i=1; i<rest.length; i++){
                     path += rest[i];
                 }
+                if(slash)
+                    args.push(rest[0]);
                 args.push(path + slash + id[0]);
             }else{
                 args.push(id[0]);
             }
-            var data = send_action(this.props.panel.instance, evtKey, args);
+            var data = {"server_name": this.props.panel.server, "action": evtKey, "args": args};
             var me = this;
             if(typeof evtKey === 'object' && evtKey.type === "download"){
                 data.action = evtKey.name;
-                Network.download_file('/api/panels/serve_file', this.props.auth.token, data).done(function(d) {
+                data['url_function'] = 'get_backuppc_url';
+                Network.download_file('/api/panels/serve_file_from_url', this.props.auth.token, data).done(function(d) {
                     var data = new Blob([d], {type: 'octet/stream'});
                     var url = window.URL.createObjectURL(data);
                     tempLink = document.createElement('a');
@@ -239,7 +227,7 @@ var Table = React.createClass({
             var newName = this.props.name.replace(/\s/g, "_");
             var newId = id[0].replace(/:/g, "_");
             var newId = newId.replace(/\s/g, "_");
-            Router.hashHistory.push('/chart_panel/' + this.props.panel.instance + '/' + newName + '/' + newId);
+            Router.hashHistory.push('/chart_panel/' + this.props.panel.server + '/' + newName + '/' + newId);
         }else if('modals' in this.props && evtKey in this.props.modals){
             if("readonly" in this.props){
                 var rows = this.props.table[this.props.name].filter(function(row) {
@@ -260,9 +248,9 @@ var Table = React.createClass({
             modal.refresh_action = this.props.source;
             this.props.dispatch({type: 'OPEN_MODAL', template: modal});
         }else if("panels" in this.props && evtKey in this.props.panels){
-            Router.hashHistory.push('/subpanel/' + this.props.panels[evtKey] + '/' + this.props.panel.instance + '/' + id[0]);
+            Router.hashHistory.push('/subpanel/' + this.props.panels[evtKey] + '/' + this.props.panel.server + '/' + id[0]);
         }else{
-            var data = send_action(this.props.panel.instance, evtKey, id);
+            var data = {"server_name": this.props.panel.server, "action": evtKey, "args": id};
             var me = this;
             Network.post('/api/panels/action', this.props.auth.token, data).done(function(msg) {
                 if(typeof msg === 'string'){
@@ -287,23 +275,28 @@ var Table = React.createClass({
         }
     },
     linkClicked: function(action, event){
-        var colVal = event.currentTarget.textContent;
-        if(action == 'link' && "panels" in this.props && 'link' in this.props.panels){
-            this.props.dispatch({type: 'SELECT', select: colVal});
-            Router.hashHistory.push('/subpanel/' + this.props.panels['link'] + '/' + this.props.panel.instance + '/' + [colVal]);
-        }else{
-            var args = this.props.table.path.concat(colVal);
-            var data = send_action(this.props.panel.instance, action, args);
-            var me = this;
-            Network.post('/api/panels/action', this.props.auth.token, data).done(function(msg) {
-                if(typeof msg === 'string'){
-                    me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
-                }else{
-                    me.props.dispatch({type: 'CHANGE_DATA', data: msg, name: me.props.name, passVal: colVal});
-                }
-            }).fail(function (msg) {
-                me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
-            });
+        var linkVal = event.currentTarget.textContent, args = "";
+        if(window.location.hash.indexOf('subpanel') > -1){
+            args = this.props.panel.args + ","; 
+        }
+        args += linkVal;
+        if("panels" in this.props && action in this.props.panels){
+            Router.hashHistory.push('/panel/' + this.props.panels[action] + '/' + this.props.panel.server + '/' + args);
+        }else if("subpanels" in this.props && action in this.props.subpanels){
+            Router.hashHistory.push('/subpanel/' + this.props.subpanels[action] + '/' + this.props.panel.server + '/' + args);
+        } else {
+             var args = this.props.table.path.concat(linkVal);
+             var data = {"server_name": this.props.panel.server, "action": action, "args": args};
+             var me = this;
+             Network.post('/api/panels/action', this.props.auth.token, data).done(function(msg) {
+                 if(typeof msg === 'string'){
+                     me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
+                 }else{
+                     me.props.dispatch({type: 'CHANGE_DATA', data: msg, name: me.props.name, passVal: linkVal});
+                 }
+             }).fail(function (msg) {
+                 me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
+             });
         }
     },
     render: function () {
@@ -368,21 +361,21 @@ var Table = React.createClass({
                     key = [row[tbl_id]];
                 }
                 columns = this.props.columns.map(function(col, index) {
-                    var key = col.key, colClass = "", colText = row[key];
+                    var key = col.key, colClass = "", colText = colVal = row[key];
                     if(typeof col.colClass !== 'undefined'){
                         colClass = col.colClass;
                         if(row[col.colClass]){
                             colClass = "col-" + col.colClass + "-" + row[col.colClass];
                         }
-                        colText = <span className={colClass}>{row[key]}</span>;
+                        colText = <span className={colClass}>{colVal}</span>;
                         if("action" in col){
                             var col_arr = col['action'].split(':');
                             if(col_arr[0] === "all" || col_arr[0] === row[col.colClass])
-                                colText = <span className={colClass} onClick={me.linkClicked.bind(me, col_arr[1])}>{row[key]}</span>
+                                colText = <span className={colClass} onClick={me.linkClicked.bind(me, col_arr[1])}>{colVal}</span>
                         }
                     }
                     return (
-                        <Reactable.Td key={key} column={key}>
+                        <Reactable.Td key={key} column={key} value={colVal}>
                             {colText}
                         </Reactable.Td>
                     );
@@ -490,14 +483,14 @@ var Modal = React.createClass({
             }
             args.splice(keys[0], 0, check_vals);
         }
-        var data = send_action(this.props.panel.instance, action_name, this.state.args.concat(args));
+        var data = {"server_name": this.props.panel.server, "action": action_name, "args": this.state.args.concat(args)};
         var me = this;
         Network.post("/api/panels/action", this.props.auth.token, data).done(function(d) {
             me.props.dispatch({type: 'CLOSE_MODAL'});
             if('refresh_action' in me.props.modal.template){
                 var args = [];
                 if(me.props.panel.args !== "") args = [me.props.panel.args];
-                var data = {"instance_name": me.props.panel.instance, "action": me.props.modal.template.refresh_action, "args": args};
+                var data = {"server_name": me.props.panel.server, "action": me.props.modal.template.refresh_action, "args": args};
                 Network.post('/api/panels/action', me.props.auth.token, data).done(function(msg) {
                     if(typeof msg !== 'string'){
                         me.props.dispatch({type: 'CHANGE_DATA', data: msg, name: me.props.modal.template.table_name});
@@ -580,8 +573,9 @@ var Path = React.createClass({
     onClick: function(evt){
         // console.log(evt.currentTarget.id)
         // console.log(evt.currentTarget.textContent);
+        if(evt.currentTarget.id == 0) return;
         var args = this.props.table.path.slice(0, parseInt(evt.currentTarget.id) + 1);
-        var data = {"instance_name": this.props.panel.instance, "action": this.props.action, "args": args};
+        var data = {"server_name": this.props.panel.server, "action": this.props.action, "args": args};
         var me = this;
         Network.post('/api/panels/action', this.props.auth.token, data).done(function(msg) {
             if(typeof msg === 'string'){
@@ -596,6 +590,9 @@ var Path = React.createClass({
     render: function () {
         var me = this, paths = [];
         if("path" in this.props.table){
+            //TODO remove link from first element in path
+            //paths[0] = <li key="0" className="breadcrumb-item">{path}</li>;
+            //var p = this.props.table.path.slice(1);
             paths =  this.props.table.path.map(function(path, i){
                 return <li key={i} className="breadcrumb-item"><span id={i} className="link" onClick={me.onClick}>{path}</span></li>;
             });
@@ -611,19 +608,32 @@ var Path = React.createClass({
 var Form = React.createClass({
 
     onSelect: function (action) {
-        var host = ReactDOM.findDOMNode(this.refs.dropdown).value.trim();
-        var data = {"instance_name": this.props.panel.instance, "action": action, "args": [host]};
+        var dropdown = ReactDOM.findDOMNode(this.refs.dropdown);
+        var host = dropdown.value.trim();
+        var d_name = dropdown.name;
+        var data = {"server_name": this.props.panel.server, "action": action, "args": [host]};
         var me = this;
         Network.post('/api/panels/action', this.props.auth.token, data).done(function(msg) {
             if(typeof msg === 'string'){
                 me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
+            }else if('val' in msg){
+                me.props.dispatch({type: 'SELECT', select: host, name: d_name});
+                me.props.dispatch({type: 'CHANGE_DATA', data: msg.list, name: me.props.target, initVal: [host, msg.val]});
             }else{
-                me.props.dispatch({type: 'SELECT', select: host});
+                me.props.dispatch({type: 'SELECT', select: host, name: d_name});
                 me.props.dispatch({type: 'CHANGE_DATA', data: msg, name: me.props.target, initVal: [host]});
             }
         }).fail(function (msg) {
             me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
         });
+    },
+
+    componentDidMount: function(){
+        if("focus" in this.props && this.props.focus){
+            var elem = this.refs[this.props.focus], pos = elem.value.length;
+            elem.focus();
+            elem.setSelectionRange(pos, pos);
+        }
     },
 
     render: function () {
@@ -644,24 +654,28 @@ var Form = React.createClass({
                     return ( <Bootstrap.Checkbox id={index} key={element.name} name={element.name} checked={this.props.data[index]} onChange={this.props.form_changed}>{element.label}</Bootstrap.Checkbox>);
                 }
                 if(type == "readonly_text"){
-                    return ( <Bootstrap.FormControl id={index} key={element.name} type={type} name={element.name} value={this.props.form.readonly[element.name]} disabled /> );
+                    return ( <input id={index} key={element.name} className="form-control" type={type} name={element.name} value={this.props.form.readonly[element.name]} disabled /> );
                 }
                 if(type == "dropdown"){
-                    var action = "", defaultValue = element.value[0];
+                    var action = "", defaultValue = "", values = [];
+                    if('form' in this.props && element.name in this.props.form.dropdowns){
+                        d_elem = this.props.form.dropdowns[element.name];
+                        defaultValue = d_elem.select;
+                        values = d_elem.values;
+                    }else{
+                        defaultValue = element.value[0];
+                        values = element.value;
+                    }
                     if("action" in element){
                         action = this.onSelect.bind(this, element.action);
-                        if("dropdown" in this.props)
-                            defaultValue = this.props.dropdown.select;
-                        else if("table" in this.props && "path" in this.props.table && this.props.table.path.length > 0)
-                            defaultValue = this.props.table.path[0];
                     }
                     return ( <select ref="dropdown" id={index} key={element.name} onChange={action} name={element.name} defaultValue={defaultValue}>
-                        {element.value.map(function(option, i) {
+                        {values.map(function(option, i) {
                             return <option key={i} value={option}>{option}</option>
                         })}
                     </select> );
                 }
-                return ( <Bootstrap.FormControl id={index} key={element.name} type={type} name={element.name} value={this.props.data[index]} placeholder={element.label} onChange={this.props.form_changed} autoFocus={element.name == this.props.focus} /> );
+                return ( <input id={index} key={element.name} type={type} name={element.name} className="form-control" value={this.props.data[index]} placeholder={element.label} onChange={this.props.form_changed} ref={element.name} /> );
             }
             element.key = element.name;
             //if(Object.keys(redux).indexOf(type) < 0){

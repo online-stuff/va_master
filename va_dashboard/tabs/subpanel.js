@@ -18,14 +18,17 @@ var Subpanel = React.createClass({
         };
     },
 
-    getPanel: function (id, instance, args) {
-        var me = this;
-        var data = {'panel': id, 'instance_name': instance, 'args': args};
+    getPanel: function (id, server, args) {
+        var me = this, args = args.split(",");
+        var data = {'panel': id, 'server_name': server, 'args': args};
         console.log(data);
-        this.props.dispatch({type: 'CHANGE_PANEL', panel: id, instance: instance, args: args});
-        Network.get('/api/panels/get_panel', this.props.auth.token, data).done(function (data) {
+        this.props.dispatch({type: 'CHANGE_PANEL', panel: id, server: server, args: args});
+        Network.post('/api/panels/get_panel', this.props.auth.token, data).done(function (data) {
             console.log(data.tbl_source);
             me.props.dispatch({type: 'ADD_DATA', tables: data.tbl_source});
+            if(typeof data.form_source !== 'undefined'){
+                me.props.dispatch({type: 'ADD_DROPDOWN', dropdowns: data.form_source});
+            }
             me.setState({template: data, args: args});
         }).fail(function (msg) {
             me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
@@ -33,12 +36,12 @@ var Subpanel = React.createClass({
     },
 
     componentDidMount: function () {
-        this.getPanel(this.props.params.id, this.props.params.instance, this.props.params.args);
+        this.getPanel(this.props.params.id, this.props.params.server, this.props.params.args);
     },
 
     componentWillReceiveProps: function (nextProps) {
-        if (nextProps.params.id !== this.props.params.id || nextProps.params.instance !== this.props.params.instance || nextProps.params.args !== this.props.params.args) {
-            this.getPanel(nextProps.params.id, nextProps.params.instance, nextProps.params.args);
+        if (nextProps.params.id !== this.props.params.id || nextProps.params.server !== this.props.params.server || nextProps.params.args !== this.props.params.args) {
+            this.getPanel(nextProps.params.id, nextProps.params.server, nextProps.params.args);
         }
     },
 
@@ -73,7 +76,7 @@ var Subpanel = React.createClass({
 
         return (
             <div key={this.props.params.id}>
-                <Bootstrap.PageHeader>{this.state.template.title + " for " + this.state.args} <small>{this.props.params.instance}</small></Bootstrap.PageHeader>
+                <Bootstrap.PageHeader>{this.state.template.title + " for " + this.state.args} <small>{this.props.params.server}</small></Bootstrap.PageHeader>
                 {elements}
                 <ModalRedux />
             </div>

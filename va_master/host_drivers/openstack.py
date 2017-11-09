@@ -13,6 +13,11 @@ import os
 
 from novaclient import client
 
+from keystoneauth1 import loading
+from keystoneauth1 import session
+from keystoneauth1 import identity
+from keystoneauth1.identity import v3
+
 PROVIDER_TEMPLATE = '''VAR_PROVIDER_NAME:
   minion:
     master: VAR_THIS_IP
@@ -22,7 +27,7 @@ PROVIDER_TEMPLATE = '''VAR_PROVIDER_NAME:
   auth_version: 2
   compute_name: nova
   protocol: ipv4
-  ssh_key_name: VAR_SSH_NAME
+  ssh_key_name: VAR_KEYPAIR_NAME
   ssh_key_file: VAR_SSH_FILE
   ssh_interface: private_ips
   use_keystoneauth: True
@@ -63,6 +68,7 @@ class OpenStackDriver(base.DriverBase):
             'datastore' : datastore
             }
         self.regions = ['RegionOne', ]
+        self.keypair_name = ''
         super(OpenStackDriver, self).__init__(**kwargs)
 
     @tornado.gen.coroutine
@@ -87,11 +93,11 @@ class OpenStackDriver(base.DriverBase):
 
     @tornado.gen.coroutine
     def get_steps(self):
-        """ Adds a host_ip, tenant and region field to the first step. These are needed in order to get OpenStack values. """
+        """ Adds a provider_ip, tenant and region field to the first step. These are needed in order to get OpenStack values. """
 
         steps = yield super(OpenStackDriver, self).get_steps()
         steps[0].add_fields([
-            ('host_ip', 'Keystone host_ip:port (xx.xx.xxx.xx:35357)', 'str'),
+            ('provider_ip', 'Keystone provider_ip:port (xx.xx.xxx.xx:35357)', 'str'),
             ('tenant', 'Tenant', 'str'),
             ('region', 'Region', 'options'),
         ])
@@ -104,13 +110,13 @@ class OpenStackDriver(base.DriverBase):
             Gets a token from an OpenStack server which is used to get OpenStack values 
 
             Arguments: 
-            field_values -- A dictionary containing information about the host. It must have a host_ip, username, password and tenant value. The host_ip should be the base ip with the port, for instance 192.168.80.16:5000. 
+            field_values -- A dictionary containing information about the provider. It must have a provider_ip, username, password and tenant value. The provider_ip should be the base ip with the port, for instance 192.168.80.16:5000. 
         """
 
-        host, username, password, tenant = (field_values['host_ip'],
+        provider, username, password, tenant = (field_values['provider_ip'],
             field_values['username'], field_values['password'],
             field_values['tenant'])
-        url = 'http://%s/v2.0/tokens' % host
+        url = 'http://%s/v2.0/tokens' % provider
 
         data = {
             'auth': {
@@ -125,7 +131,6 @@ class OpenStackDriver(base.DriverBase):
             'Content-Type': 'application/json'
         })
         try:
-            print ('Trying to get token from : ', url)
             resp = yield self.client.fetch(req)
         except:
             import traceback
@@ -138,12 +143,11 @@ class OpenStackDriver(base.DriverBase):
             for endpoint in serv['endpoints']:
                 if 'publicURL' not in endpoint: continue
                 services[serv['type']] = endpoint['publicURL']
-        print ('Token is : ', token, ' services are : ', services)
         raise tornado.gen.Return((token, services))
 
 
     @tornado.gen.coroutine
-    def get_openstack_value(self, token_data, token_value, url_endpoint):
+    def get_openstack_value(self, token_data, token_value, url_endpoint, method = 'GET', data = {}):
         """
             Gets a specified value by using the OpenStack REST api. 
 
@@ -154,18 +158,40 @@ class OpenStackDriver(base.DriverBase):
         """
 
         url = token_data[1][token_value]
-        req = HTTPRequest('%s/%s' % (url, url_endpoint), 'GET', headers={
+        req = HTTPRequest('%s/%s' % (url, url_endpoint), method, headers={
             'X-Auth-Token': token_data[0],
             'Accept': 'application/json'
         })
+        if data: 
+            req.data = data
         try:
             resp = yield self.client.fetch(req)
         except:
-            import traceback; traceback.print_exc()
+#            import traceback; traceback.print_exc()
             raise tornado.gen.Return([])
 
         result = json.loads(resp.body)
         raise tornado.gen.Return(result)
+
+
+    @tornado.gen.coroutine
+    def create_keypair(self, username, password, tenant, host_ip):
+        auth_url = 'http://' + host_ip + '/v2.0'
+        loader = loading.get_plugin_loader('password')
+        auth = loader.load_from_options(auth_url=auth_url, username=username, password=password, project_name=tenant)
+        sess = session.Session(auth=auth)
+        nova_cl = client.Client('2.0', session=sess)
+
+#        nova = client.Client('2', username, password, tenant, 'http://' + host_ip + '/v2.0')
+#        sess = session.Session = 
+        with open(self.key_path + '.pub') as f: 
+            key = f.read()
+        try:
+            keypair = nova_cl.keypairs.create(name = self.keypair_name, public_key = key)
+        except: 
+            import traceback
+            traceback.print_exc()
+        
 
 
     @tornado.gen.coroutine
@@ -209,73 +235,73 @@ class OpenStackDriver(base.DriverBase):
 
 
     @tornado.gen.coroutine
-    def get_instances(self, host):
-        """ Gets various information about the instances so it can be returned to host_data. The format of the data for each instance follows the same format as in the base driver description """
+    def get_servers(self, provider):
+        """ Gets various information about the servers so it can be returned to provider_data. The format of the data for each server follows the same format as in the base driver description """
         try:
-            self.token_data = yield self.get_token(host)
+            self.token_data = yield self.get_token(provider)
 
             flavors = yield self.get_openstack_value(self.token_data, 'compute', 'flavors/detail')
             flavors = flavors['flavors']
 
-            servers = yield self.get_openstack_value(self.token_data, 'compute', 'servers/detail')
-            servers = servers['servers']
+            nova_servers = yield self.get_openstack_value(self.token_data, 'compute', 'servers/detail')
+            nova_servers = nova_servers['servers']
 
             try: 
                 tenants = yield self.get_openstack_value(self.token_data, 'identity', 'projects')
-                tenant = [x for x in tenants['projects'] if x['name'] == host['tenant']][0]
+                tenant = [x for x in tenants['projects'] if x['name'] == provider['tenant']][0]
 
             except: 
                 tenants = yield self.get_openstack_value(self.token_data, 'identity', 'tenants')
-                tenant = [x for x in tenants['tenants'] if x['name'] == host['tenant']][0]
+                tenant = [x for x in tenants['tenants'] if x['name'] == provider['tenant']][0]
              
 
             tenant_id = tenant['id']
             tenant_usage = yield self.get_openstack_value(self.token_data, 'compute', 'os-simple-tenant-usage/' + tenant_id)
-
             tenant_usage = tenant_usage['tenant_usage']
-            instances = [
+            servers = [
                 {
                     'hostname' : x['name'], 
-                    'ip' : x['addresses'].get('private_vapps', x['addresses'].get('public', [{'addr':'n/a'}]))[0]['addr'], #[x['addresses'].keys()[0]], 
+                    'ip' : x['addresses'][x['addresses'].keys()[0]][0].get('addr', 'n/a'),
+#                    'ip' : x['addresses'].get('private_vapps', x['addresses'].get('public', [{'addr':'n/a'}]))[0]['addr'], #[x['addresses'].keys()[0]], 
                     'size' : f['name'],
                     'used_disk' : y['local_gb'], 
                     'used_ram' : y['memory_mb'], 
                     'used_cpu' : y['vcpus'],
                     'status' : x['status'], 
-                    'host' : host['hostname'], 
-                } for x in servers for y in tenant_usage['server_usages'] for f in flavors if y['name'] == x['name'] and f['id'] == x['flavor']['id']
+                    'provider' : provider['provider_name'], 
+                } for x in nova_servers for y in tenant_usage['server_usages'] for f in flavors if y['name'] == x['name'] and f['id'] == x['flavor']['id']
             ]
         except Exception as e: 
-            print ('Cannot get instances. ')
+            print ('Cannot get servers. ')
             import traceback
             print traceback.print_exc()
             raise tornado.gen.Return([])
-        raise tornado.gen.Return(instances)
+        raise tornado.gen.Return(servers)
 
 
 
     @tornado.gen.coroutine
-    def get_host_status(self, host):
-        """ Tries to get the token for the host. If not successful, returns an error message. """
+    def get_provider_status(self, provider):
+        """ Tries to get the token for the provider. If not successful, returns an error message. """
         try:
-            self.token_data = yield self.get_token(host)
+            self.token_data = yield self.get_token(provider)
         except Exception as e:
-            raise tornado.gen.Return({'success' : False, 'message' : 'Error connecting to libvirt host. ' + e.message})
+            raise tornado.gen.Return({'success' : False, 'message' : 'Error connecting to libvirt provider. ' + e.message})
 
         raise tornado.gen.Return({'success' : True, 'message' : ''})
 
     @tornado.gen.coroutine
-    def get_host_data(self, host, get_instances = True, get_billing = True):
-        """ Gets various data about the host and all the instances using the get_openstack_value() method. Returns the data in the same format as defined in the base driver. """
+    def get_provider_data(self, provider, get_servers = True, get_billing = True):
+        """ Gets various data about the provider and all the servers using the get_openstack_value() method. Returns the data in the same format as defined in the base driver. """
         try:
-            self.token_data = yield self.get_token(host)
+            self.token_data = yield self.get_token(provider)
 
             try: 
                 tenants = yield self.get_openstack_value(self.token_data, 'identity', 'projects')
-                tenant = [x for x in tenants['projects'] if x['name'] == host['tenant']][0]
+                tenant = [x for x in tenants['projects'] if x['name'] == provider['tenant']][0]
             except: 
                 tenants = yield self.get_openstack_value(self.token_data, 'identity', 'tenants')
-                tenant = [x for x in tenants['tenants'] if x['name'] == host['tenant']][0]
+                tenant = [x for x in tenants['tenants'] if x['name'] == provider['tenant']][0]
 
             tenant_id = tenant['id']
 
@@ -287,20 +313,20 @@ class OpenStackDriver(base.DriverBase):
         except Exception as e: 
             import traceback
             print traceback.print_exc()
-            host_data = {
-                'instances' : [],
+            provider_data = {
+                'servers' : [],
                 'limits' : {},
-                'host_usage' : {},
-                'status' : {'success' : False, 'message' : 'Could not connect to the libvirt host. ' + e.message}
+                'provider_usage' : {},
+                'status' : {'success' : False, 'message' : 'Could not connect to the libvirt provider. ' + e.message}
             }
-            raise tornado.gen.Return(host_data)
+            raise tornado.gen.Return(provider_data)
 
-        if get_instances: 
-            instances = yield self.get_instances(host)
+        if get_servers: 
+            servers = yield self.get_servers(provider)
         else: 
-            instances = []
+            servers = []
 
-        host_usage = {
+        provider_usage = {
             'max_cpus' : limits['maxTotalCores'],
             'used_cpus' : limits['totalCoresUsed'], 
             'free_cpus' : limits['maxTotalCores'] - limits['totalCoresUsed'], 
@@ -310,17 +336,17 @@ class OpenStackDriver(base.DriverBase):
             'max_disk' : tenant_limits['maxTotalVolumeGigabytes'], 
             'used_disk' : tenant_limits['totalGigabytesUsed'], 
             'free_disk' : tenant_limits['maxTotalVolumeGigabytes'] - tenant_limits['maxTotalVolumeGigabytes'],
-            'max_instances' : limits['maxTotalInstances'], 
-            'used_instances' : limits['totalInstancesUsed'], 
-            'free_instances' : limits['maxTotalInstances'] - limits['totalInstancesUsed']
+            'max_servers' : limits['maxTotalInstances'], 
+            'used_servers' : limits['totalInstancesUsed'], 
+            'free_servers' : limits['maxTotalInstances'] - limits['totalInstancesUsed']
         }
 
-        host_data = {
-            'instances' : instances, 
-            'host_usage' : host_usage,
+        provider_data = {
+            'servers' : servers, 
+            'provider_usage' : provider_usage,
             'status' : {'success' : True, 'message': ''}
         }
-        raise tornado.gen.Return(host_data)
+        raise tornado.gen.Return(provider_data)
 
 
     @tornado.gen.coroutine
@@ -331,17 +357,26 @@ class OpenStackDriver(base.DriverBase):
 
 
     @tornado.gen.coroutine
-    def instance_action(self, host, instance_name, action):
-        """ Performs instance actions using a nova client. """
+    def server_action(self, provider, server_name, action):
+        """ Performs server actions using a nova client. """
         try:
-            nova = client.Client('2.0', host['username'], host['password'], host['tenant'], 'http://' + host['host_ip'] + '/v2.0')
-            instance = [x for x in nova.servers.list() if x.name == instance_name][0]
+            provider_url = 'http://' + provider['provider_ip'] + '/v2.0'
+            print ('Creating novaclient with username : ', provider['username'], 'password : ', provider['password'], 'url : ', provider_url)
+            auth = identity.Password(auth_url=provider_url,
+                   username=provider['username'],
+                   password=provider['password'],
+                   project_name=provider['tenant'])
+            sess = session.Session(auth = auth, verify = False)
+            nova = client.Client(2, session = sess)
+#            nova = client.Client('2', provider['username'], provider['password'], provider['tenant'], provider_url)
+            servers = nova.servers.list()
+            server = [x for x in servers if x.name == server_name][0]
         except Exception as e:
             import traceback
             traceback.print_exc()
-            raise tornado.gen.Return({'success' : False, 'message' : 'Could not get instance. ' + e.message})
+            raise tornado.gen.Return({'success' : False, 'message' : 'Could not get server. ' + e.message})
         try:
-            success = getattr(instance, action)()
+            success = getattr(server, action)()
         except Exception as e:
             raise tornado.gen.Return({'success' : False, 'message' : 'Action was not performed. ' + e.message})
 
@@ -358,13 +393,17 @@ class OpenStackDriver(base.DriverBase):
     	    ))
         elif step_index == 0:
     	    self.token_data = yield self.get_token(field_values)
-            os_base_url = 'http://' + field_values['host_ip'] + '/v2.0'
+            os_base_url = 'http://' + field_values['provider_ip'] + '/v2.0'
 
             self.provider_vars['VAR_TENANT'] = field_values['tenant']
             self.provider_vars['VAR_IDENTITY_URL'] = os_base_url
             if not '/tokens' in self.provider_vars['VAR_IDENTITY_URL']: 
                 self.provider_vars['VAR_IDENTITY_URL'] += '/tokens'
             self.provider_vars['VAR_REGION'] = field_values['region']
+
+            self.keypair_name = field_values['provider_name'] + '_key'
+            self.provider_vars['VAR_KEYPAIR_NAME'] = self.keypair_name
+            yield self.create_keypair(field_values['username'], field_values['password'], field_values['tenant'], field_values['provider_ip'])
 
         elif step_index == 1:
             for field in ['network', 'sec_group']:
@@ -379,17 +418,15 @@ class OpenStackDriver(base.DriverBase):
 
 
     @tornado.gen.coroutine
-    def create_minion(self, host, data):
+    def create_server(self, host, data):
         """ Works properly with the base driver method, but overwritten for bug tracking. """
         try:
-#            nova = client.Client('2', host['username'], host['password'], host['tenant'], 'http://' + host['host_ip'] + '/v2.0')
-#            full_key_path = host['salt_key_path'] + ('/' * host['salt_key_path'][-1] != '/') + host['salt_key_name'] + '.pub'
-#            f = ''
-#            with open(self.key_path + '.pub') as f: 
-#                key = f.read()
-#            keypair = nova.keypairs.create(name = self.key_name, public_key = key)
-#            print ('Creating instance!')
             yield super(OpenStackDriver, self).create_minion(host, data)
+
+            #Once a server is created, we revert the templates to the originals for creating future servers. 
+            self.profile_template = PROFILE_TEMPLATE
+            self.provider_template = PROVIDER_TEMPLATE
         except:
             import traceback
             traceback.print_exc()
+

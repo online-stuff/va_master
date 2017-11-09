@@ -4,6 +4,7 @@ var connect = require('react-redux').connect;
 var Network = require('../network');
 var ReactDOM = require('react-dom');
 var Router = require('react-router');
+var Reactable = require('reactable');
 
 var Vpn = React.createClass({
     getInitialState: function () {
@@ -11,25 +12,7 @@ var Vpn = React.createClass({
             active: [],
             revoked: [],
             status: [],
-            checkall: false
         };
-    },
-
-    checkAll: function () {
-        var check = !this.state.checkall;
-        this.setState({checkall: check});
-        var active = this.state.active.map(function(vpn) {
-            vpn.check = check;
-            return vpn;
-        });
-        this.setState({active: active});
-    },
-
-    changeCheck: function (i, evt) {
-        var active = this.state.active;
-        active[i].check = evt.target.checked;
-        this.setState({checkall: false});
-        this.setState({active: active});
     },
 
     getCurrentVpns: function () {
@@ -42,7 +25,7 @@ var Vpn = React.createClass({
     },
 
     addVpn: function (username) {
-        this.setState({active: this.state.active.concat([{"connected": false, "name": username, "check": false}])});
+        this.setState({active: this.state.active.concat([{"connected": false, "name": username}])});
     },
 
     componentDidMount: function () {
@@ -100,95 +83,64 @@ var Vpn = React.createClass({
             return true;
         }.bind(this)).map(function(vpn, i) {
             return (
-                <tr key={vpn.name}>
-                    <td><input type="checkbox" checked={this.state.checkall || this.state.active[i].check} onChange = {this.changeCheck.bind(this, i)} /></td>
-                    <td>{vpn.name}</td>
-                    <td>{vpn.connected?"True":"False"}</td>
-                    <td>
+                <Reactable.Tr key={vpn.name}>
+                    <Reactable.Td column="Name">{vpn.name}</Reactable.Td>
+                    <Reactable.Td column="Connected">{vpn.connected?"True":"False"}</Reactable.Td>
+                    <Reactable.Td column="Actions">
                         <Bootstrap.DropdownButton id={"dropdown-" + vpn.name} bsStyle='default' title="Choose" onSelect = {this.btn_clicked.bind(this, vpn.name)}>
                             <Bootstrap.MenuItem eventKey="download">Download certificate</Bootstrap.MenuItem>
                             <Bootstrap.MenuItem eventKey="revoke">Revoke user</Bootstrap.MenuItem>
                             <Bootstrap.MenuItem eventKey="list">List logins</Bootstrap.MenuItem>
                         </Bootstrap.DropdownButton>
-                    </td>
-                </tr>
+                    </Reactable.Td>
+                </Reactable.Tr>
             );
         }.bind(this));
 
         var revoked_rows = this.state.revoked.map(function(vpn) {
             return (
-                <tr key={vpn}>
-                    <td>{vpn}</td>
-                    <td>False</td>
-                </tr>
+                <Reactable.Tr key={vpn}>
+                    <Reactable.Td column="Name">{vpn}</Reactable.Td>
+                    <Reactable.Td column="Connected">False</Reactable.Td>
+                </Reactable.Tr>
             );
         });
 
         var status_rows = this.state.status.map(function(vpn) {
             return (
-                <tr key={vpn['Common Name']}>
-                    <td>{vpn['Common Name']}</td>
-                    <td>{vpn['Connected Since']}</td>
-                    <td>{vpn['Real Address']}</td>
-                    <td>{vpn['Bytes Received']}</td>
-                    <td>{vpn['Bytes Sent']}</td>
-                </tr>
+                <Reactable.Tr key={vpn['Common Name']}>
+                    <Reactable.Td column="Name">{vpn['Common Name']}</Reactable.Td>
+                    <Reactable.Td column="Connected since">{vpn['Connected Since']}</Reactable.Td>
+                    <Reactable.Td column="Virtual IP">{vpn['Real Address']}</Reactable.Td>
+                    <Reactable.Td column="Bytes in">{vpn['Bytes Received']}</Reactable.Td>
+                    <Reactable.Td column="Bytes out">{vpn['Bytes Sent']}</Reactable.Td>
+                </Reactable.Tr>
             );
         });
 
         var ModalRedux = connect(function(state){
             return {auth: state.auth, modal: state.modal, alert: state.alert};
         })(Modal);
+        var sf_cols = ['Name', 'Connected'];
 
         return (
             <div>
+                <Bootstrap.PageHeader>VPN status</Bootstrap.PageHeader>
+                <Reactable.Table className="table table-striped" columns={['Name', 'Connected since', 'Virtual IP', 'Bytes in', 'Bytes out']} itemsPerPage={10} pageButtonLimit={10} noDataText="No matching records found." sortable={true} filterable={['Name', 'Connected since', 'Virtual IP', 'Bytes in', 'Bytes out']}>
+                    {status_rows}
+                </Reactable.Table>
+                <div style={{position: 'relative'}}>
                 <Bootstrap.PageHeader>VPN Users</Bootstrap.PageHeader>
                 <h4>Active users</h4>
-                <Bootstrap.Button type="button" bsStyle='default' className="pull-right margina" onClick={this.openModal}>
-                    <Bootstrap.Glyphicon glyph='plus' />
-                    Add user
-                </Bootstrap.Button>
                 <ModalRedux addVpn = {this.addVpn} />
-                <Bootstrap.Table striped bordered hover>
-                    <thead>
-                        <tr>
-                            <td><input type="checkbox" checked={this.state.checkall} onChange={this.checkAll} /></td>
-                            <td>Name</td>
-                            <td>Connected</td>
-                            <td>Actions</td>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {active_rows}
-                    </tbody>
-                </Bootstrap.Table>
+                <Reactable.Table className="table table-striped" columns={['Name', 'Connected', 'Actions']} itemsPerPage={10} pageButtonLimit={10} noDataText="No matching records found." sortable={sf_cols} filterable={sf_cols} btnName="Add user" btnClick={this.openModal}>
+                    {active_rows}
+                </Reactable.Table>
                 <h4>Revoked users</h4>
-                <Bootstrap.Table striped bordered hover>
-                    <thead>
-                        <tr>
-                        <td>Name</td>
-                        <td>Connected</td>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {revoked_rows}
-                    </tbody>
-                </Bootstrap.Table>
-                <Bootstrap.PageHeader>VPN status</Bootstrap.PageHeader>
-                <Bootstrap.Table striped bordered hover>
-                    <thead>
-                        <tr>
-                        <td>Name</td>
-                        <td>Connected since</td>
-                        <td>Virtual IP</td>
-                        <td>Bytes in</td>
-                        <td>Bytes out</td>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {status_rows}
-                    </tbody>
-                </Bootstrap.Table>
+                <Reactable.Table className="table table-striped" columns={['Name', 'Connected']} itemsPerPage={10} pageButtonLimit={10} noDataText="No matching records found." sortable={true} filterable={['Name', 'Connected']}>
+                    {revoked_rows}
+                </Reactable.Table>
+                </div>
             </div>
         );
     }
