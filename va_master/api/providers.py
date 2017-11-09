@@ -175,7 +175,7 @@ def get_provider_info(handler, dash_user, get_billing = True, get_servers = True
 
     providers_info = [x for x in providers_info if x['provider_name']]
 
-    standalone_provider = yield deploy_handler.get_standalone_provider()
+    standalone_provider = yield datastore_handler.get_provider('va_standalone_servers')
 
     standalone_default_values = {'size' : ''}
     standalone_servers = standalone_provider['servers']

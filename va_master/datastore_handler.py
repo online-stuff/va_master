@@ -64,7 +64,12 @@ class DatastoreHandler(object):
 
     @tornado.gen.coroutine
     def get_provider(self, provider_name):
-        provider = yield self.get_object('provider', provider_name = provider_name)
+        try: 
+            provider = yield self.get_object('provider', provider_name = provider_name)
+        except: 
+            if provider_name == 'va_standalone_servers': 
+                provider = {"username": "admin", "sizes": [], "servers": [], "sec_groups": [], "driver_name": "generic_driver", "location": "", "defaults": {}, "images": [], "provider_name": "va_standalone_servers", "password": "admin", "ip_address": "127.0.0.1", "networks": []}
+                yield self.create_provider(provider)
         raise tornado.gen.Return(provider)
 
     @tornado.gen.coroutine
@@ -83,11 +88,6 @@ class DatastoreHandler(object):
         servers += ['va_standalone_servers']
         raise tornado.gen.Return(servers)
 
-
-    @tornado.gen.coroutine
-    def get_provider_and_driver(self, provider_name):
-        provider = yield self.get_provider(provider_name)
-        driver = provider['driver_id']
 
     @tornado.gen.coroutine
     def list_providers(self):
@@ -264,8 +264,12 @@ class DatastoreHandler(object):
 
         for state in states_data: 
             for user_type in ['admin', 'user']: 
+                try:
+                    old_panel = yield self.get_panel(name = state['name'])
+                except: 
+                    old_panel = None
  
-                old_panel = yield self.get_panel(name = state['name'])
+                if not old_panel: continue
                 panel = {
                     'name' : state['name'], 
                     'icon' : state['icon'], 
