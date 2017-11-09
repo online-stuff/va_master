@@ -264,8 +264,12 @@ class DatastoreHandler(object):
 
         for state in states_data: 
             for user_type in ['admin', 'user']: 
- 
-                old_panel = yield self.get_panel(name = state['name'])
+                try: 
+                    old_panel = yield self.get_panel(name = state['name'])
+                except: 
+                    old_panel = None
+
+                if not panel: continue
                 panel = {
                     'name' : state['name'], 
                     'icon' : state['icon'], 
