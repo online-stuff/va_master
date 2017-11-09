@@ -47,9 +47,7 @@ def get_paths():
 @tornado.gen.coroutine
 def test_datastore(datastore_handler, func, kwargs = {}):
     """A temporary function used to test the datastore. """
-
     result = yield getattr(datastore_handler, func)(**kwargs)
-    print ('Result : ', result)
     raise tornado.gen.Return(result)
 
 
@@ -350,8 +348,6 @@ def launch_app(handler):
     except: 
         import traceback
         traceback.print_exc()
-
-    print ('Result is : ', result)
 
     if data.get('role', True):
 

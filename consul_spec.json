@@ -69,7 +69,7 @@
         "group_name" : ""
     }, 
     "state" : {
-        "consul_handle" : "state/{name}", 
+        "consul_handle" : "states/{name}", 
         "name": "", 
         "description": "", 
         "module": "",

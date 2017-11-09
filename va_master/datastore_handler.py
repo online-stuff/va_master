@@ -45,7 +45,7 @@ class DatastoreHandler(object):
         #TODO check data to be as designed in the spec
         new_object = data
 
-        print ('Inserting : ', new_object, ' at : ', new_object_handle)
+#        print ('Inserting : ', new_object, ' at : ', new_object_handle)
         yield self.datastore.insert(new_object_handle, new_object)
 
     @tornado.gen.coroutine
@@ -264,7 +264,6 @@ class DatastoreHandler(object):
 
     @tornado.gen.coroutine
     def import_states_from_states_data(self, states = []):
-        print ('Importing. ')
         states_data = yield self.get_states_data(states)
 
         empty_panel = {'admin' : [], 'user' : []}
@@ -280,7 +279,6 @@ class DatastoreHandler(object):
                     'panels' : state.get('panels', empty_panel)[user_type]
                 }
                 yield self.store_panel(panel, user_type)
-            print ('Storing : ', state)
             yield self.store_state(state)
 
         raise tornado.gen.Return(states_data)

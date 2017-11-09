@@ -14,6 +14,8 @@ import functools
 import imp
 from .api import login
 
+from va_master.datastore_handler import DatastoreHandler
+
 consul_conf_path = '/etc/consul.json'
 run_sync = tornado.ioloop.IOLoop.instance().run_sync
 
@@ -173,8 +175,10 @@ def create_admin_user(admin_user, admin_pass, store):
         cli_info('No username and password; will not create user')
 
 def handle_store_init(cli_config, values, store):
-    states_data = run_sync(functools.partial(cli_config.deploy_handler.get_states_data))
-    values.update({'states' : states_data})
+    datastore_handler = DatastoreHandler(store, '/opt/va_master/consul_spec.json')
+#    states_data = run_sync(functools.partial(cli_config.deploy_handler.get_states_data))
+    states_data = run_sync(functools.partial(datastore_handler.import_states_from_states_data))
+#    values.update({'states' : states_data})
 
     try:
         store_config = run_sync(functools.partial(store.get, 'init_vals')) or {}
@@ -198,7 +202,7 @@ def add_initial_panels(store):
     except: 
         run_sync(functools.partial(store.insert, 'panels', {'admin' : [], 'user' :[]}))
 
-def create_ssh_keys(store_config):
+def create_ssh_keys(cli_config, store_config):
     try: 
 #            os.mkdir(cli_config.ssh_key_path)
         key_full_path = cli_config.ssh_key_path + cli_config.ssh_key_name
@@ -232,7 +236,7 @@ def handle_init(args):
 
 
     #Generate an ssh-key
-    create_ssh_keys(store_config)
+    create_ssh_keys(cli_config, store_config)
 
     cli_success('Created first account. Setup is finished.')
     cli_config.init_handler(init_vals = values)
