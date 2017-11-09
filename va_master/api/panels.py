@@ -233,8 +233,16 @@ def get_all_functions(handler):
     functions.update(salt_functions)
 
     functions = [
-            { 'label' : f, 'options' : [{'label' : i, 'value' : i, 'description' : functions[f][i]['function'].__doc__} for i in functions[f]] }
-    for f in functions]
+        { 
+                'label' : f, 
+                'options' : [
+                    {
+                        'label' : i, 
+                        'value' : i, 
+                        'description' : functions[f][i]['function'].__doc__}
+                    for i in functions[f]
+                ] 
+        } for f in functions]
 
     raise tornado.gen.Return(functions)
 

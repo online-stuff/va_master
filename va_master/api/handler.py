@@ -180,11 +180,11 @@ class ApiHandler(tornado.web.RequestHandler):
                     raise tornado.gen.Return()
 
             result = yield self.handle_func(api_func, data)
-            log_result = result
-            if api_func['function'] in [get_panel_for_user]:
-                log_result = {}
+#            log_result = result
+#            if api_func['function'] in [get_panel_for_user]:
+#                log_result = {}
 
-            yield self.log_message(path = path, data = data, func = api_func['function'], result = log_result)
+            yield self.log_message(path = path, data = data, func = api_func['function'], result = {})#log_result)
 
             self.json(result)
         except: 
@@ -258,7 +258,7 @@ class ApiHandler(tornado.web.RequestHandler):
             'user' : user.get('username', 'unknown'), 
             'user_type' : user['type'], 
             'path' : path, 
-            'data' : data, 
+            'data' : data,
             'time' : str(datetime.datetime.now()),
             'result' : result,
         })
@@ -427,8 +427,8 @@ class LogMessagingSocket(tornado.websocket.WebSocketHandler):
                 to_date = datetime.datetime.now()
 
             messages = self.get_messages(from_date, to_date)
-            for m in messages: 
-                m['data'] = str(m.get('data', ''))[:100]
+#            for m in messages: 
+#                m['data'] = str(m.get('data', ''))[:100]
             messages = {'type' : 'init', 'logs' : messages}
             self.write_message(json.dumps(messages))
 
