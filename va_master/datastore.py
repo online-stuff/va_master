@@ -110,7 +110,10 @@ class ConsulStore(DataStore):
 
     @tornado.gen.coroutine
     def get_recurse(self, doc_id):
-        result = yield self.get_exec(doc_id, params = {"recurse" : True})
+        try:
+            result = yield self.get_exec(doc_id, params = {"recurse" : True})
+        except: 
+            result = []
         raise tornado.gen.Return(result)
 
     @tornado.gen.coroutine

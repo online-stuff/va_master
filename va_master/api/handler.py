@@ -128,7 +128,7 @@ class ApiHandler(tornado.web.RequestHandler):
     def handle_func(self, api_func, data):
         try:
             api_func, api_args = api_func.get('function'), api_func.get('args')       
-            api_kwargs = {x : data.get(x) for x in api_args if data.get(x)} or {}
+            api_kwargs = {x : data.get(x) for x in api_args if x in data.keys()} or {}
             api_kwargs.update({x : self.utils[x] for x in api_args if x in self.utils})
 
             result = yield api_func(**api_kwargs)
@@ -185,7 +185,6 @@ class ApiHandler(tornado.web.RequestHandler):
 #                log_result = {}
 
             yield self.log_message(path = path, data = data, func = api_func['function'], result = {})#log_result)
-
             self.json(result)
         except: 
             import traceback
@@ -346,6 +345,8 @@ class LogHandler(FileSystemEventHandler):
 
     def on_modified(self, event):
         log_file = event.src_path
+#        log_file = log_file.replace('~', '')
+#        print ('Log file is : ', log_file, ' and event is : ', event.__dict__)
         with open(log_file) as f: 
             log_file = [x for x in f.read().split('\n') if x]
         try:

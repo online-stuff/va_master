@@ -26,7 +26,6 @@ def get_paths():
     }
     return paths
 
-
 #These two functions are for inside use in the API. 
 def reload_systemctl():
     subprocess.check_output(['systemctl', 'daemon-reload'])
@@ -122,7 +121,6 @@ def add_services_presets(minion_info, presets):
         check_presets[p] for p in presets
     ]}}
     yield add_service_with_definition(service, minion_info['id'])
-
 
 @tornado.gen.coroutine
 def delete_services(server):

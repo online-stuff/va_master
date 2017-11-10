@@ -37,7 +37,6 @@ def get_paths():
 @tornado.gen.coroutine
 def reset_panels(deploy_handler): 
     """ Testing function - deletes all functions. Currently not usable. """
-
     yield deploy_handler.reset_panels()
 
 @tornado.gen.coroutine
@@ -79,6 +78,7 @@ def panel_action_execute(handler, server_name, action, args = [], dash_user = ''
     cl = salt.client.LocalClient()
     print ('Calling salt module ', module + '.' + action, ' on ', server_name, ' with args : ', args, ' and kwargs : ', kwargs)
     result = cl.cmd(server_name, module + '.' + action , args, kwarg = kwargs, timeout = timeout)
+    print ('Result : ', result)
     result = result.get(server_name)
 
     raise tornado.gen.Return(result)
@@ -126,7 +126,14 @@ def salt_serve_file_get(handler, server_name, action, hostname, backupnumber, sh
     yield handler.serve_file('test', salt_source = {"tgt" : server_name, "fun" : module + '.' + action, "kwarg" : kwargs})
     raise tornado.gen.Return({"data_type" : "file"})
 
+    if not module:
+        module = state['module']
 
+    yield handler.serve_file('test', salt_source = {"tgt" : server_name, "fun" : module + '.' + action, "arg" :  args})
+    raise tornado.gen.Return({"data_type" : "file"})
+
+
+#This is just temporary - trying to get backup download working properly. 
 @tornado.gen.coroutine
 def url_serve_file(handler, server_name, url_function, module = None, args = [], kwargs = {}):
     """Serves a file by utilizing a url. The server must have a function which returns the url. This will call that function with the supplied args and kwargs. """

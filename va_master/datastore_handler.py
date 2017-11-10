@@ -45,7 +45,7 @@ class DatastoreHandler(object):
         #TODO check data to be as designed in the spec
         new_object = data
 
-        print ('Inserting : ', new_object, ' at : ', new_object_handle)
+#        print ('Inserting : ', new_object, ' at : ', new_object_handle)
         yield self.datastore.insert(new_object_handle, new_object)
 
     @tornado.gen.coroutine
@@ -64,7 +64,14 @@ class DatastoreHandler(object):
 
     @tornado.gen.coroutine
     def get_provider(self, provider_name):
-        provider = yield self.get_object('provider', provider_name = provider_name)
+        try:
+            provider = yield self.get_object('provider', provider_name = provider_name)
+        except: 
+            if provider_name == 'va_standalone_servers' : 
+                provider = {"username": "admin", "sizes": [], "servers": [], "sec_groups": [], "driver_name": "generic_driver", "location": "", "defaults": {}, "images": [], "provider_name": "va_standalone_servers", "password": "admin", "ip_address": "127.0.0.1", "networks": []}
+                yield self.create_provider(provider)
+            else: 
+                raise
         raise tornado.gen.Return(provider)
 
     @tornado.gen.coroutine
@@ -85,11 +92,6 @@ class DatastoreHandler(object):
 
 
     @tornado.gen.coroutine
-    def get_provider_and_driver(self, provider_name):
-        provider = yield self.get_provider(provider_name)
-        driver = provider['driver_id']
-
-    @tornado.gen.coroutine
     def list_providers(self):
         providers = yield self.datastore.get_recurse('providers/')
         raise tornado.gen.Return(providers)
@@ -101,7 +103,6 @@ class DatastoreHandler(object):
 
     @tornado.gen.coroutine
     def create_provider(self, field_values):
-        print ('Creating provider with : ', field_values)
         yield self.insert_object('provider', data = field_values, provider_name = field_values['provider_name'])
 
     @tornado.gen.coroutine
@@ -258,15 +259,18 @@ class DatastoreHandler(object):
 
     @tornado.gen.coroutine
     def import_states_from_states_data(self, states = []):
-        print ('Importing. ')
         states_data = yield self.get_states_data(states)
 
         empty_panel = {'admin' : [], 'user' : []}
 
         for state in states_data: 
             for user_type in ['admin', 'user']: 
+                try:
+                    old_panel = yield self.get_panel(name = state['name'])
+                except: 
+                    old_panel = None
  
-                old_panel = yield self.get_panel(name = state['name'])
+                if not old_panel: continue
                 panel = {
                     'name' : state['name'], 
                     'icon' : state['icon'], 
@@ -274,7 +278,6 @@ class DatastoreHandler(object):
                     'panels' : state.get('panels', empty_panel)[user_type]
                 }
                 yield self.store_panel(panel, user_type)
-            print ('Storing : ', state)
             yield self.store_state(state)
 
         raise tornado.gen.Return(states_data)

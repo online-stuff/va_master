@@ -78,12 +78,12 @@ class GenericDriver(base.DriverBase):
 
     @tornado.gen.coroutine
     def remove_server(self, provider, server_name):
-        provider_datastore = yield self.datastore.get(provider['provider_name'])
+        provider_datastore = yield self.datastore.get('providers/' + provider['provider_name'])
         servers = provider_datastore.get('servers')
 
         servers = [x for x in servers if x['hostname'] != server_name]
         provider_datastore['servers'] = servers
-        yield self.datastore.insert(provider['provider_name'], provider_datastore)
+        yield self.datastore.insert('providers/' + provider['provider_name'], provider_datastore)
 
     @tornado.gen.coroutine
     def server_action(self, provider, server_name, action):
@@ -103,7 +103,7 @@ class GenericDriver(base.DriverBase):
 
     @tornado.gen.coroutine
     def get_servers(self, provider):
-        servers = yield self.datastore.get(provider['provider_name'])
+        servers = yield self.datastore.get('providers/' + provider['provider_name'])
         servers = servers['servers']
 
         if provider['provider_name'] == 'va_standalone_servers' : 
@@ -214,14 +214,15 @@ class GenericDriver(base.DriverBase):
 
         # distro = ssh_session.cmd(['get', 'distro', 'cmd'])
         # instal = ssh_session.cmd(['install', 'salt', 'stuff'])
-        # services are added on the api side. 
-        provider_datastore = yield self.datastore.get(provider['provider_name'])
-        servers = provider_datastore.get('servers')
+        # services are added on the api side.
+         
+        provider_datastore = yield self.datastore.get('providers/' + provider['provider_name'])
+        servers = provider_datastore.get('servers', [])
         server = {"hostname" : data["server_name"], "ip" : data.get("ip"), "local_gb" : 0, "memory_mb" : 0, "status" : "n/a" }
         servers.append(server)
 
         provider_datastore['servers'] = servers
-        yield self.datastore.insert(provider['provider_name'], provider_datastore)
+        yield self.datastore.insert('providers/' + provider['provider_name'], provider_datastore)
 
         raise tornado.gen.Return(True)  
 #        try:

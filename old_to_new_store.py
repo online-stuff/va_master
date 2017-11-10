@@ -16,9 +16,11 @@ def datastore_get(handle, get_key = ''):
     url = '%s/v1/kv/%s' % (path, handle)
     print 'Url is : ', url
     result = requests.get(url).text
+    if not result: 
+        return
     result = json.loads(result)
     result = [x['Value'] for x in result]
-    result = [json.loads(base64.b64decode(x)) for x in result]
+    result = [json.loads(base64.b64decode(x)) for x in result if x]
     result = result[0]
     if get_key: 
         result = result.get(get_key, result)
@@ -35,6 +37,7 @@ def old_to_new_datastore(object_name, object_handle_unformatted, object_handle_i
     if not old_key:
         old_key = object_name + 's'
     old_data = datastore_get(old_key, get_key)
+    if not old_data: return
     print 'Old data is : ', old_data
     for data in old_data:
         handles = {x : data.get(x) for x in object_handle_ids}
