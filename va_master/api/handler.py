@@ -348,6 +348,8 @@ class LogHandler(FileSystemEventHandler):
 
     def on_modified(self, event):
         log_file = event.src_path
+#        log_file = log_file.replace('~', '')
+#        print ('Log file is : ', log_file, ' and event is : ', event.__dict__)
         with open(log_file) as f: 
             log_file = [x for x in f.read().split('\n') if x]
         try:
@@ -429,8 +431,14 @@ class LogMessagingSocket(tornado.websocket.WebSocketHandler):
                 to_date = datetime.datetime.now()
 
             messages = self.get_messages(from_date, to_date)
-            for m in messages: 
-                m['data'] = str(m.get('data', ''))[:100]
+#            for m in messages: 
+#                m['data'] = str(m.get('data', ''))[:100]
+            for message in messages: 
+                try: 
+                    a = json.loads(message)
+                    print ('Keys are : ', a.keys())
+                except: 
+                    print ('Wrong json : ', message)
             messages = {'type' : 'init', 'logs' : messages}
             self.write_message(json.dumps(messages))
 
