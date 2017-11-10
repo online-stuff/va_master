@@ -129,10 +129,8 @@ class ApiHandler(tornado.web.RequestHandler):
         try:
             api_func, api_args = api_func.get('function'), api_func.get('args')       
             api_kwargs = {x : data.get(x) for x in api_args if x in data.keys()} or {}
-            print ('Kwarge before update : ', api_kwargs)
             api_kwargs.update({x : self.utils[x] for x in api_args if x in self.utils})
 
-            print ('Kwargs are : ', api_kwargs)
             result = yield api_func(**api_kwargs)
 
             if type(result) == dict: 
@@ -187,7 +185,6 @@ class ApiHandler(tornado.web.RequestHandler):
                 log_result = {}
 
             yield self.log_message(path = path, data = data, func = api_func['function'], result = log_result)
-
             self.json(result)
         except: 
             import traceback
@@ -433,12 +430,7 @@ class LogMessagingSocket(tornado.websocket.WebSocketHandler):
             messages = self.get_messages(from_date, to_date)
 #            for m in messages: 
 #                m['data'] = str(m.get('data', ''))[:100]
-            for message in messages: 
-                try: 
-                    a = json.loads(message)
-                    print ('Keys are : ', a.keys())
-                except: 
-                    print ('Wrong json : ', message)
+
             messages = {'type' : 'init', 'logs' : messages}
             self.write_message(json.dumps(messages))
 

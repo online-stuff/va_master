@@ -92,11 +92,6 @@ class DatastoreHandler(object):
 
 
     @tornado.gen.coroutine
-    def get_provider_and_driver(self, provider_name):
-        provider = yield self.get_provider(provider_name)
-        driver = provider['driver_id']
-
-    @tornado.gen.coroutine
     def list_providers(self):
         providers = yield self.datastore.get_recurse('providers/')
         raise tornado.gen.Return(providers)
@@ -270,8 +265,12 @@ class DatastoreHandler(object):
 
         for state in states_data: 
             for user_type in ['admin', 'user']: 
+                try:
+                    old_panel = yield self.get_panel(name = state['name'])
+                except: 
+                    old_panel = None
  
-                old_panel = yield self.get_panel(name = state['name'])
+                if not old_panel: continue
                 panel = {
                     'name' : state['name'], 
                     'icon' : state['icon'], 
