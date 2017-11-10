@@ -79,11 +79,12 @@ var Providers = React.createClass({
         return (<div className="app-containter">
             <NewProviderFormRedux changeProviders = {this.getCurrentProviders} />
             <span className="spinner" style={spinnerStyle} ><i className="fa fa-spinner fa-spin fa-3x" aria-hidden="true"></i></span>
-            <div style={blockStyle}>
-                <Bootstrap.PageHeader>Current providers</Bootstrap.PageHeader>
-                <Reactable.Table className="table striped" columns={['Provider name', 'IP', 'Instances', 'Driver', 'Status', 'Actions']} itemsPerPage={10} pageButtonLimit={10} noDataText="No matching records found." sortable={sf_cols} filterable={sf_cols} btnName="Add provider" btnClick={this.addProvider}>
-                    {provider_rows}
-                </Reactable.Table>
+            <div style={blockStyle} className="card">
+                <div className="card-body">
+                    <Reactable.Table className="table striped" columns={['Provider name', 'IP', 'Instances', 'Driver', 'Status', 'Actions']} itemsPerPage={10} pageButtonLimit={10} noDataText="No matching records found." sortable={sf_cols} filterable={sf_cols} btnName="Add provider" btnClick={this.addProvider} title="Current providers" filterClassName="form-control" filterPlaceholder="Filter">
+                        {provider_rows}
+                    </Reactable.Table>
+                </div>
             </div>
             <ConfirmPopup show={this.state.popupShow} data={this.state.popupData} close={this.popupClose} action={this.deleteProvider} />
         </div>);

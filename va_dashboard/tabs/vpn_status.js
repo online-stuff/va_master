@@ -10,13 +10,14 @@ var VpnStatus = React.createClass({
     getInitialState: function () {
         return {
             status: [],
+            loading: true
         };
     },
 
     getCurrentVpns: function () {
         var me = this;
         Network.get('/api/apps/vpn_users', this.props.auth.token).done(function (data) {
-            me.setState({status: data.status});
+            me.setState({status: data.status, loading: false});
         }).fail(function (msg) {
             me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
         });
@@ -42,13 +43,24 @@ var VpnStatus = React.createClass({
                 </Reactable.Tr>
             );
         });
+        var loading = this.state.loading;
+        const spinnerStyle = {
+            display: loading ? "block": "none",
+        };
+        const blockStyle = {
+            visibility: loading ? "hidden": "visible",
+        };
 
         return (
-            <div>
-                <Bootstrap.PageHeader>VPN status</Bootstrap.PageHeader>
-                <Reactable.Table className="table table-striped" columns={['Name', 'Connected since', 'Virtual IP', 'Bytes in', 'Bytes out']} itemsPerPage={10} pageButtonLimit={10} noDataText="No matching records found." sortable={true} filterable={['Name', 'Connected since', 'Virtual IP', 'Bytes in', 'Bytes out']}>
-                    {status_rows}
-                </Reactable.Table>
+            <div className="app-containter">
+                <span className="spinner" style={spinnerStyle} ><i className="fa fa-spinner fa-spin fa-3x" aria-hidden="true"></i></span>
+                <div style={blockStyle} className="card">
+                    <div className="card-body">
+                        <Reactable.Table className="table table-striped" columns={['Name', 'Connected since', 'Virtual IP', 'Bytes in', 'Bytes out']} itemsPerPage={10} pageButtonLimit={10} noDataText="No matching records found." sortable={true} filterable={['Name', 'Connected since', 'Virtual IP', 'Bytes in', 'Bytes out']} title="VPN status" filterClassName="form-control" filterPlaceholder="Filter">
+                        {status_rows}
+                        </Reactable.Table>
+                    </div>
+                </div>
             </div>
         );
     }

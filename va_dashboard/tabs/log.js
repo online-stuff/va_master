@@ -77,7 +77,7 @@ var Log = React.createClass({
                 <DateRange updateLogs={this.updateLogs} />
                 <div id='filter-log'>
                     <FilterBtns changeTable={this.changeTable} />
-                    <input type='text' placeholder='Search...' value={this.state.value} onChange={this.filter} className='pull-right'/>
+                    <input type='text' placeholder='Filter' value={this.state.value} onChange={this.filter} className='form-control pull-right' style={{width: '220px', height: '32px'}}/>
                 </div>
                 <TableRedux logs={logs} filterBy={this.state.value} checked={this.state.checked}/>
             </div>
@@ -202,12 +202,14 @@ var Table = React.createClass({
         }
         var columns = ["Timestamp", "Message", "Severity", "Host", "Facility"];
         return ( <div>
-            <Reactable.Table className="table striped tbl-select" columns={columns} itemsPerPage={10} pageButtonLimit={10} noDataText="No matching records found." sortable={true} filterable={columns} filterBy={this.props.filterBy} hideFilterInput>
+            <Reactable.Table className="table striped tbl-select card" columns={columns} itemsPerPage={10} pageButtonLimit={10} noDataText="No matching records found." sortable={true} filterable={columns} filterBy={this.props.filterBy} hideFilterInput>
                 {logs}
             </Reactable.Table>
-            <div className="selected-block">
-                <label>Log Details</label>
-                {selected_log}
+            <div className="card selected-block">
+                <div className="card-body">
+                    <label>Log Details</label>
+                    {selected_log}
+                </div>
             </div>
         </div> );
     }

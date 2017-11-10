@@ -40,28 +40,31 @@ var Store = React.createClass({
         var states_rows = this.state.states.map(function(state, index) {
             var description = state.description;
             if(description.length > 106){
-                desc = description.slice(0, 106);
-                desc += '...';
+                //desc = description.slice(0, 106);
+                //desc += '...';
                 popover = (
                     <Bootstrap.Popover id={'popover' + index} title="App description">
                         {description}
                     </Bootstrap.Popover>
                 );
-                description = (<Bootstrap.OverlayTrigger trigger="click" placement="bottom" overlay={popover}><div>{desc}</div></Bootstrap.OverlayTrigger>);
+                description = (<Bootstrap.OverlayTrigger trigger="click" placement="bottom" overlay={popover}><div>{description}</div></Bootstrap.OverlayTrigger>);
             }
             return (
                 <Bootstrap.Col xs={12} sm={6} md={3} key={state.name}>
-                    <Bootstrap.Panel header={state.name} bsStyle='primary'>
-                        <div>Version: {state.version}</div>
-                        <div className="description">{description}</div>
-                        <Bootstrap.Button bsStyle='primary' onClick={this.launchApp} value={state.name}>
-                            Launch
-                        </Bootstrap.Button>
-                        {'servers' in state && state.servers.length > 0 && <Bootstrap.Button bsStyle='success' onClick={this.openPanel} value={index} style={{marginLeft: '10px'}}>
-                            Open
-                        </Bootstrap.Button>
-                        }
-                    </Bootstrap.Panel>
+                    <div className="card card-apps">
+                        <div className="card-body">
+                            <h4 className="card-title">{state.name}</h4>
+                            <div>Version: {state.version}</div>
+                            <div className="description ellipsized-text">{description}</div>
+                            <Bootstrap.Button bsStyle='primary' onClick={this.launchApp} value={state.name}>
+                                Launch
+                            </Bootstrap.Button>
+                            {'servers' in state && state.servers.length > 0 && <Bootstrap.Button bsStyle='success' onClick={this.openPanel} value={index} style={{float: 'right'}}>
+                                Open
+                            </Bootstrap.Button>
+                            }
+                        </div>
+                    </div>
                 </Bootstrap.Col>
             )
         }.bind(this));

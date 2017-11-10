@@ -151,10 +151,13 @@ var Servers = React.createClass({
                 <span className="spinner" style={spinnerStyle} ><i className="fa fa-spinner fa-spin fa-3x"></i></span>
                 <div style={blockStyle}>
                     <ServerFormRedux loaded={loaded} providers = {this.state.providers} states = {this.state.states} provider_name = {this.state.hostname} role = {this.state.role} defaults = {this.state.defaults} options = {this.state.options} provider_usage = {this.state.provider_usage} getData = {this.getData} onChange = {this.onChange} onChangeRole = {this.onChangeRole} />
-                    <Bootstrap.PageHeader>Current servers</Bootstrap.PageHeader>
-                    <Reactable.Table className="table striped" columns={['Hostname', 'IP', 'Size', 'Status', 'Provider', 'Actions']} itemsPerPage={10} pageButtonLimit={10} noDataText="No matching records found." sortable={sf_cols} filterable={sf_cols} btnName="Create server" btnClick={this.openModal}>
-                        {app_rows}
-                    </Reactable.Table>
+                    <div style={blockStyle} className="card">
+                        <div className="card-body">
+                            <Reactable.Table className="table striped" columns={['Hostname', 'IP', 'Size', 'Status', 'Provider', 'Actions']} itemsPerPage={10} pageButtonLimit={10} noDataText="No matching records found." sortable={sf_cols} filterable={sf_cols} btnName="Create server" btnClick={this.openModal} title="Current servers" filterClassName="form-control" filterPlaceholder="Filter">
+                                {app_rows}
+                            </Reactable.Table>
+                        </div>
+                    </div>
                     <ConfirmPopup show={this.state.popupShow} data={this.state.popupData} close={this.popupClose} action={this.btn_clicked} />
                 </div>
             </div>

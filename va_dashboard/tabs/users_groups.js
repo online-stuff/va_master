@@ -12,7 +12,8 @@ var GroupPanel = React.createClass({
         return {
             funcs: [],
             groups: [],
-            group_opt: []
+            group_opt: [],
+            loading: true,
         }
     },
 
@@ -30,7 +31,7 @@ var GroupPanel = React.createClass({
             var groups = resp2.map(function(group) {
                 return {value: group.func_name, label: group.func_name};
             });
-            me.setState({funcs: resp1, groups: resp2, group_opt: groups});
+            me.setState({funcs: resp1, groups: resp2, group_opt: groups, loading: false});
         }); 
     },
 
@@ -43,9 +44,19 @@ var GroupPanel = React.createClass({
             return {auth: state.auth, alert: state.alert};
         })(Groups);
 
+        var loading = this.state.loading;
+        const spinnerStyle = {
+            display: loading ? "block": "none",
+        };
+        const blockStyle = {
+            visibility: loading ? "hidden": "visible",
+            position: 'relative'
+        };
+
         return (
-            <div>
-                <GroupRedux funcs = {this.state.funcs} groups = {this.state.groups} />
+            <div className="app-containter">
+                <span className="spinner" style={spinnerStyle} ><i className="fa fa-spinner fa-spin fa-3x" aria-hidden="true"></i></span>
+                <GroupRedux funcs = {this.state.funcs} groups = {this.state.groups} style={blockStyle} />
             </div>
         )
     }

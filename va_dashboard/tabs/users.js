@@ -11,7 +11,8 @@ var UserGroupPanel = React.createClass({
         return {
             funcs: [],
             groups: [],
-            group_opt: []
+            group_opt: [],
+            loading: true,
         }
     },
 
@@ -29,7 +30,7 @@ var UserGroupPanel = React.createClass({
             var groups = resp2.map(function(group) {
                 return {value: group.func_name, label: group.func_name};
             });
-            me.setState({funcs: resp1, groups: resp2, group_opt: groups});
+            me.setState({funcs: resp1, groups: resp2, group_opt: groups, loading: false});
         }); 
     },
 
@@ -42,9 +43,18 @@ var UserGroupPanel = React.createClass({
             return {auth: state.auth, alert: state.alert};
         })(Users);
 
+        var loading = this.state.loading;
+        const spinnerStyle = {
+            display: loading ? "block": "none",
+        };
+        const blockStyle = {
+            visibility: loading ? "hidden": "visible",
+        };
+
         return (
-            <div>
-                <UserRedux funcs = {this.state.funcs} groups = {this.state.group_opt} />
+            <div className="app-containter">
+                <span className="spinner" style={spinnerStyle} ><i className="fa fa-spinner fa-spin fa-3x" aria-hidden="true"></i></span>
+                <UserRedux funcs = {this.state.funcs} groups = {this.state.group_opt} style={blockStyle} />
             </div>
         )
     }
@@ -151,12 +161,13 @@ var Users = React.createClass({
         }
 
         return ( 
-            <div>
-                <Bootstrap.PageHeader>Dashboard Users</Bootstrap.PageHeader>
+            <div style={this.props.style} className="card">
                 {modal}
-                <Reactable.Table className="table striped" columns={['Username', 'Groups', 'Functions', 'Actions']} itemsPerPage={10} pageButtonLimit={10} noDataText="No matching records found." sortable={true} filterable={['Username', 'Groups', 'Functions', 'Actions']} btnName="Add user" btnClick={this.openModal}>
-                    {user_rows}
-                </Reactable.Table> 
+                <div className="card-body">
+                    <Reactable.Table className="table striped" columns={['Username', 'Groups', 'Functions', 'Actions']} itemsPerPage={10} pageButtonLimit={10} noDataText="No matching records found." sortable={true} filterable={['Username', 'Groups', 'Functions', 'Actions']} btnName="Add user" btnClick={this.openModal} title="Dashboard Users" filterClassName="form-control" filterPlaceholder="Filter">
+                        {user_rows}
+                    </Reactable.Table>
+                </div>
             </div> 
         );
     }
@@ -256,12 +267,13 @@ var Groups = React.createClass({
         }
 
         return (
-            <div style={{position: 'relative'}}>
-                <Bootstrap.PageHeader>Dashboard Groups</Bootstrap.PageHeader>
+            <div style={this.props.style} className="card">
                 {modal}
-                <Reactable.Table className="table striped" columns={['Group name', 'Functions', 'Actions']} itemsPerPage={10} pageButtonLimit={10} noDataText="No matching records found." sortable={true} filterable={['Group name', 'Functions', 'Actions']} btnName="Add group" btnClick={this.openModal}>
-                    {group_rows}
-                </Reactable.Table>
+                <div className="card-body">
+                    <Reactable.Table className="table striped" columns={['Group name', 'Functions', 'Actions']} itemsPerPage={10} pageButtonLimit={10} noDataText="No matching records found." sortable={true} filterable={['Group name', 'Functions', 'Actions']} btnName="Add group" btnClick={this.openModal} title="Dashboard Groups" filterClassName="form-control" filterPlaceholder="Filter">
+                        {group_rows}
+                    </Reactable.Table>
+                </div>
             </div>
         );
     }

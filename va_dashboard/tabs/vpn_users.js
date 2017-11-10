@@ -11,13 +11,14 @@ var VpnUsers = React.createClass({
         return {
             active: [],
             revoked: [],
+            loading: true,
         };
     },
 
     getCurrentVpns: function () {
         var me = this;
         Network.get('/api/apps/vpn_users', this.props.auth.token).done(function (data) {
-            me.setState({active: data.active, revoked: data.revoked});
+            me.setState({active: data.active, revoked: data.revoked, loading: false});
         }).fail(function (msg) {
             me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
         });
@@ -117,22 +118,32 @@ var VpnUsers = React.createClass({
         })(Modal);
         var sf_cols = ['Name', 'Connected'];
 
+        var loading = this.state.loading;
+        const spinnerStyle = {
+            display: loading ? "block": "none",
+        };
+        const blockStyle = {
+            visibility: loading ? "hidden": "visible",
+        };
+
         return (
-            <div>
-                <Bootstrap.PageHeader>VPN Users</Bootstrap.PageHeader>
-                <div className="container-block">
-                    <div className="block">
-                        <h4>Active users</h4>
-                        <ModalRedux addVpn = {this.addVpn} />
-                        <Reactable.Table className="table table-striped" columns={['Name', 'Connected', 'Actions']} itemsPerPage={rowNum} pageButtonLimit={10} noDataText="No matching records found." sortable={sf_cols} filterable={sf_cols} btnName="Add user" btnClick={this.openModal}>
-                            {active_rows}
-                        </Reactable.Table>
+            <div className="app-containter">
+                <span className="spinner" style={spinnerStyle} ><i className="fa fa-spinner fa-spin fa-3x" aria-hidden="true"></i></span>
+                <ModalRedux addVpn = {this.addVpn} />
+                <div style={blockStyle} className="container-block">
+                    <div className="block card">
+                        <div className="card-body">
+                            <Reactable.Table className="table table-striped" columns={['Name', 'Connected', 'Actions']} itemsPerPage={rowNum} pageButtonLimit={10} noDataText="No matching records found." sortable={sf_cols} filterable={sf_cols} btnName="Add user" btnClick={this.openModal} title="Active users" filterClassName="form-control custpm-filter-input" filterPlaceholder="Filter">
+                                {active_rows}
+                            </Reactable.Table>
+                        </div>
                     </div>
-                    <div className="block">
-                        <h4>Revoked users</h4>
-                        <Reactable.Table id="revoked-tbl" className="table table-striped" columns={['Name', 'Connected']} itemsPerPage={rowNum} pageButtonLimit={10} noDataText="No matching records found." sortable={true} filterable={['Name', 'Connected']}>
-                            {revoked_rows}
-                        </Reactable.Table>
+                    <div className="block card">
+                        <div className="card-body">
+                            <Reactable.Table id="revoked-tbl" className="table table-striped" columns={['Name', 'Connected']} itemsPerPage={rowNum} pageButtonLimit={10} noDataText="No matching records found." sortable={true} filterable={['Name', 'Connected']} title="Revoked users" filterClassName="form-control custpm-filter-input" filterPlaceholder="Filter">
+                                {revoked_rows}
+                            </Reactable.Table>
+                        </div>
                     </div>
                 </div>
             </div>
