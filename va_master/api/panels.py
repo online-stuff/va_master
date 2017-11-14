@@ -159,7 +159,7 @@ def get_chart_data(server_name, args = ['va-directory', 'Ping']):
     """Gets chart data for the specified server."""
     cl = salt.client.LocalClient()
 
-    result = cl.cmd(server, 'monitoring_stats.parse' , args)
+    result = cl.cmd(server_name, 'monitoring_stats.parse' , args)
     raise tornado.gen.Return(result)
 
 @tornado.gen.coroutine
