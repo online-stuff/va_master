@@ -31,17 +31,40 @@ var Store = React.createClass({
     openModal: function () {
         this.props.dispatch({type: 'OPEN_MODAL'});
     },
+    openPanel: function(e){
+        var index = e.target.value;
+        var state = this.state.states[index];
+        Router.hashHistory.push('/panel/' + state.panels[0].key + '/' + state.servers[0]);
+    },
     render: function () {
-        var states_rows = this.state.states.map(function(state) {
+        var states_rows = this.state.states.map(function(state, index) {
+            var description = state.description;
+            if(description.length > 106){
+                //desc = description.slice(0, 106);
+                //desc += '...';
+                popover = (
+                    <Bootstrap.Popover id={'popover' + index} title="App description">
+                        {description}
+                    </Bootstrap.Popover>
+                );
+                description = (<Bootstrap.OverlayTrigger trigger="click" placement="bottom" overlay={popover}><div>{description}</div></Bootstrap.OverlayTrigger>);
+            }
             return (
                 <Bootstrap.Col xs={12} sm={6} md={3} key={state.name}>
-                    <Bootstrap.Panel header={state.name} bsStyle='primary'>
-                        <div>Version: {state.version}</div>
-                        <div className="description">{state.description}</div>
-                        <Bootstrap.Button bsStyle='primary' onClick={this.launchApp} value={state.name}>
-                            Launch
-                        </Bootstrap.Button>
-                    </Bootstrap.Panel>
+                    <div className="card card-apps">
+                        <div className="card-body">
+                            <h4 className="card-title">{state.name}</h4>
+                            <div>Version: {state.version}</div>
+                            <div className="description ellipsized-text">{description}</div>
+                            <Bootstrap.Button bsStyle='primary' onClick={this.launchApp} value={state.name}>
+                                Launch
+                            </Bootstrap.Button>
+                            {'servers' in state && state.servers.length > 0 && <Bootstrap.Button bsStyle='success' onClick={this.openPanel} value={index} style={{float: 'right'}}>
+                                Open
+                            </Bootstrap.Button>
+                            }
+                        </div>
+                    </div>
                 </Bootstrap.Col>
             )
         }.bind(this));
@@ -52,11 +75,13 @@ var Store = React.createClass({
 
         return (
             <div>
-                <Bootstrap.Button onClick={this.openModal}>
-                    <Bootstrap.Glyphicon glyph='plus' />
-                    Add app 
-                </Bootstrap.Button>
-                <Bootstrap.PageHeader>Available apps</Bootstrap.PageHeader>
+                <div className="page-header">
+                    <h1 style={{display: 'inline', verticalAlign: 'middle'}}>Available apps</h1>
+                    <Bootstrap.Button style={{float: 'right', marginRight: '20px'}} onClick={this.openModal}>
+                        <Bootstrap.Glyphicon glyph='plus' />
+                        Add app 
+                    </Bootstrap.Button>
+                </div>
                 <div className="container-fluid">
                     <Bootstrap.Row>
                         {states_rows}
@@ -80,7 +105,7 @@ var NewStateForm = React.createClass({
                 </Bootstrap.Modal.Header>
 
                 <Bootstrap.Modal.Body>
-                    <form onSubmit={this.onSubmit} ref="uploadForm" encType="multipart/form-data">
+                    <form onSubmit={this.onSubmit} ref="uploadForm" encType="multipart/form-data" style={{width: '100%', padding: '0 20px'}}>
                         <Bootstrap.FormGroup>
                             <Bootstrap.ControlLabel >App name</Bootstrap.ControlLabel>
                             <Bootstrap.FormControl type='text' ref="name" />

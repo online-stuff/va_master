@@ -1,7 +1,10 @@
-@import url('react-datepicker.css');
+@import url('react-select-plus.css');
+@import url('_datepicker.css');
 
 html, body, .main-content {
     height: 100%;
+    background-color: #eee;
+    box-sizing: border-box;
 }
 body{
     margin: 0;
@@ -40,10 +43,16 @@ ul.left-menu a{
     font-size: 13px;
 }
 ul.left-menu a.active{
+    box-shadow: 0px 0px 3px #8C8984 inset;
+    background: #e0e0e0;
+    color: #006EAB;
+}
+
+/*ul.left-menu a.active{
     box-shadow: 0px 0px 3px #002090 inset;
     background: #007ebb;
     color: #fff;
-}
+}*/
 
 .splash-login{
     background: #fff;
@@ -66,14 +75,16 @@ ul.left-menu a.active{
 }
 
 .top-logo{
-    padding: 0px 15px;
+    padding-right: 10px;
     height: 35px;
 }
 .glyphicon-menu-hamburger{
     color: white;
     font-size: 1.5em;
-    padding: 0px 15px;
+    padding: 0px 11px;
     cursor: pointer;
+    top: 0px !important;
+    vertical-align: middle;
 }
 .navbar .container{
     padding: 0;
@@ -81,19 +92,9 @@ ul.left-menu a.active{
     width: 100%;
     height: 50px;
     line-height: 50px;
-    display: flex;
-    align-items: center;
 }
 .container .navbar-collapse{
     margin-left: auto;
-}
-
-.navbar-header{
-    height: 35px;
-    line-height: 35px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
 }
 
 .navbar-inverse .navbar-nav>li>a, .navbar-inverse .navbar-nav>li>a:hover{
@@ -103,6 +104,19 @@ ul.left-menu a.active{
 
 .navbar-inverse .navbar-nav>.open>a, .navbar-inverse .navbar-nav>.open>a:focus, .navbar-inverse .navbar-nav>.open>a:hover{
     background: #004e9b;
+}
+
+.navbar .active{
+    background-color: white !important;
+    color: #007ebb !important;
+}
+
+.navbar-header {
+    width: 15.4vw;
+}
+
+.page-header h1 {
+    font-size: 26px !important;
 }
 
 .sidebar{
@@ -189,7 +203,7 @@ ul.left-menu a.active{
     display: inline-block;
     margin-left: 20px;
     margin-right: 20px;
-    width: 26%;
+    width: 25%;
 }
 
 .chart1{
@@ -397,6 +411,11 @@ table tr.row-state-Unknown{
 }
 .reactable-filter-input{
     float: right !important;
+    width: 240px;
+    height: 32px !important;
+}
+.custpm-filter-input{
+    width: 210px !important;
 }
 .billing-info > div{
     display: inline-block;
@@ -418,11 +437,8 @@ table tr.row-state-Unknown{
 .link-tools .tool-options { display: none }
 .marker-arrowheads { display: none; }
 .tbl-btn{
-    position: absolute;
-    left: 5px;
-    top: 100px;
-    z-index: 1000;
-    overflow:hidden;
+    float: right;
+    margin-right: 10px;
 }
 .provider-billing-block span{
     display: inline-block;
@@ -470,7 +486,7 @@ table tr.row-state-Unknown{
     width: 170px;
 }
 .datepicker{
-    width: 170px;
+    width: 120px !important;
 }
 /*.date-range > :first-child {
     margin-right: 20px;
@@ -488,8 +504,14 @@ table tr.row-state-Unknown{
 }
 .selected-block{
     float: left;
-    padding-top: 30px;
-    padding-left: 30px;
+    padding-top: 10px!important;
+    margin-left: 30px;
+    border: 1px solid #ddd;
+    width: 24%!important;
+    min-height: 220px;
+}
+.selected-block label{
+    margin-bottom: 13px;
 }
 .tbl-select{
     float: left;
@@ -581,6 +603,69 @@ table tr.row-provider-Offline{
     background: transparent;
     box-shadow: none;
 }
-.table>tbody>tr>td{
+.table>thead>tr>td, .table>tbody>tr>td{
     vertical-align: middle !important;
+}
+.reactable-filterer > :first-child{
+    padding-left: 0px !important;
+}
+.container-block{
+    display: flex;
+}
+.block{
+    width: 50%;
+}
+.block:first-child{
+    margin-right: 30px;
+}
+#revoked-tbl > thead > .reactable-filterer{
+    height: 47px;
+}
+#revoked-tbl > .reactable-data > tr{
+    height: 48px;
+}
+/*.DateInput__display-text--has-input{
+    height: 24px;
+}*/
+.DateRangePicker__picker{
+    z-index: 1000!important;
+}
+#filter-log{
+    width: 70%;
+}
+.card {
+    box-shadow: 0 4px 8px 0 rgba(0,0,0,0.2);
+    transition: 0.3s;
+    border-radius: 5px;
+    position: relative;
+    background-color: white;
+    margin-bottom: 20px;
+}
+.card-body{
+    padding: 2px 16px 12px;
+    width: 100%;
+    height: 100%;
+}
+.card-title{
+    font-size: 24px;
+    font-weight: 500;
+    line-height: 1.2;
+    margin-bottom: 12px;
+}
+.card-apps button{
+    width: 72px;
+}
+.custom-panel > .panel-heading{
+    background-color: white!important;
+    font-weight: 600;
+}
+.ellipsized-text {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: block;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+    line-height: 13.3px;
+    max-height: 40px; 
 }

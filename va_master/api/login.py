@@ -14,8 +14,8 @@ def get_paths():
         'get' : {
         },
         'post' : {
-            'login' : {'function' : user_login, 'args' : ['handler']},
-            'new_user' : {'function' : create_user_api, 'args' : ['user', 'password']}
+            'login' : {'function' : user_login, 'args' : ['datastore_handler', 'username', 'password']},
+            'new_user' : {'function' : create_user_api, 'args' : ['user', 'password', 'user_type']}
         }
     }
     return paths
@@ -104,65 +104,41 @@ def auth_only(*args, **kwargs):
 
 
 @tornado.gen.coroutine
-def create_user(datastore, username, password, user_type = 'user'):
-    datastore_handle = user_type + 's' #Basically, make it plural (admin -> admins, user -> users)
-    if len(username) < 1 or len(password) < 1:
-        raise ValueError('Username and password must not be empty.')
-    try:
-        new_users = yield datastore.get(datastore_handle)
-    except datastore.KeyNotFound:
-        yield datastore.insert(datastore_handle, [])
-        new_users = []
-
-    if any([x['username'] == username for x in new_users]): 
+def create_user(datastore_handler, username, password, user_type = 'user'):
+    user = yield datastore_handler.find_user(username)
+    if user: 
         raise Exception('Username ' + username + ' is already taken ')
     crypted_pass = crypt(password)
-    new_users.append({
+    user = {
         'username': username,
         'password_hash': crypted_pass,
         'timestamp_created': long(time.time())
-    })
-    yield datastore.insert(datastore_handle, new_users)
-    token = yield get_or_create_token(datastore, username, user_type = user_type)
+    }
+    yield datastore_handler.create_user(user, user_type)
+    token = yield get_or_create_token(datastore_handler.datastore, username, user_type = user_type)
 
     raise tornado.gen.Return(token)
 
 @tornado.gen.coroutine
-def create_user_api(handler, user, password):
-    token = yield create_user(handler.config.deploy_handler.datastore, user, password) 
+def create_user_api(handler, user, password, user_type = 'user'):
+    """Creates a user with the specified user_type if it doesn't exist yet. Returns the user's token. """
+    token = yield create_user(handler.datastore_handler, user, password, user_type) 
     raise tornado.gen.Return(token)
 
 
 
 @tornado.gen.coroutine
-def user_login(deploy_handler, handler):
+def user_login(datastore_handler, username, password):
+    """Looks for a user with the specified username and checks the specified password against the found user's password. Creates a token if the login is successful. """
+
     body = None
     try: 
-        try:
-            body = json.loads(handler.request.body)
-            username = body['username'].decode('utf8')
-            password = body['password'].decode('utf8')
-        except:
-            raise tornado.gen.Return({'error': 'bad_body'})
-
         if '@' in username: 
             yield ldap_login(handler)
             raise tornado.gen.Return()
 
-        for user_type in ['admin', 'user']:
-            datastore_handle = user_type + 's'
-            try:
-                users = yield handler.datastore.get(datastore_handle)
-                account_info = None
 
-                for user in users:
-                    if user['username'] == username:
-                        account_info = user 
-                        break
-                if account_info: break
-            except handler.datastore.KeyNotFound:
-                users = []
-
+        account_info = yield datastore_handler.find_user(username)
 
         invalid_acc_hash = crypt('__invalidpassword__')
 
@@ -175,10 +151,9 @@ def user_login(deploy_handler, handler):
             }
         pw_hash = account_info['password_hash']
         if crypt(password, pw_hash) == pw_hash:
-            token = yield get_or_create_token(handler.datastore, username, user_type = user_type)
+            token = yield get_or_create_token(datastore_handler.datastore, username, user_type = account_info['user_type'])
             raise tornado.gen.Return({'token': token})
-        print ('Invalid pass. ')
-        raise tornado.gen.Return({'error': 'invalid_password'})
+        raise Exception ("Invalid password: " + password) 
 
     except tornado.gen.Return:
         raise

@@ -126,22 +126,18 @@ var Vpn = React.createClass({
         return (
             <div>
                 <Bootstrap.PageHeader>VPN status</Bootstrap.PageHeader>
-                <Reactable.Table className="table striped" columns={['Name', 'Connected since', 'Virtual IP', 'Bytes in', 'Bytes out']} itemsPerPage={10} pageButtonLimit={10} noDataText="No matching records found." sortable={true} filterable={['Name', 'Connected since', 'Virtual IP', 'Bytes in', 'Bytes out']}>
+                <Reactable.Table className="table table-striped" columns={['Name', 'Connected since', 'Virtual IP', 'Bytes in', 'Bytes out']} itemsPerPage={10} pageButtonLimit={10} noDataText="No matching records found." sortable={true} filterable={['Name', 'Connected since', 'Virtual IP', 'Bytes in', 'Bytes out']}>
                     {status_rows}
                 </Reactable.Table>
                 <div style={{position: 'relative'}}>
                 <Bootstrap.PageHeader>VPN Users</Bootstrap.PageHeader>
                 <h4>Active users</h4>
-                <Bootstrap.Button type="button" bsStyle='default' className="tbl-btn" style={{top: '110px'}} onClick={this.openModal}>
-                    <Bootstrap.Glyphicon glyph='plus' />
-                    Add user
-                </Bootstrap.Button>
                 <ModalRedux addVpn = {this.addVpn} />
-                <Reactable.Table className="table striped" columns={['Name', 'Connected', 'Actions']} itemsPerPage={10} pageButtonLimit={10} noDataText="No matching records found." sortable={sf_cols} filterable={sf_cols} >
+                <Reactable.Table className="table table-striped" columns={['Name', 'Connected', 'Actions']} itemsPerPage={10} pageButtonLimit={10} noDataText="No matching records found." sortable={sf_cols} filterable={sf_cols} btnName="Add user" btnClick={this.openModal}>
                     {active_rows}
                 </Reactable.Table>
                 <h4>Revoked users</h4>
-                <Reactable.Table className="table striped" columns={['Name', 'Connected']} itemsPerPage={10} pageButtonLimit={10} noDataText="No matching records found." sortable={true} filterable={['Name', 'Connected']}>
+                <Reactable.Table className="table table-striped" columns={['Name', 'Connected']} itemsPerPage={10} pageButtonLimit={10} noDataText="No matching records found." sortable={true} filterable={['Name', 'Connected']}>
                     {revoked_rows}
                 </Reactable.Table>
                 </div>

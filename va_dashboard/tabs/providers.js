@@ -6,7 +6,7 @@ var Reactable = require('reactable');
 
 var Providers = React.createClass({
     getInitialState: function () {
-        return {providers: [], loading: true};
+        return {providers: [], loading: true, popupShow: false, popupData: {}};
     },
     getCurrentProviders: function () {
         var me = this;
@@ -19,17 +19,23 @@ var Providers = React.createClass({
     componentDidMount: function () {
         this.getCurrentProviders();
     },
-    deleteProvider: function (e){
+    confirm_action: function(e){
         var data = {"provider_name": e.target.value};
+        this.setState({popupShow: true, popupData: data});
+    },
+    deleteProvider: function (data){
         var me = this;
-        Network.post('/api/providers/delete', this.props.auth.token, data).done(function(data) {
+        /*Network.post('/api/providers/delete', this.props.auth.token, data).done(function(data) {
             me.getCurrentProviders();
         }).fail(function (msg) {
             me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
-        });
+        });*/
     },
     addProvider: function () {
         this.props.dispatch({type: 'OPEN_MODAL'});
+    },
+    popupClose: function() {
+        this.setState({popupShow: false});
     },
     render: function() {
         var provider_rows = this.state.providers.map(function(provider) {
@@ -53,7 +59,7 @@ var Providers = React.createClass({
                     <Reactable.Td column="Instances">{provider.servers.length}</Reactable.Td>
                     <Reactable.Td column="Driver">{provider.driver_name}</Reactable.Td>
                     <Reactable.Td column="Status">{status}</Reactable.Td>
-                    <Reactable.Td column="Actions"><Bootstrap.Button type="button" bsStyle='primary' onClick={this.deleteProvider} value={provider.provider_name}>
+                    <Reactable.Td column="Actions"><Bootstrap.Button type="button" bsStyle='primary' onClick={this.confirm_action} value={provider.provider_name}>
                         Delete
                     </Bootstrap.Button></Reactable.Td>
                 </Reactable.Tr>
@@ -73,16 +79,14 @@ var Providers = React.createClass({
         return (<div className="app-containter">
             <NewProviderFormRedux changeProviders = {this.getCurrentProviders} />
             <span className="spinner" style={spinnerStyle} ><i className="fa fa-spinner fa-spin fa-3x" aria-hidden="true"></i></span>
-            <div style={blockStyle}>
-                <Bootstrap.PageHeader>Current providers <small>All specified providers</small></Bootstrap.PageHeader>
-                <Bootstrap.Button onClick={this.addProvider} className="tbl-btn">
-                    <Bootstrap.Glyphicon glyph='plus' />
-                    Add provider
-                </Bootstrap.Button>
-                <Reactable.Table className="table striped" columns={['Provider name', 'IP', 'Instances', 'Driver', 'Status', 'Actions']} itemsPerPage={10} pageButtonLimit={10} noDataText="No matching records found." sortable={sf_cols} filterable={sf_cols} >
-                    {provider_rows}
-                </Reactable.Table>
+            <div style={blockStyle} className="card">
+                <div className="card-body">
+                    <Reactable.Table className="table striped" columns={['Provider name', 'IP', 'Instances', 'Driver', 'Status', 'Actions']} itemsPerPage={10} pageButtonLimit={10} noDataText="No matching records found." sortable={sf_cols} filterable={sf_cols} btnName="Add provider" btnClick={this.addProvider} title="Current providers" filterClassName="form-control" filterPlaceholder="Filter">
+                        {provider_rows}
+                    </Reactable.Table>
+                </div>
             </div>
+            <ConfirmPopup show={this.state.popupShow} data={this.state.popupData} close={this.popupClose} action={this.deleteProvider} />
         </div>);
     }
 });
@@ -307,6 +311,27 @@ var NewProviderForm = React.createClass({
         }).fail(function (msg) {
             me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
         });
+    }
+});
+
+var ConfirmPopup = React.createClass({
+    render: function () {
+        return (
+            <Bootstrap.Modal show={this.props.show} onHide={this.props.close}>
+                <Bootstrap.Modal.Header closeButton>
+                  <Bootstrap.Modal.Title>Confirm action</Bootstrap.Modal.Title>
+                </Bootstrap.Modal.Header>
+
+                <Bootstrap.Modal.Body>
+                    <p>Please confirm action: delete provider {this.props.data.provider_name}</p>
+                </Bootstrap.Modal.Body>
+
+                <Bootstrap.Modal.Footer>
+                    <Bootstrap.Button onClick={this.props.close}>Cancel</Bootstrap.Button>
+                    <Bootstrap.Button onClick={this.props.action.bind(null, this.props.data)} bsStyle = "primary">Confirm</Bootstrap.Button>
+                </Bootstrap.Modal.Footer>
+            </Bootstrap.Modal>
+        );
     }
 });
 

@@ -49,7 +49,7 @@ Chart.pluginService.register({
                 if(chart.titleBlock.options.text == "MEMORY"){
                     text = chart.config.options.customInnerData + " GB";
                 }else if(chart.titleBlock.options.text == "USERS"){
-                    text = allData[0] + "/" + allData[1];
+                    text = allData[0] + "+" + allData[1];
                 }else{
                     text = chart.config.options.customInnerData;
                 }
@@ -234,12 +234,15 @@ var Diagram = React.createClass({
                 }
             }
         }
-        var style = { width: '100%', height: '200px' };
+        var style = { width: '100%', height: '180px' };
         return (
-            <Bootstrap.Panel ref="panel" header="Diagram" bsStyle='primary'>
-                <Graph graph={graph} options={this.state.options} style={style} events={{}} />
-                <div className="hidden">{this.props.sidebar.collapsed}</div>
-            </Bootstrap.Panel>);
+            <div ref="panel" className="card panel-default custom-panel" style={{marginBottom: '0px'}}>
+                <div className="panel-heading">Diagram</div>
+                <div className="panel-body">
+                    <Graph graph={graph} options={this.state.options} style={style} events={{}} />
+                    <div className="hidden">{this.props.sidebar.collapsed}</div>
+                </div>
+            </div>);
     }
 });
 
@@ -331,11 +334,14 @@ var ProviderRows = React.createClass({
         })(Provider);
         var provider = this.props.providers[this.state.index];
         return (
-            <Bootstrap.Panel header={provider.name + " / Instances: " + provider.servers.length} bsStyle='primary' className="provider-billing-block">
-                <Bootstrap.Glyphicon glyph='arrow-left' onClick={this.prevProvider}></Bootstrap.Glyphicon>
-                <ProviderRedux key={provider.name} title={provider.name} chartData={provider.servers} provider_usage={provider.provider_usage} />
-                <Bootstrap.Glyphicon glyph='arrow-right' onClick={this.nextProvider}></Bootstrap.Glyphicon>
-            </Bootstrap.Panel>
+            <div className="provider-billing-block card panel-default custom-panel" style={{marginBottom: '0px'}}>
+                <div className="panel-heading">{provider.name + " / Instances: " + provider.servers.length}</div>
+                <div className="panel-body">
+                    <Bootstrap.Glyphicon glyph='arrow-left' onClick={this.prevProvider}></Bootstrap.Glyphicon>
+                    <ProviderRedux key={provider.name} title={provider.name} chartData={provider.servers} provider_usage={provider.provider_usage} />
+                    <Bootstrap.Glyphicon glyph='arrow-right' onClick={this.nextProvider}></Bootstrap.Glyphicon>
+                </div>
+            </div>
         );
     }
 });
@@ -445,10 +451,13 @@ var Log = React.createClass({
             return {auth: state.auth};
         })(LogChart);
         return (
-            <Bootstrap.Panel header='Logs' bsStyle='primary' className="log-block">
-                <LogChartRedux datasets={datasets} labels={times} minDate={currentDate} />
-                {log_rows}
-            </Bootstrap.Panel>
+            <div className="log-block card panel-default custom-panel" style={{marginBottom: '0px'}}>
+                <div className="panel-heading">Logs</div>
+                <div className="panel-body">
+                    <LogChartRedux datasets={datasets} labels={times} minDate={currentDate} />
+                    {log_rows}
+                </div>
+            </div>
         );
     }
 });
