@@ -151,6 +151,7 @@ def get_states(handler, dash_user):
     
     datastore_handler = handler.datastore_handler
     states_data = yield datastore_handler.get_states()
+    print ("Got states : ", states_data)
     panels_data = yield panels.get_panels(handler, dash_user)
 
     default_panels = {'admin' : [], 'user' : []}
@@ -159,6 +160,7 @@ def get_states(handler, dash_user):
         state_panel = [x for x in panels_data if x['name'] == state['name']][0]
         state['servers'] = state_panel['servers']
         state['panels'] = state.get('panels', default_panels)[dash_user['type']]
+        print ("State is : ", state, " With name : ", state.get('name', 'NO NAME'))
     raise tornado.gen.Return(states_data)
 
 #WIP function - TODO check if it still works properly. 
