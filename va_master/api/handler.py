@@ -36,7 +36,6 @@ class ApiHandler(tornado.web.RequestHandler):
             traceback.print_exc()
 
     #Temporary for testing
-    #TODO remove in prod
     def set_default_headers(self):
         self.set_header("Access-Control-Allow-Origin", "*")
         self.set_header("Access-Control-Allow-Headers", "x-requested-with, Authorization, Content-Type")
@@ -397,12 +396,18 @@ class LogMessagingSocket(tornado.websocket.WebSocketHandler):
             self.write_message(json.dumps(msg))
 
             self.log_handler = LogHandler(self)
+            self.log_handler.stopped = False
             observer = Observer()
             observer.schedule(self.log_handler, path = log_path)
             observer.start()
         except: 
             import traceback
             traceback.print_exc()
+
+    @tornado.web.asynchronous
+    @tornado.gen.engine
+    def on_close(self):
+        self.log_handler.stopped = True
 
     def get_messages(self, from_date, to_date):
         messages = [x for x in self.messages if from_date < dateutil.parser.parse(x['timestamp']).replace(tzinfo = None) <= to_date]
@@ -443,7 +448,6 @@ class LogMessagingSocket(tornado.websocket.WebSocketHandler):
         messages = yield self.handle_get_messages(message)
         hosts = list(set([x.get('host') for x in messages['logs'] if x.get('host')]))
         messages['hosts'] = hosts
-        print ('Returning : ', hosts)
         raise tornado.gen.Return(messages)
 
     @tornado.gen.coroutine
