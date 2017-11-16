@@ -64,6 +64,7 @@ def panel_action_execute(handler, server_name, action, args = [], dash_user = ''
         user_funcs = yield datastore_handler.get_user_salt_functions(dash_user['username'])
         if action not in user_funcs and dash_user['type'] != 'admin':
             print ('Function not supported')
+            raise Exception('User attempting to execute a salt function but does not have permission. ')
             #TODO actually not allow user to do anything. This is just for testing atm. 
         
     server_info = yield apps.get_app_info(server_name)

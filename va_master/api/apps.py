@@ -24,7 +24,6 @@ def get_paths():
             'apps/get_all_salt_functions' : {'function' : get_all_salt_functions, 'args' : []},
 
             'states' : {'function' : get_states, 'args' : ['handler', 'dash_user']},
-            'states/reset' : {'function' : reset_states, 'args' : []},#Just for testing
 
         },
         'post' : {

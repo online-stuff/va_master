@@ -1,2 +1,0 @@
-recursive-include va_dashboard *.js *.css *.png *.html *.woff *.svg *.ttf *.eot
-recursive-exclude va_dashboard/node_modules *
