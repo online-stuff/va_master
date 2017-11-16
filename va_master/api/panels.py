@@ -51,10 +51,10 @@ def list_panels(deploy_handler, handler):
 
 @tornado.gen.coroutine
 def panel_action_execute(deploy_handler, server_name, action, args = [], dash_user = '', kwargs = {}, module = None, timeout = 30):
-    if dash_user.get('username'):
-        user_funcs = yield deploy_handler.get_user_salt_functions(dash_user['username'], func_type = 'salt')
-        if action not in user_funcs and dash_user['type'] != 'admin':
-            print ('Function not supported')
+#    if dash_user.get('username'):
+#        user_funcs = yield deploy_handler.get_user_salt_functions(dash_user['username'], func_type = 'salt')
+#        if action not in user_funcs and dash_user['type'] != 'admin':
+#            print ('Function not supported')
             #TODO actually not allow user to do anything. This is just for testing atm. 
         
     server_info = yield apps.get_app_info(deploy_handler, server_name)

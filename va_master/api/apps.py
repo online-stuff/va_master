@@ -66,6 +66,7 @@ def get_openvpn_users(deploy_handler):
     #We want to convert it to {"revoked" : [], "status" : [client, list], active" : [{"name" : "", "check" : False, "connected" : True/False}]}
 
     users = {'revoked' : openvpn_users['revoked']}
+    print ('status is : ', openvpn_users['status'])
     users_names = [i['Common Name'] for i in openvpn_users['status']['client_list']]
     users['active'] = [{'name' : x, 'check' : False, 'connected' : x in users_names} for x in openvpn_users['active']]
     users['status'] = openvpn_users['status']['client_list'] or []
