@@ -115,6 +115,8 @@ def add_services_presets(minion_info, presets):
     check_presets = {
         "tcp" :  {"id": minion_info['id'] + "_tcp", "name": "Check server TCP", "tcp": minion_info['ip4_interfaces']['eth0'][0], "interval": "30s", "timeout": "10s"}, 
         "ping" :  {"id": minion_info['id'] + "_ping", "name": "Ping server", "script" : "ping -c1 " + minion_info['ip4_interfaces']['eth0'][0] + " > /dev/null", "interval": "30s", "timeout": "10s"}, 
+        "highstate" : {"id" : minion_info['id'] + '_highstate', "name" : "Check highstate", "script" : "salt " + minion_info['id'] + "state.highstate test=True | perl -lne 's/^Failed:\s+// or next; s/\s.*//; print'"}, 
+
 
     }
     service = {"service": {"name": minion_info["id"] + "_services", "tags": ["hostsvc", "web", "http"], "address": minion_info['ip4_interfaces']['eth0'][0], "port": 443, "checks" : [ 
