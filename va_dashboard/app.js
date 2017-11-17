@@ -38,6 +38,37 @@ function auth(state, action){
     return newState;
 };
 
+function menu(state, action){
+    if(typeof state === 'undefined'){
+        return {tabs: {vpn: [
+            {title: 'Status', link: 'vpn_status'}, 
+            {title: 'Users', link: 'vpn_users'}
+        ], users: [
+            {title: 'Users', link: 'users_users'},
+            {title: 'Groups', link: 'users_groups'}
+        ] }, showTabs: false, selectedTab: -1};
+    }
+    var newState = Object.assign({}, state);
+
+    if(action.type == 'ADD_TABS'){
+        newState.tabs[action.key] = action.tabs;
+        newState.selectedTab = 0;
+        newState.showTabs = action.key;
+    }
+    else if(action.type == 'RESET_TABS'){
+        //newState.tabs[action.key] = [];
+        newState.showTabs = false;
+        newState.selectedTab = -1;
+    }
+    else if(action.type == 'SELECT_TAB'){
+        newState.selectedTab = action.index;
+    }
+    else if(action.type == 'SHOW_TABS'){
+        newState.showTabs = action.key;
+    }
+    return newState;
+}
+
 function table(state, action){
     if(typeof state === 'undefined'){
         return {};
@@ -229,7 +260,7 @@ function logs(state, action){
     return newState;
 };
 
-var mainReducer = Redux.combineReducers({auth: auth, table: table, filter: filter, modal: modal, apps: apps, div: div, panel: panel, alert: alert, form: form, sidebar: sidebar, logs: logs});
+var mainReducer = Redux.combineReducers({auth: auth, table: table, filter: filter, modal: modal, apps: apps, div: div, panel: panel, alert: alert, form: form, sidebar: sidebar, logs: logs, menu: menu});
 var store = Redux.createStore(mainReducer);
 
 var Home = require('./tabs/home');
@@ -240,6 +271,8 @@ var Store = require('./tabs/store');
 var Panel = require('./tabs/panel');
 var Subpanel = require('./tabs/subpanel');
 var Vpn = require('./tabs/vpn');
+var VpnUsers = require('./tabs/vpn_users');
+var VpnStatus = require('./tabs/vpn_status');
 var VpnLogins = require('./tabs/vpn_logins');
 var ChartPanel = require('./tabs/chart_panel');
 var Triggers = require('./tabs/triggers');
@@ -247,6 +280,8 @@ var Ts_status = require('./tabs/ts_status');
 var Log = require('./tabs/log');
 var Billing = require('./tabs/billing');
 var Services = require('./tabs/services');
+var Users = require('./tabs/users').Panel;
+var Groups = require('./tabs/users_groups');
 
 var Login = require('./login');
 var App = React.createClass({
@@ -259,12 +294,16 @@ var App = React.createClass({
                 <Router.Route path='/servers' component={Servers} />
                 <Router.Route path='/store' component={Store} />
                 <Router.Route path='/vpn' component={Vpn} />
+                <Router.Route path='/vpn_status' component={VpnStatus} />
+                <Router.Route path='/vpn_users' component={VpnUsers} />
                 <Router.Route path='/vpn/list_logins/:username' component={VpnLogins} />
                 <Router.Route path='/triggers' component={Triggers} />
                 <Router.Route path='/ts_status' component={Ts_status} />
                 <Router.Route path='/log' component={Log} />
                 <Router.Route path='/billing' component={Billing} />
                 <Router.Route path='/services' component={Services} />
+                <Router.Route path='/users_users' component={Users} />
+                <Router.Route path='/users_groups' component={Groups} />
                 <Router.Route path='/panel/:id/:server(/:args)' component={Panel} />
                 <Router.Route path='/subpanel/:id/:server/:args' component={Subpanel} />
                 <Router.Route path='/chart_panel/:server/:provider/:service' component={ChartPanel} />

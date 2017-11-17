@@ -78,12 +78,12 @@ class GenericDriver(base.DriverBase):
 
     @tornado.gen.coroutine
     def remove_server(self, provider, server_name):
-        provider_datastore = yield self.datastore.get(provider['provider_name'])
+        provider_datastore = yield self.datastore.get('providers/' + provider['provider_name'])
         servers = provider_datastore.get('servers')
 
         servers = [x for x in servers if x['hostname'] != server_name]
         provider_datastore['servers'] = servers
-        yield self.datastore.insert(provider['provider_name'], provider_datastore)
+        yield self.datastore.insert('providers/' + provider['provider_name'], provider_datastore)
 
     @tornado.gen.coroutine
     def server_action(self, provider, server_name, action):
@@ -103,7 +103,7 @@ class GenericDriver(base.DriverBase):
 
     @tornado.gen.coroutine
     def get_servers(self, provider):
-        servers = yield self.datastore.get(provider['provider_name'])
+        servers = yield self.datastore.get('providers/' + provider['provider_name'])
         servers = servers['servers']
 
         if provider['provider_name'] == 'va_standalone_servers' : 
@@ -186,7 +186,7 @@ class GenericDriver(base.DriverBase):
      
     @tornado.gen.coroutine
     def validate_app_fields(self, step, **fields):
-        steps_fields = [['role', 'server_name'], [], ['username', 'ip', 'port']]
+        steps_fields = [['role', 'server_name'], [], ['username', 'ip', 'port', 'location']]
         result = yield super(GenericDriver, self).validate_app_fields(step, steps_fields = steps_fields, **fields)
         raise tornado.gen.Return(result)
 
@@ -194,7 +194,6 @@ class GenericDriver(base.DriverBase):
     def create_server(self, provider, data):
         #TODO Connect to ssh://data.get('ip') -p data.get('port')[ -u data.get('user') -pass data.get('pass') || -key data.get('key')
         print ('In create server. ')
-        raise tornado.gen.Return(True)
         cl = SSHClient()
         cl.load_system_host_keys()
         cl.set_missing_host_key_policy(AutoAddPolicy())
@@ -203,7 +202,6 @@ class GenericDriver(base.DriverBase):
         }
         if data.get('port'): 
             connect_kwargs['port'] = int(data.get('port'))
-
 
         if data.get('password'): 
             connect_kwargs['password'] = data['password']
@@ -216,14 +214,15 @@ class GenericDriver(base.DriverBase):
 
         # distro = ssh_session.cmd(['get', 'distro', 'cmd'])
         # instal = ssh_session.cmd(['install', 'salt', 'stuff'])
-        # services are added on the api side. 
-        provider_datastore = yield self.datastore.get(provider['provider_name'])
-        servers = provider_datastore.get('servers')
+        # services are added on the api side.
+         
+        provider_datastore = yield self.datastore.get('providers/' + provider['provider_name'])
+        servers = provider_datastore.get('servers', [])
         server = {"hostname" : data["server_name"], "ip" : data.get("ip"), "local_gb" : 0, "memory_mb" : 0, "status" : "n/a" }
         servers.append(server)
 
         provider_datastore['servers'] = servers
-        yield self.datastore.insert(provider['provider_name'], provider_datastore)
+        yield self.datastore.insert('providers/' + provider['provider_name'], provider_datastore)
 
         raise tornado.gen.Return(True)  
 #        try:

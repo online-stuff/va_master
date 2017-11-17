@@ -13,10 +13,10 @@ module.exports = {
         }
         $.ajax(opts).done(function(data){
             if(data.success){
-                if(data.data && !$.isEmptyObject(data.data))
+                //if(data.data && !$.isEmptyObject(data.data))
                     dfd.resolve(data.data);
-                else
-                    dfd.reject("No data returned " + data.message);
+                //else
+                //    dfd.reject("No data returned " + data.message);
             }else{
                 dfd.reject(data.message);
             }

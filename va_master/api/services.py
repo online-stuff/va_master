@@ -26,6 +26,7 @@ def get_paths():
     }
     return paths
 
+#These two functions are for inside use in the API. 
 def reload_systemctl():
     subprocess.check_output(['systemctl', 'daemon-reload'])
 
@@ -33,29 +34,33 @@ def restart_consul():
     subprocess.check_output(['consul', 'reload'])
 
 @tornado.gen.coroutine
-def get_services_and_monitoring(deploy_handler):
-    services = yield list_services(deploy_handler)
-    result = yield get_all_monitoring_data(deploy_handler)
+def get_services_and_monitoring():
+    """Returns a list of all services as well as monitoring data from all connected monitoring minions. """
+    services = yield list_services()
+    result = yield get_all_monitoring_data()
     result.update(services)
 
     raise tornado.gen.Return(result)
 
 @tornado.gen.coroutine
-def list_services(deploy_handler):
+def list_services():
+    """Returns a list of services and their statuses from the consul REST API"""
     services = requests.get(consul_url + '/catalog/services')
     services = services.json()
 
     raise tornado.gen.Return(services)
 
 @tornado.gen.coroutine
-def get_services_with_status(deploy_handler, status = 'passing'):
+def get_services_with_status(status = 'passing'):
+    """Returns a list of services with the specified status. """
     services = requests.get(consul_url + '/health/state/%s' % (status))
     services = services.json()
 
     raise tornado.gen.Return(services)
 
 @tornado.gen.coroutine
-def get_service(deploy_handler, service):
+def get_service(service):
+    """Returns the service with the specified service name. """
     service = requests.get(consul_url + '/health/checks/%s' % (service))
     service = service.json()
 
@@ -66,8 +71,9 @@ def get_service(deploy_handler, service):
 
 
 @tornado.gen.coroutine
-def create_service_from_state(deploy_handler, state_name, service_name, service_address, service_port, server_name):
-    all_states = yield deploy_handler.get_states()
+def create_service_from_state(state_name, service_name, service_address, service_port, server_name):
+    """Creates a service from the specified state. Not used currently. """
+    all_states = yield datastore_handler.get_states_data()
     state = [x for x in all_states if x['name'] == state_name][0]
 
     state_service = state['service']
@@ -79,10 +85,11 @@ def create_service_from_state(deploy_handler, state_name, service_name, service_
                     #Somehow do work with var
                     pass
 
-    yield add_service_with_definition(deploy_handler, service_definition, server_name)
+    yield add_service_with_definition(service_definition, server_name)
 
 @tornado.gen.coroutine
-def add_service_with_definition(deploy_handler, service_definition, server):
+def add_service_with_definition(service_definition, server):
+    """Adds a service with a definition. The definition has the standard consul service format. """
     service_text = json.dumps(service_definition)
     service_conf = consul_dir + '/%s.json' % server
 
@@ -93,7 +100,7 @@ def add_service_with_definition(deploy_handler, service_definition, server):
     restart_consul()
 
 @tornado.gen.coroutine
-def add_services(deploy_handler, services, server):
+def add_services(services, server):
     service_keys = ['name', 'tags', 'address', 'port', 'check']
     for key in service_keys:
         if not all([x.get(key) for x in services]):
@@ -103,19 +110,23 @@ def add_services(deploy_handler, services, server):
 
 
 @tornado.gen.coroutine
-def add_services_presets(deploy_handler, minion_info, presets):
+def add_services_presets(minion_info, presets):
+    """Creates services based on several presets and the info for the server. The info is required to get the id and the IP of the server. """
     check_presets = {
         "tcp" :  {"id": minion_info['id'] + "_tcp", "name": "Check server TCP", "tcp": minion_info['ip4_interfaces']['eth0'][0], "interval": "30s", "timeout": "10s"}, 
         "ping" :  {"id": minion_info['id'] + "_ping", "name": "Ping server", "script" : "ping -c1 " + minion_info['ip4_interfaces']['eth0'][0] + " > /dev/null", "interval": "30s", "timeout": "10s"}, 
+        "highstate" : {"id" : minion_info['id'] + '_highstate', "name" : "Check highstate", "script" : "salt " + minion_info['id'] + "state.highstate test=True | perl -lne 's/^Failed:\s+// or next; s/\s.*//; print'"}, 
+
 
     }
     service = {"service": {"name": minion_info["id"] + "_services", "tags": ["hostsvc", "web", "http"], "address": minion_info['ip4_interfaces']['eth0'][0], "port": 443, "checks" : [ 
         check_presets[p] for p in presets
     ]}}
-    yield add_service_with_definition(deploy_handler, service, minion_info['id'])
+    yield add_service_with_definition(service, minion_info['id'])
 
 @tornado.gen.coroutine
-def delete_services(deploy_handler, server):
+def delete_services(server):
+    """Deletes all services for a server. """
     service_conf = consul_dir + '/%s.json' % server
     os.remove(service_conf)
 
@@ -123,7 +134,8 @@ def delete_services(deploy_handler, server):
     restart_consul()
 
 @tornado.gen.coroutine
-def get_all_monitoring_data(deploy_handler):
+def get_all_monitoring_data():
+    """Returns all icinga data from connected monitoring minions. """
     cl = LocalClient()
     result = cl.cmd('G@role:monitoring', fun = 'monitoring.icinga2', tgt_type = 'compound')
 

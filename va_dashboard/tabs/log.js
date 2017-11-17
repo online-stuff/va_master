@@ -4,7 +4,8 @@ var connect = require('react-redux').connect;
 var Network = require('../network');
 var ReactDOM = require('react-dom');
 var Router = require('react-router');
-var DatePicker = require('react-datepicker').default;
+//var DatePicker = require('react-datepicker').default;
+var DateRangePicker = require('react-dates').DateRangePicker;
 var moment = require('moment');
 var Reactable = require('reactable');
 
@@ -73,12 +74,12 @@ var Log = React.createClass({
         });
         return (
             <div id="log-page">
-            	<div>
-                    <DateRange updateLogs={this.updateLogs} />
-                    <input type='text' placeholder='Search...' value={this.state.value} onChange={this.filter}/>
-	    		</div>
-                <FilterBtns changeTable={this.changeTable} />
-            	<TableRedux logs={logs} filterBy={this.state.value} checked={this.state.checked}/>
+                <DateRange updateLogs={this.updateLogs} />
+                <div id='filter-log'>
+                    <FilterBtns changeTable={this.changeTable} />
+                    <input type='text' placeholder='Filter' value={this.state.value} onChange={this.filter} className='form-control pull-right' style={{width: '220px', height: '32px'}}/>
+                </div>
+                <TableRedux logs={logs} filterBy={this.state.value} checked={this.state.checked}/>
             </div>
 	);
     }
@@ -88,85 +89,63 @@ var DateRange = React.createClass({
     getInitialState: function () {
         return {
             startDate: moment().subtract(1, 'days'),
-            endDate: moment()
+            endDate: moment(),
+            focusedInput: null
         }
     },
-    handleChangeStart: function(date) {
+    handleChange: function(obj) {
         this.setState({
-            startDate: date
+            startDate: obj.startDate,
+            endDate: obj.endDate
         });
+        this.props.updateLogs(obj.startDate.format('YYYY-MM-DD'), obj.endDate.format('YYYY-MM-DD'));
     },
 
-    handleChangeEnd: function(date) {
-        this.setState({
-            endDate: date
-        });
+    focusChange: function(focusedInput){
+        this.setState({focusedInput: focusedInput});
     },
+
     btnClick: function(){
         this.props.updateLogs(this.state.startDate.format('YYYY-MM-DD'), this.state.endDate.format('YYYY-MM-DD'));
     },
     render: function () {
         return (
-            <div className="date-range">
-                From: 
-                <DatePicker
-                    className="datepicker"
-                    dateFormat="DD/MM/YYYY"
-                    selected={this.state.startDate}
-                    selectsStart
-                    startDate={this.state.startDate}
-                    endDate={this.state.endDate}
-                    onChange={this.handleChangeStart}
-                />
-                To: 
-                <DatePicker
-                    className="datepicker"
-                    dateFormat="DD/MM/YYYY"
-                    selected={this.state.endDate}
-                    selectsEnd
-                    startDate={this.state.startDate}
-                    endDate={this.state.endDate}
-                    onChange={this.handleChangeEnd}
-                />
-                <Bootstrap.Button onClick={this.btnClick}>Update logs</Bootstrap.Button>
-	   </div>
+            <DateRangePicker
+                displayFormat="DD/MM/YYYY"
+                startDate={this.state.startDate}
+                endDate={this.state.endDate}
+                onDatesChange={this.handleChange}
+                focusedInput={this.state.focusedInput}
+                onFocusChange={this.focusChange}
+                isOutsideRange={function(){return false}}
+            />
         );
     }
 });
 
 var FilterBtns = React.createClass({
     getInitialState: function () {
+        var severities = ["emerg", "alert", "crit", "err", "warning", "notice", "info", "debug"];
         return {
-            severities: ["emerg", "alert", "crit", "err", "warning", "notice", "info", "debug"],
-            btnStatus: Array.apply(null, Array(8)).map(function(){return true})
+            severities: severities,
+            values: Object.assign([], severities)
         }
     },
 
-	btnClick: function (key) {
-        var btnStatus = this.state.btnStatus.slice(0);
-        btnStatus[key] = !btnStatus[key];
-        this.setState({btnStatus: btnStatus});
-        var checked = [], s = this.state.severities;
-        for(var i=0; i<btnStatus.length; i++){
-            if(btnStatus[i]) checked.push(s[i]);
-        };
-        this.props.changeTable(checked);
+	onChange: function (values) {
+        this.setState({values: values});
+        this.props.changeTable(values);
 	},
 
     render: function () {
-        var btnStyle = {
-			display: 'inline',
-			marginRight: '10px',
-            backgroundColor: '#fff'
-		};
-        var btnStatus = this.state.btnStatus, me = this;
-		var btns = this.state.severities.map(function(val, key){
-            var style = Object.assign({}, btnStyle);
-            if(btnStatus[key]) style['backgroundColor'] = '#eee';
-			return <Bootstrap.Button key={key} onClick={me.btnClick.bind(me, key)} style={style}>{val}</Bootstrap.Button>;
+        var me = this;
+		var btns = this.state.severities.map(function(val){
+			return <Bootstrap.ToggleButton key={val} value={val}>{val}</Bootstrap.ToggleButton>;
 		});
 		return (
-			<div id="log-btns">{btns}</div>
+            <Bootstrap.ToggleButtonGroup type="checkbox" value={this.state.values} onChange={this.onChange}>
+			    {btns}
+            </Bootstrap.ToggleButtonGroup>
 		);
     }
 });
@@ -191,14 +170,21 @@ var Table = React.createClass({
     },
 
     render: function () {
-        var logs = this.props.logs.map(function(log) {
-            var msg = JSON.parse(log.message), className = "";
+        var logs = this.props.logs.map(function(log, index) {
+            var msg = log.message, className = "";
+            try{
+                var log_json = JSON.parse(msg);
+                msg = msg.function;
+            }catch (e){
+                console.log("JSON error ", index.toString());
+                console.log(log.message);
+            }
             if(this.state.selected_log.timestamp === log.timestamp)
                 className = "info";
             return (
                 <Reactable.Tr key={log.timestamp} id={log.timestamp} className={className} onClick={this.rowSelected}>
                     <Reactable.Td column="Timestamp">{log.timestamp.substring(0,19)}</Reactable.Td>
-                    <Reactable.Td column="Message">{msg.function}</Reactable.Td>
+                    <Reactable.Td column="Message">{msg}</Reactable.Td>
                     <Reactable.Td column="Severity">{log.severity}</Reactable.Td>
                     <Reactable.Td column="Host">{log.host}</Reactable.Td>
                     <Reactable.Td column="Facility">{log.facility}</Reactable.Td>
@@ -216,11 +202,14 @@ var Table = React.createClass({
         }
         var columns = ["Timestamp", "Message", "Severity", "Host", "Facility"];
         return ( <div>
-            <Reactable.Table className="table striped tbl-select" columns={columns} itemsPerPage={10} pageButtonLimit={10} noDataText="No matching records found." sortable={true} filterable={columns} filterBy={this.props.filterBy} hideFilterInput>
+            <Reactable.Table className="table striped tbl-select card" columns={columns} itemsPerPage={10} pageButtonLimit={10} noDataText="No matching records found." sortable={true} filterable={columns} filterBy={this.props.filterBy} hideFilterInput>
                 {logs}
             </Reactable.Table>
-            <div className="selected-block">
-                {selected_log}
+            <div className="card selected-block">
+                <div className="card-body">
+                    <label>Log Details</label>
+                    {selected_log}
+                </div>
             </div>
         </div> );
     }

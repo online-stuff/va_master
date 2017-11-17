@@ -4,12 +4,12 @@ def get_paths():
     paths = {
         'get' : {
             'triggers' : {'function' : list_triggers, 'args' : []},
-            'triggers/clear' : {'function' : clear_triggers, 'args' : ['provider_name']}, #Just for resting!!!
+#            'triggers/clear' : {'function' : clear_triggers, 'args' : ['provider_name']}, #Just for resting!!!
         },
         'post' : {
             'triggers/add_trigger':  {'function' : add_trigger_api, 'args' : ['new_trigger', 'provider_name']},
             'triggers/triggered': {'function' : receive_trigger, 'args' : ['deploy_handler', 'provider_name', 'service', 'level', 'extra_kwargs']},
-            'triggers/load_triggers' : {'function' : load_triggers, 'args' : ['provider_name', 'triggers']},
+#            'triggers/load_triggers' : {'function' : load_triggers, 'args' : ['provider_name', 'triggers']},
             'triggers/edit_trigger' : {'function' : edit_trigger, 'args' : ['provider_name', 'trigger_id', 'trigger']},
         },
         'delete' : {
@@ -40,10 +40,9 @@ def get_paths():
 #    }
     
 @tornado.gen.coroutine
-def add_trigger(deploy_handler, provider_name, new_trigger):
+def add_trigger(datastore_handler, provider_name, new_trigger):
 
-    providers = yield deploy_handler.list_providers()
-    provider = [x for x in providers if x['provider_name'] == provider_name][0]
+    provider = yield datastore_handler.get_provider(provider_name) 
 
     if not provider.get('triggers'): provider['triggers'] = []
     triggers_ids = [x.get('id', -1) for x in provider['triggers']] or [-1]
@@ -53,46 +52,43 @@ def add_trigger(deploy_handler, provider_name, new_trigger):
 
     provider['triggers'].append(new_trigger)
 
-    yield deploy_handler.datastore.insert('providers', providers)
-
+    yield datastore_handler.create_provider(provider)
     raise tornado.gen.Return(True)
 
 
 @tornado.gen.coroutine
-def add_trigger_api(deploy_handler, new_trigger, provider_name):
-    result = yield add_trigger(deploy_handler, provider_name, new_trigger)
+def add_trigger_api(datastore_handler, new_trigger, provider_name):
+    """Adds a trigger to the specified provider. """
+    result = yield add_trigger(datastore_handler, provider_name, new_trigger)
     raise tornado.gen.Return(result)
 
 @tornado.gen.coroutine
-def delete_trigger(deploy_handler, provider_name, trigger_id):
-    providers = yield deploy_handler.list_providers()
-    provider = [x for x in providers if x['provider_name'] == provider_name][0]
+def delete_trigger(datastore_handler, provider_name, trigger_id):
+    """Deletes a trigger defined by the trigger_id. """
+    provider = yield datastore_handler.get_provider(provider_name) 
 
     provider['triggers'] = [x for x in provider['triggers'] if x['id'] != trigger_id]
-    yield deploy_handler.datastore.insert('providers', providers)
+    yield datastore_handler.create_provider(provider)
 
 
 @tornado.gen.coroutine
 def edit_trigger(deploy_handler, provider_name, trigger_id, trigger):
-    providers = yield deploy_handler.list_providers()
-    provider = [x for x in providers if x['provider_name'] == provider_name][0]
+    """Finds the trigger by the id and sets it to the new trigger's data. """
 
-    edited_trigger_index = provider['triggers'].index([x for x in provider['triggers'] if x['id'] == trigger_id][0])
-    
+    provider = yield datastore_handler.get_provider(provider_name) 
+
+    edited_trigger_index = provider['triggers'].index([x for x in provider['triggers'] if x['id'] == trigger_id][0])    
     trigger['id'] = provider['triggers'][edited_trigger_index]['id']
     provider['triggers'][edited_trigger_index] = trigger
 
-    yield deploy_handler.datastore.insert('providers', providers)
+    yield datastore_handler.create_provider(provider)
 
 @tornado.gen.coroutine
-def clear_triggers(deploy_handler, provider_name):
-    providers = yield deploy_handler.list_providers()
-    provider = [x for x in providers if x['provider_name'] == provider_name][0]
+def clear_triggers(datastore_handler, provider_name):
 
+    provider = yield datastore_handler.get_provider(provider_name) 
     provider['triggers'] = []
-    yield deploy_handler.datastore.insert('providers', providers)
-
-    raise tornado.gen.Return(True)
+    yield datastore_handler.create_provider(provider)
 
 @tornado.gen.coroutine
 def load_triggers(deploy_handler, provider_name, triggers):
@@ -105,8 +101,11 @@ def load_triggers(deploy_handler, provider_name, triggers):
 
 
 @tornado.gen.coroutine
-def list_triggers(deploy_handler):
-    providers = yield deploy_handler.list_providers()
+def list_triggers(handler):
+    """Returns an object with all providers and their respective triggers. """
+    datastore_handler, deploy_handler = handler.datastore_handler, handler.deploy_handler
+
+    providers = yield datastore_handler.list_providers()
     drivers = []
     for provider in providers: 
         driver = yield deploy_handler.get_driver_by_id(provider['driver_name'])
@@ -118,11 +117,11 @@ def list_triggers(deploy_handler):
 
 
 @tornado.gen.coroutine
-def receive_trigger(deploy_handler, provider_name, service = '', level = '', extra_kwargs = {}):
-#    raise tornado.gen.Return(True) # Uncomment to disable triggers
-    provider, driver = yield deploy_handler.get_provider_and_driver(handler.data['provider_name'])
+def receive_trigger(handler, provider_name, service = '', level = '', extra_kwargs = {}):
+    """When called, will look for the trigger matching the service and level and take action based on the saved trigger's data. """
+    provider, driver = yield providers.get_provider_and_driver(handler, provider_name)
     
-    triggers = yield deploy_handler.get_triggers(provider_name)
+    triggers = yield datastore_handler.get_triggers(provider_name)
     triggers = [x for x in triggers if x['service'] == service and x['status'] == level]
 
     if not triggers: 

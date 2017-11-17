@@ -1,8 +1,12 @@
 venv/
 *.pyc
+.*.swp
+.*.swo
 /id_rsa
 /id_rsa.pub
+bundle.js
 node_modules/
+npm-debug.log
 *.egg-info/
 pip-log.txt
 ami_images
@@ -11,5 +15,9 @@ vapp_config.json
 openstack_env_vars.sh
 dist/
 build/
+<<<<<<< HEAD
+.vscode
+=======
 va_master/api/custom_modules/*
 va_master/host_drivers/aek_driver.py
+>>>>>>> va_development
