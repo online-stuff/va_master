@@ -706,3 +706,6 @@ table tr.row-provider-Offline{
     line-height: 20px!important;
     max-height: 100%;
 }
+.btn > span.glyphicon{
+    padding-right: 5px;
+}
