@@ -123,6 +123,30 @@ class ApiHandler(tornado.web.RequestHandler):
 
         raise tornado.gen.Return(auth_successful)   
 
+
+    @tornado.gen.coroutine
+    def check_arguments(self, api_func, api_args, call_args):
+        api_args = [x for x in api_args if x not in self.utils.keys()]
+        call_args = [x for x in call_args if x not in self.utils.keys()]
+        func_name = api_func.func_name
+
+        missing_arguments = [x for x in api_args if x not in call_args]
+        unrecognized_arguments = [x for x in call_args if x not in api_args]
+
+        error_msg = ''
+        if missing_arguments: 
+            error_msg += 'Missing arguments: {arg_list}. '.format(**{'func_name' : func_name, 'arg_list' : str(missing_arguments)})
+        if unrecognized_arguments: 
+            error_msg += 'Unrecognized arguments: {arg_list}. '.format(**{'func_name' : func_name, 'arg_list' : str(unrecognized_arguments)})
+
+        if error_msg: 
+            error_msg = 'Attempted to call {func_name} with arguments {func_args} but called with invalid arguments. {error_msg}'.format(**{
+                'func_args': str(api_args), 'func_name': func_name, 'error_msg' : error_msg
+            })
+            
+        return error_msg
+
+
     @tornado.gen.coroutine
     def handle_func(self, api_func, data):
         try:
@@ -130,7 +154,16 @@ class ApiHandler(tornado.web.RequestHandler):
             api_kwargs = {x : data.get(x) for x in api_args if x in data.keys()} or {}
             api_kwargs.update({x : self.utils[x] for x in api_args if x in self.utils})
 
-            result = yield api_func(**api_kwargs)
+            yield self.check_arguments(api_func, api_args, api_kwargs.keys())
+
+            try:
+                result = yield api_func(**api_kwargs)
+            except TypeError:
+                import traceback
+                traceback.print_exc()
+                error_msg = yield self.check_arguments(api_func, api_args, api_kwargs.keys())
+                if error_msg: 
+                    raise TypeError("Function raised a TypeError exception - maybe caused by bad arguments. " + error_msg)
 
             if type(result) == dict: 
                 if result.get('data_type', 'json') == 'file' : 
@@ -173,6 +206,7 @@ class ApiHandler(tornado.web.RequestHandler):
             data['dash_user'] = user
 
             api_func = self.fetch_func(method, path, data)
+
             if api_func['function'] not in [user_login]:#, url_serve_file_test]: 
                 auth_successful = yield self.handle_user_auth(path)
                 if not auth_successful: 
