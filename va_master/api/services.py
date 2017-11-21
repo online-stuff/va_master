@@ -14,7 +14,7 @@ def get_paths():
             'services/full_status' : {'function' : get_services_and_monitoring, 'args' : []},
             'services/by_status' : {'function' : get_services_with_status, 'args' : ['status']},
             'services/by_service' : {'function' : get_service, 'args' : ['service']},
-            'services/get_monitoring_status' : {'function' : get_all_monitoring_data, 'args' : []},
+            'services/get_monitoring_status' : {'function' : get_all_monitoring_data, 'args' : ['datastore_handler']},
 
         },
         'post' : {
@@ -134,9 +134,17 @@ def delete_services(server):
     restart_consul()
 
 @tornado.gen.coroutine
-def get_all_monitoring_data():
+def get_all_monitoring_data(datastore_handler):
     """Returns all icinga data from connected monitoring minions. """
     cl = LocalClient()
     result = cl.cmd('G@role:monitoring', fun = 'monitoring.icinga2', tgt_type = 'compound')
 
-    return result
+    for minion in result: 
+        for host in result[minion]: 
+            if 'va_master' in host['host_name']: 
+                panel = {'icon' : 'fa-circle'}
+            else: 
+                panel = yield datastore_handler.find_panel_for_server(host['host_name'])
+            host['icon'] = panel['icon']
+
+    raise tornado.gen.Return(result)

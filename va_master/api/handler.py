@@ -106,7 +106,8 @@ class ApiHandler(tornado.web.RequestHandler):
                 self.json({'success' : False, 'message' : 'User not authenticated properly. ', 'data' : {}})
                 auth_successful = False
             elif user['type'] == 'user' : 
-                user_functions = yield self.config.deploy_handler.get_user_functions(user.get('username'))
+                user_functions = yield self.datastore_handler.get_user_functions(user.get('username'))
+                user_functions = [x.get('func_path', '') for x in user_functions]
                 user_functions += self.paths.get('user_allowed', [])
 
                 if path not in user_functions: 
@@ -128,9 +129,7 @@ class ApiHandler(tornado.web.RequestHandler):
         try:
             api_func, api_args = api_func.get('function'), api_func.get('args')       
             api_kwargs = {x : data.get(x) for x in api_args if x in data.keys()} or {}
-            print ('Before update : ', api_kwargs)
             api_kwargs.update({x : self.utils[x] for x in api_args if x in self.utils})
-            print ('After update', api_kwargs, ' and calling : ', api_func)
 
             result = yield api_func(**api_kwargs)
 
@@ -172,6 +171,7 @@ class ApiHandler(tornado.web.RequestHandler):
             }
 
             user = yield get_current_user(self)
+            print ('Data is : ', data)
             data['dash_user'] = user
 
             api_func = self.fetch_func(method, path, data)
