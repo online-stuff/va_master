@@ -196,7 +196,6 @@ class ApiHandler(tornado.web.RequestHandler):
         try:
 
             args = self.request.query_arguments
-            print ('With args in get: ', args)
 
             t_args = args
             for x in t_args: 

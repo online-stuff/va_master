@@ -290,7 +290,7 @@ class DatastoreHandler(object):
 
     @tornado.gen.coroutine
     def get_states(self):
-        states = yield self.datastore.get_recurse('state/')
+        states = yield self.datastore.get_recurse('states/')
         raise tornado.gen.Return(states)
 
     @tornado.gen.coroutine

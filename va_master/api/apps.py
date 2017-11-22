@@ -68,6 +68,7 @@ def get_openvpn_users():
     #We want to convert it to {"revoked" : [], "status" : [client, list], active" : [{"name" : "", "check" : False, "connected" : True/False}]}
 
     users = {'revoked' : openvpn_users['revoked']}
+    print ('status is : ', openvpn_users['status'])
     users_names = [i['Common Name'] for i in openvpn_users['status']['client_list']]
     users['active'] = [{'name' : x, 'check' : False, 'connected' : x in users_names} for x in openvpn_users['active']]
     users['status'] = openvpn_users['status']['client_list'] or []
@@ -155,7 +156,10 @@ def get_states(handler, dash_user):
     default_panels = {'admin' : [], 'user' : []}
 
     for state in states_data: 
-        state_panel = [x for x in panels_data if x['name'] == state['name']][0]
+        state_panel = [x for x in panels_data if x['name'] == state['name']]
+        if not state_panel: 
+            print ('No panel for : ', state['name'])
+            break
         state['servers'] = state_panel['servers']
         state['panels'] = state.get('panels', default_panels)[dash_user['type']]
     raise tornado.gen.Return(states_data)
