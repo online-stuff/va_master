@@ -192,6 +192,7 @@ def get_panel_for_user(handler, panel, server_name, dash_user, args = [], provid
     """Returns the required panel from the server for the logged in user. A list of args may be provided for the panel. """
 
     user_panels = yield list_panels(handler.datastore_handler, dash_user)
+    print ('User panels are : ', user_panels)
     server_info = yield apps.get_app_info(server_name)
     state = server_info['role']
 
@@ -203,7 +204,7 @@ def get_panel_for_user(handler, panel, server_name, dash_user, args = [], provid
     else: 
         kwargs = {}
 
-    state = filter(lambda x: x['name'] == state, user_panels)[0]
+    state = filter(lambda x: x['name'] == state or x.get('id', '') == state, user_panels)[0]
     if server_name in state['servers']:
         action = 'get_panel'
         if type(args) != list and args: 

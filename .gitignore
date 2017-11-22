@@ -15,9 +15,8 @@ vapp_config.json
 openstack_env_vars.sh
 dist/
 build/
-<<<<<<< HEAD
 .vscode
-=======
 va_master/api/custom_modules/*
+va_master/api/custom_modules/__init__.py
 va_master/host_drivers/aek_driver.py
->>>>>>> va_development
+
