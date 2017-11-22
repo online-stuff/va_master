@@ -107,6 +107,8 @@ class ApiHandler(tornado.web.RequestHandler):
                 auth_successful = False
             elif user['type'] == 'user' : 
                 user_functions = yield self.datastore_handler.get_user_functions(user.get('username'))
+                user_functions = [x.get('func_path', '') for x in user_functions]
+
                 user_functions += self.paths.get('user_allowed', [])
 
                 if path not in user_functions: 
@@ -171,6 +173,7 @@ class ApiHandler(tornado.web.RequestHandler):
             }
 
             user = yield get_current_user(self)
+            print ('Data is : ', data)
             data['dash_user'] = user
 
             api_func = self.fetch_func(method, path, data)
