@@ -25,7 +25,7 @@ class ApiHandler(tornado.web.RequestHandler):
 
     def initialize(self, config, include_version=False):
         try:
-#            self.config = config
+            self.config = config
             self.datastore = config.datastore
             self.deploy_handler = config.deploy_handler
             self.data = {}
