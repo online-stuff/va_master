@@ -287,7 +287,7 @@ class LibVirtDriver(base.DriverBase):
         if not get_servers: return servers
 
         for x in conn.listAllDomains():
-            print ('Trying to get ', x.name)
+            print ('Trying to get ', x.name())
             server =  {            
                 'hostname' : x.name(), 
                 'ip' : 'n/a', 

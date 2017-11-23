@@ -143,7 +143,7 @@ var Chart = React.createClass({
     },
     btn_click: function(period, interval, unit, step) {
         var server_name = this.props.panel.server;
-        var data = {"server_name": server_name, "args": [this.props.host, this.props.service, period, interval]};
+        var data = {"server_name": server_name, "args": [this.props.provider, this.props.service, period, interval]};
         var me = this;
         Network.post('/api/panels/chart_data', this.props.auth.token, data).done(function(d) {
             var chartOptions = Object.assign({}, me.state.chartOptions);

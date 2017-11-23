@@ -36,7 +36,6 @@ class ApiHandler(tornado.web.RequestHandler):
             traceback.print_exc()
 
     #Temporary for testing
-    #TODO remove in prod
     def set_default_headers(self):
         self.set_header("Access-Control-Allow-Origin", "*")
         self.set_header("Access-Control-Allow-Headers", "x-requested-with, Authorization, Content-Type")
@@ -107,7 +106,8 @@ class ApiHandler(tornado.web.RequestHandler):
                 self.json({'success' : False, 'message' : 'User not authenticated properly. ', 'data' : {}})
                 auth_successful = False
             elif user['type'] == 'user' : 
-                user_functions = yield self.config.deploy_handler.get_user_functions(user.get('username'))
+                user_functions = yield self.datastore_handler.get_user_functions(user.get('username'))
+                user_functions = [x.get('func_path', '') for x in user_functions]
                 user_functions += self.paths.get('user_allowed', [])
 
                 if path not in user_functions: 
@@ -171,6 +171,7 @@ class ApiHandler(tornado.web.RequestHandler):
             }
 
             user = yield get_current_user(self)
+            print ('Data is : ', data)
             data['dash_user'] = user
 
             api_func = self.fetch_func(method, path, data)
@@ -195,6 +196,7 @@ class ApiHandler(tornado.web.RequestHandler):
         try:
 
             args = self.request.query_arguments
+
             t_args = args
             for x in t_args: 
                 if len(t_args[x]) == 1: 
@@ -341,6 +343,7 @@ class ApiHandler(tornado.web.RequestHandler):
 class LogHandler(FileSystemEventHandler):
     def __init__(self, socket):
         self.socket = socket
+        self.stopped = False
         super(LogHandler, self).__init__()
 
     def on_modified(self, event):
@@ -354,7 +357,8 @@ class LogHandler(FileSystemEventHandler):
             last_line = json.loads(last_line)
 
             msg = {"type" : "update", "message" : last_line}
-#            self.socket.write_message(json.dumps(msg))
+            if not self.stopped: 
+                self.socket.write_message(json.dumps(msg))
         except: 
             import traceback
             traceback.print_exc()
@@ -385,18 +389,24 @@ class LogMessagingSocket(tornado.websocket.WebSocketHandler):
             yesterday = datetime.datetime.now() + dateutil.relativedelta.relativedelta(days = -1)
 
             init_messages = self.get_messages(yesterday, datetime.datetime.now())
+            hosts = list(set([x.get('host') for x in init_messages if x.get('host')]))
 
-            msg = {"type" : "init", "logs" : init_messages}
+            msg = {"type" : "init", "logs" : init_messages, 'hosts' : hosts}
             self.write_message(json.dumps(msg))
 
-            log_handler = LogHandler(self)
+            self.log_handler = LogHandler(self)
+            self.log_handler.stopped = False
             observer = Observer()
-            observer.schedule(log_handler, path = log_path)
+            observer.schedule(self.log_handler, path = log_path)
             observer.start()
-            print ('Started observer. ')
         except: 
             import traceback
             traceback.print_exc()
+
+    @tornado.web.asynchronous
+    @tornado.gen.engine
+    def on_close(self):
+        self.log_handler.stopped = True
 
     def get_messages(self, from_date, to_date):
         messages = [x for x in self.messages if from_date < dateutil.parser.parse(x['timestamp']).replace(tzinfo = None) <= to_date]
@@ -407,6 +417,7 @@ class LogMessagingSocket(tornado.websocket.WebSocketHandler):
 
     @tornado.gen.coroutine
     def on_message(self, message): 
+        print ('I am receiving message : ', message)
         try:
             message = json.loads(message)
         except: 
@@ -414,25 +425,55 @@ class LogMessagingSocket(tornado.websocket.WebSocketHandler):
             raise tornado.gen.Return(None)
 
         try:
-            from_date = message.get('from_date')
-            date_format = '%Y-%m-%d'
-            if from_date:
-                from_date = datetime.datetime.strptime(from_date, date_format)
-            else: 
-                from_date = datetime.datetime.now() + dateutil.relativedelta.relativedelta(days = -2)
+            print ('Message is : ', message)
+            message_handlers = {
+                        'init' : self.handle_init_message, 
+                        'get_messages' : self.handle_get_messages, 
+                        'observer_status' : self.handle_observer, 
+                    }
+            msg_type = message.get('type', '')
+            if msg_type not in message_handlers: 
+                self.write_message('Type: ' + msg_type + ' not found in : ', message_handlers.keys())
 
-            to_date = message.get('to_date')
-            if to_date: 
-                to_date = datetime.datetime.strptime(to_date, date_format)
-            else: 
-                to_date = datetime.datetime.now()
-
-            messages = self.get_messages(from_date, to_date)
-#            for m in messages: 
-#                m['data'] = str(m.get('data', ''))[:100]
-            messages = {'type' : 'init', 'logs' : messages}
-            self.write_message(json.dumps(messages))
-
+            response = yield message_handlers[msg_type](message)
+            if response: 
+                self.write(json.loads(response))
         except: 
             import traceback
             traceback.print_exc()
+
+    @tornado.gen.coroutine
+    def handle_init_message(self, message):
+        messages = yield self.handle_get_messages(message)
+        hosts = list(set([x.get('host') for x in messages['logs'] if x.get('host')]))
+        messages['hosts'] = hosts
+        raise tornado.gen.Return(messages)
+
+    @tornado.gen.coroutine
+    def handle_get_messages(self, message):
+        
+        from_date = message.get('from_date')
+        date_format = '%Y-%m-%d'
+        if from_date:
+            from_date = datetime.datetime.strptime(from_date, date_format)
+        else: 
+            from_date = datetime.datetime.now() + dateutil.relativedelta.relativedelta(days = -2)
+ 
+        to_date = message.get('to_date')
+        if to_date: 
+            to_date = datetime.datetime.strptime(to_date, date_format)
+        else: 
+            to_date = datetime.datetime.now()
+ 
+        messages = self.get_messages(from_date, to_date)
+        messages = {'type' : 'init', 'logs' : messages}
+        raise tornado.gen.Return(messages)
+#        self.write_message(json.dumps(messages))
+
+    @tornado.gen.coroutine
+    def handle_observer(self, message):
+        status_map = {
+           'start' : True, 
+           'stop' : False, 
+        }
+        self.log_handler.stopped = status_map[message['status']]
