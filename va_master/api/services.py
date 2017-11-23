@@ -19,6 +19,8 @@ def get_paths():
         },
         'post' : {
             'services/add' : {'function' : add_services, 'args' : ['services', 'server']},
+            'services/add_preset' : {'function' : add_services_presets, 'args' : ['service_presets', 'server']},
+
         },
         'delete' : {
             'services/delete' : {'function' : delete_services, 'args' : ['server']},
@@ -110,8 +112,12 @@ def add_services(services, server):
 
 
 @tornado.gen.coroutine
-def add_services_presets(minion_info, presets):
+def add_services_presets(server, presets):
     """Creates services based on several presets and the info for the server. The info is required to get the id and the IP of the server. """
+
+    if type(server) == 'str': 
+        minion_info = yield apps.get_minion_info(server)
+
     check_presets = {
         "tcp" :  {"id": minion_info['id'] + "_tcp", "name": "Check server TCP", "tcp": minion_info['ip4_interfaces']['eth0'][0], "interval": "30s", "timeout": "10s"}, 
         "ping" :  {"id": minion_info['id'] + "_ping", "name": "Ping server", "script" : "ping -c1 " + minion_info['ip4_interfaces']['eth0'][0] + " > /dev/null", "interval": "30s", "timeout": "10s"}, 
