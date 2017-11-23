@@ -94,7 +94,5 @@ class TestClass(unittest.TestCase):
         self.assertNotEqual(len(providers['data']), len(new_providers['data']))
 
 if __name__ == '__main__':
-    print(len(sys.argv))
-    print(sys.argv)
     suite = unittest.TestLoader().loadTestsFromTestCase(TestClass)
     unittest.TextTestRunner(verbosity=5).run(suite)
