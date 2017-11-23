@@ -160,6 +160,7 @@ def get_states(handler, dash_user):
         if not state_panel: 
             print ('No panel for : ', state['name'])
             break
+        state_panel = state_panel[0]
         state['servers'] = state_panel['servers']
         state['panels'] = state.get('panels', default_panels)[dash_user['type']]
     raise tornado.gen.Return(states_data)
