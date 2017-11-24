@@ -245,6 +245,7 @@ def get_app_info(server_name):
     cl = Caller()
     server_info = cl.cmd('mine.get', server_name, 'inventory') 
     server_info = server_info.get(server_name)
+    print ('Server info : ', server_info)
     raise tornado.gen.Return(server_info)
 
 

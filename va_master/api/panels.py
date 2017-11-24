@@ -25,7 +25,7 @@ def get_paths():
 
             'panels/get_panel' : {'function' : get_panel_for_user, 'args' : ['server_name', 'panel', 'provider', 'handler', 'args', 'dash_user']},
 #            'panels/reset_panels': {'function' : reset_panels, 'args' : []}, #JUST FOR TESTING
-            'panels/new_panel' : {'function' : new_panel, 'args' : ['datastore_handler', 'panel_name', 'role']},
+            'panels/new_panel' : {'function' : new_panel, 'args' : ['datastore_handler', 'server_name', 'role']},
             'panels/action' : {'function' : panel_action, 'args' : ['handler', 'server_name', 'action', 'args', 'kwargs', 'module', 'dash_user']}, #must have server_name and action in data, 'args' : []}, ex: panels/action server_name=nino_dir action=list_users
             'panels/chart_data' : {'function' : get_chart_data, 'args' : ['server_name', 'args']},
             'panels/serve_file' : {'function' : salt_serve_file, 'args' : ['handler', 'server_name', 'action', 'args', 'kwargs', 'module']},
@@ -40,10 +40,10 @@ def reset_panels(deploy_handler):
     yield deploy_handler.reset_panels()
 
 @tornado.gen.coroutine
-def new_panel(datastore_handler, panel_name, role):
+def new_panel(datastore_handler, server_name, role):
     """ Adds the panel_name to the list of servers for the specified role. """
 
-    yield datastore_handler.add_panel(panel_name, role)
+    yield datastore_handler.add_panel(server_name, role)
 
 
 @tornado.gen.coroutine
@@ -79,7 +79,6 @@ def panel_action_execute(handler, server_name, action, args = [], dash_user = ''
     cl = salt.client.LocalClient()
     print ('Calling salt module ', module + '.' + action, ' on ', server_name, ' with args : ', args, ' and kwargs : ', kwargs)
     result = cl.cmd(server_name, module + '.' + action , args, kwarg = kwargs, timeout = timeout)
-    print ('Result : ', result)
     result = result.get(server_name)
 
     raise tornado.gen.Return(result)

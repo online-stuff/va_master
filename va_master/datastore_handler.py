@@ -239,8 +239,8 @@ class DatastoreHandler(object):
         user_panel['servers'].append(panel_name)
         admin_panel['servers'].append(panel_name)
 
-        yield self.store_panel('user', user_panel, role)
-        yield self.store_panel('admin', admin_panel, role)
+        yield self.store_panel(user_panel, 'user', role)
+        yield self.store_panel(admin_panel, 'admin', role)
 
     @tornado.gen.coroutine
     def get_states_data(self, states = []):
