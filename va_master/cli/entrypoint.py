@@ -3,7 +3,7 @@ import tornado.ioloop
 import sys
 import os
 import ssl
-from . import config, httpserver
+from va_master import config, httpserver
 from OpenSSL import crypto, SSL
 from socket import gethostname
 from pprint import pprint
@@ -52,13 +52,13 @@ def bootstrap(master_config):
             generate_keys(master_config, crt_path, key_path)
     else:
         crt_path = master_config.https_crt
-        key_path = master_config.key_crt
+        key_path = master_config.https_key
 
     ssl_ctx = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
     ssl_ctx.load_cert_chain(crt_path, key_path)
 
-    from . import consul
-    consul.ConsulProcess(master_config).start()
+    from va_master.consul_kv import consul
+#    consul.ConsulProcess(master_config).start()
 
     my_serv = tornado.httpserver.HTTPServer(app, ssl_options=ssl_ctx)
     my_serv.listen(master_config.https_port)

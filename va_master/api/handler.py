@@ -15,7 +15,7 @@ import json, datetime, syslog, pytz
 import dateutil.relativedelta
 import dateutil.parser
 
-from va_master.datastore_handler import DatastoreHandler
+from va_master.consul_kv.datastore_handler import DatastoreHandler
 
 def invalid_url(path, method):
     raise Exception('Invalid URL : ' + path +' with method : ' + method)

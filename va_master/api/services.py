@@ -122,7 +122,7 @@ def add_services(services, server):
         if not all([x.get(key) for x in services]):
             raise tornado.gen.Return({"success" : False, "message" : "All services need to define a value for the keys: " + ', '.join(service_keys) + '; Missing key : ' + key, 'data' : {}})
 
-    yield add_service_with_definition(deploy_handler, services, server)
+    yield add_service_with_definition(services, server)
 
 
 @tornado.gen.coroutine

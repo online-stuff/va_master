@@ -3,9 +3,9 @@ import functools
 import pkg_resources
 import logging
 import os
-from . import deploy_handler
-from . import datastore
-from .host_drivers import openstack
+from va_master import deploy_handler
+from va_master.consul_kv import datastore
+from va_master.host_drivers import openstack
 
 def get_server_static():
     # get the server assets static path
@@ -26,13 +26,18 @@ class Config(object):
         ch.setFormatter(logging.Formatter('[%(asctime)-15s] %(message)s'))
         self.logger.addHandler(ch)
         self.server_port = 80
+        self.https_port = 443
         self.server_static_path = get_server_static()
         self.deploy_pool_count = 3
         self.ssh_key_path = '/root/.ssh/'
         self.ssh_key_name = 'va-master' 
 
+        self.https_crt = '/opt/va_master/ssl/cert.crt'
+        self.https_key = '/opt/va_master/ssl/server.key'
+
         # Now dynamically inject any kwargs
         for kw in kwargs:
+            print ('Initiating ', kw, ' to ', kwargs[kw])
             setattr(self, kw, kwargs[kw])
         self.deploy_handler = deploy_handler.DeployHandler(self.datastore, self.deploy_pool_count, self.ssh_key_name, self.ssh_key_path)
 

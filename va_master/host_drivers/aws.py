@@ -3,7 +3,7 @@ from .base import Step, StepResult
 from tornado.httpclient import AsyncHTTPClient, HTTPRequest
 import tornado.gen
 import json
-from va_master import datastore
+from va_master.consul_kv import datastore
 
 import subprocess
 

@@ -24,7 +24,6 @@ def get_paths():
             'panels/update_user' : {'function' : update_user, 'args' : ['datastore_handler', 'user', 'functions', 'groups', 'password']}, 
 
             'panels/get_panel' : {'function' : get_panel_for_user, 'args' : ['server_name', 'panel', 'provider', 'handler', 'args', 'dash_user']},
-#            'panels/reset_panels': {'function' : reset_panels, 'args' : []}, #JUST FOR TESTING
             'panels/new_panel' : {'function' : new_panel, 'args' : ['datastore_handler', 'server_name', 'role']},
             'panels/action' : {'function' : panel_action, 'args' : ['handler', 'server_name', 'action', 'args', 'kwargs', 'module', 'dash_user']}, #must have server_name and action in data, 'args' : []}, ex: panels/action server_name=nino_dir action=list_users
             'panels/chart_data' : {'function' : get_chart_data, 'args' : ['server_name', 'args']},
@@ -34,10 +33,6 @@ def get_paths():
     }
     return paths
 
-@tornado.gen.coroutine
-def reset_panels(deploy_handler): 
-    """ Testing function - deletes all functions. Currently not usable. """
-    yield deploy_handler.reset_panels()
 
 @tornado.gen.coroutine
 def new_panel(datastore_handler, server_name, role):

@@ -18,7 +18,7 @@ def get_paths():
             'apps/set_settings' : {'function' : set_settings, 'args' : ['settings']},
             'apps/vpn_users' : {'function' : get_openvpn_users, 'args' : []},
             'apps/vpn_status' : {'function' : get_openvpn_status, 'args' : []},
-            'apps/add_app' : {'function' : add_app, 'args' : ['provider', 'server_name']},
+#            'apps/add_app' : {'function' : add_app, 'args' : ['provider', 'server_name']},
 
             'apps/get_user_salt_functions' : {'function' : get_user_salt_functions, 'args' : ['dash_user']},
             'apps/get_all_salt_functions' : {'function' : get_all_salt_functions, 'args' : []},
@@ -55,7 +55,7 @@ def add_app(provider, server_name):
     "WIP function - TODO make adding apps work properly"""
 
     app = yield get_app_info(server_name)
-    yield handler.config.deploy_handler.store_app(app, provider)
+    yield handler.config.datastore_handler.store_app(app, provider)
 
 @tornado.gen.coroutine
 def get_openvpn_users():
@@ -167,7 +167,7 @@ def get_states(handler, dash_user):
 
 #WIP function - TODO check if it still works properly. 
 @tornado.gen.coroutine
-def create_new_state(deploy_handler, file_contents, body, filename):
+def create_new_state(datastore_handler, file_contents, body, filename):
     """Creates a new state from a file, unpack it to the state directory and add it to the datastore. """
 
     data = file_contents[0]
@@ -200,6 +200,8 @@ def create_new_state(deploy_handler, file_contents, body, filename):
     tar_ref = tarfile.TarFile(tmp_archive)
     tar_ref.extractall(salt_path)
 
+    yield datastore_handler.add_state(new_state)
+
 #    zip_ref.close()
     tar_ref.close()
 #    manage_states(handler, 'append')
@@ -213,8 +215,6 @@ def validate_app_fields(handler):
     Requires that you send a step index as an argument, whereas the specifics for the validation are based on what driver you are using. 
     If no provider_name is sent, creates a server on the va_standalone_servers provider, which is mostly invisible, and its servers are treated as standalone. 
     """
-    deploy_handler = handler.deploy_handler
-
     provider, driver = yield providers.get_provider_and_driver(handler, handler.data.get('provider_name', 'va_standalone_servers'))
 
     kwargs = handler.data
@@ -324,10 +324,10 @@ def launch_app(handler):
 
 #WIP - todo finish this function
 @tornado.gen.coroutine
-def get_all_salt_functions(deploy_handler):
+def get_all_salt_functions(datastore_handler):
     """ Gets all salt functions for all minions. """
     cl = LocalClient()
-    states = yield deploy_handler.get_states()
+    states = yield datastore_handler.get_states()
 
     functions = cl.cmd('*', 'sys.doc')
     result = {
@@ -337,17 +337,17 @@ def get_all_salt_functions(deploy_handler):
     raise tornado.gen.Return(result)
 
 @tornado.gen.coroutine
-def get_user_salt_functions(deploy_handler, dash_user):
+def get_user_salt_functions(datastore_handler, dash_user):
     """Gets all functions tagged as 'salt' from the datastore for the logged in user. """
 
-    salt_functions = yield deploy_handler.get_user_salt_functions(dash_user['username'])
+    salt_functions = yield datastore_handler.get_user_salt_functions(dash_user['username'])
     raise tornado.gen.Return(salt_functions)
     
 @tornado.gen.coroutine
-def add_user_salt_functions(deploy_handler, dash_user, functions):
+def add_user_salt_functions(datastore_handler, dash_user, functions):
     """Adds the list of salt functions for use for the logged in user. """
 
-    yield deploy_handler.add_user_salt_functions(dash_user['username'], functions)
+    yield datastore_handler.add_user_salt_functions(dash_user['username'], functions)
 
 @tornado.gen.coroutine
 def set_settings(settings):

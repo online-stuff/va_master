@@ -7,7 +7,7 @@ import tornado
 import tornado.gen
 from host_drivers import openstack, aws, vcloud, libvirt_driver, generic_driver, century_link, gce, vmware
 
-from va_master.datastore_handler import DatastoreHandler
+from va_master.consul_kv.datastore_handler import DatastoreHandler
 from Crypto.PublicKey import RSA
 from concurrent.futures import ProcessPoolExecutor
 
