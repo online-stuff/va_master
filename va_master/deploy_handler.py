@@ -42,6 +42,7 @@ class DeployHandler(object):
 
         for var in init_vars: 
             if var in kwargs: 
+                print ('Setting : ', var, ' to : ', kwargs[var])
                 setattr(self, var, kwargs[var])
             else: 
                 if var in store_values: 
@@ -103,31 +104,6 @@ class DeployHandler(object):
         raise tornado.gen.Return(None)
 
     @tornado.gen.coroutine
-    def get_provider_and_driver(self, provider_name = ''):
-        if provider_name: 
-            provider = yield self.get_provider(provider_name)
-            driver = yield self.get_driver_by_id(provider['driver_name'])
-        else: 
-            provider = yield self.get_provider('va_standalone_servers') 
-            driver = yield self.get_driver_by_id('generic_driver')
-
-        raise tornado.gen.Return((provider, driver))
-
-    @tornado.gen.coroutine
-    def get_standalone_provider(self):
-        provider = yield self.datastore_handler.get_provider('va_standalone_servers')
-        driver = yield self.get_driver_by_id('generic_driver')
-
-        provider['servers'] = yield driver.get_servers(provider)
-
-        provider['provider_name'] = ''
-        for x in provider['servers']: 
-            x['provider'] = ''
-
-        raise tornado.gen.Return(provider)
-
-
-    @tornado.gen.coroutine
     def generate_top_sls(self):
         states = yield self.datastore.get('states')
         with open('/srv/salt/top.sls.base') as f: 
@@ -142,26 +118,4 @@ class DeployHandler(object):
         except: 
             import traceback
             traceback.print_exc()
-
-    @tornado.gen.coroutine
-    def store_action(self, user, path, data):
-        try: 
-            actions = yield self.datastore.get('actions')
-        except: 
-            actions = []
-        actions.append({
-            'username' : user['username'], 
-            'type' : user['type'], 
-            'path' : path, 
-            'data' : str(data), 
-            'time' : str(datetime.datetime.now())
-        })
-        yield self.datastore.insert('actions', actions)
-
-    @tornado.gen.coroutine
-    def get_actions(self, number_actions, filters = {}):
-        all_actions = yield self.datastore.get('actions')
-        actions = all_actions[:number_actions] if number_actions else all_actions
-        raise tornado.gen.Return(all_actions[:number_actions])
-
 

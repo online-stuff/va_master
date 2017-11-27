@@ -1,5 +1,4 @@
 import config, cli_environment
-from api import login
 from datetime import datetime
 import tornado.ioloop
 import yaml, json, glob
@@ -12,9 +11,9 @@ import distutils
 import traceback
 import functools
 import imp
-from .api import login
 
-from va_master.datastore_handler import DatastoreHandler
+from va_master.consul_kv.datastore_handler import DatastoreHandler
+from va_master.api import login
 
 consul_conf_path = '/etc/consul.json'
 run_sync = tornado.ioloop.IOLoop.instance().run_sync
@@ -175,9 +174,7 @@ def create_admin_user(admin_user, admin_pass, datastore_handler):
         cli_info('No username and password; will not create user')
 
 def handle_store_init(cli_config, values, store, datastore_handler):
-#    states_data = run_sync(functools.partial(cli_config.deploy_handler.get_states_data))
     states_data = run_sync(functools.partial(datastore_handler.import_states_from_states_data))
-#    values.update({'states' : states_data})
 
     try:
         store_config = run_sync(functools.partial(store.get, 'init_vals')) or {}

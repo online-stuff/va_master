@@ -1,7 +1,7 @@
 #import tornado.httpserver
 #import tornado.ioloop
 #import tornado.options
-from cli import entrypoint
+from cli import entrypoint, cli
 from config import Config
 import sys
 #import ssl
