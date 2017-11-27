@@ -7,8 +7,8 @@ def get_paths():
 #            'triggers/clear' : {'function' : clear_triggers, 'args' : ['provider_name']}, #Just for resting!!!
         },
         'post' : {
-            'triggers/add_trigger':  {'function' : add_trigger_api, 'args' : ['new_trigger', 'provider_name']},
-            'triggers/triggered': {'function' : receive_trigger, 'args' : ['deploy_handler', 'provider_name', 'service', 'level', 'extra_kwargs']},
+            'triggers/add_trigger':  {'function' : add_trigger_api, 'args' : ['datastore_handler', 'new_trigger', 'provider_name']},
+            'triggers/triggered': {'function' : receive_trigger, 'args' : ['handler', 'provider_name', 'service', 'level', 'extra_kwargs']},
 #            'triggers/load_triggers' : {'function' : load_triggers, 'args' : ['provider_name', 'triggers']},
             'triggers/edit_trigger' : {'function' : edit_trigger, 'args' : ['provider_name', 'trigger_id', 'trigger']},
         },
@@ -72,7 +72,7 @@ def delete_trigger(datastore_handler, provider_name, trigger_id):
 
 
 @tornado.gen.coroutine
-def edit_trigger(deploy_handler, provider_name, trigger_id, trigger):
+def edit_trigger(datastore_handler, provider_name, trigger_id, trigger):
     """Finds the trigger by the id and sets it to the new trigger's data. """
 
     provider = yield datastore_handler.get_provider(provider_name) 
@@ -91,11 +91,11 @@ def clear_triggers(datastore_handler, provider_name):
     yield datastore_handler.create_provider(provider)
 
 @tornado.gen.coroutine
-def load_triggers(deploy_handler, provider_name, triggers):
-    yield clear_triggers(deploy_handler)
+def load_triggers(datastore_handler, provider_name, triggers):
+    yield clear_triggers(datastore_handler, provider_name)
 
     for trigger in triggers: 
-        yield add_trigger(deploy_handler, provider_name, trigger)
+        yield add_trigger(datastore_handler_handler, provider_name, trigger)
 
     raise tornado.gen.Return(True)
 
