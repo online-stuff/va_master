@@ -1,4 +1,3 @@
-import config, cli_environment
 from datetime import datetime
 import tornado.ioloop
 import yaml, json, glob
@@ -14,7 +13,9 @@ import imp
 
 from va_master.consul_kv.datastore_handler import DatastoreHandler
 from va_master.api import login
-
+from va_master.va_master_project import config
+import cli_environment
+import unittest
 consul_conf_path = '/etc/consul.json'
 run_sync = tornado.ioloop.IOLoop.instance().run_sync
 
@@ -301,18 +302,22 @@ def handle_new_user(args):
     create_user_run = run_sync(create_user)
    
 def handle_test_api(args):
-    from .api import api_test
-    test_cl = api_test.TestAPIMethods(args['token'], args['base_url'])
-    if args['generate_endpoints']: 
-        test_cl.generate_api_endpoints()
-    else: 
-        path = {}
-        with open('api_endpoints.json') as f: 
-            paths = json.loads(f.read())
-        print paths
-        test_cl.set_paths(paths)
-        test_cl.test_api_endpoints()
+    from va_master import tests
+    from va_master.tests import va_panels_tests, va_providers_tests, va_states_tests, va_test_base, va_testcase, va_users_tests, va_vpn_tests
 
+    api_test_suite = unittest.TestSuite()
+    all_tests = [
+            va_panels_tests.VAPanelsTests,
+            va_providers_tests.VAProvidersTests,
+            va_states_tests.VAStatesTests,
+            va_users_tests.VAUsersTests,
+            va_vpn_tests.VAVPNTests,
+    ]
+
+    for t in all_tests: 
+        api_test_suite.addTest(unittest.TestLoader().loadTestsFromTestCase(t))
+
+    unittest.TextTestRunner(verbosity=5).run(api_test_suite)
 
 
 def entry():
@@ -355,9 +360,9 @@ def entry():
     new_user.set_defaults(sub='new_user')
 
     test_api = subparsers.add_parser('test-api', help='Runs through (some of) the API endpoints and tests their results. ')
-    test_api.add_argument('--token', help = 'Enter the token which the test suite will use. ')
-    test_api.add_argument('--generate-endpoints', help = 'If set to True, it will generate an api_endpoints.json file which you can edit to set up default arguments for all the functions. You may delete functions that you do not want in the test from this file. ', dest = 'generate_endpoints', action = 'store_true')
-    test_api.add_argument('--base-url', help = 'Enter the base url. Default : 127.0.0.1', default = 'https://127.0.0.1:443/api/')
+#    test_api.add_argument('--token', help = 'Enter the token which the test suite will use. ')
+#    test_api.add_argument('--generate-endpoints', help = 'If set to True, it will generate an api_endpoints.json file which you can edit to set up default arguments for all the functions. You may delete functions that you do not want in the test from this file. ', dest = 'generate_endpoints', action = 'store_true')
+#    test_api.add_argument('--base-url', help = 'Enter the base url. Default : 127.0.0.1', default = 'https://127.0.0.1:443/api/')
     test_api.set_defaults(sub='test_api')
 
     args = parser.parse_args()

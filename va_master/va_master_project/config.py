@@ -3,7 +3,7 @@ import functools
 import pkg_resources
 import logging
 import os
-from va_master import deploy_handler
+from va_master.handlers import deploy_handler
 from va_master.consul_kv import datastore
 from va_master.host_drivers import openstack
 

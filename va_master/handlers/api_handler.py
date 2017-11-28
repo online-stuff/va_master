@@ -8,9 +8,8 @@ from tornado.httpclient import AsyncHTTPClient, HTTPRequest
 from tornado.concurrent import run_on_executor, Future
 from concurrent.futures import ThreadPoolExecutor   # `pip install futures` for python2
 
-from . import url_handler
-from login import get_current_user, user_login
-from panels import get_panel_for_user
+from va_master.api import url_handler
+from va_master.api.login import get_current_user, user_login
 import json, datetime, syslog, pytz
 import dateutil.relativedelta
 import dateutil.parser
@@ -30,7 +29,7 @@ class ApiHandler(tornado.web.RequestHandler):
             self.deploy_handler = config.deploy_handler
             self.data = {}
             self.paths = url_handler.gather_paths()
-            self.datastore_handler = DatastoreHandler(datastore = self.datastore, datastore_spec_path = '/opt/va_master/consul_spec.json')
+            self.datastore_handler = DatastoreHandler(datastore = self.datastore, datastore_spec_path = '/opt/va_master/va_master/consul_kv/consul_spec.json')
         except: 
             import traceback
             traceback.print_exc()
@@ -215,9 +214,6 @@ class ApiHandler(tornado.web.RequestHandler):
                     raise tornado.gen.Return()
 
             result = yield self.handle_func(api_func, data)
-#            log_result = result
-#            if api_func['function'] in [get_panel_for_user]:
-#                log_result = {}
 
             yield self.log_message(path = path, data = data, func = api_func['function'], result = {})#log_result)
             self.json(result)
@@ -253,20 +249,14 @@ class ApiHandler(tornado.web.RequestHandler):
     @tornado.gen.coroutine
     def post(self, path):
         try: 
-            try: 
-                if 'json' in self.request.headers['Content-Type']: 
-                    try:
-                        data = json.loads(self.request.body)
-                    except: 
-                        raise Exception('Bad json in request body : ', self.request.body)
-                else:
-                    data = {self.request.arguments[x][0] for x in self.request.arguments}
-                    data.update(self.request.files)
-            except ValueError: 
-                import traceback
-                traceback.print_exc()
-                data = {}
-
+            if 'json' in self.request.headers['Content-Type']: 
+                try:
+                    data = json.loads(self.request.body)
+                except: 
+                    raise Exception('Bad json in request body : ', self.request.body)
+            else:
+                data = {self.request.arguments[x][0] for x in self.request.arguments}
+                data.update(self.request.files)
             yield self.exec_method('post', path, data)
 
         except: 

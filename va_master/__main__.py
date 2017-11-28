@@ -2,7 +2,7 @@
 #import tornado.ioloop
 #import tornado.options
 from cli import entrypoint, cli
-from config import Config
+from va_master_project.config import Config
 import sys
 #import ssl
 

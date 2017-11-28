@@ -5,9 +5,8 @@ import traceback
 import functools
 import tornado
 import tornado.gen
-from host_drivers import openstack, aws, vcloud, libvirt_driver, generic_driver, century_link, gce, vmware
+from va_master.host_drivers import openstack, aws, vcloud, libvirt_driver, generic_driver, century_link, gce, vmware
 
-from va_master.consul_kv.datastore_handler import DatastoreHandler
 from Crypto.PublicKey import RSA
 from concurrent.futures import ProcessPoolExecutor
 
@@ -23,7 +22,6 @@ class DeployHandler(object):
         self.ssh_key_path = ssh_key_path
         self.datastore = datastore
 
-        self.datastore_handler = DatastoreHandler(datastore = self.datastore, datastore_spec_path = '/opt/va_master/consul_spec.json')
         self.drivers = []
 
         self.deploy_pool_count = deploy_pool_count

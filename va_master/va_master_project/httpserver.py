@@ -1,4 +1,4 @@
-from va_master.api.handler import ApiHandler, LogMessagingSocket
+from va_master.handlers.api_handler import ApiHandler, LogMessagingSocket
 import tornado.ioloop
 import tornado.web
 import tornado.gen

@@ -1,7 +1,7 @@
 import subprocess
 import threading
 import time
-from va_master import dependencies
+from va_master.va_master_project import dependencies
 import os
 from collections import namedtuple
 

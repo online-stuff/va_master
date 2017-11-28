@@ -3,7 +3,7 @@ import tornado.ioloop
 import sys
 import os
 import ssl
-from va_master import config, httpserver
+from va_master.va_master_project import config, httpserver
 from OpenSSL import crypto, SSL
 from socket import gethostname
 from pprint import pprint
