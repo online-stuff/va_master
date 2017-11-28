@@ -35,10 +35,15 @@ def datastore_insert(handle, data):
 def old_to_new_datastore(object_name, object_handle_unformatted, object_handle_ids = [], get_key = '', special_data_parsing = None, special_data_kwargs = {}, old_key = ''):
     if not old_key:
         old_key = object_name + 's'
+        
     old_data = datastore_get(old_key, get_key)
     if not old_data: return
     for data in old_data:
-        handles = {x : data.get(x) for x in object_handle_ids}
+        print 'Data is : ', data
+        try:
+            handles = {x : data.get(x) for x in object_handle_ids}
+        except: 
+            continue #This usually happens if the script has already been run. 
         object_handle = object_handle_unformatted.format(**handles)
 
         if special_data_parsing: 
