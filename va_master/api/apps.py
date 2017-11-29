@@ -266,18 +266,6 @@ def write_pillar(data):
     salt_manage_pillar.add_server(data.get('server_name'), data.get('role', ''))
 
         
-def add_panel_for_minion(handler, data, minion_info):
-    """Adds a panel for a minion based on its appinfo.json file and minion info retrieved from salt. """
-
-    init_vals = yield store.get('init_vals')
-    states = init_vals['states']
-    state = [x for x in states if x['name'] == data['role']][0]
-      
-    print ('Minion info is : ', minion_info['role'])
-    panel = {'panel_name' : data['server_name'], 'role' : minion_info['role']}
-    panel.update(state['panels'])
-    yield handler.config.datastore_handler.store_panel(panel)
-
 ##@auth_only
 @tornado.gen.coroutine
 def launch_app(handler):
@@ -314,8 +302,6 @@ def launch_app(handler):
                 yield tornado.gen.sleep(10)
 
         yield services.add_services_presets(minion_info, ['ping'])
-
-        add_panel_for_minion(data, minion_info)
 
         if not minion_info: 
             raise tornado.gen.Return({"success" : False, "message" : "No minion_info, something probably went wrong with trying to start the instance. ", "data" : None})

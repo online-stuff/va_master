@@ -11,7 +11,7 @@ import traceback
 import functools
 import imp
 
-from va_master.consul_kv.datastore_handler import DatastoreHandler
+from va_master.handlers.datastore_handler import DatastoreHandler
 from va_master.api import login
 from va_master.va_master_project import config
 import cli_environment
@@ -177,19 +177,10 @@ def create_admin_user(admin_user, admin_pass, datastore_handler):
 def handle_store_init(cli_config, values, store, datastore_handler):
     states_data = run_sync(functools.partial(datastore_handler.import_states_from_states_data))
 
-    try:
-        store_config = run_sync(functools.partial(store.get, 'init_vals')) or {}
-    except: 
-        store_config = {}
-
-    store_config.update(generate_store_config(values))
+    store_config  = generate_store_config(values)
     store_config = {x : store_config[x] for x in store_config if x not in ['admin_pass']}
-#            store_config = run_sync(functools.partial(store.insert, 'init_vals', store_config))
-    run_sync(functools.partial(store.insert, 'init_vals', store_config))
-
-    #Add va_standalone_servers
-    run_sync(functools.partial(store.insert, 'providers', [{"username": "admin", "sizes": [], "servers": [], "images": [], "driver_name": "generic_driver", "location": "va_master", "defaults": {}, "sec_groups": [], "provider_name": "va_standalone_servers", "password": "admin", "ip_address": "127.0.0.1", "networks": []}]))
-    run_sync(functools.partial(store.insert, 'va_standalone_servers', {"servers" : []}))
+    run_sync(functools.partial(datastore_handler.insert_init_vals, store_config))
+    run_sync(functools.partial(datastore_handler.create_standalone_provider))
 
     return store_config
 
@@ -224,7 +215,7 @@ def handle_init(args):
     cli_config = config.Config(init_vals = values)
 
     store = cli_config.datastore
-    datastore_handler = DatastoreHandler(store, '/opt/va_master/consul_spec.json')
+    datastore_handler = DatastoreHandler(store, '/opt/va_master/va_master/consul_kv/consul_spec.json')
 
 
     check_datastore_connection(values, store)

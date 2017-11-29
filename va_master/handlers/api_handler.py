@@ -10,6 +10,7 @@ from concurrent.futures import ThreadPoolExecutor   # `pip install futures` for 
 
 from va_master.api import url_handler
 from va_master.api.login import get_current_user, user_login
+from va_master.handlers.drivers_handler import DriversHandler
 import json, datetime, syslog, pytz
 import dateutil.relativedelta
 import dateutil.parser
@@ -26,10 +27,11 @@ class ApiHandler(tornado.web.RequestHandler):
         try:
             self.config = config
             self.datastore = config.datastore
-            self.deploy_handler = config.deploy_handler
             self.data = {}
             self.paths = url_handler.gather_paths()
             self.datastore_handler = DatastoreHandler(datastore = self.datastore, datastore_spec_path = '/opt/va_master/va_master/consul_kv/consul_spec.json')
+            self.drivers_handler = DriversHandler(self.datastore_handler)
+
         except: 
             import traceback
             traceback.print_exc()
@@ -198,8 +200,8 @@ class ApiHandler(tornado.web.RequestHandler):
             self.utils = {
                 'handler' : self,
                 'datastore_handler' : self.datastore_handler,
-                'deploy_handler' : self.deploy_handler,
-                'datastore' : self.deploy_handler.datastore,
+                'drivers_handler' : self.drivers_handler,
+                'datastore' : self.datastore,
             }
 
             user = yield get_current_user(self)

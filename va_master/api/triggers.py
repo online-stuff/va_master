@@ -103,12 +103,12 @@ def load_triggers(datastore_handler, provider_name, triggers):
 @tornado.gen.coroutine
 def list_triggers(handler):
     """Returns an object with all providers and their respective triggers. """
-    datastore_handler, deploy_handler = handler.datastore_handler, handler.deploy_handler
+    datastore_handler, drivers_handler = handler.datastore_handler, handler.drivers_handler
 
     providers = yield datastore_handler.list_providers()
     drivers = []
     for provider in providers: 
-        driver = yield deploy_handler.get_driver_by_id(provider['driver_name'])
+        driver = yield drivers_handler.get_driver_by_id(provider['driver_name'])
         provider['functions'] = yield driver.get_driver_trigger_functions()
 
     triggers = {h['provider_name'] : {'triggers' : h.get('triggers', []), 'functions' : h.get('functions', [])} for h in providers}

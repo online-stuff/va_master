@@ -9,7 +9,7 @@ import panels
 def get_paths():
     paths = {
         'get' : {
-            'drivers' : {'function' : list_drivers, 'args' : ['deploy_handler']},
+            'drivers' : {'function' : list_drivers, 'args' : ['drivers_handler']},
             'providers/get_trigger_functions': {'function' : get_providers_triggers, 'args' : ['provider_name']},
             'providers/get_provider_billing' : {'function' : get_provider_billing, 'args' : ['provider_name']},
             'providers' : {'function' : list_providers, 'args' : ['handler']},
@@ -30,7 +30,7 @@ def get_paths():
 @tornado.gen.coroutine
 def get_provider_and_driver(handler, provider_name = 'va_standalone_servers'):
     provider = yield handler.datastore_handler.get_provider(provider_name = provider_name)
-    driver = yield handler.deploy_handler.get_driver_by_id(provider['driver_name'])
+    driver = yield handler.drivers_handler.get_driver_by_id(provider['driver_name'])
 
     raise tornado.gen.Return((provider, driver))
 
@@ -71,13 +71,13 @@ def get_providers_triggers(handler, provider_name):
 def list_providers(handler):
     """Gets a list of providers from the datastore. Adds the driver name to the list, and gets the status. Gets a list of servers for each provider and, if there are any hidden servers, they are removed from the list. """
     datastore_handler = handler.datastore_handler
-    deploy_handler = handler.deploy_handler
+    drivers_handler = handler.drivers_handler
 
     providers = yield datastore_handler.list_providers()
     hidden_servers = yield datastore_handler.get_hidden_servers()
 
     for provider in providers: 
-        driver = yield deploy_handler.get_driver_by_id(provider['driver_name'])
+        driver = yield drivers_handler.get_driver_by_id(provider['driver_name'])
         provider['servers'] = yield driver.get_servers(provider)
         
         provider_status = yield driver.get_provider_status(provider)
@@ -97,9 +97,9 @@ def delete_provider(datastore_handler, provider_name):
     yield datastore_handler.delete_provider(provider_name)
 
 @tornado.gen.coroutine
-def list_drivers(deploy_handler):
+def list_drivers(drivers_handler):
     """Gets a list of drivers. """
-    drivers = yield deploy_handler.get_drivers()
+    drivers = yield drivers_handler.get_drivers()
     out = {'drivers': []}
     for driver in drivers:
         driver_id = yield driver.driver_id()
@@ -115,9 +115,9 @@ def validate_new_provider_fields(handler, driver_id, field_values, step_index):
     """Used when adding new providers. Makes sure all the fields are entered properly, and proceeds differently based on what driver is being used. """
 
     step_index = int(step_index)
-    deploy_handler = handler.deploy_handler
+    drivers_handler = handler.drivers_handler
     datastore_handler = handler.datastore_handler
-    found_driver = yield deploy_handler.get_driver_by_id(driver_id)
+    found_driver = yield drivers_handler.get_driver_by_id(driver_id)
 
     driver_steps = yield found_driver.get_steps()
     if step_index >= len(driver_steps) or step_index < -1:
@@ -146,7 +146,7 @@ def get_provider_info(handler, dash_user, get_billing = True, get_servers = True
     If required_providers is set, the providers are filtered to only show the providers with a provider_name in that list. 
     If sort_by_location is true, then this sorts providers in a dictionary object where the keys are the locations of the providers. 
     """
-    deploy_handler = handler.deploy_handler
+    drivers_handler = handler.drivers_handler
     datastore_handler = handler.datastore_handler
 
     hidden_servers = yield datastore_handler.get_hidden_servers()
@@ -155,7 +155,7 @@ def get_provider_info(handler, dash_user, get_billing = True, get_servers = True
     if required_providers: 
         providers = [provider for provider in providers if provider['provider_name'] in required_providers]
 
-    provider_drivers = yield [deploy_handler.get_driver_by_id(x['driver_name']) for x in providers]
+    provider_drivers = yield [drivers_handler.get_driver_by_id(x['driver_name']) for x in providers]
     providers_data = [x[0].get_provider_data(provider = x[1], get_servers = get_servers, get_billing = get_billing) for x in zip(provider_drivers, providers)]
     providers_info = yield providers_data
     

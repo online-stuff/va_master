@@ -63,13 +63,40 @@ class DatastoreHandler(object):
         raise tornado.gen.Return(result)
 
     @tornado.gen.coroutine
+    def insert_init_vals(self, init_vals):
+        try:
+            old_vals = yield self.datastore.get('init_vals')
+        except: 
+            old_vals = {}
+
+        old_vals.update(init_vals)
+        yield self.datastore.insert('init_vals', old_vals)
+
+    @tornado.gen.coroutine
+    def get_init_vals(self):
+        try:
+            init_vals = yield self.datastore.get('init_vals')
+        except: 
+            yield self.datastore.insert('init_vals', {})
+            init_vals = {}
+
+        raise tornado.gen.Return(init_vals)
+
+    @tornado.gen.coroutine
+    def create_standalone_provider(self):
+        provider = {"username": "admin", "sizes": [], "servers": [], "sec_groups": [], "driver_name": "generic_driver", "location": "", "defaults": {}, "images": [], "provider_name": "va_standalone_servers", "password": "admin", "ip_address": "127.0.0.1", "networks": []}
+        providers = yield self.list_providers()
+        if any([x.get('provider_name') == provider['provider_name'] for x in providers]): 
+            yield self.create_provider(provider)
+        yield self.datastore.insert('va_standalone_servers', {"servers" : []})
+
+    @tornado.gen.coroutine
     def get_provider(self, provider_name):
         try:
             provider = yield self.get_object('provider', provider_name = provider_name)
         except: 
             if provider_name == 'va_standalone_servers' : 
-                provider = {"username": "admin", "sizes": [], "servers": [], "sec_groups": [], "driver_name": "generic_driver", "location": "", "defaults": {}, "images": [], "provider_name": "va_standalone_servers", "password": "admin", "ip_address": "127.0.0.1", "networks": []}
-                yield self.create_provider(provider)
+                yield self.create_standalone_provider()
             else: 
                 raise
         raise tornado.gen.Return(provider)
@@ -90,7 +117,6 @@ class DatastoreHandler(object):
         servers += ['va_standalone_servers']
         raise tornado.gen.Return(servers)
 
-
     @tornado.gen.coroutine
     def list_providers(self):
         providers = yield self.datastore.get_recurse('providers/')
@@ -103,6 +129,10 @@ class DatastoreHandler(object):
 
     @tornado.gen.coroutine
     def create_provider(self, field_values):
+        try:
+            existing_provider = yield self.get_provider(field_values['provider_name'])
+        except: #We expect the provider not to exist. 
+            pass
         yield self.insert_object('provider', data = field_values, provider_name = field_values['provider_name'])
 
     @tornado.gen.coroutine

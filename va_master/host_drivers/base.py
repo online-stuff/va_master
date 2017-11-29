@@ -4,6 +4,8 @@ import tornado.gen
 from tornado.httpclient import AsyncHTTPClient, HTTPRequest
 import time
 
+from va_master.handlers.datastore_handler import DatastoreHandler
+
 class Step(object):
     def __init__(self, name):
         self.name = name
@@ -90,13 +92,14 @@ class DriverBase(object):
           
         self.app_fields = {} 
         self.datastore = datastore
+        self.datastore_handler = DatastoreHandler(datastore = self.datastore, datastore_spec_path = '/opt/va_master/va_master/consul_kv/consul_spec.json')
         self.host_ip = host_ip
 
         self.key_path = key_path + ('/' * (not key_path[-1] == '/')) + key_name
         self.key_name = key_name
 
         self.provider_vars = {'VAR_THIS_IP' : host_ip, 'VAR_PROVIDER_NAME' : provider_name, 'VAR_SSH_NAME' : key_name, 'VAR_SSH_FILE' : self.key_path + '.pem'}
-        self.profile_vars = {'VAR_PROVIDER_NAME' : provider_name, 'VAR_PROFILE_NAME' : profile_name}
+        self.profile_vars = {'VAR_PROVIDER_NAME' : provider_name, 'VAR_PROFILE_NAME' : profile_name, 'VAR_THIS_IP' : host_ip}
 
         self.provider_template = provider_template
         self.profile_template = profile_template
@@ -466,8 +469,7 @@ class DriverBase(object):
         self.app_fields.update(fields)
     
         if fields.get('role'): 
-            states = yield self.datastore.get('init_vals')
-            states = states['states']
+            states = yield self.datastore_handler.get_states()
             state = [x for x in states if x['name'] == fields.get('role')][0]
             self.app_fields['state'] = state
             state_fields = [x['name'] for x in state.get('fields', [])]
@@ -475,7 +477,7 @@ class DriverBase(object):
             state_fields = []
         # steps_fields is a list of lists such that the index of an element is the required fields for that step. We check if the app_fields contain all of those. 
         if not steps_fields: 
-            steps_fields = [['role', 'server_name'], state_fields, ['sec_group', 'image', 'size', 'network', 'location']]
+            steps_fields = [['role', 'server_name'], state_fields, ['sec_group', 'image', 'size', 'network']]
         if not all([x in self.app_fields.keys() for x in steps_fields[step]]):
             print ('Fields expected are : ', steps_fields[step], ' but have : ', self.app_fields.keys())
             print ('Entire fields data : ', fields)

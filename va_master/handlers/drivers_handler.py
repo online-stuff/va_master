@@ -17,10 +17,10 @@ class DeployHandler(object):
 
     executor = ProcessPoolExecutor(1)
 
-    def __init__(self, datastore, deploy_pool_count, ssh_key_name, ssh_key_path):
+    def __init__(self, datastore_handler, deploy_pool_count, ssh_key_name, ssh_key_path):
         self.ssh_key_name = ssh_key_name
         self.ssh_key_path = ssh_key_path
-        self.datastore = datastore
+        self.datastore_handler = datastore_handler
 
         self.drivers = []
 
@@ -28,43 +28,9 @@ class DeployHandler(object):
         self.executor = ProcessPoolExecutor(deploy_pool_count) 
 
     @tornado.gen.coroutine
-    def init_vals(self, store, **kwargs):
-        init_vars = {
-            'va_flavours' : 'va_flavours', 
-        }
-        try: 
-            store_values = yield self.datastore.get('init_vals')
-        except:
-            store_values = {}
-            print ('No store values found - probably initializing deploy_handler for the first time. Will initialize with cli arguments. ')
-
-        for var in init_vars: 
-            if var in kwargs: 
-                print ('Setting : ', var, ' to : ', kwargs[var])
-                setattr(self, var, kwargs[var])
-            else: 
-                if var in store_values: 
-                    setattr(self, var, store_values[var])
-                else:
-                    print ("Variable '%s' defined neither in store nor in arguments and will not be set in deploy handler. This may result with further errors. " % (var))
-
-
-    @tornado.gen.coroutine
-    def get_ssh_keypair(self):
-        try:
-            keydata = self.datastore.get('ssh_keypair')
-        except self.datastore.KeyNotFound:
-            # create new
-            data = yield self.create_ssh_keypair()
-            yield self.datastore.insert('ssh_keypair', data)
-            raise tornado.gen.Return(data)
-        raise tornado.gen.Return({'public': keydata['public'],
-            'private': keydata['private']})
-
-    @tornado.gen.coroutine
     def get_drivers(self):
         if not self.drivers: 
-            init_vals = yield self.datastore.get('init_vals')
+            init_vals = yield self.datastore_handler.get_init_vals()
             host_ip =  init_vals['fqdn'] 
             va_flavours = init_vals['va_flavours']
 
@@ -101,6 +67,8 @@ class DeployHandler(object):
                 raise tornado.gen.Return(driver)
         raise tornado.gen.Return(None)
 
+    #Designed to create sls files which will be used with various minion-specific data. Not used currently, and probably will need a states_handler.
+    #Or just do this in the api/
     @tornado.gen.coroutine
     def generate_top_sls(self):
         states = yield self.datastore.get('states')
