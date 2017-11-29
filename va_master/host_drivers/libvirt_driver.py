@@ -172,13 +172,13 @@ BASE_VOLUME_XML = """
 </volume>"""
 
 class LibVirtDriver(base.DriverBase):
-    def __init__(self, flavours, provider_name = 'libvirt_provider', profile_name = 'libvirt_profile', host_ip = '192.168.80.39', path_to_images = '/etc/libvirt/qemu/', config_path = '/etc/salt/libvirt_configs/', key_name = 'va_master_key', key_path = '/root/va_master_key', datastore = None):
+    def __init__(self, flavours, provider_name = 'libvirt_provider', profile_name = 'libvirt_profile', host_ip = '192.168.80.39', path_to_images = '/etc/libvirt/qemu/', config_path = '/etc/salt/libvirt_configs/', key_name = 'va_master_key', key_path = '/root/va_master_key', datastore_handler = None):
         """
             Custom init for libvirt. Does not work with saltstack, so a lot of things have to be done manually. 
 
             Arguments
 
-            flavours -- A list of "flavours" defined so it can work similar to OpenStack. A flavour is just a dictionary with some values which are used to create servers. Flavours are saved in the datastore, and the deploy_handler manages them. 
+            flavours -- A list of "flavours" defined so it can work similar to OpenStack. A flavour is just a dictionary with some values which are used to create servers. Flavours are saved in the datastore_handler, and the deploy_handler manages them. 
 
             The rest are similar to the Base driver arguments. 
 
@@ -193,7 +193,7 @@ class LibVirtDriver(base.DriverBase):
             'host_ip' : host_ip,
             'key_name' : key_name,
             'key_path' : key_path,
-            'datastore' : datastore
+            'datastore_handler' : datastore_handler
             }
         self.conn = None
         self.config_path = config_path
@@ -259,7 +259,7 @@ class LibVirtDriver(base.DriverBase):
 
     @tornado.gen.coroutine
     def get_sizes(self):
-        """ Returns the flavours received from the datastore. """
+        """ Returns the flavours received from the datastore_handler. """
         raise tornado.gen.Return(self.flavours.keys())
 
     @tornado.gen.coroutine

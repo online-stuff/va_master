@@ -59,7 +59,7 @@ class DriverBase(object):
     __metaclass__ = abc.ABCMeta
 
     @abc.abstractmethod
-    def  __init__(self, driver_name,  provider_template, profile_template, provider_name, profile_name, host_ip, key_name, key_path, datastore):
+    def  __init__(self, driver_name,  provider_template, profile_template, provider_name, profile_name, host_ip, key_name, key_path, datastore_handler):
         """
             Initialize method for the base driver. Subclassing drivers should be overwriting this and calling it with custom arguments if they are needed. 
             Takes care of the salt key, writing salt provider and profile configurations and so on. 
@@ -91,8 +91,7 @@ class DriverBase(object):
             }
           
         self.app_fields = {} 
-        self.datastore = datastore
-        self.datastore_handler = DatastoreHandler(datastore = self.datastore, datastore_spec_path = '/opt/va_master/va_master/consul_kv/consul_spec.json')
+        self.datastore_handler = datastore_handler
         self.host_ip = host_ip
 
         self.key_path = key_path + ('/' * (not key_path[-1] == '/')) + key_name

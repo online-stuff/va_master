@@ -229,7 +229,7 @@ def handle_init(args):
     create_ssh_keys(cli_config, store_config)
 
     cli_success('Created first account. Setup is finished.')
-    cli_config.init_handler(init_vals = values)
+#    cli_config.init_handler(init_vals = values)
 
 
 def handle_jsbuild(args):

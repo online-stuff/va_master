@@ -140,9 +140,15 @@ class DatastoreHandler(object):
         yield self.delete_object('provider', provider_name = provider_name)
 
     @tornado.gen.coroutine
-    def add_generic_server(provider_name, base_server):
-        generic_server = yield self.get_provider(provider_name)
-        generic_server['instances'].append(base_server)
+    def edit_provider(self, provider):
+        old_provider = yield self.get_provider(provider['provider_name'])
+        yield self.insert_object('provider', data = provider, provider_name = provider['provider_name'])
+
+    @tornado.gen.coroutine
+    def add_generic_server(self, provider_name, server):
+        generic_provider = yield self.get_provider(provider_name)
+        generic_provider['servers'].append(server)
+        yield self.edit_provider(generic_provider)
 
     @tornado.gen.coroutine
     def store_action(self, user, path, data):

@@ -30,7 +30,6 @@ import sys
 if __name__ == '__main__':
     if 'start' in sys.argv: 
         va_config = Config()
-        va_config.init_handler({})
         entrypoint.bootstrap(va_config)
     else: 
         cli.entry()

@@ -13,19 +13,13 @@ from concurrent.futures import ProcessPoolExecutor
 from pbkdf2 import crypt
 
 
-class DeployHandler(object):
+class DriversHandler(object):
 
-    executor = ProcessPoolExecutor(1)
-
-    def __init__(self, datastore_handler, deploy_pool_count, ssh_key_name, ssh_key_path):
+    def __init__(self, datastore_handler, ssh_key_name, ssh_key_path):
         self.ssh_key_name = ssh_key_name
         self.ssh_key_path = ssh_key_path
         self.datastore_handler = datastore_handler
-
         self.drivers = []
-
-        self.deploy_pool_count = deploy_pool_count
-        self.executor = ProcessPoolExecutor(deploy_pool_count) 
 
     @tornado.gen.coroutine
     def get_drivers(self):
@@ -38,7 +32,7 @@ class DeployHandler(object):
                 'host_ip' : host_ip, 
                 'key_name' : self.ssh_key_name, 
                 'key_path' : self.ssh_key_path, 
-                'datastore' : self.datastore
+                'datastore_handler' : self.datastore_handler
             }
 
             self.drivers = [x(**kwargs) for x in [
