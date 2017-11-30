@@ -11,7 +11,7 @@
         "token": ""
     },
     "by_username" : {
-        "consul_handle" : "tokens/{user_type}/by_username/{token}",
+        "consul_handle" : "tokens/{user_type}/by_username/{username}",
         "username": "", 
         "token": ""
     },
