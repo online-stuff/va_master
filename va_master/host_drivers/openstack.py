@@ -43,7 +43,7 @@ PROFILE_TEMPLATE = '''VAR_PROFILE_NAME:
     image: VAR_IMAGE
     size: VAR_SIZE
     securitygroups: VAR_SEC_GROUP
-    ssh_username: VAR_IMAGE_USERNAME
+    ssh_username: VAR_USERNAME
     minion:
         master: VAR_THIS_IP
         grains:
@@ -224,6 +224,7 @@ class OpenStackDriver(base.DriverBase):
     def get_images(self):
         """ Gets the images using the get_openstack_value() method. """
         images = yield self.get_openstack_value(self.token_data, 'image', 'v2.0/images')
+        print ('Images are : ', images)
         images = [x['name'] for x in images['images']]
         raise tornado.gen.Return(images)
 

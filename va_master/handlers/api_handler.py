@@ -29,8 +29,8 @@ class ApiHandler(tornado.web.RequestHandler):
             self.datastore = config.datastore
             self.data = {}
             self.paths = url_handler.gather_paths()
-            self.datastore_handler = DatastoreHandler(datastore = self.datastore, datastore_spec_path = '/opt/va_master/va_master/consul_kv/consul_spec.json')
-            self.drivers_handler = DriversHandler(self.datastore_handler, ssh_key_path = config.ssh_key_path, ssh_key_name = config.ssh_key_name)
+            self.datastore_handler = config.datastore_handler 
+            self.drivers_handler = config.drivers_handler     
 
         except: 
             import traceback

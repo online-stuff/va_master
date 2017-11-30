@@ -355,15 +355,10 @@ class DriverBase(object):
             yield self.get_salt_configs(skip_profile = True)
             yield self.write_configs(skip_profile = True)	
 
-    	    self.field_values['networks'] = yield self.get_networks()
+            self.field_values['networks'] = yield self.get_networks()
             self.field_values['sec_groups'] = yield self.get_sec_groups()
-            self.field_values['images'] = yield self.get_images()
-            self.field_values['sizes']= yield self.get_sizes()
 
             self.field_values['location'] = field_values.get('location', 'va_master')                
-
-
-
             options.update({
                     'network': self.field_values['networks'],
                     'sec_group': self.field_values['sec_groups'],
@@ -380,6 +375,10 @@ class DriverBase(object):
 
             self.field_values['defaults']['network'] = field_values['network']
             self.field_values['defaults']['sec_group'] = field_values['sec_group']
+
+            self.field_values['images'] = yield self.get_images()
+            self.field_values['sizes']= yield self.get_sizes()
+
             options.update({
                     'image': self.field_values['images'],
                     'size': self.field_values['sizes'],
@@ -435,7 +434,7 @@ class DriverBase(object):
         new_profile = data['server_name'] + '-profile'
         self.profile_vars['VAR_PROFILE_NAME'] = new_profile
         self.profile_vars['VAR_SEC_GROUP'] = 'default'
-        self.profile_vars['VAR_IMAGE_USERNAME'] = data.get('username', 'admin')
+        self.profile_vars['VAR_USERNAME'] = data.get('username', 'admin')
 #        self.profile_template = profile_template
 
         if self.profile_template:
