@@ -435,23 +435,23 @@ class DriverBase(object):
         self.profile_vars['VAR_PROFILE_NAME'] = new_profile
         self.profile_vars['VAR_SEC_GROUP'] = 'default'
         self.profile_vars['VAR_USERNAME'] = data.get('username', 'admin')
-#        self.profile_template = profile_template
 
         if self.profile_template:
             yield self.get_salt_configs(skip_provider = True)
             yield self.write_configs(skip_provider = True)
 
-        #probably use salt.cloud somehow, but the documentation is terrible. 
+        #probably use salt.cloud somehow
         new_minion_cmd = ['salt-cloud', '-p', new_profile, data['server_name']]
         minion_apply_state = ['salt', data['server_name'], 'state.highstate']
 
-#        print ('Using sleep to simulate app start. Using time.sleep on purpose to test blocking calls. ')
-#        time.sleep(120)
-#        print ('Sleep time is done!')
-        new_minion_values = subprocess.call(new_minion_cmd)
-        new_minion_state_values = subprocess.call(minion_apply_state)
+        try:
+            new_minion = subprocess.check_output(new_minion_cmd)
+            new_minion_state = subprocess.check_output(minion_apply_state)
+        except Exception as e: 
+            import traceback
+            traceback.print_exc()
 
-
+            raise Exception('Error creating minion. ' + e.message)
 
         raise tornado.gen.Return(True)
 

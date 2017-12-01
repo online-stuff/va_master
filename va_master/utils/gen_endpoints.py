@@ -1,6 +1,8 @@
 import unittest, simplejson
 from url_handler import gather_paths
 
+#Not used currently; previously used for generating a json of all endpoints. 
+
 class TestAPIMethods():
 
     def __init__(self, token, base_url, paths = None):
