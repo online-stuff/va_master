@@ -78,7 +78,6 @@ def panel_action_execute(handler, server_name, action, args = [], dash_user = ''
     cl = salt.client.LocalClient()
     print ('Calling salt module ', module + '.' + action, ' on ', server_name, ' with args : ', args, ' and kwargs : ', kwargs)
     result = cl.cmd(server_name, module + '.' + action , args, kwarg = kwargs, timeout = timeout)
-    print ('Result : ', result)
     result = result.get(server_name)
 
     raise tornado.gen.Return(result)
@@ -209,6 +208,7 @@ def get_panel_for_user(handler, panel, server_name, dash_user, args = [], provid
             args = [args]
         args = [panel] + args
         panel  = yield panel_action_execute(handler, server_name, action, args, dash_user, kwargs = kwargs)
+        print ('Panel is : ', panel)
         raise tornado.gen.Return(panel)
     else: 
         raise Exception("Requested salt call on " + server_name + " but that server name is not in the list of servers for " + state['name'] + " : " + str(state['servers']))

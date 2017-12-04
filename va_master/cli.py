@@ -195,12 +195,6 @@ def handle_store_init(cli_config, values, store, datastore_handler):
 
     return store_config
 
-def add_initial_panels(store):
-    try:
-        panels = run_sync(functools.partial(store.get, 'panels')) or {'admin' : [], 'user' : []}
-    except: 
-        run_sync(functools.partial(store.insert, 'panels', {'admin' : [], 'user' :[]}))
-
 def create_ssh_keys(cli_config, store_config):
     try: 
 #            os.mkdir(cli_config.ssh_key_path)
@@ -232,8 +226,8 @@ def handle_init(args):
     check_datastore_connection(values, store)
     create_admin_user(values.get('admin_user'), values.get('admin_pass'), datastore_handler)
     store_config = handle_store_init(cli_config, values, store, datastore_handler)
-    add_initial_panels(store)
 
+#    run_sync(datastore_handler.update_panels_from_states_data())
 
 
     #Generate an ssh-key

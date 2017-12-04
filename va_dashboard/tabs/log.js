@@ -19,7 +19,8 @@ var Log = React.createClass({
             logs: [],
             value: "",
             checked: Object.assign([], SEV),
-            status: 0,
+            status: 1,
+            statuses: ['start', 'stop'],
             hosts: [],
             selected_hosts: []
         }
@@ -58,8 +59,16 @@ var Log = React.createClass({
     },
     updateLogs: function(startDate, endDate){
         var msg = {
+            type: "get_messages",
             from_date: startDate,
             to_date: endDate
+        };
+        this.ws.send(JSON.stringify(msg));
+    },
+    changeObservableStatus: function(value){
+        var msg = {
+            type: "observer_status",
+            status: value
         };
         this.ws.send(JSON.stringify(msg));
     },
@@ -67,7 +76,9 @@ var Log = React.createClass({
         this.setState({checked: checked});
     },
     changeStatus: function(e){
-        this.setState({status: 1 - e.target.value});
+        var value = e.target.value;
+        this.setState({status: 1 - value});
+        this.changeObservableStatus(this.state.statuses[value]);
     },
     onChangeHost(value) {
         this.setState({ selected_hosts: value });
@@ -92,15 +103,11 @@ var Log = React.createClass({
                 return true;
             return false;
         }, this);
-        var status = this.state.status, lbl = "Stop", className;
-        if(status){
-            className = "active";
-            lbl = "Start";
-        }
+        var status = this.state.status;
         return (
             <div id="log-page">
                 <div>
-                    <Bootstrap.Button onClick={this.changeStatus} value={status} className={className} style={{marginRight: '20px'}}>{lbl} Live</Bootstrap.Button>
+                    <Bootstrap.Button onClick={this.changeStatus} value={status} style={{marginRight: '20px', textTransform: 'capitalize'}}>{this.state.statuses[status]} Live</Bootstrap.Button>
                     <DateRange updateLogs={this.updateLogs} state={status} />
                     <Select name="hosts" options={this.state.hosts} multi={true} placeholder="Filter hosts" value={this.state.selected_hosts} onChange={this.onChangeHost} style={{marginLeft: '20px', width: '300px'}} />
                 </div>

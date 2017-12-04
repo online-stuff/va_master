@@ -258,10 +258,20 @@ class DatastoreHandler(object):
         raise tornado.gen.Return(states_data)
 
     @tornado.gen.coroutine
+    def get_panel_from_state(self, state, user_type, old_servers = []):
+        empty_panel = {'admin' : [], 'user' : []}
+
+        panel = {
+            'name' : state['name'], 
+            'icon' : state['icon'], 
+            'servers' : old_servers,
+            'panels' : state.get('panels', empty_panel)[user_type]
+        }
+        raise tornado.gen.Return(panel)
+
+    @tornado.gen.coroutine
     def import_states_from_states_data(self, states = []):
         states_data = yield self.get_states_data(states)
-
-        empty_panel = {'admin' : [], 'user' : []}
 
         for state in states_data: 
             for user_type in ['admin', 'user']: 
@@ -271,20 +281,26 @@ class DatastoreHandler(object):
                     old_panel = None
  
                 if not old_panel: continue
-                panel = {
-                    'name' : state['name'], 
-                    'icon' : state['icon'], 
-                    'servers' : old_panel['servers'],
-                    'panels' : state.get('panels', empty_panel)[user_type]
-                }
+                panel = yield self.get_panel_from_state(state, user_type, old_panel.get('servers', []))
                 yield self.store_panel(panel, user_type)
             yield self.store_state(state)
 
         raise tornado.gen.Return(states_data)
 
     @tornado.gen.coroutine
+    def update_panels_from_states_data(self, states = []):
+        states_data = yield self.get_states_data(states)
+        for user_type in ['user', 'admin']:
+            panels = yield self.get_panels(user_type)
+            for panel in panels: 
+                panel_servers = panel.get('servers')
+                panel = yield self.get_panel_from_state(state, user_type, panel_servers)
+                yield self.store_panel(panel, user_type)
+
+
+    @tornado.gen.coroutine
     def get_states(self):
-        states = yield self.datastore.get_recurse('state/')
+        states = yield self.datastore.get_recurse('states/')
         raise tornado.gen.Return(states)
 
     @tornado.gen.coroutine
