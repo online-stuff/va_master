@@ -45,6 +45,7 @@ PROFILE_TEMPLATE = '''VAR_PROFILE_NAME:
     securitygroups: VAR_SEC_GROUP
     ssh_username: VAR_IMAGE_USERNAME
     minion:
+        master: VAR_THIS_IP
         grains:
             role: VAR_ROLE
     networks:

@@ -203,7 +203,7 @@ def add_initial_panels(store):
 
 def create_ssh_keys(cli_config, store_config):
     try: 
-#            os.mkdir(cli_config.ssh_key_path)
+        os.mkdir(cli_config.ssh_key_path)
         key_full_path = cli_config.ssh_key_path + cli_config.ssh_key_name
         ssh_cmd = ['ssh-keygen', '-t', 'rsa', '-f', key_full_path, '-N', '']
         
