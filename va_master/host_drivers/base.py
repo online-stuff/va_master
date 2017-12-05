@@ -445,7 +445,7 @@ class DriverBase(object):
         minion_apply_state = ['salt', data['server_name'], 'state.highstate']
 
         try:
-            new_minion = subprocess.check_output(new_minion_cmd)
+            new_minion = subprocess.call(new_minion_cmd)
             new_minion_state = subprocess.check_output(minion_apply_state)
         except Exception as e: 
             import traceback
