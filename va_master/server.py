@@ -79,7 +79,7 @@ def get_app(config):
         (r"/log", LogMessagingSocket),
         (r"/proxy/(.*)", ProxyHandler),
 
-    ], debug = True)
+    ])
     # TODO: If config.release, disable debug mode for static assets
     # Note: running the debug mode is not dangerous in production, but it's slower.
     return app

@@ -223,6 +223,12 @@ class DatastoreHandler(object):
         raise tornado.gen.Return(panel)
 
     @tornado.gen.coroutine
+    def find_panel_for_server(self, server_name):
+        all_panels = yield self.get_panels('admin')
+        server_panel = [x for x in all_panels if server_name in x['servers']] or [{'icon' : None}]
+        raise tornado.gen.Return(server_panel[0])
+
+    @tornado.gen.coroutine
     def add_panel(self, panel_name, role):
         states = yield self.get_states_data()
         panel_state = [x for x in states if x['name'] == role][0]
@@ -233,8 +239,8 @@ class DatastoreHandler(object):
         user_panel['servers'].append(panel_name)
         admin_panel['servers'].append(panel_name)
 
-        yield self.store_panel('user', user_panel, role)
-        yield self.store_panel('admin', admin_panel, role)
+        yield self.store_panel(user_panel, 'user', role)
+        yield self.store_panel(admin_panel, 'admin', role)
 
     @tornado.gen.coroutine
     def get_states_data(self, states = []):

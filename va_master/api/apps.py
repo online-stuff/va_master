@@ -24,7 +24,6 @@ def get_paths():
             'apps/get_all_salt_functions' : {'function' : get_all_salt_functions, 'args' : []},
 
             'states' : {'function' : get_states, 'args' : ['handler', 'dash_user']},
-            'states/reset' : {'function' : reset_states, 'args' : []},#Just for testing
 
         },
         'post' : {
@@ -36,35 +35,10 @@ def get_paths():
             'apps/revoke_vpn_user': {'function' : revoke_openvpn_user, 'args' : ['username']},
             'apps/list_user_logins': {'function' : list_user_logins, 'args' : ['username']},
             'apps/download_vpn_cert': {'function' : download_vpn_cert, 'args' : ['username', 'handler']},
-#            'apps/datastore_tester' : {'function' : test_datastore, 'args' : ['datastore_handler', 'func', 'kwargs']},
-            'apps/datastore_converter' : {'function' : old_to_new_datastore, 'args' : ['datastore_handler', 'object_name', 'object_handle_unformatted', 'object_handle_ids']},
         }
     }
     return paths
 
-
-#TODO just for testing - will remove when I know it works
-@tornado.gen.coroutine
-def test_datastore(datastore_handler, func, kwargs = {}):
-    """A temporary function used to test the datastore. """
-    result = yield getattr(datastore_handler, func)(**kwargs)
-    raise tornado.gen.Return(result)
-
-
-@tornado.gen.coroutine
-def old_to_new_datastore(deploy_handler, datastore_handler, object_name, object_handle_unformatted, object_handle_ids = []):
-    """A temporary function used to convert the old styled datastore to the new styled. Old-styled : /providers = [list, of, providers], new-styled : providers/provider_name"""
-
-    old_data = yield deploy_handler.datastore.get(object_name)
-
-    for data in old_data: 
-        handles = {x : data.get(x) for x in object_handle_ids}
-        object_handle = object_handle_unformatted.format(**handles)
-
-        yield datastore_handler.insert_object(object_name[:-1], data = data, handle_data = handles)
-#        print ('Want to save : ', data, ' in handle : ', object_handle)
-#        yield datastore_handler.create_provider(data)
-    
 
 def bytes_to_readable(num, suffix='B'):
     """Converts bytes integer to human readable"""
@@ -94,6 +68,7 @@ def get_openvpn_users():
     #We want to convert it to {"revoked" : [], "status" : [client, list], active" : [{"name" : "", "check" : False, "connected" : True/False}]}
 
     users = {'revoked' : openvpn_users['revoked']}
+    print ('status is : ', openvpn_users['status'])
     users_names = [i['Common Name'] for i in openvpn_users['status']['client_list']]
     users['active'] = [{'name' : x, 'check' : False, 'connected' : x in users_names} for x in openvpn_users['active']]
     users['status'] = openvpn_users['status']['client_list'] or []
@@ -167,28 +142,6 @@ def perform_server_action(handler, provider_name, action, server_name):
     raise tornado.gen.Return(success)
 
 
-#TODO make all state inserts to save to key "states" instead of init_vas : "states". 
-@tornado.gen.coroutine
-def manage_states(handler, name, action = 'append'):
-    """
-    Deletes or inserts a state based on the action argument. 
-    """
-
-    deploy_handler = handler.deploy_handler
-    datastore_handler = handler.datastore_handler
-
-    current_states = yield get_states(datastore_handler)
-
-    #TODO delete from /srv/salt
-    getattr(current_states, action)(name)
-    store_action = {
-        'append' : deploy_handler.datastore.insert, 
-        'delete' : deploy_handler.datastore.delete, 
-    }[action]
-
-    yield store_action('states', current_states)
-    yield deploy_handler.generate_top_sls()
-
 @tornado.gen.coroutine
 def get_states(handler, dash_user):
     """
@@ -203,16 +156,14 @@ def get_states(handler, dash_user):
     default_panels = {'admin' : [], 'user' : []}
 
     for state in states_data: 
-        state_panel = [x for x in panels_data if x['name'] == state['name']][0]
+        state_panel = [x for x in panels_data if x['name'] == state['name']]
+        if not state_panel: 
+            print ('No panel for : ', state['name'])
+            break
+        state_panel = state_panel[0]
         state['servers'] = state_panel['servers']
         state['panels'] = state.get('panels', default_panels)[dash_user['type']]
     raise tornado.gen.Return(states_data)
-
-@tornado.gen.coroutine
-def reset_states(deploy_handler):
-    """Removes all states from the consul datastore. Only for testing purposes. """
-
-    yield handler.config.deploy_handler.reset_states()
 
 #WIP function - TODO check if it still works properly. 
 @tornado.gen.coroutine
@@ -251,7 +202,7 @@ def create_new_state(deploy_handler, file_contents, body, filename):
 
 #    zip_ref.close()
     tar_ref.close()
-    manage_states(handler, 'append')
+#    manage_states(handler, 'append')
 
 
 @tornado.gen.coroutine
@@ -294,6 +245,7 @@ def get_app_info(server_name):
     cl = Caller()
     server_info = cl.cmd('mine.get', server_name, 'inventory') 
     server_info = server_info.get(server_name)
+    print ('Server info : ', server_info)
     raise tornado.gen.Return(server_info)
 
 
@@ -314,7 +266,7 @@ def write_pillar(data):
     salt_manage_pillar.add_server(data.get('server_name'), data.get('role', ''))
 
         
-def add_panel_for_minion(data, minion_info):
+def add_panel_for_minion(handler, data, minion_info):
     """Adds a panel for a minion based on its appinfo.json file and minion info retrieved from salt. """
 
     init_vals = yield store.get('init_vals')
@@ -324,7 +276,7 @@ def add_panel_for_minion(data, minion_info):
     print ('Minion info is : ', minion_info['role'])
     panel = {'panel_name' : data['server_name'], 'role' : minion_info['role']}
     panel.update(state['panels'])
-    yield handler.config.deploy_handler.store_panel(panel)
+    yield handler.config.datastore_handler.store_panel(panel)
 
 ##@auth_only
 @tornado.gen.coroutine
