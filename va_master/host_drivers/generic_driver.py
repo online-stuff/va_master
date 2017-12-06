@@ -16,7 +16,7 @@ PROVIDER_TEMPLATE = ""
 PROFILE_TEMPLATE = ""
 
 class GenericDriver(base.DriverBase):
-    def __init__(self, provider_name = 'generic_provider', profile_name = 'generic_profile', host_ip = '192.168.80.39', key_name = 'va_master_key', key_path = '/root/va_master_key', datastore = None, driver_name = 'generic_driver'):
+    def __init__(self, provider_name = 'generic_provider', profile_name = 'generic_profile', host_ip = '192.168.80.39', key_name = 'va_master_key', key_path = '/root/va_master_key', datastore_handler = None, driver_name = 'generic_driver'):
         kwargs = {
             'driver_name' : driver_name, 
             'provider_template' : PROVIDER_TEMPLATE, 
@@ -26,7 +26,7 @@ class GenericDriver(base.DriverBase):
             'host_ip' : host_ip,
             'key_name' : key_name, 
             'key_path' : key_path, 
-            'datastore' : datastore
+            'datastore_handler' : datastore_handler
             }
         super(GenericDriver, self).__init__(**kwargs) 
 
@@ -78,12 +78,12 @@ class GenericDriver(base.DriverBase):
 
     @tornado.gen.coroutine
     def remove_server(self, provider, server_name):
-        provider_datastore = yield self.datastore.get('providers/' + provider['provider_name'])
+        provider_datastore = yield self.datastore_handler.get_provider(provider['provider_name'])
         servers = provider_datastore.get('servers')
 
         servers = [x for x in servers if x['hostname'] != server_name]
         provider_datastore['servers'] = servers
-        yield self.datastore.insert('providers/' + provider['provider_name'], provider_datastore)
+        yield self.datastore_handler.edit_provider(provider_datastore)
 
     @tornado.gen.coroutine
     def server_action(self, provider, server_name, action):
@@ -103,7 +103,7 @@ class GenericDriver(base.DriverBase):
 
     @tornado.gen.coroutine
     def get_servers(self, provider):
-        servers = yield self.datastore.get('providers/' + provider['provider_name'])
+        servers = yield self.datastore_handler.get_provider(provider['provider_name'])
         servers = servers['servers']
 
         if provider['provider_name'] == 'va_standalone_servers' : 
@@ -176,8 +176,6 @@ class GenericDriver(base.DriverBase):
                 'ip_address' : field_values['ip_address'],
             })
 
-
-            self.datastore.insert(field_values['provider_name'], {'servers' : []})
             raise tornado.gen.Return(StepResult(
                 errors = [], new_step_index = -1, option_choices = {}
             ))
@@ -215,18 +213,8 @@ class GenericDriver(base.DriverBase):
         # distro = ssh_session.cmd(['get', 'distro', 'cmd'])
         # instal = ssh_session.cmd(['install', 'salt', 'stuff'])
         # services are added on the api side.
-         
-        provider_datastore = yield self.datastore.get('providers/' + provider['provider_name'])
-        servers = provider_datastore.get('servers', [])
         server = {"hostname" : data["server_name"], "ip" : data.get("ip"), "local_gb" : 0, "memory_mb" : 0, "status" : "n/a" }
-        servers.append(server)
-
-        provider_datastore['servers'] = servers
-        yield self.datastore.insert('providers/' + provider['provider_name'], provider_datastore)
+        yield self.datastore_handler.add_generic_server(provider, server)
 
         raise tornado.gen.Return(True)  
-#        try:
-#            yield super(GenericDriver, self).create_minion(provider, data)
-#        except: 
-#            import traceback
 
