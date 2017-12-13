@@ -52,6 +52,7 @@ class DatastoreHandler(object):
     def get_object(self, object_type, **handle_data):
         object_spec = self.spec[object_type]
         object_handle = object_spec['consul_handle'].format(**handle_data)
+        print ('Handle is : ', object_handle)
         result = yield self.datastore.get(object_handle)
         raise tornado.gen.Return(result)
 
@@ -174,16 +175,7 @@ class DatastoreHandler(object):
     @tornado.gen.coroutine
     def get_user_functions(self, user, func_type = ''):
         user = yield self.get_object('user', username = user)
-
         user_funcs = user.get('functions', [])
-
-        #Get all functions from the user groups to return in a single list. 
-        #i.e. instead of [{group_name : group, functions : [{group_func1}, ...]}, func1, func2, ...] we want [group_func1, ..., func1, func2, ...]
-#        user_group_functions = [x['functions'] for x in user_funcs if x.get('func_type', '') == 'function_group']
-
-#        user_funcs = [
-#            x.get('func_path') for x in user_funcs + user_group_functions 
-#        if x.get('func_type', '') == func_type and x.get('func_path')]
 
         raise tornado.gen.Return(user_funcs)
 
