@@ -21,7 +21,7 @@ var Panel = React.createClass({
         var me = this;
         var data = {'panel': id, 'server_name': server};
         if(args !== ""){
-            data['args'] = args.split(",");
+            data['args'] = args.indexOf(',') > -1 ? args.split(",") : args;
             this.props.dispatch({type: 'CHANGE_PANEL', panel: id, server: server, args: data['args']});
         }else{
             this.props.dispatch({type: 'CHANGE_PANEL', panel: id, server: server});
