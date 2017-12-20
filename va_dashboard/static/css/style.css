@@ -1,13 +1,26 @@
 html, body, .main-content {
     height: 100%;
+    background-color: #eee;
+    box-sizing: border-box;
 }
 body{
     margin: 0;
-    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-family: Ubuntu, "Droid Sans", sans-serif;
+
 }
 
 body.login {
     background: #006eab;
+}
+
+
+small{
+    padding-left: 20px !important;
+}
+
+.link{
+    color: #006EAB;
+    cursor: pointer;
 }
 
 .splash-logo{
