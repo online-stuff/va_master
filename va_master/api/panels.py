@@ -24,8 +24,7 @@ def get_paths():
             'panels/update_user' : {'function' : update_user, 'args' : ['datastore_handler', 'user', 'functions', 'groups', 'password']}, 
 
             'panels/get_panel' : {'function' : get_panel_for_user, 'args' : ['server_name', 'panel', 'provider', 'handler', 'args', 'dash_user']},
-#            'panels/reset_panels': {'function' : reset_panels, 'args' : []}, #JUST FOR TESTING
-            'panels/new_panel' : {'function' : new_panel, 'args' : ['datastore_handler', 'panel_name', 'role']},
+            'panels/new_panel' : {'function' : new_panel, 'args' : ['datastore_handler', 'server_name', 'role']},
             'panels/action' : {'function' : panel_action, 'args' : ['handler', 'server_name', 'action', 'args', 'kwargs', 'module', 'dash_user']}, #must have server_name and action in data, 'args' : []}, ex: panels/action server_name=nino_dir action=list_users
             'panels/chart_data' : {'function' : get_chart_data, 'args' : ['server_name', 'args']},
             'panels/serve_file' : {'function' : salt_serve_file, 'args' : ['handler', 'server_name', 'action', 'args', 'kwargs', 'module']},
@@ -34,16 +33,12 @@ def get_paths():
     }
     return paths
 
-@tornado.gen.coroutine
-def reset_panels(deploy_handler): 
-    """ Testing function - deletes all functions. Currently not usable. """
-    yield deploy_handler.reset_panels()
 
 @tornado.gen.coroutine
-def new_panel(datastore_handler, panel_name, role):
+def new_panel(datastore_handler, server_name, role):
     """ Adds the panel_name to the list of servers for the specified role. """
 
-    yield datastore_handler.add_panel(panel_name, role)
+    yield datastore_handler.add_panel(server_name, role)
 
 
 @tornado.gen.coroutine
@@ -78,8 +73,7 @@ def panel_action_execute(handler, server_name, action, args = [], dash_user = ''
 
     cl = salt.client.LocalClient()
     print ('Calling salt module ', module + '.' + action, ' on ', server_name, ' with args : ', args, ' and kwargs : ', kwargs)
-    result = cl.cmd(server_name, module + '.' + action , args, kwarg = kwargs, timeout = timeout)
-    print ('Result : ', result)
+    result = cl.cmd(server_name, module + '.' + action , arg = args, kwarg = kwargs, timeout = timeout)
     result = result.get(server_name)
 
     raise tornado.gen.Return(result)
@@ -167,12 +161,20 @@ def get_chart_data(server_name, args = ['va-directory', 'Ping']):
 def panel_action(handler, actions_list = [], server_name = '', action = '', args = [], kwargs = {}, module = None, dash_user = {}):
     """Performs a list of actions on multiple servers. If actions_list is not supplied, will use the rest of the arguments to call a single function on one server. """
     if not actions_list: 
-        actions_list = [{"server_name" : server_name, "action" : action, "args" : args, 'kwargs' : {}, 'module' : module}]
+        actions_list = [{"server_name" : server_name, "action" : action, "args" : args, 'kwargs' : kwargs, 'module' : module}]
 
     servers = [x['server_name'] for x in actions_list]
     results = {x : None for x in servers}
-    for action in actions_list: 
-        server_result = yield panel_action_execute(handler, action['server_name'], action['action'], action['args'], action['kwargs'], action['module'])
+    for action in actions_list:
+        print ('Getting results with kwargs : ', action['kwargs']) 
+        server_result = yield panel_action_execute(handler = handler, 
+            server_name = action['server_name'], 
+            action = action['action'], 
+            args = action['args'], 
+            dash_user = dash_user, 
+            kwargs = action['kwargs'], 
+            module = action['module'])
+
         results[action['server_name']] = server_result
 
     if len(results.keys()) == 1: 
@@ -191,29 +193,33 @@ def get_panels(handler, dash_user):
 def get_panel_for_user(handler, panel, server_name, dash_user, args = [], provider = None, kwargs = {}):
     """Returns the required panel from the server for the logged in user. A list of args may be provided for the panel. """
 
-    user_panels = yield list_panels(handler.datastore_handler, dash_user)
-    print ('User panels are : ', user_panels)
+    datastore_handler = handler.datastore_handler
+    user_panels = yield list_panels(datastore_handler, dash_user)
     server_info = yield apps.get_app_info(server_name)
+    print ('Server info : ', server_info)
     state = server_info['role']
 
     #This is usually for get requests. Any arguments in the url that are not arguments of this function are assumed to be keyword arguments for salt.
     #TODO Also this is pretty shabby, and I need to find a better way to make GET salt requests work. 
     if not args: 
-        ignored_kwargs = ['datastore', 'handler', 'datastore_handler', 'deploy_handler', 'panel', 'instance_name', 'dash_user', 'method', 'server_name', 'path']
+        ignored_kwargs = ['datastore', 'handler', 'datastore_handler', 'drivers_handler', 'panel', 'instance_name', 'dash_user', 'method', 'server_name', 'path']
         kwargs = {x : handler.data[x] for x in handler.data if x not in ignored_kwargs}
     else: 
         kwargs = {}
 
-    state = filter(lambda x: x['name'] == state or x.get('id', '') == state, user_panels)[0]
-    if server_name in state['servers']:
-        action = 'get_panel'
-        if type(args) != list and args: 
-            args = [args]
-        args = [panel] + args
-        panel  = yield panel_action_execute(handler, server_name, action, args, dash_user, kwargs = kwargs)
-        raise tornado.gen.Return(panel)
-    else: 
-        raise Exception("Requested salt call on " + server_name + " but that server name is not in the list of servers for " + state['name'] + " : " + str(state['servers']))
+    state = yield datastore_handler.get_state(name = state)
+
+#    if server_name in state['servers']:
+    action = 'get_panel'
+    if type(args) != list and args: 
+        args = [args]
+    args = [panel] + args
+    print ('State : ', state)
+    args = [state['module']] + args
+    panel  = yield panel_action_execute(handler, server_name, action, args, dash_user, kwargs = kwargs, module = 'va_utils')
+    raise tornado.gen.Return(panel)
+#    else: 
+#        raise Exception("Requested salt call on " + server_name + " but that server name is not in the list of servers for " + state['name'] + " : " + str(state['servers']))
 
 @tornado.gen.coroutine
 def get_users(handler, user_type = 'users'):

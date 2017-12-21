@@ -3,7 +3,6 @@ from .base import Step, StepResult
 from tornado.httpclient import AsyncHTTPClient, HTTPRequest
 import tornado.gen
 import json
-from va_master import datastore
 
 import subprocess
 
@@ -51,7 +50,7 @@ output=json
 
 class AWSDriver(base.DriverBase):
 
-    def __init__(self, provider_name = 'aws_provider', profile_name = 'aws_profile', host_ip = '192.168.80.39', key_name = 'va_master_key', key_path = '/root/va_master_key', datastore = None):
+    def __init__(self, provider_name = 'aws_provider', profile_name = 'aws_profile', host_ip = '192.168.80.39', key_name = 'va_master_key', key_path = '/root/va_master_key', datastore_handler = None):
         kwargs = {
             'driver_name' : 'aws', 
             'provider_template' : PROVIDER_TEMPLATE, 
@@ -61,7 +60,7 @@ class AWSDriver(base.DriverBase):
             'host_ip' : host_ip,
             'key_name' : key_name,
             'key_path' : key_path, 
-            'datastore' : datastore,
+            'datastore_handler' : datastore_handler,
         }
         self.aws_client = None
 

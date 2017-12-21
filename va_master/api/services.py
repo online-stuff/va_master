@@ -10,21 +10,31 @@ consul_dir = '/etc/consul.d'
 def get_paths():
     paths = {
         'get' : {
+            'get_va_master_version' : {'function' : get_version, 'args' : ['handler']},
+
             'services' : {'function' : list_services, 'args' : []},
             'services/full_status' : {'function' : get_services_and_monitoring, 'args' : []},
             'services/by_status' : {'function' : get_services_with_status, 'args' : ['status']},
             'services/by_service' : {'function' : get_service, 'args' : ['service']},
             'services/get_monitoring_status' : {'function' : get_all_monitoring_data, 'args' : ['datastore_handler']},
-
+            'services/get_services_with_checks' : {'function' : get_all_checks, 'args' : []},
         },
         'post' : {
             'services/add' : {'function' : add_services, 'args' : ['services', 'server']},
+            'services/add_preset' : {'function' : add_services_presets, 'args' : ['service_presets', 'server']},
+
         },
         'delete' : {
             'services/delete' : {'function' : delete_services, 'args' : ['server']},
         }
     }
     return paths
+
+@tornado.gen.coroutine
+def get_version(handler):
+    version = handler.config.pretty_version()
+
+    raise tornado.gen.Return(version)
 
 #These two functions are for inside use in the API. 
 def reload_systemctl():
@@ -49,6 +59,12 @@ def list_services():
     services = services.json()
 
     raise tornado.gen.Return(services)
+
+@tornado.gen.coroutine
+def get_all_checks():
+    services = yield list_services()
+    all_checks = yield {x : get_service(x) for x in services.keys()}
+    raise tornado.gen.Return(all_checks)
 
 @tornado.gen.coroutine
 def get_services_with_status(status = 'passing'):
@@ -106,12 +122,16 @@ def add_services(services, server):
         if not all([x.get(key) for x in services]):
             raise tornado.gen.Return({"success" : False, "message" : "All services need to define a value for the keys: " + ', '.join(service_keys) + '; Missing key : ' + key, 'data' : {}})
 
-    yield add_service_with_definition(deploy_handler, services, server)
+    yield add_service_with_definition(services, server)
 
 
 @tornado.gen.coroutine
-def add_services_presets(minion_info, presets):
+def add_services_presets(server, presets):
     """Creates services based on several presets and the info for the server. The info is required to get the id and the IP of the server. """
+
+    if type(server) == 'str': 
+        minion_info = yield apps.get_minion_info(server)
+
     check_presets = {
         "tcp" :  {"id": minion_info['id'] + "_tcp", "name": "Check server TCP", "tcp": minion_info['ip4_interfaces']['eth0'][0], "interval": "30s", "timeout": "10s"}, 
         "ping" :  {"id": minion_info['id'] + "_ping", "name": "Ping server", "script" : "ping -c1 " + minion_info['ip4_interfaces']['eth0'][0] + " > /dev/null", "interval": "30s", "timeout": "10s"}, 

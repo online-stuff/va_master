@@ -25,18 +25,18 @@ def get_paths():
 
 
 @tornado.gen.coroutine
-def get_or_create_token(datastore, username, user_type = 'admin'):
+def get_or_create_token(datastore_handler, username, user_type = 'admin'):
     found = False
     try:
-        token_doc = yield datastore.get('tokens/%s/by_username/%s' % (user_type, username))
+        token_doc = yield datastore_handler.get_object('by_username', user_type = user_type, username = username)
         found = True
-    except datastore.KeyNotFound:
+    except datastore_handler.datastore.KeyNotFound:
         doc = {
             'token': uuid.uuid4().hex,
             'username': username
         }
-        yield datastore.insert('tokens/%s/by_username/%s' % (user_type, username), doc)
-        yield datastore.insert('tokens/%s/by_token/%s' % (user_type, doc['token']), doc)
+        yield datastore.insert_object('by_username', data = doc, user_type = user_type, username = username)
+        yield datastore.insert_object('by_token', data = doc, user_type = user_type, token = doc['token'])
         raise tornado.gen.Return(doc['token'])
     finally:
         if found:
@@ -44,14 +44,15 @@ def get_or_create_token(datastore, username, user_type = 'admin'):
 
 @tornado.gen.coroutine
 def get_current_user(handler):
+    datastore_handler = handler.datastore_handler
     token = handler.request.headers.get('Authorization', '')
 
     token = token.replace('Token ', '')    
  
     for t in ['user', 'admin']: # add other types as necessary, maybe from datastore. 
-        token_valid = yield is_token_valid(handler.datastore, token, t)
+        token_valid = yield is_token_valid(handler.datastore_handler, token, t)
         if token_valid: 
-            user = yield handler.datastore.get('tokens/%s/by_token/%s' % (t, token))
+            user = yield datastore_handler.get_object('by_token', user_type = t, token = token)
             raise tornado.gen.Return({'username' : user['username'], 'type' : t})
     raise tornado.gen.Return(None)
 
@@ -64,17 +65,16 @@ def get_user_type(handler):
     raise tornado.gen.Return(None)
 
 @tornado.gen.coroutine
-def is_token_valid(datastore, token, user_type = 'admin'):
+def is_token_valid(datastore_handler, token, user_type = 'admin'):
     valid = True
     try:
-        user_handle = 'tokens/%s/by_token/%s' % (user_type, token)
-        res = yield datastore.get(user_handle)
-    except datastore.KeyNotFound:
+        user = yield datastore_handler.get_object('by_token', user_type = user_type, token = token)
+    except datastore_handler.datastore.KeyNotFound:
         raise tornado.gen.Return(False)
     except Exception as e: 
         import traceback
         traceback.print_exc()
-    valid = (res['username'] != '__invalid__')
+    valid = (user['username'] != '__invalid__')
     raise tornado.gen.Return(valid)
 
 #So far, one kwarg is used: user_allowed. 
@@ -151,7 +151,7 @@ def user_login(datastore_handler, username, password):
             }
         pw_hash = account_info['password_hash']
         if crypt(password, pw_hash) == pw_hash:
-            token = yield get_or_create_token(datastore_handler.datastore, username, user_type = account_info['user_type'])
+            token = yield get_or_create_token(datastore_handler, username, user_type = account_info['user_type'])
             raise tornado.gen.Return({'token': token})
         raise Exception ("Invalid password: " + password) 
 
