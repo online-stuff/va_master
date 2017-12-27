@@ -4,6 +4,12 @@ var Network = require('../network');
 
 var Filter = React.createClass({
 
+    componentDidMount: function(){
+		var elem = this.refs[this.props.name], pos = elem.value.length;
+		elem.focus();
+		elem.setSelectionRange(pos, pos);
+    },
+
     filter: function(e){
         this.props.dispatch({type: 'FILTER', filterBy: e.target.value});
     },
@@ -11,12 +17,13 @@ var Filter = React.createClass({
     render: function () {
         return (
             <Bootstrap.InputGroup>
-                <Bootstrap.FormControl
+                <input
                     type="text"
+                    className="form-control"
                     placeholder="Filter"
                     value={this.props.filter.filterBy}
                     onChange={this.filter}
-                    autoFocus
+                    ref={this.props.name}
                 />
                 <Bootstrap.InputGroup.Addon>
                   <Bootstrap.Glyphicon glyph="search" />
