@@ -18,6 +18,7 @@ var Filter = React.createClass({
         return (
             <Bootstrap.InputGroup>
                 <input
+                    id={this.props.name}
                     type="text"
                     className="form-control"
                     placeholder="Filter"
@@ -46,7 +47,28 @@ var Button = React.createClass({
     },
 
     btn_action: function(action) {
-        console.log(action);
+        var me = this;
+        if("tblName" in this.props){
+            var panel = this.props.panel;
+            var filterVal = document.getElementById('reactableFilter').value;
+            var data = {server_name: panel.server, panel: panel.panel, args: panel.args, table_name: this.props.tblName, filter_field: filterVal};
+            Network.download_file('/api/panels/get_panel_pdf', this.props.auth.token, data).done(function(d) {
+                var data = new Blob([d], {type: 'octet/stream'});
+                var url = window.URL.createObjectURL(data);
+                tempLink = document.createElement('a');
+                tempLink.style = "display: none";
+                tempLink.href = url;
+                tempLink.setAttribute('download', panel.panel + '.pdf');
+                document.body.appendChild(tempLink);
+                tempLink.click();
+                setTimeout(function(){
+                    document.body.removeChild(tempLink);
+                    window.URL.revokeObjectURL(url);
+                }, 100);
+            }).fail(function (msg) {
+                me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
+            });
+        }
     },
 
     render: function () {
