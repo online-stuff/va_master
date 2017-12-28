@@ -362,7 +362,10 @@ var Table = React.createClass({
                 }
                 columns = this.props.columns.map(function(col, index) {
                     var key = col.key, colClass = "", colText = colVal = row[key];
-                    if(typeof col.colClass !== 'undefined'){
+                    if(typeof col.href !== 'undefined'){
+                        colText = <a href={colVal} target='_blank'>Link</a>
+                    }
+                    else if(typeof col.colClass !== 'undefined'){
                         colClass = col.colClass;
                         if(row[col.colClass]){
                             colClass = "col-" + col.colClass + "-" + row[col.colClass];
@@ -443,6 +446,8 @@ var Modal = React.createClass({
             if(content[j].type == "Form"){
                 var elem = content[j].elements;
                 for(i=0; i<elem.length; i++){
+                    if(elem[i].type === 'dropdown')
+                        data[i] = elem[i].value[0];
                     if(elem[i].type !== 'label')
                         data[i] = elem[i].value;
                     if(elem[i].type === 'checkbox')
@@ -536,6 +541,7 @@ var Modal = React.createClass({
                 element.data = this.state.data;
                 element.form_changed = this.form_changed;
                 element.focus = this.state.focus;
+                element.modal = true;
             }
             redux[element.type] = connect(function(state){
                 var newstate = {auth: state.auth};
@@ -658,7 +664,14 @@ var Form = React.createClass({
                 }
                 if(type == "dropdown"){
                     var action = "", defaultValue = "", values = [];
-                    if('form' in this.props && element.name in this.props.form.dropdowns){
+                    if('modal' in this.props){
+                        return (<select id={index} key={element.name} name={element.name} defaultValue={this.props.data[index]} onChange={this.props.form_changed} ref={element.name}>
+                                    {values.map(function(option, i) {
+                                        return <option key={i} value={option}>{option}</option>
+                                    })}
+                                </select>);
+                    }
+                    else if('form' in this.props && element.name in this.props.form.dropdowns){
                         d_elem = this.props.form.dropdowns[element.name];
                         defaultValue = d_elem.select;
                         values = d_elem.values;
