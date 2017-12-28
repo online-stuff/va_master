@@ -19,7 +19,7 @@ var Subpanel = React.createClass({
     },
 
     getPanel: function (id, server, args) {
-        var me = this, args = args.split(",");
+        var me = this, args = args.indexOf(',') > -1 ? args.split(",") : args;
         var data = {'panel': id, 'server_name': server, 'args': args};
         console.log(data);
         this.props.dispatch({type: 'CHANGE_PANEL', panel: id, server: server, args: args});
