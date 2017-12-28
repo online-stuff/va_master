@@ -87,7 +87,7 @@ var Users = React.createClass({
     },
 
     openModal: function() {
-        this.setState({modal_open: true});
+        this.setState({modal_open: true, update: false});
     },
 
     addUser: function(data) {
@@ -195,7 +195,7 @@ var Groups = React.createClass({
     },*/
 
     openModal: function() {
-        this.setState({modal_open: true});
+        this.setState({modal_open: true, update: false});
     },
 
     addGroup: function(data) {
