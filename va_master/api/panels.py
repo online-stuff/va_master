@@ -5,7 +5,7 @@ import tornado.gen
 import login, apps
 
 from login import auth_only, create_user_api
-
+from salt.client import LocalClient 
 
 def get_paths():
     paths = {
@@ -29,6 +29,7 @@ def get_paths():
             'panels/chart_data' : {'function' : get_chart_data, 'args' : ['server_name', 'args']},
             'panels/serve_file' : {'function' : salt_serve_file, 'args' : ['handler', 'server_name', 'action', 'args', 'kwargs', 'module']},
             'panels/serve_file_from_url' : {'function' : url_serve_file, 'args' : ['handler', 'server_name', 'url_function', 'module', 'args', 'kwargs']},
+            'panels/get_panel_pdf' : {'function' : get_panel_pdf, 'args' : ['server_name', 'panel', 'pdf_file', 'provider', 'handler', 'args', 'kwargs', 'dash_user', 'filter_field']},
         }
     }
     return paths
@@ -166,15 +167,13 @@ def panel_action(handler, actions_list = [], server_name = '', action = '', args
     servers = [x['server_name'] for x in actions_list]
     results = {x : None for x in servers}
     for action in actions_list:
-        print ('Getting results with kwargs : ', action['kwargs']) 
-        server_result = yield panel_action_execute(handler = handler, 
-            server_name = action['server_name'], 
-            action = action['action'], 
-            args = action['args'], 
-            dash_user = dash_user, 
-            kwargs = action['kwargs'], 
+    for action in actions_list: 
+        server_result = yield panel_action_execute(handler, server_name = action['server_name'], \
+            dash_user = dash_user, \
+            action = action['action'], \
+            args = action['args'], \
+            kwargs = action['kwargs'], \
             module = action['module'])
-
         results[action['server_name']] = server_result
 
     if len(results.keys()) == 1: 
@@ -198,28 +197,36 @@ def get_panel_for_user(handler, panel, server_name, dash_user, args = [], provid
     server_info = yield apps.get_app_info(server_name)
     print ('Server info : ', server_info)
     state = server_info['role']
-
     #This is usually for get requests. Any arguments in the url that are not arguments of this function are assumed to be keyword arguments for salt.
     #TODO Also this is pretty shabby, and I need to find a better way to make GET salt requests work. 
     if not args: 
         ignored_kwargs = ['datastore', 'handler', 'datastore_handler', 'drivers_handler', 'panel', 'instance_name', 'dash_user', 'method', 'server_name', 'path']
-        kwargs = {x : handler.data[x] for x in handler.data if x not in ignored_kwargs}
+        kwargs = {x : kwargs[x] for x in kwargs if x not in ignored_kwargs}
     else: 
         kwargs = {}
 
     state = yield datastore_handler.get_state(name = state)
 
-#    if server_name in state['servers']:
     action = 'get_panel'
     if type(args) != list and args: 
         args = [args]
     args = [panel] + args
-    print ('State : ', state)
     args = [state['module']] + args
     panel  = yield panel_action_execute(handler, server_name, action, args, dash_user, kwargs = kwargs, module = 'va_utils')
     raise tornado.gen.Return(panel)
-#    else: 
-#        raise Exception("Requested salt call on " + server_name + " but that server name is not in the list of servers for " + state['name'] + " : " + str(state['servers']))
+
+@tornado.gen.coroutine
+def get_panel_pdf(handler, panel, server_name, dash_user, pdf_file = '/tmp/table.pdf', args = [], provider = None, kwargs = {}, filter_field = ''):
+    if not args: 
+        args = list(args)
+    cl = LocalClient()
+    panel = yield get_panel_for_user(handler = handler, panel = panel, server_name = server_name, dash_user = dash_user, args = args, provider = provider, kwargs = kwargs)
+    print ('Getting pdf with filter : ', filter_field)
+    result = cl.cmd('va-master', 'va_utils.get_pdf', kwarg = {'panel' : panel, 'pdf_file' : pdf_file, 'filter_field' : filter_field})
+    print ('Result is : ', result)
+    if not result['va-master']: 
+        yield handler.serve_file(pdf_file)
+        raise tornado.gen.Return({'data_type' : 'file'})
 
 @tornado.gen.coroutine
 def get_users(handler, user_type = 'users'):
