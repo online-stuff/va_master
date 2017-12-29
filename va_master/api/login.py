@@ -115,7 +115,7 @@ def create_user(datastore_handler, username, password, user_type = 'user'):
         'timestamp_created': long(time.time())
     }
     yield datastore_handler.create_user(user, user_type)
-    token = yield get_or_create_token(datastore_handler.datastore, username, user_type = user_type)
+    token = yield get_or_create_token(datastore_handler, username, user_type = user_type)
 
     raise tornado.gen.Return(token)
 

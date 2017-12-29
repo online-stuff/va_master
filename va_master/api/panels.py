@@ -167,7 +167,6 @@ def panel_action(handler, actions_list = [], server_name = '', action = '', args
     servers = [x['server_name'] for x in actions_list]
     results = {x : None for x in servers}
     for action in actions_list:
-    for action in actions_list: 
         server_result = yield panel_action_execute(handler, server_name = action['server_name'], \
             dash_user = dash_user, \
             action = action['action'], \

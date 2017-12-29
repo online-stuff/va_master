@@ -15,7 +15,6 @@ import json, datetime, syslog, pytz
 import dateutil.relativedelta
 import dateutil.parser
 
-=======
 from salt.client import LocalClient
 from va_master.handlers.datastore_handler import DatastoreHandler
 
