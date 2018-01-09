@@ -301,15 +301,15 @@ class DatastoreHandler(object):
                 try:
                     old_panel = yield self.get_panel(name = state['name'])
                 except: 
-                    old_panel = None
- 
-                if not old_panel: continue
+                    old_panel = {'servers' : []}
+
                 panel = {
                     'name' : state['name'], 
                     'icon' : state['icon'], 
                     'servers' : old_panel['servers'],
                     'panels' : state.get('panels', empty_panel)[user_type]
                 }
+                print ('Storing ', panel)
                 yield self.store_panel(panel, user_type)
             yield self.store_state(state)
 
