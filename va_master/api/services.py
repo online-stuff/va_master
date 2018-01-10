@@ -157,7 +157,7 @@ def delete_services(server):
 def get_all_monitoring_data(datastore_handler):
     """Returns all icinga data from connected monitoring minions. """
     cl = LocalClient()
-    result = cl.cmd('G@role:monitoring', fun = 'monitoring.icinga2', tgt_type = 'compound')
+    result = cl.cmd('G@role:monitoring', fun = 'va_monitoring.icinga2', tgt_type = 'compound')
 
     for minion in result: 
         for host in result[minion]: 

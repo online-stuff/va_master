@@ -15,6 +15,7 @@ import json, datetime, syslog, pytz
 import dateutil.relativedelta
 import dateutil.parser
 
+from salt.client import LocalClient
 from va_master.handlers.datastore_handler import DatastoreHandler
 
 def invalid_url(path, method):
@@ -110,6 +111,7 @@ class ApiHandler(tornado.web.RequestHandler):
             elif user['type'] == 'user' : 
                 user_functions = yield self.datastore_handler.get_user_functions(user.get('username'))
                 user_functions = [x.get('func_path', '') for x in user_functions]
+
                 user_functions += self.paths.get('user_allowed', [])
 
                 if path not in user_functions: 
@@ -318,7 +320,10 @@ class ApiHandler(tornado.web.RequestHandler):
             if not data:
                 break
 
+            print ('Data is : ', len(data))
+
             if type(data) == str:
+                print ('Writing data')
                 self.write(data)
                 self.flush()
 
@@ -358,6 +363,7 @@ class ApiHandler(tornado.web.RequestHandler):
                 source = f.read
                 kwargs = {"source_args" : [chunk_size]}
 
+            print ('Serving file with : ', source, kwargs, chunk_size)
             result = yield self.send_data(source, kwargs, chunk_size)
             self.finish()
         except: 

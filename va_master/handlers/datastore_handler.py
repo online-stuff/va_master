@@ -210,16 +210,7 @@ class DatastoreHandler(object):
     @tornado.gen.coroutine
     def get_user_functions(self, user, func_type = ''):
         user = yield self.get_object('user', username = user)
-
         user_funcs = user.get('functions', [])
-
-        #Get all functions from the user groups to return in a single list. 
-        #i.e. instead of [{group_name : group, functions : [{group_func1}, ...]}, func1, func2, ...] we want [group_func1, ..., func1, func2, ...]
-#        user_group_functions = [x['functions'] for x in user_funcs if x.get('func_type', '') == 'function_group']
-
-#        user_funcs = [
-#            x.get('func_path') for x in user_funcs + user_group_functions 
-#        if x.get('func_type', '') == func_type and x.get('func_path')]
 
         raise tornado.gen.Return(user_funcs)
 
@@ -320,10 +311,14 @@ class DatastoreHandler(object):
                 try:
                     old_panel = yield self.get_panel(name = state['name'])
                 except: 
-                    old_panel = None
- 
-                if not old_panel: continue
-                panel = yield self.get_panel_from_state(state, user_type, old_panel.get('servers', []))
+                    old_panel = {'servers' : []}
+
+                panel = {
+                    'name' : state['name'], 
+                    'icon' : state['icon'], 
+                    'servers' : old_panel['servers'],
+                    'panels' : state.get('panels', empty_panel)[user_type]
+                }
                 yield self.store_panel(panel, user_type)
             yield self.store_state(state)
 

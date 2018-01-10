@@ -35,8 +35,8 @@ def get_or_create_token(datastore_handler, username, user_type = 'admin'):
             'token': uuid.uuid4().hex,
             'username': username
         }
-        yield datastore.insert_object('by_username', data = doc, user_type = user_type, username = username)
-        yield datastore.insert_object('by_token', data = doc, user_type = user_type, token = doc['token'])
+        yield datastore_handler.insert_object('by_username', data = doc, user_type = user_type, username = username)
+        yield datastore_handler.insert_object('by_token', data = doc, user_type = user_type, token = doc['token'])
         raise tornado.gen.Return(doc['token'])
     finally:
         if found:
@@ -115,7 +115,7 @@ def create_user(datastore_handler, username, password, user_type = 'user'):
         'timestamp_created': long(time.time())
     }
     yield datastore_handler.create_user(user, user_type)
-    token = yield get_or_create_token(datastore_handler.datastore, username, user_type = user_type)
+    token = yield get_or_create_token(datastore_handler, username, user_type = user_type)
 
     raise tornado.gen.Return(token)
 

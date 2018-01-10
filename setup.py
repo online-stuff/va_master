@@ -21,6 +21,7 @@ setuptools.setup(
     'clc-sdk',
     'google-api-python-client',
     'paramiko', #for ssh connections
+    'reportlab', #For generating PDF files
   ],
   zip_safe=False,
   entry_points = {

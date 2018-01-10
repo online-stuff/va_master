@@ -186,12 +186,12 @@ def handle_store_init(cli_config, values, store, datastore_handler):
 
 def create_ssh_keys(cli_config, store_config):
     try: 
-        os.mkdir(cli_config.ssh_key_path)
-        key_full_path = cli_config.ssh_key_path + cli_config.ssh_key_name
-        ssh_cmd = ['ssh-keygen', '-t', 'rsa', '-f', key_full_path, '-N', '']
+        #os.mkdir(cli_config.ssh_key_path)
+        #key_full_path = cli_config.ssh_key_path + cli_config.ssh_key_name
+        #ssh_cmd = ['ssh-keygen', '-t', 'rsa', '-f', key_full_path, '-N', '']
         
-        subprocess.call(ssh_cmd)
-        subprocess.call(['mv', key_full_path, key_full_path + '.pem'])
+        subprocess.call('true')
+        #subprocess.call(['mv', key_full_path, key_full_path + '.pem'])
     except: 
         import traceback
         print ('Could not generate a key. Probably already exists. ')
@@ -215,9 +215,6 @@ def handle_init(args):
     check_datastore_connection(values, store)
     create_admin_user(values.get('admin_user'), values.get('admin_pass'), datastore_handler)
     store_config = handle_store_init(cli_config, values, store, datastore_handler)
-
-#    run_sync(datastore_handler.update_panels_from_states_data())
-
 
     #Generate an ssh-key
     create_ssh_keys(cli_config, store_config)

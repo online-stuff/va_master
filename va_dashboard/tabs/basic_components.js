@@ -4,6 +4,12 @@ var Network = require('../network');
 
 var Filter = React.createClass({
 
+    componentDidMount: function(){
+		var elem = this.refs[this.props.name], pos = elem.value.length;
+		elem.focus();
+		elem.setSelectionRange(pos, pos);
+    },
+
     filter: function(e){
         this.props.dispatch({type: 'FILTER', filterBy: e.target.value});
     },
@@ -11,12 +17,14 @@ var Filter = React.createClass({
     render: function () {
         return (
             <Bootstrap.InputGroup>
-                <Bootstrap.FormControl
+                <input
+                    id={this.props.name}
                     type="text"
+                    className="form-control"
                     placeholder="Filter"
                     value={this.props.filter.filterBy}
                     onChange={this.filter}
-                    autoFocus
+                    ref={this.props.name}
                 />
                 <Bootstrap.InputGroup.Addon>
                   <Bootstrap.Glyphicon glyph="search" />
@@ -39,7 +47,28 @@ var Button = React.createClass({
     },
 
     btn_action: function(action) {
-        console.log(action);
+        var me = this;
+        if("tblName" in this.props){
+            var panel = this.props.panel;
+            var filterVal = document.getElementById('reactableFilter').value;
+            var data = {server_name: panel.server, panel: panel.panel, args: panel.args, table_name: this.props.tblName, filter_field: filterVal};
+            Network.download_file('/api/panels/get_panel_pdf', this.props.auth.token, data).done(function(d) {
+                var data = new Blob([d], {type: 'octet/stream'});
+                var url = window.URL.createObjectURL(data);
+                tempLink = document.createElement('a');
+                tempLink.style = "display: none";
+                tempLink.href = url;
+                tempLink.setAttribute('download', panel.panel + '.pdf');
+                document.body.appendChild(tempLink);
+                tempLink.click();
+                setTimeout(function(){
+                    document.body.removeChild(tempLink);
+                    window.URL.revokeObjectURL(url);
+                }, 100);
+            }).fail(function (msg) {
+                me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
+            });
+        }
     },
 
     render: function () {
