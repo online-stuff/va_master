@@ -86,8 +86,14 @@ class DatastoreHandler(object):
     def create_standalone_provider(self):
         provider = {"username": "admin", "sizes": [], "servers": [], "sec_groups": [], "driver_name": "generic_driver", "location": "", "defaults": {}, "images": [], "provider_name": "va_standalone_servers", "password": "admin", "ip_address": "127.0.0.1", "networks": []}
         providers = yield self.list_providers()
-        if any([x.get('provider_name') == provider['provider_name'] for x in providers]): 
-            yield self.create_provider(provider)
+        if not any([x.get('provider_name') == provider['provider_name'] for x in providers]): 
+            try:
+                yield self.insert_object('provider', data = provider, provider_name = provider['provider_name'])
+
+                result = yield self.create_provider(provider)
+            except: 
+                import traceback
+                traceback.print_exc()
         yield self.datastore.insert('va_standalone_servers', {"servers" : []})
 
     @tornado.gen.coroutine
@@ -97,6 +103,8 @@ class DatastoreHandler(object):
         except: 
             if provider_name == 'va_standalone_servers' : 
                 yield self.create_standalone_provider()
+#                provider = yield self.get_object('provider', provider_name = provider_name)
+
             else: 
                 raise
         raise tornado.gen.Return(provider)
@@ -132,6 +140,8 @@ class DatastoreHandler(object):
         try:
             existing_provider = yield self.get_provider(field_values['provider_name'])
         except: #We expect the provider not to exist. 
+            import traceback
+            traceback.print_exc()
             pass
         yield self.insert_object('provider', data = field_values, provider_name = field_values['provider_name'])
 
@@ -195,7 +205,6 @@ class DatastoreHandler(object):
         edited_user = yield self.get_object('user', username = user)
 
         functions = [{"func_path" : x.get('value')} if x.get('value') else x for x in functions]
-        print ('Functions are : ', functions)
         edited_user['functions'] = functions 
         yield self.insert_object('user', data = edited_user, username = user) 
 
