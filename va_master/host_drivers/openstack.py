@@ -135,8 +135,9 @@ class OpenStackDriver(base.DriverBase):
             resp = yield self.client.fetch(req)
         except:
             import traceback
+            print ('Error getting token with %s. ' % (url))
             traceback.print_exc()
-            raise tornado.gen.Return((None, None))
+            raise Exception('Error getting openstack token on %s. ' % (url))
         body = json.loads(resp.body)
         token = body['access']['token']['id']
         services = {}
@@ -168,8 +169,10 @@ class OpenStackDriver(base.DriverBase):
         try:
             resp = yield self.client.fetch(req)
         except:
-#            import traceback; traceback.print_exc()
-            raise tornado.gen.Return([])
+            import traceback;
+            print ('Error getting openstack value for url %s and endpoint %s. ' % (url, url_endpoint)
+            traceback.print_exc()
+            raise Exception('Error getting openstack value for endpoint %s. ' % (url_endpoint))
 
         result = json.loads(resp.body)
         raise tornado.gen.Return(result)
@@ -189,10 +192,11 @@ class OpenStackDriver(base.DriverBase):
             key = f.read()
         try:
             keypair = nova_cl.keypairs.create(name = self.keypair_name, public_key = key)
-        except: 
+        except Exception as e:
             import traceback
+            print ('Error creating keypair with name %s and key %s. ' % (self.keypair_name, key)
             traceback.print_exc()
-        
+            raise Exception('Error creating a nova keypair with name %s. Message was: %s. ' % (self.keypair_name, e.message))
 
 
     @tornado.gen.coroutine
