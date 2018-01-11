@@ -56,16 +56,17 @@ def panel_action_execute(handler, server_name, action, args = [], dash_user = ''
     If module is not passed, looks up the panels and retrieves the module from there. 
     """
     datastore_handler = handler.datastore_handler
-    if dash_user.get('username'):
-        user_funcs = yield datastore_handler.get_user_salt_functions(dash_user['username'])
-        if action not in user_funcs and dash_user['type'] != 'admin':
-            print ('Function not supported')
-            raise Exception('User attempting to execute a salt function but does not have permission. ')
-            #TODO actually not allow user to do anything. This is just for testing atm. 
-        
+
     server_info = yield apps.get_app_info(server_name)
     state = server_info['role']
 
+    if dash_user.get('username'):
+        user_funcs = yield datastore_handler.get_user_salt_functions(dash_user['username'])
+        user_funcs = user_funcs.get(state)
+        if action not in user_funcs and dash_user['type'] != 'admin':
+            print ('Function not supported')
+            raise Exception('User attempting to execute a salt function but does not have permission. ')
+        
     state = yield datastore_handler.get_state(name = state)
     if not state: state = {'module' : 'openvpn'}
 
@@ -76,6 +77,9 @@ def panel_action_execute(handler, server_name, action, args = [], dash_user = ''
     print ('Calling salt module ', module + '.' + action, ' on ', server_name, ' with args : ', args, ' and kwargs : ', kwargs)
     result = cl.cmd(server_name, module + '.' + action , arg = args, kwarg = kwargs, timeout = timeout)
     result = result.get(server_name)
+    if type(result) == str:
+        print ('Result returned : ', result)
+        raise Exception('Calling %s on %s returned an error. ' % (module + '.' + action, server_name))
 
     raise tornado.gen.Return(result)
 
@@ -220,12 +224,12 @@ def get_panel_pdf(handler, panel, server_name, dash_user, pdf_file = '/tmp/table
         args = list(args)
     cl = LocalClient()
     panel = yield get_panel_for_user(handler = handler, panel = panel, server_name = server_name, dash_user = dash_user, args = args, provider = provider, kwargs = kwargs)
-    print ('Getting pdf with filter : ', filter_field)
     result = cl.cmd('va-master', 'va_utils.get_pdf', kwarg = {'panel' : panel, 'pdf_file' : pdf_file, 'filter_field' : filter_field})
-    print ('Result is : ', result)
     if not result['va-master']: 
         yield handler.serve_file(pdf_file)
         raise tornado.gen.Return({'data_type' : 'file'})
+    print ('Result returned : ', result)
+    raise Exception('PDF returned a value - probably because of an error. ')
 
 
 @tornado.gen.coroutine
@@ -250,7 +254,8 @@ def get_users(handler, user_type = 'users'):
 def get_all_functions(handler):
     """Gets all functions returned by the get_functions methods for all the api modules and formats them properly for the dashboard. """
     functions = {m : handler.paths[m] for m in ['post', 'get']}
-    salt_functions = {} #TODO salt functinos should look like {backuppc:[list, of, functions], owncloud : [list, of, ofunctions]}
+    states = yield handler.database_handler.get_states()
+    salt_functions = {state['name'] : state.get('salt_functions', {}) for state in states}
 
     functions.update(salt_functions)
 
@@ -261,7 +266,7 @@ def get_all_functions(handler):
                     {
                         'label' : i, 
                         'value' : i, 
-                        'description' : functions[f][i]['function'].__doc__}
+                        'description' : functions[f][i].get('doc') or functions[f][i]['function'].__doc__}
                     for i in functions[f]
                 ] 
         } for f in functions]

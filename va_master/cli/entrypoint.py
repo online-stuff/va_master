@@ -37,11 +37,14 @@ def bootstrap(master_config):
     """Starts the master with all its components, and provides the configuration
     data to all the components."""
 
+    master_config.logger.info('Bootstrap initiated. ')
     app = httpserver.get_app(master_config)
 
     if None in (master_config.https_crt, master_config.https_key):
         crt_path = os.path.join(master_config.data_path, 'https.crt')
         key_path = os.path.join(master_config.data_path, 'https.key')
+        master_config.logger.info('No certificate found, will generate at %s' % (master_config.data_path))
+
         try:
             with open(crt_path):
                 with open(key_path):
@@ -51,6 +54,7 @@ def bootstrap(master_config):
             master_config.logger.info('Generating self-signed certificate...')
             generate_keys(master_config, crt_path, key_path)
     else:
+        master_config.logger.info('Using certificates from config : %s and %s. ' % (master_config.https_crt, master_config.https_key))
         crt_path = master_config.https_crt
         key_path = master_config.https_key
 
@@ -62,6 +66,8 @@ def bootstrap(master_config):
 
     my_serv = tornado.httpserver.HTTPServer(app, ssl_options=ssl_ctx)
     my_serv.listen(master_config.https_port)
+    master_config.logger.info('Server is listening at : %s. ' % str(master_config.https_port))
+    master_config.logger.info('Starting server. ')
     tornado.ioloop.IOLoop.current().start()
 #    tornado.ioloop.IOLoop.instance().start()
 #    app.listen(my_config.server_port)

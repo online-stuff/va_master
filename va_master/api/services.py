@@ -55,8 +55,15 @@ def get_services_and_monitoring():
 @tornado.gen.coroutine
 def list_services():
     """Returns a list of services and their statuses from the consul REST API"""
-    services = requests.get(consul_url + '/catalog/services')
-    services = services.json()
+    try:
+        services_url = consul_url + '/catalog/services'
+        services = requests.get(services_url)
+        services = services.json()
+    except: 
+        import traceback
+        print ('Error when getting services with %s' % (services_url))
+        traceback.print_exc()
+        raise Exception('There was an error attempting to list consul services. ')
 
     raise tornado.gen.Return(services)
 
@@ -69,16 +76,30 @@ def get_all_checks():
 @tornado.gen.coroutine
 def get_services_with_status(status = 'passing'):
     """Returns a list of services with the specified status. """
-    services = requests.get(consul_url + '/health/state/%s' % (status))
-    services = services.json()
+    try:
+        status_url = consul_url + '/health/state/%s' % (status)
+        services = requests.get(status_url)
+        services = services.json()
+    except: 
+        import traceback
+        print ('Error when trying to get all services with status %s with url %s. ' % (status, status_url))
+        traceback.print_exc()
+        raise Exception('There was an error trying to get all services with status %s. ' % (status))
 
     raise tornado.gen.Return(services)
 
 @tornado.gen.coroutine
 def get_service(service):
     """Returns the service with the specified service name. """
-    service = requests.get(consul_url + '/health/checks/%s' % (service))
-    service = service.json()
+    try:
+        service_url = consul_url + '/health/checks/%s' % (service)
+        service = requests.get(service_url)
+        service = service.json()
+    except: 
+        import traceback
+        print ('Error trying to get data for service %s with url %s. ' % (status, service_url))
+        traceback.print_exc()
+        raise Exception('There was an error getting data for the service %s. ' % (service))
 
     raise tornado.gen.Return(service)
 
@@ -103,6 +124,7 @@ def create_service_from_state(state_name, service_name, service_address, service
 
     yield add_service_with_definition(service_definition, server_name)
 
+#TODO check if the definition is alright, raise exception if not. 
 @tornado.gen.coroutine
 def add_service_with_definition(service_definition, server):
     """Adds a service with a definition. The definition has the standard consul service format. """
@@ -136,9 +158,13 @@ def add_services_presets(server, presets):
         "tcp" :  {"id": minion_info['id'] + "_tcp", "name": "Check server TCP", "tcp": minion_info['ip4_interfaces']['eth0'][0], "interval": "30s", "timeout": "10s"}, 
         "ping" :  {"id": minion_info['id'] + "_ping", "name": "Ping server", "script" : "ping -c1 " + minion_info['ip4_interfaces']['eth0'][0] + " > /dev/null", "interval": "30s", "timeout": "10s"}, 
         "highstate" : {"id" : minion_info['id'] + '_highstate', "name" : "Check highstate", "script" : "salt " + minion_info['id'] + "state.highstate test=True | perl -lne 's/^Failed:\s+// or next; s/\s.*//; print'"}, 
-
-
     }
+
+
+    unknown_presets = [p for p in presets if p not in check_presets.keys()]
+    if unknown_presets:
+        raise Exception('Presets %s not found in the list of available presets: %s' % (str(unknown_presets), str(check_presets.keys())))
+
     service = {"service": {"name": minion_info["id"] + "_services", "tags": ["hostsvc", "web", "http"], "address": minion_info['ip4_interfaces']['eth0'][0], "port": 443, "checks" : [ 
         check_presets[p] for p in presets
     ]}}
@@ -158,8 +184,13 @@ def get_all_monitoring_data(datastore_handler):
     """Returns all icinga data from connected monitoring minions. """
     cl = LocalClient()
     result = cl.cmd('G@role:monitoring', fun = 'va_monitoring.icinga2', tgt_type = 'compound')
+    monitoring_errors = []
 
     for minion in result: 
+        if type(result[minion]) == str:
+            print ('Error getting monitoring data for %s, salt returned %s, but will go on as usual. ' % (minion, result[minion]))
+            monitoring_errors.append(minion)
+            continue
         for host in result[minion]: 
             if 'va_master' in host['host_name']: 
                 panel = {'icon' : 'fa-circle'}
@@ -167,4 +198,7 @@ def get_all_monitoring_data(datastore_handler):
                 panel = yield datastore_handler.find_panel_for_server(host['host_name'])
             host['icon'] = panel['icon']
 
+    if monitoring_errors: 
+        monitoring_errors = 'There was an error with the monitoring server(s): ' + ', '.join(monitoring_errors)
+        result = {'success' : True, 'data' : result, 'message' : monitoring_errors}
     raise tornado.gen.Return(result)
