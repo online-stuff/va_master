@@ -325,8 +325,10 @@ class DatastoreHandler(object):
         raise tornado.gen.Return(states_data)
 
     @tornado.gen.coroutine
-    def get_states(self):
+    def get_states(self, get_states_without_modules = False):
         states = yield self.datastore.get_recurse('states/')
+        if not get_states_without_modules: 
+            states = [x for x in states if x.get('module')]
         raise tornado.gen.Return(states)
 
     @tornado.gen.coroutine

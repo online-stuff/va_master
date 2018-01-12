@@ -254,8 +254,24 @@ def get_users(handler, user_type = 'users'):
 def get_all_functions(handler):
     """Gets all functions returned by the get_functions methods for all the api modules and formats them properly for the dashboard. """
     functions = {m : handler.paths[m] for m in ['post', 'get']}
-    states = yield handler.database_handler.get_states()
-    salt_functions = {state['name'] : state.get('salt_functions', {}) for state in states}
+    states = yield handler.datastore_handler.get_states()
+
+    cl = LocalClient()
+
+    all_salt_functions = cl.cmd('va-master', 'sys.doc')['va-master']
+    print ('States : ', states)
+    print ('States with keys : ', {state['name']: state.get('module') for state in states})
+    states_functions = {
+        state['module'] : {x.split('.')[1] : {'doc' : all_salt_functions[x] or 'No description available. '} for x in all_salt_functions if x.startswith(state['module'])}
+    for state in states}
+
+    print ('States functions are : ', states_functions)
+
+
+    salt_functions = {state['module'] : {
+        x : states_functions[state['module']][x] for x in states_functions[state['module']] if x in state.get('salt_functions', [])
+    } for state in states}
+
 
     functions.update(salt_functions)
 
