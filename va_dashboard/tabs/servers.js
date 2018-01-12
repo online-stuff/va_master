@@ -1,9 +1,9 @@
-var React = require('react');
-var connect = require('react-redux').connect;
+import React, { Component } from 'react';
+import {connect} from 'react-redux';
 var Network = require('../network');
 var Bootstrap = require('react-bootstrap');
-var ReactDOM = require('react-dom');
-var Reactable = require('reactable');
+import {findDOMNode} from 'react-dom';
+import {Table, Tr, Td} from 'reactable';
 
 var Servers = React.createClass({
     getInitialState: function () {
@@ -113,21 +113,21 @@ var Servers = React.createClass({
                 }
                 var rowClass = "row-app-" + app.status;
                 return (
-                    <Reactable.Tr key={app.hostname} className={rowClass}>
-                        <Reactable.Td column="Hostname">{app.hostname}</Reactable.Td>
-                        <Reactable.Td column="IP">{ipaddr}</Reactable.Td>
-                        <Reactable.Td column="Size">{app.size}</Reactable.Td>
-                        <Reactable.Td column="Status">{app.status}</Reactable.Td>
-                        <Reactable.Td column="Provider">{app.provider}</Reactable.Td>
-                        <Reactable.Td column="Actions">
+                    <Tr key={app.hostname} className={rowClass}>
+                        <Td column="Hostname">{app.hostname}</Td>
+                        <Td column="IP">{ipaddr}</Td>
+                        <Td column="Size">{app.size}</Td>
+                        <Td column="Status">{app.status}</Td>
+                        <Td column="Provider">{app.provider}</Td>
+                        <Td column="Actions">
                             <Bootstrap.DropdownButton id={'dropdown-' + app.hostname} bsStyle='primary' title="Choose" onSelect = {this.confirm_action.bind(null, app.provider, app.hostname)}>
                                 <Bootstrap.MenuItem className="danger" eventKey="reboot">Reboot</Bootstrap.MenuItem>
                                 <Bootstrap.MenuItem className="danger" eventKey="delete">Delete</Bootstrap.MenuItem>
                                 <Bootstrap.MenuItem eventKey="start">Start</Bootstrap.MenuItem>
                                 <Bootstrap.MenuItem eventKey="stop">Stop</Bootstrap.MenuItem>
                             </Bootstrap.DropdownButton>
-                        </Reactable.Td>
-                    </Reactable.Tr>
+                        </Td>
+                    </Tr>
                 );
             }.bind(this));
             app_rows.push(rows);
@@ -153,9 +153,9 @@ var Servers = React.createClass({
                     <ServerFormRedux loaded={loaded} providers = {this.state.providers} states = {this.state.states} provider_name = {this.state.hostname} role = {this.state.role} defaults = {this.state.defaults} options = {this.state.options} provider_usage = {this.state.provider_usage} getData = {this.getData} onChange = {this.onChange} onChangeRole = {this.onChangeRole} />
                     <div style={blockStyle} className="card">
                         <div className="card-body">
-                            <Reactable.Table className="table striped" columns={['Hostname', 'IP', 'Size', 'Status', 'Provider', 'Actions']} itemsPerPage={10} pageButtonLimit={10} noDataText="No matching records found." sortable={sf_cols} filterable={sf_cols} btnName="Create server" btnClick={this.openModal} title="Current servers" filterClassName="form-control" filterPlaceholder="Filter">
+                            <Table className="table striped" columns={['Hostname', 'IP', 'Size', 'Status', 'Provider', 'Actions']} itemsPerPage={10} pageButtonLimit={10} noDataText="No matching records found." sortable={sf_cols} filterable={sf_cols} btnName="Create server" btnClick={this.openModal} title="Current servers" filterClassName="form-control" filterPlaceholder="Filter">
                                 {app_rows}
-                            </Reactable.Table>
+                            </Table>
                         </div>
                     </div>
                     <ConfirmPopup show={this.state.popupShow} data={this.state.popupData} close={this.popupClose} action={this.btn_clicked} />
@@ -241,7 +241,7 @@ var UserStep = React.createClass({
             var data = {'step': 2};
             for(var i=0; i<this.state.fields.length; i++){
                 field = this.state.fields[i];
-                data[field] = ReactDOM.findDOMNode(this.refs[field]).value;
+                data[field] = findDOMNode(this.refs[field]).value;
             }
             Network.post('/api/apps/new/validate_fields', this.props.auth.token, data).done(function(data) {
                 me.props.goToNextStep();
@@ -278,14 +278,14 @@ var SSHStep = React.createClass({
         }, 10000);
         var data = {
             step: 3,
-            ip: ReactDOM.findDOMNode(this.refs.ip).value,
-            port: ReactDOM.findDOMNode(this.refs.port).value,
-            hostname: ReactDOM.findDOMNode(this.refs.hostname).value,
-            username: ReactDOM.findDOMNode(this.refs.username).value,
-            location: ReactDOM.findDOMNode(this.refs.location).value
+            ip: findDOMNode(this.refs.ip).value,
+            port: findDOMNode(this.refs.port).value,
+            hostname: findDOMNode(this.refs.hostname).value,
+            username: findDOMNode(this.refs.username).value,
+            location: findDOMNode(this.refs.location).value
         };
         if(!this.state.auth)
-            data['password'] = ReactDOM.findDOMNode(this.refs.password).value;
+            data['password'] = findDOMNode(this.refs.password).value;
         Network.post('/api/apps/new/validate_fields', this.props.auth.token, data).done(function(data) {
             //me.setState({status: 'launched'});
             me.props.launchServer();
@@ -530,13 +530,13 @@ var HostStep = React.createClass({
         }, 10000);
         var data = {
             step: 3,
-            provider_name: ReactDOM.findDOMNode(this.refs.provider_name).value,
-            size: ReactDOM.findDOMNode(this.refs.flavor).value,
-            image: ReactDOM.findDOMNode(this.refs.image).value,
-            storage: ReactDOM.findDOMNode(this.refs.storage).value,
-            network: ReactDOM.findDOMNode(this.refs.network).value,
-            sec_group: ReactDOM.findDOMNode(this.refs.sec_group).value,
-            username: ReactDOM.findDOMNode(this.refs.username).value
+            provider_name: findDOMNode(this.refs.provider_name).value,
+            size: findDOMNode(this.refs.flavor).value,
+            image: findDOMNode(this.refs.image).value,
+            storage: findDOMNode(this.refs.storage).value,
+            network: findDOMNode(this.refs.network).value,
+            sec_group: findDOMNode(this.refs.sec_group).value,
+            username: findDOMNode(this.refs.username).value
         };
         Network.post('/api/apps/new/validate_fields', this.props.auth.token, data).done(function(data) {
             //me.setState({status: 'launched'});
@@ -579,8 +579,8 @@ var ServerForm = React.createClass({
     nextStep: function () {
         if(this.state.stepIndex === 1){
             var nextStep = this.state.step2 ? 2 : 3;
-            var me = this, server_name = ReactDOM.findDOMNode(this.refs.name).value;
-            var data = {step: 1, role: ReactDOM.findDOMNode(this.refs.role).value, server_name: server_name};
+            var me = this, server_name = findDOMNode(this.refs.name).value;
+            var data = {step: 1, role: findDOMNode(this.refs.role).value, server_name: server_name};
             if(!this.state.standalone)
                 data.provider_name = this.state.provider_name;
             Network.post('/api/apps/new/validate_fields', this.props.auth.token, data).done(function(d) {

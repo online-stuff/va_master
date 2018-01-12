@@ -1,10 +1,7 @@
-var React = require('react');
+import React, { Component } from 'react';
 var Bootstrap = require('react-bootstrap');
-var connect = require('react-redux').connect;
+import {connect} from 'react-redux';
 var Network = require('../network');
-var ReactDOM = require('react-dom');
-var Router = require('react-router');
-var Select = require('react-select-plus');
 var Groups = require('./users').Group;
 
 var GroupPanel = React.createClass({

@@ -1,12 +1,11 @@
-var React = require('react');
-var ReactDOM = require('react-dom');
-var Router = require('react-router');
-var Redux = require('redux');
-var ReactRedux = require('react-redux');
+import React, { Component } from 'react';
+import {render} from 'react-dom';
+import {Router, Route, IndexRoute, hashHistory} from 'react-router';
+import {combineReducers, createStore} from 'redux';
+import {connect, Provider} from 'react-redux';
+import FontFaceObserver from 'fontfaceobserver';
 var Network = require('./network');
 
-var connect = ReactRedux.connect;
-var Provider = ReactRedux.Provider;
 
 function auth(state, action){
     if(typeof state === 'undefined'){
@@ -260,8 +259,8 @@ function logs(state, action){
     return newState;
 };
 
-var mainReducer = Redux.combineReducers({auth: auth, table: table, filter: filter, modal: modal, apps: apps, div: div, panel: panel, alert: alert, form: form, sidebar: sidebar, logs: logs, menu: menu});
-var store = Redux.createStore(mainReducer);
+var mainReducer = combineReducers({auth: auth, table: table, filter: filter, modal: modal, apps: apps, div: div, panel: panel, alert: alert, form: form, sidebar: sidebar, logs: logs, menu: menu});
+var store = createStore(mainReducer);
 
 var Home = require('./tabs/home');
 var Overview = require('./tabs/overview');
@@ -284,58 +283,44 @@ var Users = require('./tabs/users').Panel;
 var Groups = require('./tabs/users_groups');
 
 var Login = require('./login');
-var App = React.createClass({
-  render: function() {
+class App extends Component {
+  render() {
     return (
-        <Router.Router history={Router.hashHistory}>
-            <Router.Route path='/' component={Home}>
-                <Router.IndexRoute component={Overview} />
-                <Router.Route path='/providers' component={Providers} />
-                <Router.Route path='/servers' component={Servers} />
-                <Router.Route path='/store' component={Store} />
-                <Router.Route path='/vpn' component={Vpn} />
-                <Router.Route path='/vpn_status' component={VpnStatus} />
-                <Router.Route path='/vpn_users' component={VpnUsers} />
-                <Router.Route path='/vpn/list_logins/:username' component={VpnLogins} />
-                <Router.Route path='/triggers' component={Triggers} />
-                <Router.Route path='/ts_status' component={Ts_status} />
-                <Router.Route path='/log' component={Log} />
-                <Router.Route path='/billing' component={Billing} />
-                <Router.Route path='/services' component={Services} />
-                <Router.Route path='/users_users' component={Users} />
-                <Router.Route path='/users_groups' component={Groups} />
-                <Router.Route path='/panel/:id/:server(/:args)' component={Panel} />
-                <Router.Route path='/subpanel/:id/:server/:args' component={Subpanel} />
-                <Router.Route path='/chart_panel/:server/:provider/:service' component={ChartPanel} />
-            </Router.Route>
-            <Router.Route path='/login' component={Login} />
-        </Router.Router>
+        <Router history={hashHistory}>
+            <Route path='/' component={Home}>
+                <IndexRoute component={Overview} />
+                <Route path='/providers' component={Providers} />
+                <Route path='/servers' component={Servers} />
+                <Route path='/store' component={Store} />
+                <Route path='/vpn' component={Vpn} />
+                <Route path='/vpn_status' component={VpnStatus} />
+                <Route path='/vpn_users' component={VpnUsers} />
+                <Route path='/vpn/list_logins/:username' component={VpnLogins} />
+                <Route path='/triggers' component={Triggers} />
+                <Route path='/ts_status' component={Ts_status} />
+                <Route path='/log' component={Log} />
+                <Route path='/billing' component={Billing} />
+                <Route path='/services' component={Services} />
+                <Route path='/users_users' component={Users} />
+                <Route path='/users_groups' component={Groups} />
+                <Route path='/panel/:id/:server(/:args)' component={Panel} />
+                <Route path='/subpanel/:id/:server/:args' component={Subpanel} />
+                <Route path='/chart_panel/:server/:provider/:service' component={ChartPanel} />
+            </Route>
+            <Route path='/login' component={Login} />
+        </Router>
     );
   }
-});
+}
 
-var activeCallback = $.Callbacks();
+var font1 = new FontFaceObserver('Glyphicons Halflings');
+var font2 = new FontFaceObserver('FontAwesome');
 
-WebFontConfig = {
-    custom: {
-        families: ['Glyphicons Halflings', 'FontAwesome'],
-        urls: ['static/css/bootstrap.min.css', 'static/css/font-awesome.min.css', 'static/css/style.css']
-    },
-    active: function () { activeCallback.fire(); },
-    inactive: function () { console.log("inactive fonts"); }
-};
 (function() {
     var el = document.getElementById('body-wrapper');
-    activeCallback.add(function (){
-        ReactDOM.render(<Provider store={store}>
-              <App/>
-            </Provider>, el);
+    Promise.all([font1.load(), font2.load()]).then(function (){
+        render(<Provider store={store}>
+            <App/>
+        </Provider>, el);
     });
-    var wf = document.createElement('script');
-    wf.src = ('https:' == document.location.protocol ? 'https' : 'http') +
-      '://ajax.googleapis.com/ajax/libs/webfont/1.6.26/webfont.js';
-    wf.type = 'text/javascript';
-    wf.async = 'true';
-    var s = document.getElementsByTagName('script')[0];
-    s.parentNode.insertBefore(wf, s);
 })();

@@ -1,7 +1,7 @@
-var React = require('react');
-var Router = require('react-router');
+import React, { Component } from 'react';
+import {Router, Link, IndexLink, hashHistory} from 'react-router';
 var Bootstrap = require('react-bootstrap');
-var connect = require('react-redux').connect;
+import {connect} from 'react-redux';
 
 var Network = require('../network');
 
@@ -18,23 +18,23 @@ var NavLink = React.createClass({
         }
         if('tabs' in this.props){
             return (
-                <Router.Link to={this.props.to} className={className} activeClassName='active' onClick={this.props.show_tabs.bind(null, this.props.tabs)}>
+                <Link to={this.props.to} className={className} activeClassName='active' onClick={this.props.show_tabs.bind(null, this.props.tabs)}>
                     {this.props.children}
-                </Router.Link>
+                </Link>
             );
         }
         if('tab' in this.props){
             return (
-                <Router.Link to={this.props.to} className={className} activeClassName='active'>
+                <Link to={this.props.to} className={className} activeClassName='active'>
                     {this.props.children}
-                </Router.Link>
+                </Link>
             );
         }
 
         return (
-            <Router.Link to={this.props.to} className={className} activeClassName='active' onClick={this.props.reset_tabs}>
+            <Link to={this.props.to} className={className} activeClassName='active' onClick={this.props.reset_tabs}>
                 {this.props.children}
-            </Router.Link>
+            </Link>
         );
     }
 });
@@ -69,14 +69,14 @@ var Home = React.createClass({
     },
     componentDidMount: function() {
         if(!this.props.auth.token){
-            Router.hashHistory.push('/login');
+            hashHistory.push('/login');
         }else{
             this.getPanels();
         }
     },
     componentWillReceiveProps: function(props) {
         if(!props.auth.token) {
-            Router.hashHistory.push('/login');
+            hashHistory.push('/login');
         }
         var activeKey = window.localStorage.getItem('activeKey') || -1;
         if(this.state.activeKey != activeKey){
@@ -89,7 +89,7 @@ var Home = React.createClass({
         else if(key === 'users'){
             this.reset_tabs();
             this.props.dispatch({type: 'SHOW_TABS', key: 'users'});
-            Router.hashHistory.push('/users_users');
+            hashHistory.push('/users_users');
         }
     },
     collapse: function () {
@@ -103,6 +103,7 @@ var Home = React.createClass({
         this.props.dispatch({type: 'HIDE_ALERT'});
     },
     render: function () {
+        var me = this;
         var panels = this.state.data.filter(function(panel) {
             if(panel.servers.length > 0){
                 return true;
@@ -112,10 +113,10 @@ var Home = React.createClass({
             var header = (
                 <span><i className={'fa ' + panel.icon} /> {panel.name} <i className='fa fa-angle-down pull-right' /></span>
             )
-            var servers = panel.servers.map(function(server) {
-                var subpanels = panel.panels.map(function(panel) {
+            var servers = panel.servers.map((server) => {
+                var subpanels = panel.panels.map((panel) => {
                     return (
-                        <li key={panel.key}><NavLink to={'panel/' + panel.key + '/' + server} activeKey={i} reset_tabs={this.reset_tabs}>
+                        <li key={panel.key}><NavLink to={'panel/' + panel.key + '/' + server} activeKey={i} reset_tabs={me.reset_tabs}>
                             <span>{panel.name}</span>
                         </NavLink></li>
                     );
@@ -168,8 +169,8 @@ var Home = React.createClass({
                 <div className='sidebar' style={this.state.collapse?{left: '-15.4vw'}:{left: 0}}>
                     <ul className='left-menu'>
                         <li>
-                        <Router.IndexLink to='' activeClassName='active' onClick={this.reset_tabs}>
-                            <Bootstrap.Glyphicon glyph='home' /> Overview</Router.IndexLink>
+                        <IndexLink to='' activeClassName='active' onClick={this.reset_tabs}>
+                            <Bootstrap.Glyphicon glyph='home' /> Overview</IndexLink>
                         </li>
                         <li>
                         <NavLink to='providers' reset_tabs={this.reset_tabs}>

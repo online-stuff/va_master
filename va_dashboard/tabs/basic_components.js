@@ -1,4 +1,4 @@
-var React = require('react');
+import React, { Component } from 'react';
 var Bootstrap = require('react-bootstrap');
 var Network = require('../network');
 

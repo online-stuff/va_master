@@ -1,10 +1,10 @@
-var React = require('react');
+import React, { Component } from 'react';
 var Bootstrap = require('react-bootstrap');
-var connect = require('react-redux').connect;
+import {connect} from 'react-redux';
 var Network = require('../network');
-var ReactDOM = require('react-dom');
-var Router = require('react-router');
-var Select = require('react-select-plus');
+import {findDOMNode} from 'react-dom';
+import Select from 'react-select-plus';
+import {Table, Tr, Td} from 'reactable';
 
 var UserGroupPanel = React.createClass({
     getInitialState: function () {
@@ -135,17 +135,17 @@ var Users = React.createClass({
             var groups = user.groups.join(', ');
             var funcs = user.functions.join(', ');
             return (
-                <Reactable.Tr key={user.user}>
-                    <Reactable.Td column="Username">{user.user}</Reactable.Td>
-                    <Reactable.Td column="Groups">{groups}</Reactable.Td>
-                    <Reactable.Td column="Functions">{funcs}</Reactable.Td>
-                    <Reactable.Td column="Actions">
+                <Tr key={user.user}>
+                    <Td column="Username">{user.user}</Td>
+                    <Td column="Groups">{groups}</Td>
+                    <Td column="Functions">{funcs}</Td>
+                    <Td column="Actions">
                         <Bootstrap.DropdownButton bsStyle='primary' title="Choose" onSelect = {this.btn_clicked.bind(null, index)}>
                             <Bootstrap.MenuItem eventKey="remove">Remove</Bootstrap.MenuItem>
                             <Bootstrap.MenuItem eventKey="update">Update</Bootstrap.MenuItem>
                         </Bootstrap.DropdownButton>
-                    </Reactable.Td>
-                </Reactable.Tr>
+                    </Td>
+                </Tr>
             );
         }, this);
 
@@ -164,9 +164,9 @@ var Users = React.createClass({
             <div style={this.props.style} className="card">
                 {modal}
                 <div className="card-body">
-                    <Reactable.Table className="table striped" columns={['Username', 'Groups', 'Functions', 'Actions']} itemsPerPage={10} pageButtonLimit={10} noDataText="No matching records found." sortable={true} filterable={['Username', 'Groups', 'Functions', 'Actions']} btnName="Add user" btnClick={this.openModal} title="Dashboard Users" filterClassName="form-control" filterPlaceholder="Filter">
+                    <Table className="table striped" columns={['Username', 'Groups', 'Functions', 'Actions']} itemsPerPage={10} pageButtonLimit={10} noDataText="No matching records found." sortable={true} filterable={['Username', 'Groups', 'Functions', 'Actions']} btnName="Add user" btnClick={this.openModal} title="Dashboard Users" filterClassName="form-control" filterPlaceholder="Filter">
                         {user_rows}
-                    </Reactable.Table>
+                    </Table>
                 </div>
             </div> 
         );
@@ -242,16 +242,16 @@ var Groups = React.createClass({
         var group_rows = this.state.groups.map(function(group, index) {
             var funcs = group.functions.join(', ');
             return (
-                <Reactable.Tr key={group.func_name}>
-                    <Reactable.Td column="Group name">{group.func_name}</Reactable.Td>
-                    <Reactable.Td column="Functions">{funcs}</Reactable.Td>
-                    <Reactable.Td column="Actions">
+                <Tr key={group.func_name}>
+                    <Td column="Group name">{group.func_name}</Td>
+                    <Td column="Functions">{funcs}</Td>
+                    <Td column="Actions">
                         <Bootstrap.DropdownButton bsStyle='primary' title="Choose" onSelect = {this.btn_clicked.bind(null, index)}>
                             <Bootstrap.MenuItem eventKey="remove">Remove</Bootstrap.MenuItem>
                             <Bootstrap.MenuItem eventKey="update">Update</Bootstrap.MenuItem>
                         </Bootstrap.DropdownButton>
-                    </Reactable.Td>
-                </Reactable.Tr>
+                    </Td>
+                </Tr>
             );
         }, this);
 
@@ -270,9 +270,9 @@ var Groups = React.createClass({
             <div style={this.props.style} className="card">
                 {modal}
                 <div className="card-body">
-                    <Reactable.Table className="table striped" columns={['Group name', 'Functions', 'Actions']} itemsPerPage={10} pageButtonLimit={10} noDataText="No matching records found." sortable={true} filterable={['Group name', 'Functions', 'Actions']} btnName="Add group" btnClick={this.openModal} title="Dashboard Groups" filterClassName="form-control" filterPlaceholder="Filter">
+                    <Table className="table striped" columns={['Group name', 'Functions', 'Actions']} itemsPerPage={10} pageButtonLimit={10} noDataText="No matching records found." sortable={true} filterable={['Group name', 'Functions', 'Actions']} btnName="Add group" btnClick={this.openModal} title="Dashboard Groups" filterClassName="form-control" filterPlaceholder="Filter">
                         {group_rows}
-                    </Reactable.Table>
+                    </Table>
                 </div>
             </div>
         );
@@ -302,7 +302,7 @@ var Modal = React.createClass({
     },
 
     action: function(e) {
-        var elements = ReactDOM.findDOMNode(this.refs.forma).elements;
+        var elements = findDOMNode(this.refs.forma).elements;
         var data = {};
         for(i=0; i<elements.length; i++){
             data[elements[i].name] = elements[i].value;

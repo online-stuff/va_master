@@ -1,9 +1,9 @@
-var React = require('react');
+import React, { Component } from 'react';
 var Bootstrap = require('react-bootstrap');
-var connect = require('react-redux').connect;
+import {connect} from 'react-redux';
 var Network = require('../network');
-var ReactDOM = require('react-dom');
-var Router = require('react-router');
+import {findDOMNode} from 'react-dom';
+import {hashHistory} from 'react-router';
 
 var Store = React.createClass({
     getInitialState: function () {
@@ -26,7 +26,7 @@ var Store = React.createClass({
     launchApp: function (e){
         this.props.dispatch({type: 'LAUNCH', select: e.target.value});
         this.props.dispatch({type: 'OPEN_MODAL'});
-        Router.hashHistory.push('/servers');
+        hashHistory.push('/servers');
     },
     openModal: function () {
         this.props.dispatch({type: 'OPEN_MODAL'});
@@ -34,7 +34,7 @@ var Store = React.createClass({
     openPanel: function(e){
         var index = e.target.value;
         var state = this.state.states[index];
-        Router.hashHistory.push('/panel/' + state.panels[0].key + '/' + state.servers[0]);
+        hashHistory.push('/panel/' + state.panels[0].key + '/' + state.servers[0]);
     },
     render: function () {
         var states_rows = this.state.states.map(function(state, index) {
@@ -42,7 +42,7 @@ var Store = React.createClass({
             if(description.length > 106){
                 //desc = description.slice(0, 106);
                 //desc += '...';
-                popover = (
+                var popover = (
                     <Bootstrap.Popover id={'popover' + index} title="App description">
                         {description}
                     </Bootstrap.Popover>
@@ -150,18 +150,18 @@ var NewStateForm = React.createClass({
     },
     onSubmit: function(e) {
         e.preventDefault();
-        var str = ReactDOM.findDOMNode(this.refs.substates).value.trim();
+        var str = findDOMNode(this.refs.substates).value.trim();
         str = str.split(/[\s,]+/).join();
         var substates = str.split(",");
         var fd = new FormData();
-        fd.append('name', ReactDOM.findDOMNode(this.refs.name).value);
-        fd.append('version', ReactDOM.findDOMNode(this.refs.version).value);
-        fd.append('description', ReactDOM.findDOMNode(this.refs.description).value);
-        fd.append('icon', ReactDOM.findDOMNode(this.refs.icon).value);
-        fd.append('dependency', ReactDOM.findDOMNode(this.refs.dependency).value);
-        fd.append('path', ReactDOM.findDOMNode(this.refs.path).value);
+        fd.append('name', findDOMNode(this.refs.name).value);
+        fd.append('version', findDOMNode(this.refs.version).value);
+        fd.append('description', findDOMNode(this.refs.description).value);
+        fd.append('icon', findDOMNode(this.refs.icon).value);
+        fd.append('dependency', findDOMNode(this.refs.dependency).value);
+        fd.append('path', findDOMNode(this.refs.path).value);
         fd.append('substates', substates);
-        fd.append('file', ReactDOM.findDOMNode(this.refs.file).files[0]);
+        fd.append('file', findDOMNode(this.refs.file).files[0]);
         var me = this;
         Network.post_file('/api/state/add', this.props.auth.token, fd).done(function(data) {
             me.props.getStates();

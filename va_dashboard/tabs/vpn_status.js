@@ -1,10 +1,8 @@
-var React = require('react');
+import React, { Component } from 'react';
 var Bootstrap = require('react-bootstrap');
-var connect = require('react-redux').connect;
+import {connect} from 'react-redux';
 var Network = require('../network');
-var ReactDOM = require('react-dom');
-var Router = require('react-router');
-var Reactable = require('reactable');
+import {Table, Tr, Td} from 'reactable';
 
 var VpnStatus = React.createClass({
     getInitialState: function () {
@@ -34,13 +32,13 @@ var VpnStatus = React.createClass({
     render: function () {
         var status_rows = this.state.status.map(function(vpn) {
             return (
-                <Reactable.Tr key={vpn['Common Name']}>
-                    <Reactable.Td column="Name">{vpn['Common Name']}</Reactable.Td>
-                    <Reactable.Td column="Connected since">{vpn['Connected Since']}</Reactable.Td>
-                    <Reactable.Td column="Virtual IP">{vpn['Real Address']}</Reactable.Td>
-                    <Reactable.Td column="Bytes in">{vpn['Bytes Received']}</Reactable.Td>
-                    <Reactable.Td column="Bytes out">{vpn['Bytes Sent']}</Reactable.Td>
-                </Reactable.Tr>
+                <Tr key={vpn['Common Name']}>
+                    <Td column="Name">{vpn['Common Name']}</Td>
+                    <Td column="Connected since">{vpn['Connected Since']}</Td>
+                    <Td column="Virtual IP">{vpn['Real Address']}</Td>
+                    <Td column="Bytes in">{vpn['Bytes Received']}</Td>
+                    <Td column="Bytes out">{vpn['Bytes Sent']}</Td>
+                </Tr>
             );
         });
         var loading = this.state.loading;
@@ -56,9 +54,9 @@ var VpnStatus = React.createClass({
                 <span className="spinner" style={spinnerStyle} ><i className="fa fa-spinner fa-spin fa-3x" aria-hidden="true"></i></span>
                 <div style={blockStyle} className="card">
                     <div className="card-body">
-                        <Reactable.Table className="table table-striped" columns={['Name', 'Connected since', 'Virtual IP', 'Bytes in', 'Bytes out']} itemsPerPage={10} pageButtonLimit={10} noDataText="No matching records found." sortable={true} filterable={['Name', 'Connected since', 'Virtual IP', 'Bytes in', 'Bytes out']} title="VPN status" filterClassName="form-control" filterPlaceholder="Filter">
+                        <Table className="table table-striped" columns={['Name', 'Connected since', 'Virtual IP', 'Bytes in', 'Bytes out']} itemsPerPage={10} pageButtonLimit={10} noDataText="No matching records found." sortable={true} filterable={['Name', 'Connected since', 'Virtual IP', 'Bytes in', 'Bytes out']} title="VPN status" filterClassName="form-control" filterPlaceholder="Filter">
                         {status_rows}
-                        </Reactable.Table>
+                        </Table>
                     </div>
                 </div>
             </div>

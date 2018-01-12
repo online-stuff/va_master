@@ -1,14 +1,11 @@
-var React = require('react');
+import React, { Component } from 'react';
 var Bootstrap = require('react-bootstrap');
-var connect = require('react-redux').connect;
+import {connect} from 'react-redux';
 var Network = require('../network');
-var ReactDOM = require('react-dom');
-var Router = require('react-router');
-//var DatePicker = require('react-datepicker').default;
-var DateRangePicker = require('react-dates').DateRangePicker;
+import {DateRangePicker} from 'react-dates';
 var moment = require('moment');
-var Reactable = require('reactable');
-var Select = require('react-select-plus').default;
+import {Table, Tr, Td} from 'reactable';
+import Select from 'react-select-plus';
 
 var SEV = ["emerg", "alert", "crit", "err", "warning", "notice", "info", "debug"];
 var COLORS = ["#de4040", "#de4040", "#de4040", "#de4040", "#ffa726", "#777777", "#777777", "#777777"];
@@ -35,7 +32,7 @@ var Log = React.createClass({
         var me = this;
         this.ws.onmessage = function (evt) {
             var data = JSON.parse(evt.data);
-            var logs = [];
+            var logs = [], hosts = [];
             if(data.type === "update")
                 logs = me.state.logs.concat([data.message]);
             else if(data.type === "init")
@@ -86,7 +83,7 @@ var Log = React.createClass({
     render: function () {
         var TableRedux = connect(function(state){
             return {auth: state.auth, alert: state.alert};
-        })(Table);
+        })(LogTable);
         var DateRangeRedux = connect(function(state){
             return {auth: state.auth, alert: state.alert};
         })(DateRange);
@@ -184,7 +181,7 @@ var FilterBtns = React.createClass({
     }
 });
 
-var Table = React.createClass({
+var LogTable = React.createClass({
     getInitialState: function () {
         return {
             selected_log: {}
@@ -216,12 +213,12 @@ var Table = React.createClass({
             //if(this.state.selected_log.timestamp === log.timestamp)
             //    className = "info";
             return (
-                <Reactable.Tr key={log.timestamp} id={log.timestamp} className={className} onClick={this.rowSelected}>
-                    <Reactable.Td column="Timestamp" style={{minWidth: '100px'}}>{log.timestamp.substring(0,19).split('T').join(' ')}</Reactable.Td>
-                    <Reactable.Td column="Host">{log.host}</Reactable.Td>
-                    <Reactable.Td column="Severity">{log.severity}</Reactable.Td>
-                    <Reactable.Td column="Message" className="ellipsized-text2">{msg}</Reactable.Td>
-                </Reactable.Tr>
+                <Tr key={log.timestamp} id={log.timestamp} className={className} onClick={this.rowSelected}>
+                    <Td column="Timestamp" style={{minWidth: '100px'}}>{log.timestamp.substring(0,19).split('T').join(' ')}</Td>
+                    <Td column="Host">{log.host}</Td>
+                    <Td column="Severity">{log.severity}</Td>
+                    <Td column="Message" className="ellipsized-text2">{msg}</Td>
+                </Tr>
             );
         }.bind(this));
         var selected_log = [];
@@ -235,9 +232,9 @@ var Table = React.createClass({
         }
         var columns = ["Timestamp", "Host", "Severity", "Message"];
         return ( <div>
-            <Reactable.Table className="table striped card" columns={columns} itemsPerPage={10} pageButtonLimit={10} noDataText="No matching records found." sortable={true} filterable={columns} filterBy={this.props.filterBy} hideFilterInput>
+            <Table className="table striped card" columns={columns} itemsPerPage={10} pageButtonLimit={10} noDataText="No matching records found." sortable={true} filterable={columns} filterBy={this.props.filterBy} hideFilterInput>
                 {logs}
-            </Reactable.Table>
+            </Table>
         </div> );
     }
 });

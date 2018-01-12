@@ -1,13 +1,12 @@
-var React = require('react');
+import React, { Component } from 'react';
 var Bootstrap = require('react-bootstrap');
-var connect = require('react-redux').connect;
+import {connect} from 'react-redux';
 var Network = require('../network');
-var ReactDOM = require('react-dom');
+import {findDOMNode} from 'react-dom';
 var components = require('./basic_components');
-var Reactable = require('reactable');
-var Router = require('react-router');
-var LineChart = require("react-chartjs-2").Line;
-var defaults = require("react-chartjs-2").defaults;
+import {Table as Reactable, Tr, Th, Thead, Td} from 'reactable';
+import {hashHistory} from 'react-router';
+import {Line, defaults} from "react-chartjs-2";
 
 var Div = React.createClass({
 
@@ -46,7 +45,7 @@ var MultiTable = React.createClass({
 
     render: function () {
         var redux = {}, tables = [];
-        for(x in this.props.table){
+        for(var x in this.props.table){
             if(x !== "path"){
                 var elements = this.props.elements.map(function(element) {
                     element.name = x;
@@ -158,7 +157,7 @@ var Chart = React.createClass({
         return (
             <div>
                 <div className="panel_chart">
-                    <LineChart name="chart" height={200} data={this.state.chartData} options={this.state.chartOptions} redraw />
+                    <Line name="chart" height={200} data={this.state.chartData} options={this.state.chartOptions} redraw />
                 </div>
                 <div id="chartBtns">
                   <button className='btn btn-primary bt-sm chartBtn' onClick = {this.btn_click.bind(this, "-1h", "300", 'minute', 5)}>Last hour</button>
@@ -227,7 +226,7 @@ var Table = React.createClass({
             var newName = this.props.name.replace(/\s/g, "_");
             var newId = id[0].replace(/:/g, "_");
             var newId = newId.replace(/\s/g, "_");
-            Router.hashHistory.push('/chart_panel/' + this.props.panel.server + '/' + newName + '/' + newId);
+            hashHistory.push('/chart_panel/' + this.props.panel.server + '/' + newName + '/' + newId);
         }else if('modals' in this.props && evtKey in this.props.modals){
             if("readonly" in this.props){
                 var rows = this.props.table[this.props.name].filter(function(row) {
@@ -248,7 +247,7 @@ var Table = React.createClass({
             modal.refresh_action = this.props.source;
             this.props.dispatch({type: 'OPEN_MODAL', template: modal});
         }else if("panels" in this.props && evtKey in this.props.panels){
-            Router.hashHistory.push('/subpanel/' + this.props.panels[evtKey] + '/' + this.props.panel.server + '/' + id[0]);
+            hashHistory.push('/subpanel/' + this.props.panels[evtKey] + '/' + this.props.panel.server + '/' + id[0]);
         }else{
             var data = {"server_name": this.props.panel.server, "action": evtKey, "args": id};
             var me = this;
@@ -281,9 +280,9 @@ var Table = React.createClass({
         }
         args += linkVal;
         if("panels" in this.props && action in this.props.panels){
-            Router.hashHistory.push('/panel/' + this.props.panels[action] + '/' + this.props.panel.server + '/' + args);
+            hashHistory.push('/panel/' + this.props.panels[action] + '/' + this.props.panel.server + '/' + args);
         }else if("subpanels" in this.props && action in this.props.subpanels){
-            Router.hashHistory.push('/subpanel/' + this.props.subpanels[action] + '/' + this.props.panel.server + '/' + args);
+            hashHistory.push('/subpanel/' + this.props.subpanels[action] + '/' + this.props.panel.server + '/' + args);
         } else {
              var args = this.props.table.path.concat(linkVal);
              var data = {"server_name": this.props.panel.server, "action": action, "args": args};
@@ -321,7 +320,7 @@ var Table = React.createClass({
             }
             cols.push(tmp.key);
             tbl_cols[i] = (
-                <Reactable.Th key={tmp.key} column={tmp.key} style={style}>{tmp.label}</Reactable.Th>
+                <Th key={tmp.key} column={tmp.key} style={style}>{tmp.label}</Th>
             );
         }
         if(!tbl_id){
@@ -347,9 +346,9 @@ var Table = React.createClass({
             if(typeof row === "string"){
                 key = [this.props.name, row];
                 columns = (
-                    <Reactable.Td key={cols[0]} column={cols[0]}>
+                    <Td key={cols[0]} column={cols[0]}>
                         {row}
-                    </Reactable.Td>
+                    </Td>
                 );
             }else{
                 if(tbl_id instanceof Array){
@@ -361,7 +360,7 @@ var Table = React.createClass({
                     key = [row[tbl_id]];
                 }
                 columns = this.props.columns.map(function(col, index) {
-                    var key = col.key, colClass = "", colText = colVal = row[key];
+                    var key = col.key, colClass = "", colText = row[key], colVal = row[key];
                     if(typeof col.href !== 'undefined'){
                         colText = <a href={colVal} target='_blank'>Link</a>
                     }
@@ -378,15 +377,15 @@ var Table = React.createClass({
                         }
                     }
                     return (
-                        <Reactable.Td key={key} column={key} value={colVal}>
+                        <Td key={key} column={key} value={colVal}>
                             {colText}
-                        </Reactable.Td>
+                        </Td>
                     );
                 });
             }
             if(action_col){
                 action_col = (
-                    <Reactable.Td column="action">
+                    <Td column="action">
                         {action_length > 1 ? (
                             <Bootstrap.DropdownButton id={"dropdown-" + key[0]} bsStyle='primary' title="Choose" onSelect = {this.btn_clicked.bind(this, key)}>
                                 {actions}
@@ -396,7 +395,7 @@ var Table = React.createClass({
                                 {this.props.actions[0].name}
                             </Bootstrap.Button>
                         )}
-                    </Reactable.Td>
+                    </Td>
                 );
             }
             var rowClass = "";
@@ -404,10 +403,10 @@ var Table = React.createClass({
                 rowClass = "row-" + this.props.rowStyleCol + "-" + row[this.props.rowStyleCol];
             }
             return (
-                <Reactable.Tr className={rowClass} key={key}>
+                <Tr className={rowClass} key={key}>
                     {columns}
                     {action_col}
-                </Reactable.Tr>
+                </Tr>
             )
         }.bind(this));
         var filterBy = "";
@@ -420,18 +419,18 @@ var Table = React.createClass({
         }
         return (
             <div>
-            { pagination ? ( <Reactable.Table className={className} itemsPerPage={10} pageButtonLimit={10} noDataText="No matching records found." sortable={true} filterable={cols} >
-                <Reactable.Thead>
+            { pagination ? ( <Reactable className={className} itemsPerPage={10} pageButtonLimit={10} noDataText="No matching records found." sortable={true} filterable={cols} >
+                <Thead>
                     {tbl_cols}
-                </Reactable.Thead>
+                </Thead>
                 {rows}
-            </Reactable.Table> ) :
-            ( <Reactable.Table className={className} filterable={cols} filterBy={filterBy} noDataText="No matching records found." sortable={true} hideFilterInput >
-                <Reactable.Thead>
+            </Reactable> ) :
+            ( <Reactable className={className} filterable={cols} filterBy={filterBy} noDataText="No matching records found." sortable={true} hideFilterInput >
+                <Thead>
                     {tbl_cols}
-                </Reactable.Thead>
+                </Thead>
                 {rows}
-            </Reactable.Table> )}
+            </Reactable> )}
             </div>
         );
     }
@@ -442,7 +441,7 @@ var Modal = React.createClass({
 
     getInitialState: function () {
         var content = this.props.modal.template.content, data = [], checks = {};
-        for(j=0; j<content.length; j++){
+        for(var j=0; j<content.length; j++){
             if(content[j].type == "Form"){
                 var elem = content[j].elements;
                 for(i=0; i<elem.length; i++){
@@ -614,7 +613,7 @@ var Path = React.createClass({
 var Form = React.createClass({
 
     onSelect: function (action) {
-        var dropdown = ReactDOM.findDOMNode(this.refs.dropdown);
+        var dropdown = findDOMNode(this.refs.dropdown);
         var host = dropdown.value.trim();
         var d_name = dropdown.name;
         var data = {"server_name": this.props.panel.server, "action": action, "args": [host]};

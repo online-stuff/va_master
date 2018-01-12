@@ -1,13 +1,9 @@
-var React = require('react');
-var connect = require('react-redux').connect;
+import React, { Component } from 'react';
+import {connect} from 'react-redux';
+import {Chart, Doughnut, Bar, defaults} from "react-chartjs-2";
+import {Glyphicon} from 'react-bootstrap';
+import Graph from'react-graph-vis';
 var Network = require('../network');
-var Chart = require("react-chartjs-2").Chart;
-var DoughnutChart = require("react-chartjs-2").Doughnut;
-var BarChart = require("react-chartjs-2").Bar;
-var defaults = require("react-chartjs-2").defaults;
-var Bootstrap = require('react-bootstrap');
-var ReactDOM = require('react-dom');
-var Graph = require('react-graph-vis').default;
 
 Chart.defaults.global.defaultFontFamily = 'Ubuntu';
 Chart.pluginService.register({
@@ -337,9 +333,9 @@ var ProviderRows = React.createClass({
             <div className="provider-billing-block card panel-default custom-panel" style={{marginBottom: '0px'}}>
                 <div className="panel-heading">{provider.name + " / Instances: " + provider.servers.length}</div>
                 <div className="panel-body">
-                    <Bootstrap.Glyphicon glyph='arrow-left' onClick={this.prevProvider}></Bootstrap.Glyphicon>
+                    <Glyphicon glyph='arrow-left' onClick={this.prevProvider}></Glyphicon>
                     <ProviderRedux key={provider.name} title={provider.name} chartData={provider.servers} provider_usage={provider.provider_usage} />
-                    <Bootstrap.Glyphicon glyph='arrow-right' onClick={this.nextProvider}></Bootstrap.Glyphicon>
+                    <Glyphicon glyph='arrow-right' onClick={this.nextProvider}></Glyphicon>
                 </div>
             </div>
         );
@@ -369,7 +365,7 @@ var DoughnutComponent = React.createClass({
     render: function() {
         return (
             <div className="chart">
-                <DoughnutChart data={this.state.chartData} options={this.state.chartOptions}/>
+                <Doughnut data={this.state.chartData} options={this.state.chartOptions}/>
             </div>
         );
     }
@@ -404,7 +400,7 @@ var Log = React.createClass({
         }
         var logs_limit = 3, brojac=0, log_rows = [];
         for(var i=0; i<logs.length; i++){
-            log = logs[i];
+            var log = logs[i];
             var logClass = log.severity == "warning" ? "text-warning" : (log.severity == "err" || log.severity == "critical" || log.severity == "emergency") ? "text-danger" : "text-info";
             var timestamp = new Date(log.timestamp);
             if(timestamp.getTime() > prevHourTs){
@@ -417,7 +413,7 @@ var Log = React.createClass({
                     datasets[index].data[datasets[index].data.length - 1] += 1;
                 }else{
                     times.push(timestamp);
-                    for(j=0; j<category.length; j++){
+                    for(var j=0; j<category.length; j++){
                         if(category[j] == logLabel){
                             datasets[j].data.push(1);
                         }else{
@@ -524,7 +520,7 @@ var LogChart = React.createClass({
     render: function() {
         return (
             <div className="log-chart">
-                <BarChart data={this.state.chartData} options={this.state.chartOptions} redraw />
+                <Bar data={this.state.chartData} options={this.state.chartOptions} redraw />
             </div>
         );
     }

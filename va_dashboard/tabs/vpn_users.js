@@ -1,10 +1,10 @@
-var React = require('react');
+import React, { Component } from 'react';
 var Bootstrap = require('react-bootstrap');
-var connect = require('react-redux').connect;
+import {connect} from 'react-redux';
 var Network = require('../network');
-var ReactDOM = require('react-dom');
-var Router = require('react-router');
-var Reactable = require('reactable');
+import {findDOMNode} from 'react-dom';
+import {hashHistory} from 'react-router';
+import {Table, Tr, Td} from 'reactable';
 
 var VpnUsers = React.createClass({
     getInitialState: function () {
@@ -68,7 +68,7 @@ var VpnUsers = React.createClass({
                 });
                 break;
             case "list":
-                Router.hashHistory.push('/vpn/list_logins/' + username);
+                hashHistory.push('/vpn/list_logins/' + username);
                 break;
             default:
                 break;
@@ -87,26 +87,26 @@ var VpnUsers = React.createClass({
             return true;
         }.bind(this)).map(function(vpn, i) {
             return (
-                <Reactable.Tr key={vpn.name}>
-                    <Reactable.Td column="Name">{vpn.name}</Reactable.Td>
-                    <Reactable.Td column="Connected">{vpn.connected?"True":"False"}</Reactable.Td>
-                    <Reactable.Td column="Actions">
+                <Tr key={vpn.name}>
+                    <Td column="Name">{vpn.name}</Td>
+                    <Td column="Connected">{vpn.connected?"True":"False"}</Td>
+                    <Td column="Actions">
                         <Bootstrap.DropdownButton id={"dropdown-" + vpn.name} bsStyle='default' title="Choose" onSelect = {this.btn_clicked.bind(this, vpn.name)}>
                             <Bootstrap.MenuItem eventKey="download">Download certificate</Bootstrap.MenuItem>
                             <Bootstrap.MenuItem eventKey="revoke">Revoke user</Bootstrap.MenuItem>
                             <Bootstrap.MenuItem eventKey="list">List logins</Bootstrap.MenuItem>
                         </Bootstrap.DropdownButton>
-                    </Reactable.Td>
-                </Reactable.Tr>
+                    </Td>
+                </Tr>
             );
         }.bind(this));
 
         var revoked_rows = this.state.revoked.map(function(vpn) {
             return (
-                <Reactable.Tr key={vpn}>
-                    <Reactable.Td column="Name">{vpn}</Reactable.Td>
-                    <Reactable.Td column="Connected">False</Reactable.Td>
-                </Reactable.Tr>
+                <Tr key={vpn}>
+                    <Td column="Name">{vpn}</Td>
+                    <Td column="Connected">False</Td>
+                </Tr>
             );
         });
         var a_len = active_rows.length, r_len = revoked_rows.length;
@@ -133,16 +133,16 @@ var VpnUsers = React.createClass({
                 <div style={blockStyle} className="container-block">
                     <div className="block card">
                         <div className="card-body">
-                            <Reactable.Table className="table table-striped" columns={['Name', 'Connected', 'Actions']} itemsPerPage={rowNum} pageButtonLimit={10} noDataText="No matching records found." sortable={sf_cols} filterable={sf_cols} btnName="Add user" btnClick={this.openModal} title="Active users" filterClassName="form-control custpm-filter-input" filterPlaceholder="Filter">
+                            <Table className="table table-striped" columns={['Name', 'Connected', 'Actions']} itemsPerPage={rowNum} pageButtonLimit={10} noDataText="No matching records found." sortable={sf_cols} filterable={sf_cols} btnName="Add user" btnClick={this.openModal} title="Active users" filterClassName="form-control custpm-filter-input" filterPlaceholder="Filter">
                                 {active_rows}
-                            </Reactable.Table>
+                            </Table>
                         </div>
                     </div>
                     <div className="block card">
                         <div className="card-body">
-                            <Reactable.Table id="revoked-tbl" className="table table-striped" columns={['Name', 'Connected']} itemsPerPage={rowNum} pageButtonLimit={10} noDataText="No matching records found." sortable={true} filterable={['Name', 'Connected']} title="Revoked users" filterClassName="form-control custpm-filter-input" filterPlaceholder="Filter">
+                            <Table id="revoked-tbl" className="table table-striped" columns={['Name', 'Connected']} itemsPerPage={rowNum} pageButtonLimit={10} noDataText="No matching records found." sortable={true} filterable={['Name', 'Connected']} title="Revoked users" filterClassName="form-control custpm-filter-input" filterPlaceholder="Filter">
                                 {revoked_rows}
-                            </Reactable.Table>
+                            </Table>
                         </div>
                     </div>
                 </div>
@@ -164,8 +164,8 @@ var Modal = React.createClass({
     action: function(e) {
         console.log(e.target);
         console.log(this.refs.forma);
-        console.log(ReactDOM.findDOMNode(this.refs.forma).elements);
-        var elements = ReactDOM.findDOMNode(this.refs.forma).elements;
+        console.log(findDOMNode(this.refs.forma).elements);
+        var elements = findDOMNode(this.refs.forma).elements;
         var data = {};
         for(i=0; i<elements.length; i++){
             data[elements[i].name] = elements[i].value;

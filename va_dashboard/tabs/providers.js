@@ -1,8 +1,8 @@
-var React = require('react');
+import React, { Component } from 'react';
 var Bootstrap = require('react-bootstrap');
 var Network = require('../network');
-var connect = require('react-redux').connect;
-var Reactable = require('reactable');
+import {connect} from 'react-redux';
+import {Table, Tr, Td} from 'reactable';
 
 var Providers = React.createClass({
     getInitialState: function () {
@@ -53,16 +53,16 @@ var Providers = React.createClass({
                 className = "danger row-provider-Offline";
             }
             return (
-                <Reactable.Tr key={provider.provider_name} className={className}>
-                    <Reactable.Td column="Provider name">{provider.provider_name}</Reactable.Td>
-                    <Reactable.Td column="IP">{provider.provider_ip}</Reactable.Td>
-                    <Reactable.Td column="Instances">{provider.servers.length}</Reactable.Td>
-                    <Reactable.Td column="Driver">{provider.driver_name}</Reactable.Td>
-                    <Reactable.Td column="Status">{status}</Reactable.Td>
-                    <Reactable.Td column="Actions"><Bootstrap.Button type="button" bsStyle='primary' onClick={this.confirm_action} value={provider.provider_name}>
+                <Tr key={provider.provider_name} className={className}>
+                    <Td column="Provider name">{provider.provider_name}</Td>
+                    <Td column="IP">{provider.provider_ip}</Td>
+                    <Td column="Instances">{provider.servers.length}</Td>
+                    <Td column="Driver">{provider.driver_name}</Td>
+                    <Td column="Status">{status}</Td>
+                    <Td column="Actions"><Bootstrap.Button type="button" bsStyle='primary' onClick={this.confirm_action} value={provider.provider_name}>
                         Delete
-                    </Bootstrap.Button></Reactable.Td>
-                </Reactable.Tr>
+                    </Bootstrap.Button></Td>
+                </Tr>
             );
         }.bind(this));
         var NewProviderFormRedux = connect(function(state){
@@ -81,9 +81,9 @@ var Providers = React.createClass({
             <span className="spinner" style={spinnerStyle} ><i className="fa fa-spinner fa-spin fa-3x" aria-hidden="true"></i></span>
             <div style={blockStyle} className="card">
                 <div className="card-body">
-                    <Reactable.Table className="table striped" columns={['Provider name', 'IP', 'Instances', 'Driver', 'Status', 'Actions']} itemsPerPage={10} pageButtonLimit={10} noDataText="No matching records found." sortable={sf_cols} filterable={sf_cols} btnName="Add provider" btnClick={this.addProvider} title="Current providers" filterClassName="form-control" filterPlaceholder="Filter">
+                    <Table className="table striped" columns={['Provider name', 'IP', 'Instances', 'Driver', 'Status', 'Actions']} itemsPerPage={10} pageButtonLimit={10} noDataText="No matching records found." sortable={sf_cols} filterable={sf_cols} btnName="Add provider" btnClick={this.addProvider} title="Current providers" filterClassName="form-control" filterPlaceholder="Filter">
                         {provider_rows}
-                    </Reactable.Table>
+                    </Table>
                 </div>
             </div>
             <ConfirmPopup show={this.state.popupShow} data={this.state.popupData} close={this.popupClose} action={this.deleteProvider} />
