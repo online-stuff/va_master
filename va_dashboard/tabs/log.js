@@ -33,8 +33,14 @@ var Log = React.createClass({
         this.ws.onmessage = function (evt) {
             var data = JSON.parse(evt.data);
             var logs = [], hosts = [];
-            if(data.type === "update")
-                logs = me.state.logs.concat([data.message]);
+            if(data.type === "update"){
+                let log = data.message, host = log.host; 
+                hosts = me.state.hosts;
+                logs = me.state.logs.concat([log]);
+                let h = hosts.map((host) => host.value);
+                if(!host in h)
+                    hosts.push({value: host, label: host});
+            }
             else if(data.type === "init")
                 logs = data.logs, hosts = data.hosts;
             me.setState({logs: logs, hosts: hosts, selected_hosts: hosts});
