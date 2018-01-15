@@ -6,6 +6,9 @@ import functools
 import salt
 from pbkdf2 import crypt
 
+
+from va_master.consul_kv.datastore import KeyNotFound, StoreError
+
 # TODO: Check if the implementation of the `pbkdf2` lib is credible,
 # and if the library is maintained and audited. May switch to bcrypt.
 
@@ -30,7 +33,7 @@ def get_or_create_token(datastore_handler, username, user_type = 'admin'):
     try:
         token_doc = yield datastore_handler.get_object('by_username', user_type = user_type, username = username)
         found = True
-    except datastore_handler.datastore.KeyNotFound:
+    except KeyNotFound:
         doc = {
             'token': uuid.uuid4().hex,
             'username': username
@@ -115,7 +118,7 @@ def create_user(datastore_handler, username, password, user_type = 'user'):
         'timestamp_created': long(time.time())
     }
     yield datastore_handler.create_user(user, user_type)
-    token = yield get_or_create_token(datastore_handler.datastore, username, user_type = user_type)
+    token = yield get_or_create_token(datastore_handler, username, user_type = user_type)
 
     raise tornado.gen.Return(token)
 

@@ -7,6 +7,9 @@ import tornado.gen
 
 from pbkdf2 import crypt
 
+from va_master.consul_kv.datastore import KeyNotFound, StoreError
+
+
 #def compare_dicts(d1, d2):
 #    for key in d1:
 #        if key not in d2 or type(d1.get(key)) != type(d2.get(key)):
