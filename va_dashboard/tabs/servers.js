@@ -550,8 +550,12 @@ var HostStep = React.createClass({
 
 var ServerForm = React.createClass({
     getInitialState: function () {
-        var provider_name = this.props.providers.length > 0 ? this.props.providers[0].provider_name : "";
-        return {role: this.props.role, provider_name: provider_name, step2: false, standalone: false, stepIndex: 1, isLoading: false, errors: [], server_name: "", status: 'none', btnDisable: false};
+        var provider_name = "", standalone = true;
+        if(this.props.providers.length > 0){
+            provider_name = this.props.providers[0].provider_name;
+            standalone = false;
+        }
+        return {role: this.props.role, provider_name: provider_name, step2: false, standalone: standalone, stepIndex: 1, isLoading: false, errors: [], server_name: "", status: 'none', btnDisable: false};
     },
 
     onChangeRole: function(e) {
@@ -678,7 +682,7 @@ var ServerForm = React.createClass({
                                     <div className="col-sm-12">
                                         <div className="checkbox" style={{paddingLeft: "15px"}}>
                                             <label>
-                                                <input type="checkbox" onChange={this.toggleStandalone} />
+                                                <input type="checkbox" defaultChecked={this.state.standalone} onChange={this.toggleStandalone} />
                                                 Standalone?
                                             </label>
                                         </div>
