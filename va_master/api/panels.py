@@ -62,7 +62,6 @@ def panel_action_execute(handler, server_name, action, args = [], dash_user = ''
 
     if dash_user.get('username'):
         user_funcs = yield datastore_handler.get_user_salt_functions(dash_user['username'])
-        user_funcs = user_funcs.get(state)
         if action not in user_funcs and dash_user['type'] != 'admin':
             print ('Function not supported')
             raise Exception('User attempting to execute a salt function but does not have permission. ')

@@ -38,12 +38,14 @@ PROVIDER_TEMPLATE = '''VAR_PROVIDER_NAME:
   compute_region: VAR_REGION
 '''
 
+
 PROFILE_TEMPLATE = '''VAR_PROFILE_NAME:
     provider: VAR_PROVIDER_NAME
     image: VAR_IMAGE
     size: VAR_SIZE
     securitygroups: VAR_SEC_GROUP
     ssh_username: VAR_USERNAME
+
     minion:
         master: VAR_THIS_IP
         grains:
