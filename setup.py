@@ -22,6 +22,7 @@ setuptools.setup(
     'google-api-python-client',
     'paramiko', #for ssh connections
     'reportlab', #For generating PDF files
+    'coloredlogs', #For pretty log printing. Can be left out in unsupported terminals. 
   ],
   zip_safe=False,
   entry_points = {

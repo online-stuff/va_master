@@ -70,7 +70,7 @@ class ApiHandler(tornado.web.RequestHandler):
         if type(result) == str: 
             has_error =  any([i in result for i in exceptions])
             if has_error: 
-                print ('Salt error: ', result)
+                self.config.logger.error('Salt error: ' + result)
             return has_error
         else: return False
 
@@ -89,8 +89,7 @@ class ApiHandler(tornado.web.RequestHandler):
     def fetch_func(self, method, path, data):
         try:
             api_func = self.paths[method].get(path)
-
-            print ('Getting a call at ', path, ' with data ', data, ' and will call function: ', api_func)
+            self.config.logger.info('Getting a call at ' + str(path) + ' with data ' + str(data) + ' and will call function: ' + str(api_func))
     
             if not api_func: 
                 api_func = {'function' : invalid_url, 'args' : ['path', 'method']}
@@ -168,6 +167,7 @@ class ApiHandler(tornado.web.RequestHandler):
                 error_msg = yield self.check_arguments(api_func, api_args, api_kwargs.keys())
                 if error_msg: 
                     raise TypeError("Function raised a TypeError exception - maybe caused by bad arguments. " + error_msg)
+                raise
 
             if type(result) == dict: 
                 if result.get('data_type', 'json') == 'file' : 
@@ -181,9 +181,9 @@ class ApiHandler(tornado.web.RequestHandler):
         except tornado.gen.Return: 
             raise
         except Exception as e: 
+            self.config.logger.error('An error occured performing request. Function was %s and data was %s. ' % (str(api_func), str(data)))
             import traceback
             traceback.print_exc()
-
             result = {'success' : False, 'message' : 'There was an error performing a request : ' + str(e.message), 'data' : {}}
         raise tornado.gen.Return(result)
         
@@ -207,7 +207,6 @@ class ApiHandler(tornado.web.RequestHandler):
             }
 
             user = yield get_current_user(self)
-            print ('Data is : ', data)
             data['dash_user'] = user
 
             api_func = self.fetch_func(method, path, data)
@@ -322,7 +321,6 @@ class ApiHandler(tornado.web.RequestHandler):
             if not data:
                 break
 
-            print ('Data is : ', len(data))
 
             if type(data) == str:
                 print ('Writing data')
@@ -401,8 +399,14 @@ class LogMessagingSocket(tornado.websocket.WebSocketHandler):
     #Socket gets messages when opened
     @tornado.web.asynchronous
     @tornado.gen.engine
-    def open(self, no_messages = 0, log_path = '/var/log/vapourapps/', log_file = 'va-master.log'):
-        print ('Trying to open socket. ')
+    def open(self, config, no_messages = 0, log_path = '/var/log/vapourapps/', log_file = 'va-master.log'):
+        print ('Opening socket!')
+        try:
+            self.config.logger.info('Opening socket. ')
+        except: 
+            print ('Wuuut')
+            import traceback
+            traceback.print_exc()
         try: 
             self.logfile = log_path + log_file
             try:
@@ -449,7 +453,7 @@ class LogMessagingSocket(tornado.websocket.WebSocketHandler):
 
     @tornado.gen.coroutine
     def on_message(self, message): 
-        print ('I am receiving message : ', message)
+        self.config.logger.info('Received websocket message : %s' % (str(message)))
         try:
             message = json.loads(message)
         except: 
@@ -457,7 +461,6 @@ class LogMessagingSocket(tornado.websocket.WebSocketHandler):
             raise tornado.gen.Return(None)
 
         try:
-            print ('Message is : ', message)
             message_handlers = {
                         'init' : self.handle_init_message, 
                         'get_messages' : self.handle_get_messages, 

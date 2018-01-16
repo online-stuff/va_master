@@ -9,6 +9,12 @@ from socket import gethostname
 from pprint import pprint
 from time import gmtime, mktime
 
+#We use coloredlogs for limited prettier output. It may not be available for all terminals. 
+try:
+    import coloredlogs
+except ImportError: 
+    coloredlogs = None 
+
 def generate_keys(master_config, crt_path, key_path):
     k = crypto.PKey()
     k.generate_key(crypto.TYPE_RSA, 1024)
@@ -36,6 +42,9 @@ def generate_keys(master_config, crt_path, key_path):
 def bootstrap(master_config):
     """Starts the master with all its components, and provides the configuration
     data to all the components."""
+
+    if coloredlogs: 
+        coloredlogs.install(logger = master_config.logger)
 
     master_config.logger.info('Bootstrap initiated. ')
     app = httpserver.get_app(master_config)
