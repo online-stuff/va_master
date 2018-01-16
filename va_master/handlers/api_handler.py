@@ -396,35 +396,40 @@ class LogHandler(FileSystemEventHandler):
 
 class LogMessagingSocket(tornado.websocket.WebSocketHandler):
 
+
+    def initialize(self, config):
+        self.config = config
+
     #Socket gets messages when opened
     @tornado.web.asynchronous
     @tornado.gen.engine
-    def open(self, config, no_messages = 0, log_path = '/var/log/vapourapps/', log_file = 'va-master.log'):
-        print ('Opening socket!')
-        try:
-            self.config.logger.info('Opening socket. ')
-        except: 
-            print ('Wuuut')
-            import traceback
-            traceback.print_exc()
+    def open(self, config = None, no_messages = 0, log_path = '/var/log/vapourapps/', log_file = 'va-master.log'):
+        self.config.logger.info('Opening socket. ')
         try: 
             self.logfile = log_path + log_file
             try:
                 with open(self.logfile) as f: 
                     self.messages = f.read().split('\n')
+                    self.messages = [x for x in self.messages if x]
             except: 
+                self.config.logger.warning('Could not open %s and read messages. Returning empty list. ' % self.logfile)
                 self.messages = []
+
             json_msgs = []
             for message in self.messages: 
                 try:
                     j_msg = json.loads(message)
                 except: 
+                    self.config.logger.warning('Found a non-json message in log : %s; Will ignore it. ' % (message))
                     continue
+
                 json_msgs.append(j_msg)
+
             self.messages = json_msgs 
             yesterday = datetime.datetime.now() + dateutil.relativedelta.relativedelta(days = -1)
 
             init_messages = self.get_messages(yesterday, datetime.datetime.now())
+
             hosts = list(set([x.get('host') for x in init_messages if x.get('host')]))
 
             msg = {"type" : "init", "logs" : init_messages, 'hosts' : hosts}
