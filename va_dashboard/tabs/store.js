@@ -5,38 +5,43 @@ var Network = require('../network');
 import {findDOMNode} from 'react-dom';
 import {hashHistory} from 'react-router';
 
-var Store = React.createClass({
-    getInitialState: function () {
-        return {states: []};
-    },
+class Store extends Component {
+    constructor (props) {
+        super(props);
+        this.state = {states: []};
+        this.getCurrentStates = this.getCurrentStates.bind(this);
+        this.launchApp = this.launchApp.bind(this);
+        this.openModal = this.openModal.bind(this);
+        this.openPanel = this.openPanel.bind(this);
+    }
 
-    getCurrentStates: function () {
+    getCurrentStates () {
         var me = this;
         Network.get('/api/states', this.props.auth.token).done(function (data) {
             me.setState({states: data});
         }).fail(function (msg) {
             me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
         });
-    },
+    }
 
-    componentDidMount: function () {
+    componentDidMount () {
         this.getCurrentStates();
-    },
+    }
 
-    launchApp: function (e){
+    launchApp (e){
         this.props.dispatch({type: 'LAUNCH', select: e.target.value});
         this.props.dispatch({type: 'OPEN_MODAL'});
         hashHistory.push('/servers');
-    },
-    openModal: function () {
+    }
+    openModal () {
         this.props.dispatch({type: 'OPEN_MODAL'});
-    },
-    openPanel: function(e){
+    }
+    openPanel(e){
         var index = e.target.value;
         var state = this.state.states[index];
         hashHistory.push('/panel/' + state.panels[0].key + '/' + state.servers[0]);
-    },
-    render: function () {
+    }
+    render () {
         var states_rows = this.state.states.map(function(state, index) {
             var description = state.description;
             if(description.length > 106){
@@ -91,21 +96,21 @@ var Store = React.createClass({
             </div>
         );
     }
-});
+}
 
-var NewStateForm = React.createClass({
-    close: function() {
+class NewStateForm extends Component {
+    close() {
         this.props.dispatch({type: 'CLOSE_MODAL'});
-    },
-    render: function () {
+    }
+    render() {
         return (
-            <Bootstrap.Modal show={this.props.modal.isOpen} onHide={this.close}>
+            <Bootstrap.Modal show={this.props.modal.isOpen} onHide={() => this.close()}>
                 <Bootstrap.Modal.Header closeButton>
                   <Bootstrap.Modal.Title>Add new state</Bootstrap.Modal.Title>
                 </Bootstrap.Modal.Header>
 
                 <Bootstrap.Modal.Body>
-                    <form onSubmit={this.onSubmit} ref="uploadForm" encType="multipart/form-data" style={{width: '100%', padding: '0 20px'}}>
+                    <form onSubmit={(e) => this.onSubmit(e)} ref="uploadForm" encType="multipart/form-data" style={{width: '100%', padding: '0 20px'}}>
                         <Bootstrap.FormGroup>
                             <Bootstrap.ControlLabel >App name</Bootstrap.ControlLabel>
                             <Bootstrap.FormControl type='text' ref="name" />
@@ -147,8 +152,8 @@ var NewStateForm = React.createClass({
                 </Bootstrap.Modal.Body>
             </Bootstrap.Modal>);
 
-    },
-    onSubmit: function(e) {
+    }
+    onSubmit(e) {
         e.preventDefault();
         var str = findDOMNode(this.refs.substates).value.trim();
         str = str.split(/[\s,]+/).join();
@@ -169,7 +174,7 @@ var NewStateForm = React.createClass({
             me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
         });
     }
-});
+}
 
 Store = connect(function(state){
     return {auth: state.auth, apps: state.apps, alert: state.alert};

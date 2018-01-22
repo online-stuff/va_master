@@ -4,32 +4,34 @@ import {connect} from 'react-redux';
 var Network = require('../network');
 import {Table, Tr, Td} from 'reactable';
 
-var VpnStatus = React.createClass({
-    getInitialState: function () {
-        return {
+class VpnStatus extends Component {
+    constructor (props) {
+        super(props);
+        this.state = {
             status: [],
             loading: true
         };
-    },
+        this.getCurrentVpns = this.getCurrentVpns.bind(this);
+    }
 
-    getCurrentVpns: function () {
+    getCurrentVpns () {
         var me = this;
         Network.get('/api/apps/vpn_users', this.props.auth.token).done(function (data) {
             me.setState({status: data.status, loading: false});
         }).fail(function (msg) {
             me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
         });
-    },
+    }
 
-    componentDidMount: function () {
+    componentDidMount () {
         this.getCurrentVpns();
-    },
+    }
 
     /*componentWillUnmount: function () {
         this.props.dispatch({type: 'RESET_TABS'});
     },*/
 
-    render: function () {
+    render () {
         var status_rows = this.state.status.map(function(vpn) {
             return (
                 <Tr key={vpn['Common Name']}>
@@ -62,7 +64,7 @@ var VpnStatus = React.createClass({
             </div>
         );
     }
-});
+}
 
 VpnStatus = connect(function(state){
     return {auth: state.auth, alert: state.alert};

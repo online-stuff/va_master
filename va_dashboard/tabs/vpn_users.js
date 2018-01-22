@@ -6,37 +6,42 @@ import {findDOMNode} from 'react-dom';
 import {hashHistory} from 'react-router';
 import {Table, Tr, Td} from 'reactable';
 
-var VpnUsers = React.createClass({
-    getInitialState: function () {
-        return {
+class VpnUsers extends Component {
+    constructor (props) {
+        super(props);
+        this.state = {
             active: [],
             revoked: [],
             loading: true,
         };
-    },
+        this.getCurrentVpns = this.getCurrentVpns.bind(this);
+        this.addVpn = this.addVpn.bind(this);
+        this.btn_clicked = this.btn_clicked.bind(this);
+        this.openModal = this.openModal.bind(this);
+    }
 
-    getCurrentVpns: function () {
+    getCurrentVpns () {
         var me = this;
         Network.get('/api/apps/vpn_users', this.props.auth.token).done(function (data) {
             me.setState({active: data.active, revoked: data.revoked, loading: false});
         }).fail(function (msg) {
             me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
         });
-    },
+    }
 
-    addVpn: function (username) {
+    addVpn (username) {
         this.setState({active: this.state.active.concat([{"connected": false, "name": username}])});
-    },
+    }
 
-    componentDidMount: function () {
+    componentDidMount () {
         this.getCurrentVpns();
-    },
+    }
 
     /*componentWillUnmount: function () {
         this.props.dispatch({type: 'RESET_TABS'});
     },*/
 
-    btn_clicked: function(username, evtKey){
+    btn_clicked (username, evtKey) {
         var data = {username: username};
         var me = this;
         switch (evtKey) {
@@ -73,13 +78,13 @@ var VpnUsers = React.createClass({
             default:
                 break;
         }
-    },
+    }
 
-    openModal: function() {
+    openModal() {
         this.props.dispatch({type: 'OPEN_MODAL'});
-    },
+    }
 
-    render: function () {
+    render () {
         var active_rows = this.state.active.filter(function(vpn) {
             if(this.state.revoked.indexOf(vpn.name) > -1){
                 return false;
@@ -149,19 +154,19 @@ var VpnUsers = React.createClass({
             </div>
         );
     }
-});
+}
 
-var Modal = React.createClass({
+class Modal extends Component {
 
-    open: function() {
+    open() {
         this.props.dispatch({type: 'OPEN_MODAL'});
-    },
+    }
 
-    close: function() {
+    close() {
         this.props.dispatch({type: 'CLOSE_MODAL'});
-    },
+    }
 
-    action: function(e) {
+    action(e) {
         console.log(e.target);
         console.log(this.refs.forma);
         console.log(findDOMNode(this.refs.forma).elements);
@@ -180,9 +185,9 @@ var Modal = React.createClass({
         }).fail(function (msg) {
             me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
         });
-    },
+    }
 
-    render: function () {
+    render () {
         return (
             <Bootstrap.Modal show={this.props.modal.isOpen} onHide={this.close}>
             <Bootstrap.Modal.Header closeButton>
@@ -210,7 +215,7 @@ var Modal = React.createClass({
         </Bootstrap.Modal>
         );
     }
-});
+}
 
 VpnUsers = connect(function(state){
     return {auth: state.auth, alert: state.alert};

@@ -4,40 +4,46 @@ var Network = require('../network');
 import {connect} from 'react-redux';
 import {Table, Tr, Td} from 'reactable';
 
-var Providers = React.createClass({
-    getInitialState: function () {
-        return {providers: [], loading: true, popupShow: false, popupData: {}};
-    },
-    getCurrentProviders: function () {
+class Providers extends Component {
+    constructor (props) {
+        super(props);
+        this.state = {providers: [], loading: true, popupShow: false, popupData: {}};
+        this.getCurrentProviders = this.getCurrentProviders.bind(this);
+        this.confirm_action = this.confirm_action.bind(this);
+        this.deleteProvider = this.deleteProvider.bind(this);
+        this.addProvider = this.addProvider.bind(this);
+        this.popupClose = this.popupClose.bind(this);
+    }
+    getCurrentProviders () {
         var me = this;
         Network.post('/api/providers', this.props.auth.token, {}).done(function (data) {
             me.setState({providers: data.providers, loading: false});
         }).fail(function (msg) {
             me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
         });
-    },
-    componentDidMount: function () {
+    }
+    componentDidMount() {
         this.getCurrentProviders();
-    },
-    confirm_action: function(e){
+    }
+    confirm_action(e){
         var data = {"provider_name": e.target.value};
         this.setState({popupShow: true, popupData: data});
-    },
-    deleteProvider: function (data){
+    }
+    deleteProvider (data){
         var me = this;
-        /*Network.post('/api/providers/delete', this.props.auth.token, data).done(function(data) {
+        Network.post('/api/providers/delete', this.props.auth.token, data).done(function(data) {
             me.getCurrentProviders();
         }).fail(function (msg) {
             me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
-        });*/
-    },
-    addProvider: function () {
+        });
+    }
+    addProvider () {
         this.props.dispatch({type: 'OPEN_MODAL'});
-    },
-    popupClose: function() {
+    }
+    popupClose() {
         this.setState({popupShow: false});
-    },
-    render: function() {
+    }
+    render() {
         var provider_rows = this.state.providers.map(function(provider) {
             var status = "", className = "";
             if(provider.status.success){
@@ -89,72 +95,73 @@ var Providers = React.createClass({
             <ConfirmPopup show={this.state.popupShow} data={this.state.popupData} close={this.popupClose} action={this.deleteProvider} />
         </div>);
     }
-});
+}
 
-var ProviderStep = React.createClass({
-    render: function () {
-        var fields = [];
-        for(var i = 0; i < this.props.fields.length; i++) {
-            var field = this.props.fields[i];
-            var formControl = null;
-            var notAField = false;
-            if(field.type === 'str') {
-                formControl = <Bootstrap.FormControl type='text' key={field.id} id={field.id} value={this.props.fieldValues[field.id]} onChange={this.onChange} />;
-            } else if(field.type === 'options') {
-                formControl = (
-                    <Bootstrap.FormControl componentClass='select' key={field.id} id={field.id} onChange={this.onChange}>
-                        <option key={-1} value=''>Choose</option>
-                        {this.props.optionChoices[field.id].map(function(option, i) {
-                            return <option key={i} value={option}>{option}</option>
-                        })}
-                    </Bootstrap.FormControl>
-                );
-            } else if(field.type === 'description'){
-                notAField = true;
-                formControl = (
-                    <Bootstrap.FormGroup key={field.id}>
-                        <br/>
-                        <Bootstrap.Well>
-                            <h4>
-                            {field.name} &nbsp;
-                            <Bootstrap.Label bsStyle='info'> Info</Bootstrap.Label>
-                            </h4>
-                            <p>{this.props.optionChoices[field.id]}</p>
-                        </Bootstrap.Well>
-                    </Bootstrap.FormGroup>
-                );
-            }
-            else if(field.type === 'file'){
-                formControl = <Bootstrap.FormControl type='file' key={field.id} id={field.id} value={this.props.fieldValues[field.id]} onChange={this.onChange} />;
-            }
-            if(notAField) {
-                fields.push(formControl);
-            } else {
-                fields.push(
-                    <Bootstrap.FormGroup key={field.id}>
-                        <Bootstrap.ControlLabel >{field.name}</Bootstrap.ControlLabel>
-                        {formControl}
-                    </Bootstrap.FormGroup>
-                );
-            }
+const ProviderStep = (props) => {
+    var fields = [];
+    for(var i = 0; i < props.fields.length; i++) {
+        var field = props.fields[i];
+        var formControl = null;
+        var notAField = false;
+        if(field.type === 'str') {
+            formControl = <Bootstrap.FormControl type='text' key={field.id} id={field.id} value={props.fieldValues[field.id]} onChange={props.onFieldChange} />;
+        } else if(field.type === 'options') {
+            formControl = (
+                <Bootstrap.FormControl componentClass='select' key={field.id} id={field.id} onChange={props.onFieldChange}>
+                    <option key={-1} value=''>Choose</option>
+                    {this.props.optionChoices[field.id].map(function(option, i) {
+                        return <option key={i} value={option}>{option}</option>
+                    })}
+                </Bootstrap.FormControl>
+            );
+        } else if(field.type === 'description'){
+            notAField = true;
+            formControl = (
+                <Bootstrap.FormGroup key={field.id}>
+                    <br/>
+                    <Bootstrap.Well>
+                        <h4>
+                        {field.name} &nbsp;
+                        <Bootstrap.Label bsStyle='info'> Info</Bootstrap.Label>
+                        </h4>
+                        <p>{this.props.optionChoices[field.id]}</p>
+                    </Bootstrap.Well>
+                </Bootstrap.FormGroup>
+            );
         }
-        return (
-            <form>
-                {fields}
-            </form>
-        )
-    },
-    onChange: function(e) {
-        this.props.onFieldChange(e.target.id, e.target.value);
+        else if(field.type === 'file'){
+            formControl = <Bootstrap.FormControl type='file' key={field.id} id={field.id} value={this.props.fieldValues[field.id]} onChange={props.onFieldChange} />;
+        }
+        if(notAField) {
+            fields.push(formControl);
+        } else {
+            fields.push(
+                <Bootstrap.FormGroup key={field.id}>
+                    <Bootstrap.ControlLabel >{field.name}</Bootstrap.ControlLabel>
+                    {formControl}
+                </Bootstrap.FormGroup>
+            );
+        }
     }
-});
+    return (
+        <form>
+            {fields}
+        </form>
+    )
+}
 
-var NewProviderForm = React.createClass({
-    getInitialState: function () {
-        return {currentDriver: null, drivers: [], stepIndex: -1, optionChoices: {},
+class NewProviderForm extends Component {
+    constructor (props) {
+        super(props);
+        this.state = {currentDriver: null, drivers: [], stepIndex: -1, optionChoices: {},
             errors: [], fieldValues: {}, isLoading: false};
-    },
-    componentDidMount: function () {
+        this.onDriverSelect = this.onDriverSelect.bind(this);
+        this.onFieldChange = this.onFieldChange.bind(this);
+        this.close = this.close.bind(this);
+        this.nextStep = this.nextStep.bind(this);
+        this.onSubmit = this.onSubmit.bind(this);
+    }
+    componentDidMount () {
         var me = this;
         Network.get('/api/drivers', this.props.auth.token).done(function(data) {
             var newState = {drivers: data.drivers};
@@ -162,8 +169,8 @@ var NewProviderForm = React.createClass({
         }).fail(function (msg) {
             me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
         });
-    },
-    onDriverSelect: function (e) {
+    }
+    onDriverSelect (e) {
         var driverId = e.target.value;
         for(var i = 0; i < this.state.drivers.length; i++){
             var driver = this.state.drivers[i];
@@ -187,16 +194,18 @@ var NewProviderForm = React.createClass({
         }
         this.setState({currentDriver: null, stepIndex: -1, optionChoices: {},
             errors: [], fieldValues: {}});
-    },
-    onFieldChange: function(id, value){
-        var newFieldValues = Object.assign({}, this.state.fieldValues);
+    }
+    onFieldChange(e){
+        let id = e.target.id;
+        let value = e.target.value;
+        let newFieldValues = Object.assign({}, this.state.fieldValues);
         newFieldValues[id] = value;
         this.setState({fieldValues: newFieldValues});
-    },
-    close: function() {
+    }
+    close() {
         this.props.dispatch({type: 'CLOSE_MODAL'});
-    },
-    render: function () {
+    }
+    render() {
         var steps = [];
         var driverOptions = [<option key="-1" value=''>Select driver</option>];
         for(var i = 0; i < this.state.drivers.length; i++) {
@@ -267,8 +276,8 @@ var NewProviderForm = React.createClass({
                     </Bootstrap.ButtonGroup>
                 </Bootstrap.Modal.Footer>
             </Bootstrap.Modal>);
-    },
-    nextStep: function () {
+    }
+    nextStep() {
         if(this.state.currentDriver === null) return;
         if(this.state.stepIndex === -1){
             var me = this;
@@ -301,8 +310,8 @@ var NewProviderForm = React.createClass({
             //var data = {driver_id: this.state.currentDriver.id, current_index: this.state.stepIndex,
             //}
         }
-    },
-    onSubmit: function(e) {
+    }
+    onSubmit(e) {
         e.preventDefault();
         var data = {name: this.refs.provider_name.value, driver: this.state.currentDriver};
         var me = this;
@@ -312,28 +321,26 @@ var NewProviderForm = React.createClass({
             me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
         });
     }
-});
+}
 
-var ConfirmPopup = React.createClass({
-    render: function () {
-        return (
-            <Bootstrap.Modal show={this.props.show} onHide={this.props.close}>
-                <Bootstrap.Modal.Header closeButton>
-                  <Bootstrap.Modal.Title>Confirm action</Bootstrap.Modal.Title>
-                </Bootstrap.Modal.Header>
+const ConfirmPopup = (props) => {
+    return (
+        <Bootstrap.Modal show={props.show} onHide={props.close}>
+            <Bootstrap.Modal.Header closeButton>
+              <Bootstrap.Modal.Title>Confirm action</Bootstrap.Modal.Title>
+            </Bootstrap.Modal.Header>
 
-                <Bootstrap.Modal.Body>
-                    <p>Please confirm action: delete provider {this.props.data.provider_name}</p>
-                </Bootstrap.Modal.Body>
+            <Bootstrap.Modal.Body>
+                <p>Please confirm action: delete provider {props.data.provider_name}</p>
+            </Bootstrap.Modal.Body>
 
-                <Bootstrap.Modal.Footer>
-                    <Bootstrap.Button onClick={this.props.close}>Cancel</Bootstrap.Button>
-                    <Bootstrap.Button onClick={this.props.action.bind(null, this.props.data)} bsStyle = "primary">Confirm</Bootstrap.Button>
-                </Bootstrap.Modal.Footer>
-            </Bootstrap.Modal>
-        );
-    }
-});
+            <Bootstrap.Modal.Footer>
+                <Bootstrap.Button onClick={props.close}>Cancel</Bootstrap.Button>
+                <Bootstrap.Button onClick={props.action.bind(null, props.data)} bsStyle = "primary">Confirm</Bootstrap.Button>
+            </Bootstrap.Modal.Footer>
+        </Bootstrap.Modal>
+    );
+}
 
 Providers = connect(function(state){
     return {auth: state.auth, alert: state.alert};

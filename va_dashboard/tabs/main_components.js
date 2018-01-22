@@ -7,104 +7,102 @@ var components = require('./basic_components');
 import {Table as Reactable, Tr, Th, Thead, Td} from 'reactable';
 import {hashHistory} from 'react-router';
 import {Line, defaults} from "react-chartjs-2";
+import {getRandomColor} from './util';
 
-var Div = React.createClass({
-
-    render: function () {
-        var redux = {};
-        var elements = this.props.elements.map(function(element) {
-            element.key = element.name;
-            var Component = components[element.type];
-            redux[element.type] = connect(function(state){
-                var newstate = {auth: state.auth};
-                if(typeof element.reducers !== 'undefined'){
-                    var r = element.reducers;
-                    for (var i = 0; i < r.length; i++) {
-                        newstate[r[i]] = state[r[i]];
-                    }
+const Div = (props) => {
+    var redux = {};
+    var elements = props.elements.map(function(element) {
+        element.key = element.name;
+        var Component = components[element.type];
+        redux[element.type] = connect(function(state){
+            var newstate = {auth: state.auth};
+            if(typeof element.reducers !== 'undefined'){
+                var r = element.reducers;
+                for (var i = 0; i < r.length; i++) {
+                    newstate[r[i]] = state[r[i]];
                 }
-                return newstate;
-            })(Component);
-            var Redux = redux[element.type];
-            return React.createElement(Redux, element);
-        });
-        var classes = this.props.class;
-        if(typeof this.props.div !== 'undefined'){
-            //TODO add other classes
-            classes = this.props.div.show;
-        }
-        return (
-            <div className={classes}>
-                {elements}
-            </div>
-        );
-    }
-});
-
-var MultiTable = React.createClass({
-
-    render: function () {
-        var redux = {}, tables = [];
-        for(var x in this.props.table){
-            if(x !== "path"){
-                var elements = this.props.elements.map(function(element) {
-                    element.name = x;
-                    element.key = element.type + element.name;
-                    var Component = components[element.type];
-                    redux[element.type] = connect(function(state){
-                        var newstate = {auth: state.auth};
-                        if(typeof element.reducers !== 'undefined'){
-                            var r = element.reducers;
-                            for (var i = 0; i < r.length; i++) {
-                                newstate[r[i]] = state[r[i]];
-                            }
-                        }
-                        return newstate;
-                    })(Component);
-                    var Redux = redux[element.type];
-                    return React.createElement(Redux, element);
-                }.bind(this));
-                tables.push(elements);
             }
-        }
-        return (
-            <div className="multi">
-                {tables}
-            </div>
-        );
+            return newstate;
+        })(Component);
+        var Redux = redux[element.type];
+        return React.createElement(Redux, element);
+    });
+    var classes = props.class;
+    if(typeof props.div !== 'undefined'){
+        //TODO add other classes
+        classes = props.div.show;
     }
-});
+    return (
+        <div className={classes}>
+            {elements}
+        </div>
+    );
+}
 
-var Chart = React.createClass({
-    getInitialState: function () {
+const MultiTable = (props) => {
+    var redux = {}, tables = [];
+    for(var x in props.table){
+        if(x !== "path"){
+            var elements = props.elements.map((element) => {
+                element.name = x;
+                element.key = element.type + element.name;
+                var Component = components[element.type];
+                redux[element.type] = connect(function(state){
+                    var newstate = {auth: state.auth};
+                    if(typeof element.reducers !== 'undefined'){
+                        var r = element.reducers;
+                        for (var i = 0; i < r.length; i++) {
+                            newstate[r[i]] = state[r[i]];
+                        }
+                    }
+                    return newstate;
+                })(Component);
+                var Redux = redux[element.type];
+                return React.createElement(Redux, element);
+            });
+            tables.push(elements);
+        }
+    }
+    return (
+        <div className="multi">
+            {tables}
+        </div>
+    );
+}
+
+class Chart extends Component {
+    constructor (props) {
+        super(props);
         defaults.global.legend.display = true;
         defaults.global.legend.position = 'right';
         var chartData = this.getData(this.props.data, false);
-        return {chartOptions: {
-                    maintainAspectRatio: false,
-                    responsive: true,
-                    scales: {
-                        xAxes: [{
-                            type: 'time',
-                            stacked: true,
-                            time: {
-                                displayFormats: {
-                                    minute: 'HH:mm',
-                                    hour: 'HH:mm',
-                                    second: 'HH:mm:ss',
-                                },
-                                tooltipFormat: 'DD/MM/YYYY HH:mm',
-                                unit: 'minute',
-                                unitStepSize: 5
-                            }
-                        }],
-                        yAxes: [{
-                            stacked: true
-                        }]
+        this.state = {chartOptions: {
+            maintainAspectRatio: false,
+            responsive: true,
+            scales: {
+                xAxes: [{
+                    type: 'time',
+                    stacked: true,
+                    time: {
+                        displayFormats: {
+                            minute: 'HH:mm',
+                            hour: 'HH:mm',
+                            second: 'HH:mm:ss',
+                        },
+                        tooltipFormat: 'DD/MM/YYYY HH:mm',
+                        unit: 'minute',
+                        unitStepSize: 5
                     }
-                }, chartData: chartData};
-    },
-    getData: function(data, check) {
+                }],
+                yAxes: [{
+                    stacked: true
+                }]
+            }
+        }, chartData: chartData};
+        this.getData = this.getData.bind(this);
+        this.btn_click = this.btn_click.bind(this);
+    }
+    getData(data, check) {
         var datasets = [], times = [], chartData = {}, prevColors = {};
         if(check){
             for(var i=0; i < this.state.chartData.datasets.length; i++) {
@@ -114,7 +112,7 @@ var Chart = React.createClass({
         }
         for(var key in data){
             var obj = {}, prevColor = prevColors[key];
-            var color = prevColor || this.getRandomColor();
+            var color = prevColor || getRandomColor();
             obj.label = key;
             obj.data = [];
             var chart_data = data[key];
@@ -131,16 +129,8 @@ var Chart = React.createClass({
         chartData.labels = times;
         chartData.datasets = datasets;
         return chartData;
-    },
-    getRandomColor: function() {
-        var letters = '0123456789ABCDEF'.split('');
-        var color = '#';
-        for (var i = 0; i < 6; i++ ) {
-            color += letters[Math.floor(Math.random() * 16)];
-        }
-        return color;
-    },
-    btn_click: function(period, interval, unit, step) {
+    }
+    btn_click (period, interval, unit, step) {
         var server_name = this.props.panel.server;
         var data = {"server_name": server_name, "args": [this.props.provider, this.props.service, period, interval]};
         var me = this;
@@ -152,8 +142,8 @@ var Chart = React.createClass({
         }).fail(function (msg) {
             me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
         });
-    },
-    render: function () {
+    }
+    render () {
         return (
             <div>
                 <div className="panel_chart">
@@ -169,10 +159,10 @@ var Chart = React.createClass({
             </div>
         );
     }
-});
+}
 
-var Table = React.createClass({
-    btn_clicked: function(id, evtKey){
+class Table extends Component {
+    btn_clicked(id, evtKey){
         var checkPath = 'path' in this.props.table && this.props.table.path.length > 0;
         if(!checkPath && 'args' in this.props.panel && this.props.panel.args !== ""){
             id.unshift(this.props.panel.args);
@@ -272,8 +262,8 @@ var Table = React.createClass({
                 me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
             });
         }
-    },
-    linkClicked: function(action, event){
+    }
+    linkClicked(action, event){
         var linkVal = event.currentTarget.textContent, args = "";
         if(window.location.hash.indexOf('subpanel') > -1){
             args = this.props.panel.args + ","; 
@@ -297,8 +287,8 @@ var Table = React.createClass({
                  me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
              });
         }
-    },
-    render: function () {
+    }
+    render () {
         var pagination = "pagination" in this.props ? this.props.pagination : true;
         if(typeof this.props.table[this.props.name] === 'undefined')
             return null;
@@ -341,8 +331,8 @@ var Table = React.createClass({
                 });
             }
         }
-        var rows = this.props.table[this.props.name].map(function(row) {
-            var columns, key, me = this;
+        var rows = this.props.table[this.props.name].map((row) => {
+            var columns, key;
             if(typeof row === "string"){
                 key = [this.props.name, row];
                 columns = (
@@ -359,7 +349,7 @@ var Table = React.createClass({
                 }else{
                     key = [row[tbl_id]];
                 }
-                columns = this.props.columns.map(function(col, index) {
+                columns = this.props.columns.map((col, index) => {
                     var key = col.key, colClass = "", colText = row[key], colVal = row[key];
                     if(typeof col.href !== 'undefined'){
                         colText = <a href={colVal} target='_blank'>Link</a>
@@ -373,7 +363,7 @@ var Table = React.createClass({
                         if("action" in col){
                             var col_arr = col['action'].split(':');
                             if(col_arr[0] === "all" || col_arr[0] === row[col.colClass])
-                                colText = <span className={colClass} onClick={me.linkClicked.bind(me, col_arr[1])}>{colVal}</span>
+                                colText = <span className={colClass} onClick={this.linkClicked.bind(this, col_arr[1])}>{colVal}</span>
                         }
                     }
                     return (
@@ -408,7 +398,7 @@ var Table = React.createClass({
                     {action_col}
                 </Tr>
             )
-        }.bind(this));
+        });
         var filterBy = "";
         if('filter' in this.props){
             filterBy = this.props.filter.filterBy;
@@ -434,17 +424,18 @@ var Table = React.createClass({
             </div>
         );
     }
-});
+}
 
 //TODO multiple group of checkboxes
-var Modal = React.createClass({
+class Modal extends Component {
 
-    getInitialState: function () {
+    constructor (props) {
+        super(props);
         var content = this.props.modal.template.content, data = [], checks = {};
         for(var j=0; j<content.length; j++){
             if(content[j].type == "Form"){
                 var elem = content[j].elements;
-                for(i=0; i<elem.length; i++){
+                for(let i=0; i<elem.length; i++){
                     if(elem[i].type === 'dropdown')
                         data[i] = elem[i].value[0];
                     if(elem[i].type !== 'label')
@@ -458,19 +449,22 @@ var Modal = React.createClass({
         if("args" in this.props.modal.template){
             args = this.props.modal.template.args;
         }
-        return {
+        this.state = {
             data: data,
             focus: "",
             args: args,
             checks: checks
         };
-    },
+        this.close = this.close.bind(this);
+        this.action = this.action.bind(this);
+        this.form_changed = this.form_changed.bind(this);
+    }
 
-    close: function() {
+    close () {
         this.props.dispatch({type: 'CLOSE_MODAL'});
-    },
+    }
 
-    action: function(action_name) {
+    action (action_name) {
         var args = this.state.data.slice(0);
         var checks = this.state.checks, keys = Object.keys(checks);
         if(keys.length > 0){
@@ -488,27 +482,26 @@ var Modal = React.createClass({
             args.splice(keys[0], 0, check_vals);
         }
         var data = {"server_name": this.props.panel.server, "action": action_name, "args": this.state.args.concat(args)};
-        var me = this;
-        Network.post("/api/panels/action", this.props.auth.token, data).done(function(d) {
-            me.props.dispatch({type: 'CLOSE_MODAL'});
-            if('refresh_action' in me.props.modal.template){
+        Network.post("/api/panels/action", this.props.auth.token, data).done((d) => {
+            this.props.dispatch({type: 'CLOSE_MODAL'});
+            if('refresh_action' in this.props.modal.template){
                 var args = [];
-                if(me.props.panel.args !== "") args = [me.props.panel.args];
-                var data = {"server_name": me.props.panel.server, "action": me.props.modal.template.refresh_action, "args": args};
-                Network.post('/api/panels/action', me.props.auth.token, data).done(function(msg) {
+                if(this.props.panel.args !== "") args = [this.props.panel.args];
+                var data = {"server_name": this.props.panel.server, "action": this.props.modal.template.refresh_action, "args": args};
+                Network.post('/api/panels/action', this.props.auth.token, data).done(function(msg) {
                     if(typeof msg !== 'string'){
-                        me.props.dispatch({type: 'CHANGE_DATA', data: msg, name: me.props.modal.template.table_name});
+                        this.props.dispatch({type: 'CHANGE_DATA', data: msg, name: this.props.modal.template.table_name});
                     }else{
-                        me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
+                        this.props.dispatch({type: 'SHOW_ALERT', msg: msg});
                     }
                 });
             }
         }).fail(function (msg) {
-            me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
+            this.props.dispatch({type: 'SHOW_ALERT', msg: msg});
         });
-    },
+    }
 
-    form_changed: function(e) {
+    form_changed(e) {
         var name = e.target.name;
         var val = e.target.value;
         var id = e.target.id;
@@ -520,19 +513,19 @@ var Modal = React.createClass({
         }
         data[id] = val;
         this.setState({data: data});
-    },
+    }
 
-    render: function () {
-        var btns = this.props.modal.template.buttons.map(function(btn){
+    render () {
+        var redux = {}, action;
+        var btns = this.props.modal.template.buttons.map((btn) => {
             if(btn.action == "cancel"){
                 action = this.close;
             }else{
                 action = this.action.bind(this, btn.action);
             }
             return <Bootstrap.Button key={btn.name} onClick={action} bsStyle = {btn.class}>{btn.name}</Bootstrap.Button>;
-        }.bind(this));
+        });
 
-        var redux = {};
         var elements = this.props.modal.template.content.map(function(element) {
             element.key = element.name;
             var Component = components[element.type];
@@ -572,34 +565,33 @@ var Modal = React.createClass({
         </Bootstrap.Modal>
         );
     }
-});
+}
 
-var Path = React.createClass({
-    onClick: function(evt){
-        // console.log(evt.currentTarget.id)
-        // console.log(evt.currentTarget.textContent);
-        if(evt.currentTarget.id == 0) return;
-        var args = this.props.table.path.slice(0, parseInt(evt.currentTarget.id) + 1);
-        var data = {"server_name": this.props.panel.server, "action": this.props.action, "args": args};
-        var me = this;
-        Network.post('/api/panels/action', this.props.auth.token, data).done(function(msg) {
-            if(typeof msg === 'string'){
-                me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
-            }else{
-                me.props.dispatch({type: 'CHANGE_DATA', data: msg, name: me.props.target, initVal: args});
-            }
-        }).fail(function (msg) {
-            me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
-        });
-    },
-    render: function () {
-        var me = this, paths = [];
+class Path extends Component {
+	onClick(evt) {
+		// console.log(evt.currentTarget.id)
+		// console.log(evt.currentTarget.textContent);
+		if(evt.currentTarget.id == 0) return;
+		var args = this.props.table.path.slice(0, parseInt(evt.currentTarget.id) + 1);
+		var data = {"server_name": this.props.panel.server, "action": this.props.action, "args": args};
+		Network.post('/api/panels/action', this.props.auth.token, data).done((msg) => {
+			if(typeof msg === 'string'){
+				this.props.dispatch({type: 'SHOW_ALERT', msg: msg});
+			}else{
+				this.props.dispatch({type: 'CHANGE_DATA', data: msg, name: this.props.target, initVal: args});
+			}
+		}).fail((msg) => {
+			this.props.dispatch({type: 'SHOW_ALERT', msg: msg});
+		});
+	}
+    render () {
+        var paths = [];
         if("path" in this.props.table){
             //TODO remove link from first element in path
             //paths[0] = <li key="0" className="breadcrumb-item">{path}</li>;
             //var p = this.props.table.path.slice(1);
-            paths =  this.props.table.path.map(function(path, i){
-                return <li key={i} className="breadcrumb-item"><span id={i} className="link" onClick={me.onClick}>{path}</span></li>;
+            paths =  this.props.table.path.map((path, i) => {
+                return <li key={i} className="breadcrumb-item"><span id={i} className="link" onClick={(e) => this.onClick(e)}>{path}</span></li>;
             });
         }
         return (
@@ -608,11 +600,11 @@ var Path = React.createClass({
             </ol>
         );
     }
-});
+}
 
-var Form = React.createClass({
+class Form extends Component {
 
-    onSelect: function (action) {
+    onSelect (action) {
         var dropdown = findDOMNode(this.refs.dropdown);
         var host = dropdown.value.trim();
         var d_name = dropdown.name;
@@ -631,17 +623,17 @@ var Form = React.createClass({
         }).fail(function (msg) {
             me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
         });
-    },
+    }
 
-    componentDidMount: function(){
+    componentDidMount(){
         if("focus" in this.props && this.props.focus){
             var elem = this.refs[this.props.focus], pos = elem.value.length;
             elem.focus();
             elem.setSelectionRange(pos, pos);
         }
-    },
+    }
 
-    render: function () {
+    render () {
         var redux = {};
 
         var inputs = this.props.elements.map(function(element, index) {
@@ -730,7 +722,7 @@ var Form = React.createClass({
             </form>
         );
     }
-});
+}
 
 components.Div = Div;
 components.MultiTable = MultiTable;

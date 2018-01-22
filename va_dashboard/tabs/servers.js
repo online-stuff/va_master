@@ -5,9 +5,10 @@ var Bootstrap = require('react-bootstrap');
 import {findDOMNode} from 'react-dom';
 import {Table, Tr, Td} from 'reactable';
 
-var Servers = React.createClass({
-    getInitialState: function () {
-        return {
+class Servers extends Component {
+    constructor (props) {
+        super(props);
+        this.state = {
             loaded: false,
             providers: [],
             servers: [],
@@ -20,9 +21,14 @@ var Servers = React.createClass({
             popupShow: false,
             popupData: ['','','']
         };
-    },
+        this.getData = this.getData.bind(this);
+        this.btn_clicked = this.btn_clicked.bind(this);
+        this.confirm_action = this.confirm_action.bind(this);
+        this.popupClose = this.popupClose.bind(this);
+        this.openModal = this.openModal.bind(this);
+    }
 
-    getData: function() {
+    getData() {
         var data = {providers: []};
         var me = this;
         var n1 = Network.post('/api/providers/info', this.props.auth.token, data).fail(function (msg) {
@@ -58,17 +64,17 @@ var Servers = React.createClass({
             }
             me.setState({provider_usage: provider_usage, providers: providers, provider_name: first_provider.provider_name, options: {sizes: first_provider.sizes, networks: first_provider.networks, images: first_provider.images, sec_groups: first_provider.sec_groups}, defaults: first_provider.defaults, states: states, role: role, loaded: true, servers: resp1});
         });
-    },
+    }
 
-    componentDidMount: function () {
+    componentDidMount() {
         this.getData();
-    },
+    }
 
-    componentWillUnmount: function () {
+    componentWillUnmount () {
         this.props.dispatch({type: 'RESET_APP'});
-    },
+    }
 
-    btn_clicked: function(provider, server, evtKey){
+    btn_clicked(provider, server, evtKey){
         var me = this;
         var data = {provider_name: provider, server_name: server, action: evtKey};
         Network.post('/api/apps/action', this.props.auth.token, data).done(function(d) {
@@ -80,24 +86,24 @@ var Servers = React.createClass({
         }).fail(function (msg) {
             me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
         });
-    },
+    }
 
-    confirm_action: function(provider, server, evtKey){
+    confirm_action(provider, server, evtKey){
         if(evtKey == 'reboot' || evtKey == 'delete')
             this.setState({popupShow: true, popupData: [provider, server, evtKey]});
         else
             this.btn_clicked(provider, server, evtKey);
-    },
+    }
 
-    popupClose: function() {
+    popupClose() {
         this.setState({popupShow: false});
-    },
+    }
 
-    openModal: function () {
+    openModal () {
         this.props.dispatch({type: 'OPEN_MODAL'});
-    },
+    }
 
-    render: function () {
+    render () {
         var app_rows = [];
         for(var i = 0; i < this.state.servers.length; i++){
             // provider_name = this.state.providers[i].provider_name;
@@ -163,43 +169,44 @@ var Servers = React.createClass({
             </div>
         );
     }
-});
+}
 
-var ConfirmPopup = React.createClass({
-    render: function () {
-        var data = this.props.data;
-        return (
-            <Bootstrap.Modal show={this.props.show} onHide={this.props.close}>
-                <Bootstrap.Modal.Header closeButton>
-                  <Bootstrap.Modal.Title>Confirm action</Bootstrap.Modal.Title>
-                </Bootstrap.Modal.Header>
+const ConfirmPopup = (props) => {
+    var data = props.data;
+    return (
+        <Bootstrap.Modal show={props.show} onHide={props.close}>
+            <Bootstrap.Modal.Header closeButton>
+              <Bootstrap.Modal.Title>Confirm action</Bootstrap.Modal.Title>
+            </Bootstrap.Modal.Header>
 
-                <Bootstrap.Modal.Body>
-                    <p>Please confirm action: {data[2]} server {data[0]}</p>
-                </Bootstrap.Modal.Body>
+            <Bootstrap.Modal.Body>
+                <p>Please confirm action: {data[2]} server {data[0]}</p>
+            </Bootstrap.Modal.Body>
 
-                <Bootstrap.Modal.Footer>
-                    <Bootstrap.Button onClick={this.props.close}>Cancel</Bootstrap.Button>
-                    <Bootstrap.Button onClick={this.props.action.bind(null, data[0],data[1],data[2])} bsStyle = "primary">Confirm</Bootstrap.Button>
-                </Bootstrap.Modal.Footer>
-            </Bootstrap.Modal>
-        );
-    }
-});
+            <Bootstrap.Modal.Footer>
+                <Bootstrap.Button onClick={props.close}>Cancel</Bootstrap.Button>
+                <Bootstrap.Button onClick={props.action.bind(null, data[0],data[1],data[2])} bsStyle = "primary">Confirm</Bootstrap.Button>
+            </Bootstrap.Modal.Footer>
+        </Bootstrap.Modal>
+    );
+}
 
-var UserStep = React.createClass({
-    getInitialState: function () {
+class UserStep extends Component {
+    constructor (props) {
+        super(props);
         var fields = this.props.fields.map(function(field) {
             return field.name;
         });
-        return {user: 'new', fields: fields};
-    },
+        this.state = {user: 'new', fields: fields};
+        this.radioChange = this.radioChange.bind(this);
+        this.onSubmit = this.onSubmit.bind(this);
+    }
 
-    radioChange: function (evt) {
+    radioChange (evt) {
         this.setState({user: evt.target.value});
-    },
+    }
 
-    render: function () {
+    render () {
         var me = this;
 
         var fields = null;
@@ -232,8 +239,8 @@ var UserStep = React.createClass({
                 {fields}
             </form>
         );
-    },
-    onSubmit: function() {
+    }
+    onSubmit() {
         //e.preventDefault();
         var me = this;
         var type_user = this.state.user;
@@ -253,18 +260,21 @@ var UserStep = React.createClass({
         }
     }
 
-});
+}
 
-var SSHStep = React.createClass({
-    getInitialState: function () {
-        return {progress: 0, auth: false};
-    },
+class SSHStep extends Component {
+    constructor (props) {
+        super(props);
+        this.state = {progress: 0, auth: false};
+        this.toggleAuth = this.toggleAuth.bind(this);
+        this.onSubmit = this.onSubmit.bind(this);
+    }
 
-    toggleAuth: function (e) {
+    toggleAuth (e) {
         this.setState({auth: e.target.checked});
-    },
+    }
 
-    onSubmit: function() {
+    onSubmit() {
         //e.preventDefault();
         var me = this;
         this.setState({progress: 0});
@@ -292,9 +302,9 @@ var SSHStep = React.createClass({
         }).fail(function (msg) {
             me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
         });
-    },
+    }
 
-    render: function () {
+    render () {
         var statusColor, statusDisplay, statusMessage;
 
         if(this.props.status == 'launching'){
@@ -378,14 +388,17 @@ var SSHStep = React.createClass({
             </form>
         );
     }
-});
+}
 
-var HostStep = React.createClass({
-    getInitialState: function () {
-        return {progress: 0, provider_name: this.props.hostname, options: this.props.options, defaults: this.props.defaults, index: 0};
-    },
+class HostStep extends Component {
+    constructor (props) {
+        super(props);
+        this.state = {progress: 0, provider_name: this.props.hostname, options: this.props.options, defaults: this.props.defaults, index: 0};
+        this.onChange = this.onChange.bind(this);
+        this.onSubmit = this.onSubmit.bind(this);
+    }
 
-    onChange: function(e) {
+    onChange(e) {
         var value = e.target.value;
         for(var i=0; i < this.props.providers.length; i++){
             var provider = this.props.providers[i];
@@ -394,9 +407,9 @@ var HostStep = React.createClass({
                 break;
             }
         }
-    },
+    }
 
-    render: function () {
+    render () {
         var statusColor, statusDisplay, statusMessage;
 
         if(this.props.status == 'launching'){
@@ -515,8 +528,8 @@ var HostStep = React.createClass({
                 <StatsRedux provider_name = {this.state.hostname} provider_usage = {this.props.provider_usage[this.state.index]} />
             </div>
         );
-    },
-    onSubmit: function() {
+    }
+    onSubmit() {
         //e.preventDefault();
         var me = this;
         this.setState({progress: 0});
@@ -546,41 +559,49 @@ var HostStep = React.createClass({
         });
     }
 
-});
+}
 
-var ServerForm = React.createClass({
-    getInitialState: function () {
+class ServerForm extends Component {
+    constructor (props) {
+        super(props);
         var provider_name = "", standalone = true;
         if(this.props.providers.length > 0){
             provider_name = this.props.providers[0].provider_name;
             standalone = false;
         }
-        return {role: this.props.role, provider_name: provider_name, step2: false, standalone: standalone, stepIndex: 1, isLoading: false, errors: [], server_name: "", status: 'none', btnDisable: false};
-    },
+        this.state = {role: this.props.role, provider_name: provider_name, step2: false, standalone: standalone, stepIndex: 1, isLoading: false, errors: [], server_name: "", status: 'none', btnDisable: false};
+        this.onChangeRole = this.onChangeRole.bind(this);
+        this.onChangeProvider = this.onChangeProvider.bind(this);
+        this.close = this.close.bind(this);
+        this.goToNextStep = this.goToNextStep.bind(this);
+        this.launchServer = this.launchServer.bind(this);
+        this.nextStep = this.nextStep.bind(this);
+        this.toggleStandalone = this.toggleStandalone.bind(this);
+    }
 
-    onChangeRole: function(e) {
+    onChangeRole(e) {
         this.setState({role: e.target.value, step2: e.target.value && this.props.states[e.target.value].length > 0});
-    },
+    }
 
-    onChangeProvider: function(e){
+    onChangeProvider(e){
         this.setState({provider_name: e.target.value});
-    },
+    }
 
-    close: function() {
+    close() {
         this.props.dispatch({type: 'CLOSE_MODAL'});
         this.setState({stepIndex: 1});
-    },
+    }
 
-    goToNextStep: function () {
+    goToNextStep () {
         this.setState({stepIndex: 3});
-    },
+    }
 
-    launchServer: function () {
+    launchServer () {
         //this.close();
         this.setState({btnDisable: true, status: 'launched'});
-    },
+    }
 
-    nextStep: function () {
+    nextStep () {
         if(this.state.stepIndex === 1){
             var nextStep = this.state.step2 ? 2 : 3;
             var me = this, server_name = findDOMNode(this.refs.name).value;
@@ -600,13 +621,13 @@ var ServerForm = React.createClass({
             this.refs[step_name].getWrappedInstance().onSubmit();
             //this.setState({stepIndex: nextStep});
         }
-    },
+    }
 
-    toggleStandalone: function (e) {
+    toggleStandalone (e) {
         this.setState({standalone: e.target.checked});
-    },
+    }
 
-    render: function () {
+    render () {
         var me = this;
 
         var UserStepRedux = connect(function(state){
@@ -707,22 +728,19 @@ var ServerForm = React.createClass({
         );
     }
 
-});
+}
 
-var Stats = React.createClass({
-    render: function () {
-        return (
-            <Bootstrap.Col xs={12} sm={5} md={5}>
-                <h3>{this.props.provider_name}</h3>
-                <label>CPU: </label>{this.props.provider_usage.used_cpus} / {this.props.provider_usage.max_cpus}<br/>
-                <label>RAM: </label>{this.props.provider_usage.used_ram} / {this.props.provider_usage.max_ram}<br/>
-                <label>DISK: </label>{this.props.provider_usage.used_disk} / {this.props.provider_usage.max_disk}<br/>
-                <label>INSTANCES: </label>{this.props.provider_usage.used_servers} / {this.props.provider_usage.max_servers}<br/>
-            </Bootstrap.Col>
-        );
-
-    }
-});
+const Stats = (props) => {
+    return (
+        <Bootstrap.Col xs={12} sm={5} md={5}>
+            <h3>{props.provider_name}</h3>
+            <label>CPU: </label>{props.provider_usage.used_cpus} / {props.provider_usage.max_cpus}<br/>
+            <label>RAM: </label>{props.provider_usage.used_ram} / {props.provider_usage.max_ram}<br/>
+            <label>DISK: </label>{props.provider_usage.used_disk} / {props.provider_usage.max_disk}<br/>
+            <label>INSTANCES: </label>{props.provider_usage.used_servers} / {props.provider_usage.max_servers}<br/>
+        </Bootstrap.Col>
+    );
+}
 
 Servers = connect(function(state){
     return {auth: state.auth, apps: state.apps, alert: state.alert};

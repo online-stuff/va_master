@@ -6,17 +6,19 @@ import {findDOMNode} from 'react-dom';
 import Select from 'react-select-plus';
 import {Table, Tr, Td} from 'reactable';
 
-var UserGroupPanel = React.createClass({
-    getInitialState: function () {
-        return {
+class UserGroupPanel extends Component {
+    constructor (props) {
+        super(props);
+        this.state = {
             funcs: [],
             groups: [],
             group_opt: [],
             loading: true,
-        }
-    },
+        };
+        this.getCurrentFuncs = this.getCurrentFuncs.bind(this);
+    }
 
-    getCurrentFuncs: function () {
+    getCurrentFuncs () {
         var me = this;
         var n1 = Network.get('/api/panels/get_all_functions', this.props.auth.token)
         .fail(function (msg) {
@@ -32,13 +34,13 @@ var UserGroupPanel = React.createClass({
             });
             me.setState({funcs: resp1, groups: resp2, group_opt: groups, loading: false});
         }); 
-    },
+    }
 
-    componentDidMount: function () {
+    componentDidMount () {
         this.getCurrentFuncs();
-    },
+    }
 
-    render: function () {
+    render () {
         var UserRedux = connect(function(state){
             return {auth: state.auth, alert: state.alert};
         })(Users);
@@ -58,20 +60,27 @@ var UserGroupPanel = React.createClass({
             </div>
         )
     }
-});
+}
 
 
-var Users = React.createClass({
-    getInitialState: function () {
-        return {
+class Users extends Component {
+    constructor (props) {
+        super(props);
+        this.state = {
             users: [],
             modal_open: false,
             update: false,
             selected_user: {}
-        }
-    },
+        };
+        this.getCurrentUsers = this.getCurrentUsers.bind(this);
+        this.openModal = this.openModal.bind(this);
+        this.addUser = this.addUser.bind(this);
+        this.updateUser = this.updateUser.bind(this);
+        this.closeModal = this.closeModal.bind(this);
+        this.btn_clicked = this.btn_clicked.bind(this);
+    }
 
-    getCurrentUsers: function () {
+    getCurrentUsers () {
         var me = this;
         Network.get('/api/panels/users', this.props.auth.token)
         .done(function (data){
@@ -80,26 +89,26 @@ var Users = React.createClass({
         .fail(function (msg) {
             me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
         });
-    },
+    }
 
-    componentDidMount: function () {
+    componentDidMount () {
         this.getCurrentUsers();
-    },
+    }
 
-    openModal: function() {
+    openModal() {
         this.setState({modal_open: true, update: false});
-    },
+    }
 
-    addUser: function(data) {
+    addUser(data) {
         var users = Object.assign([], this.state.users);
         data.functions = data.functions.map(function(f){
             return f.value;
         });
         users.push(data);
         this.setState({modal_open: false, users: users});
-    },
+    }
 
-    updateUser: function(index, data) {
+    updateUser(index, data) {
         var users = Object.assign([], this.state.users);
         if(data.functions.length > 0 && typeof data.functions[0] === 'object'){
             data.functions = data.functions.map(function(f){
@@ -108,13 +117,13 @@ var Users = React.createClass({
         }
         users[index] = data;
         this.setState({modal_open: false, users: users});
-    },
+    }
 
-    closeModal: function() {
+    closeModal() {
         this.setState({modal_open: false});
-    },
+    }
 
-    btn_clicked: function(index, evtKey){
+    btn_clicked(index, evtKey){
         var users = Object.assign([], this.state.users);
         var user = users[index];
         if(evtKey === "remove"){
@@ -128,9 +137,9 @@ var Users = React.createClass({
         }else{
             this.setState({modal_open: true, update: index, selected_user: user});
         }
-    },
+    }
 
-    render: function () {
+    render() {
         var user_rows = this.state.users.map(function(user, index) {
             var groups = user.groups.join(', ');
             var funcs = user.functions.join(', ');
@@ -171,17 +180,23 @@ var Users = React.createClass({
             </div> 
         );
     }
-});
+}
 
-var Groups = React.createClass({
-    getInitialState: function () {
-        return {
+class Groups extends Component {
+    constructor (props) {
+        super(props);
+        this.state = {
             groups: Object.assign([], this.props.groups),
             modal_open: false,
             update: false,
             selected_group: {}
-        }
-    },
+        };
+        this.openModal = this.openModal.bind(this);
+        this.addGroup = this.addGroup.bind(this);
+        this.updateGroup = this.updateGroup.bind(this);
+        this.closeModal = this.closeModal.bind(this);
+        this.btn_clicked = this.btn_clicked.bind(this);
+    }
 
     /*getCurrentGroups: function () {
         var me = this;
@@ -194,20 +209,20 @@ var Groups = React.createClass({
         });
     },*/
 
-    openModal: function() {
+    openModal() {
         this.setState({modal_open: true, update: false});
-    },
+    }
 
-    addGroup: function(data) {
+    addGroup(data) {
         var groups = Object.assign([], this.state.group);
         data.groups = data.groups.map(function(g){
             return g.value;
         });
         groups.push(data);
         this.setState({modal_open: false, groups: groups});
-    },
+    }
 
-    updateGroup: function(index, data) {
+    updateGroup(index, data) {
         var groups = Object.assign([], this.state.groups);
         if(data.functions.length > 0 && typeof data.functions[0] === 'object'){
             data.functions = data.functions.map(function(f){
@@ -216,13 +231,13 @@ var Groups = React.createClass({
         }
         groups[index] = data;
         this.setState({modal_open: false, groups: groups});
-    },
+    }
 
-    closeModal: function() {
+    closeModal() {
         this.setState({modal_open: false});
-    },
+    }
 
-    btn_clicked: function(index, evtKey){
+    btn_clicked(index, evtKey){
         var groups = Object.assign([], this.state.groups);
         var group = groups[index];
         if(evtKey === "remove"){
@@ -236,9 +251,9 @@ var Groups = React.createClass({
         }else{
             this.setState({modal_open: true, update: index, selected_group: group});
         }
-    },
+    }
 
-    render: function () {
+    render () {
         var group_rows = this.state.groups.map(function(group, index) {
             var funcs = group.functions.join(', ');
             return (
@@ -277,11 +292,12 @@ var Groups = React.createClass({
             </div>
         );
     }
-});
+}
 
 
-var Modal = React.createClass({
-    getInitialState: function () {
+class Modal extends Component {
+    constructor (props) {
+        super(props);
         var data = {
             type: -1,
             value: null,
@@ -298,10 +314,14 @@ var Modal = React.createClass({
             data.value = group.functions;
             data.group = group.func_name;
         }
-        return data;
-    },
+        this.state = data;
+        this.action = this.action.bind(this);
+        this.typeChange = this.typeChange.bind(this);
+        this.onChange = this.onChange.bind(this);
+        this.onChangeGroup = this.onChangeGroup.bind(this);
+    }
 
-    action: function(e) {
+    action(e) {
         var elements = findDOMNode(this.refs.forma).elements;
         var data = {};
         for(i=0; i<elements.length; i++){
@@ -344,21 +364,21 @@ var Modal = React.createClass({
         }).fail(function (msg) {
             me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
         });
-    },
+    }
 
-    typeChange: function (evt) {
+    typeChange (evt) {
         this.setState({type: evt.target.value});
-    },
+    }
 
     onChange(value) {
         this.setState({ value: value });
-    },
+    }
 
     onChangeGroup(value) {
         this.setState({ group: value });
-    },
+    }
 
-    render: function () {
+    render () {
         var type = this.props.type;
         if(type === -1)
             return <div></div>;
@@ -435,7 +455,7 @@ var Modal = React.createClass({
         </Bootstrap.Modal>
         );
     }
-});
+}
 
 UserGroupPanel = connect(function(state){
     return {auth: state.auth, alert: state.alert};
