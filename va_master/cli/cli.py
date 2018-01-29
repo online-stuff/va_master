@@ -186,15 +186,22 @@ def handle_store_init(cli_config, values, store, datastore_handler):
 
 def create_ssh_keys(cli_config, store_config):
     try: 
-        #os.mkdir(cli_config.ssh_key_path)
-        #key_full_path = cli_config.ssh_key_path + cli_config.ssh_key_name
-        #ssh_cmd = ['ssh-keygen', '-t', 'rsa', '-f', key_full_path, '-N', '']
-        
-        subprocess.call('true')
-        #subprocess.call(['mv', key_full_path, key_full_path + '.pem'])
-    except: 
+        os.mkdir(cli_config.ssh_key_path)
+    except Exception as e: 
         import traceback
+        print 'Could not create ssh path; It probably exists. Error was :' 
+        traceback.print_exc()
+
+    try:
+        key_full_path = cli_config.ssh_key_path + cli_config.ssh_key_name
+
+        ssh_cmd = ['ssh-keygen', '-t', 'rsa', '-f', key_full_path, '-N', '']
+        subprocess.call(ssh_cmd)
+        subprocess.call(['mv', key_full_path, key_full_path + '.pem'])
+    except: 
         print ('Could not generate a key. Probably already exists. ')
+
+        import traceback
         traceback.print_exc()
 
 def handle_init(args):
