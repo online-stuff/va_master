@@ -226,11 +226,17 @@ class DriverBase(object):
         """ 
             Gets a list of all the images used to create servers. This _needs_ to be overwritten. 
         """
-        cl = salt.cloud.CloudClient(path = '/etc/salt/cloud')
-        provider_name = self.provider_vars['VAR_PROVIDER_NAME']
-        images = cl.list_images(provider = provider_name)[provider_name]
-        images = images[images.keys()[0]]
-        images = [images[x]['name'] for x in images]
+        try:
+            cl = salt.cloud.CloudClient(path = '/etc/salt/cloud')
+            provider_name = self.provider_vars['VAR_PROVIDER_NAME']
+            images = cl.list_images(provider = provider_name)[provider_name]
+            images = images[images.keys()[0]]
+            images = [images[x]['name'] for x in images]
+        except: 
+            import traceback
+            print ('There was an error in get_images() in the base driver for %s. ' % (provider_name))
+            traceback.print_exc()
+            raise Exception('There was an error getting images for %s' % (provider_name))
         raise tornado.gen.Return(images)
 
     @tornado.gen.coroutine
@@ -238,11 +244,17 @@ class DriverBase(object):
         """     
             Gets a list of all sizes (flavors) used to create servers. This _needs_ to be overwritten. 
         """
-        cl = salt.cloud.CloudClient(path = '/etc/salt/cloud')
-        provider_name = self.provider_vars['VAR_PROVIDER_NAME']
-        sizes = cl.list_sizes(provider = provider_name)[provider_name]
-        sizes = sizes[sizes.keys()[0]]
-        sizes = [x['name'] for x in sizes]
+        try:
+            cl = salt.cloud.CloudClient(path = '/etc/salt/cloud')
+            provider_name = self.provider_vars['VAR_PROVIDER_NAME']
+            sizes = cl.list_sizes(provider = provider_name)[provider_name]
+            sizes = sizes[sizes.keys()[0]]
+            sizes = [x['name'] for x in sizes]
+        except: 
+            import traceback
+            print ('There was an error in get_sizes() in the base driver for %s. ' % (provider_name))
+            traceback.print_exc()
+            raise Exception('There was an error getting sizes for %s' % (provider_name))
         raise tornado.gen.Return(sizes)
 
     @tornado.gen.coroutine
@@ -477,8 +489,9 @@ class DriverBase(object):
         if not steps_fields: 
             steps_fields = [['role', 'server_name'], state_fields, ['sec_group', 'image', 'size', 'network']]
         if not all([x in self.app_fields.keys() for x in steps_fields[step]]):
+            error_msg = 'Expected fields: %s, but only have data for: %s. ' % (steps_fields[step], self.app_fields.keys())
             print ('Fields expected are : ', steps_fields[step], ' but have : ', self.app_fields.keys())
             print ('Entire fields data : ', fields)
-            raise tornado.gen.Return(False) 
+            raise Exception(error_msg)
     
         raise tornado.gen.Return(self.app_fields)

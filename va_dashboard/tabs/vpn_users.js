@@ -1,42 +1,47 @@
-var React = require('react');
+import React, { Component } from 'react';
 var Bootstrap = require('react-bootstrap');
-var connect = require('react-redux').connect;
+import {connect} from 'react-redux';
 var Network = require('../network');
-var ReactDOM = require('react-dom');
-var Router = require('react-router');
-var Reactable = require('reactable');
+import {findDOMNode} from 'react-dom';
+import {hashHistory} from 'react-router';
+import {Table, Tr, Td} from 'reactable';
 
-var VpnUsers = React.createClass({
-    getInitialState: function () {
-        return {
+class VpnUsers extends Component {
+    constructor (props) {
+        super(props);
+        this.state = {
             active: [],
             revoked: [],
             loading: true,
         };
-    },
+        this.getCurrentVpns = this.getCurrentVpns.bind(this);
+        this.addVpn = this.addVpn.bind(this);
+        this.btn_clicked = this.btn_clicked.bind(this);
+        this.openModal = this.openModal.bind(this);
+    }
 
-    getCurrentVpns: function () {
+    getCurrentVpns () {
         var me = this;
         Network.get('/api/apps/vpn_users', this.props.auth.token).done(function (data) {
             me.setState({active: data.active, revoked: data.revoked, loading: false});
         }).fail(function (msg) {
             me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
         });
-    },
+    }
 
-    addVpn: function (username) {
+    addVpn (username) {
         this.setState({active: this.state.active.concat([{"connected": false, "name": username}])});
-    },
+    }
 
-    componentDidMount: function () {
+    componentDidMount () {
         this.getCurrentVpns();
-    },
+    }
 
     /*componentWillUnmount: function () {
         this.props.dispatch({type: 'RESET_TABS'});
     },*/
 
-    btn_clicked: function(username, evtKey){
+    btn_clicked (username, evtKey) {
         var data = {username: username};
         var me = this;
         switch (evtKey) {
@@ -68,18 +73,18 @@ var VpnUsers = React.createClass({
                 });
                 break;
             case "list":
-                Router.hashHistory.push('/vpn/list_logins/' + username);
+                hashHistory.push('/vpn/list_logins/' + username);
                 break;
             default:
                 break;
         }
-    },
+    }
 
-    openModal: function() {
+    openModal() {
         this.props.dispatch({type: 'OPEN_MODAL'});
-    },
+    }
 
-    render: function () {
+    render () {
         var active_rows = this.state.active.filter(function(vpn) {
             if(this.state.revoked.indexOf(vpn.name) > -1){
                 return false;
@@ -87,26 +92,26 @@ var VpnUsers = React.createClass({
             return true;
         }.bind(this)).map(function(vpn, i) {
             return (
-                <Reactable.Tr key={vpn.name}>
-                    <Reactable.Td column="Name">{vpn.name}</Reactable.Td>
-                    <Reactable.Td column="Connected">{vpn.connected?"True":"False"}</Reactable.Td>
-                    <Reactable.Td column="Actions">
+                <Tr key={vpn.name}>
+                    <Td column="Name">{vpn.name}</Td>
+                    <Td column="Connected">{vpn.connected?"True":"False"}</Td>
+                    <Td column="Actions">
                         <Bootstrap.DropdownButton id={"dropdown-" + vpn.name} bsStyle='default' title="Choose" onSelect = {this.btn_clicked.bind(this, vpn.name)}>
                             <Bootstrap.MenuItem eventKey="download">Download certificate</Bootstrap.MenuItem>
                             <Bootstrap.MenuItem eventKey="revoke">Revoke user</Bootstrap.MenuItem>
                             <Bootstrap.MenuItem eventKey="list">List logins</Bootstrap.MenuItem>
                         </Bootstrap.DropdownButton>
-                    </Reactable.Td>
-                </Reactable.Tr>
+                    </Td>
+                </Tr>
             );
         }.bind(this));
 
         var revoked_rows = this.state.revoked.map(function(vpn) {
             return (
-                <Reactable.Tr key={vpn}>
-                    <Reactable.Td column="Name">{vpn}</Reactable.Td>
-                    <Reactable.Td column="Connected">False</Reactable.Td>
-                </Reactable.Tr>
+                <Tr key={vpn}>
+                    <Td column="Name">{vpn}</Td>
+                    <Td column="Connected">False</Td>
+                </Tr>
             );
         });
         var a_len = active_rows.length, r_len = revoked_rows.length;
@@ -133,39 +138,39 @@ var VpnUsers = React.createClass({
                 <div style={blockStyle} className="container-block">
                     <div className="block card">
                         <div className="card-body">
-                            <Reactable.Table className="table table-striped" columns={['Name', 'Connected', 'Actions']} itemsPerPage={rowNum} pageButtonLimit={10} noDataText="No matching records found." sortable={sf_cols} filterable={sf_cols} btnName="Add user" btnClick={this.openModal} title="Active users" filterClassName="form-control custpm-filter-input" filterPlaceholder="Filter">
+                            <Table className="table table-striped" columns={['Name', 'Connected', 'Actions']} itemsPerPage={rowNum} pageButtonLimit={10} noDataText="No matching records found." sortable={sf_cols} filterable={sf_cols} btnName="Add user" btnClick={this.openModal} title="Active users" filterClassName="form-control custpm-filter-input" filterPlaceholder="Filter">
                                 {active_rows}
-                            </Reactable.Table>
+                            </Table>
                         </div>
                     </div>
                     <div className="block card">
                         <div className="card-body">
-                            <Reactable.Table id="revoked-tbl" className="table table-striped" columns={['Name', 'Connected']} itemsPerPage={rowNum} pageButtonLimit={10} noDataText="No matching records found." sortable={true} filterable={['Name', 'Connected']} title="Revoked users" filterClassName="form-control custpm-filter-input" filterPlaceholder="Filter">
+                            <Table id="revoked-tbl" className="table table-striped" columns={['Name', 'Connected']} itemsPerPage={rowNum} pageButtonLimit={10} noDataText="No matching records found." sortable={true} filterable={['Name', 'Connected']} title="Revoked users" filterClassName="form-control custpm-filter-input" filterPlaceholder="Filter">
                                 {revoked_rows}
-                            </Reactable.Table>
+                            </Table>
                         </div>
                     </div>
                 </div>
             </div>
         );
     }
-});
+}
 
-var Modal = React.createClass({
+class Modal extends Component {
 
-    open: function() {
+    open() {
         this.props.dispatch({type: 'OPEN_MODAL'});
-    },
+    }
 
-    close: function() {
+    close() {
         this.props.dispatch({type: 'CLOSE_MODAL'});
-    },
+    }
 
-    action: function(e) {
+    action(e) {
         console.log(e.target);
         console.log(this.refs.forma);
-        console.log(ReactDOM.findDOMNode(this.refs.forma).elements);
-        var elements = ReactDOM.findDOMNode(this.refs.forma).elements;
+        console.log(findDOMNode(this.refs.forma).elements);
+        var elements = findDOMNode(this.refs.forma).elements;
         var data = {};
         for(i=0; i<elements.length; i++){
             data[elements[i].name] = elements[i].value;
@@ -180,9 +185,9 @@ var Modal = React.createClass({
         }).fail(function (msg) {
             me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
         });
-    },
+    }
 
-    render: function () {
+    render () {
         return (
             <Bootstrap.Modal show={this.props.modal.isOpen} onHide={this.close}>
             <Bootstrap.Modal.Header closeButton>
@@ -210,7 +215,7 @@ var Modal = React.createClass({
         </Bootstrap.Modal>
         );
     }
-});
+}
 
 VpnUsers = connect(function(state){
     return {auth: state.auth, alert: state.alert};

@@ -1,21 +1,19 @@
-var React = require('react');
+import React, { Component } from 'react';
 var Bootstrap = require('react-bootstrap');
-var connect = require('react-redux').connect;
+import {connect} from 'react-redux';
 var Network = require('../network');
-var ReactDOM = require('react-dom');
-var Router = require('react-router');
-//var DatePicker = require('react-datepicker').default;
-var DateRangePicker = require('react-dates').DateRangePicker;
+import {DateRangePicker} from 'react-dates';
 var moment = require('moment');
-var Reactable = require('reactable');
-var Select = require('react-select-plus').default;
+import {Table, Tr, Td} from 'reactable';
+import Select from 'react-select-plus';
 
 var SEV = ["emerg", "alert", "crit", "err", "warning", "notice", "info", "debug"];
 var COLORS = ["#de4040", "#de4040", "#de4040", "#de4040", "#ffa726", "#777777", "#777777", "#777777"];
 
-var Log = React.createClass({
-    getInitialState: function () {
-        return {
+class Log extends Component {
+    constructor (props) {
+        super(props);
+        this.state = {
             logs: [],
             value: "",
             checked: Object.assign([], SEV),
@@ -23,9 +21,17 @@ var Log = React.createClass({
             statuses: ['start', 'stop'],
             hosts: [],
             selected_hosts: []
-        }
-    },
-    initLog: function () {
+        };
+        this.initLog = this.initLog.bind(this);
+        this.close_socket = this.close_socket.bind(this);
+        this.filter = this.filter.bind(this);
+        this.updateLogs = this.updateLogs.bind(this);
+        this.changeObservableStatus = this.changeObservableStatus.bind(this);
+        this.changeTable = this.changeTable.bind(this);
+        this.changeStatus = this.changeStatus.bind(this);
+        this.onChangeHost = this.onChangeHost.bind(this);
+    }
+    initLog() {
         var host = window.location.host;
         if(host.indexOf(":") == 0){
             host += ":80";
@@ -35,9 +41,15 @@ var Log = React.createClass({
         var me = this;
         this.ws.onmessage = function (evt) {
             var data = JSON.parse(evt.data);
-            var logs = [];
-            if(data.type === "update")
-                logs = me.state.logs.concat([data.message]);
+            var logs = [], hosts = [];
+            if(data.type === "update"){
+                let log = data.message, host = log.host; 
+                hosts = me.state.hosts;
+                logs = me.state.logs.concat([log]);
+                let h = hosts.map((host) => host.value);
+                if(!host in h)
+                    hosts.push({value: host, label: host});
+            }
             else if(data.type === "init")
                 logs = data.logs, hosts = data.hosts;
             me.setState({logs: logs, hosts: hosts, selected_hosts: hosts});
@@ -46,50 +58,44 @@ var Log = React.createClass({
             me.ws.close();
             me.props.dispatch({type: 'SHOW_ALERT', msg: "Socket error."});
         };
-    },
-    componentDidMount: function () {
+    }
+    componentDidMount() {
         if(!this.props.alert.show)
             this.initLog();
-    },
-    close_socket: function () {
+    }
+    close_socket() {
         this.ws.close();
-    },
-    filter: function (evt) {
+    }
+    filter(evt) {
         this.setState({value: evt.target.value});
-    },
-    updateLogs: function(startDate, endDate){
+    }
+    updateLogs(startDate, endDate){
         var msg = {
             type: "get_messages",
             from_date: startDate,
             to_date: endDate
         };
         this.ws.send(JSON.stringify(msg));
-    },
-    changeObservableStatus: function(value){
+    }
+    changeObservableStatus(value){
         var msg = {
             type: "observer_status",
             status: value
         };
         this.ws.send(JSON.stringify(msg));
-    },
-    changeTable: function(checked){
+    }
+    changeTable(checked){
         this.setState({checked: checked});
-    },
-    changeStatus: function(e){
+    }
+    changeStatus (e){
         var value = e.target.value;
         this.setState({status: 1 - value});
         this.changeObservableStatus(this.state.statuses[value]);
-    },
+    }
     onChangeHost(value) {
         this.setState({ selected_hosts: value });
-    },
-    render: function () {
-        var TableRedux = connect(function(state){
-            return {auth: state.auth, alert: state.alert};
-        })(Table);
-        var DateRangeRedux = connect(function(state){
-            return {auth: state.auth, alert: state.alert};
-        })(DateRange);
+    }
+    render () {
         var counters = {};
         for(var i=0; i<SEV.length; i++)
             counters[SEV[i]] = 0;
@@ -115,34 +121,35 @@ var Log = React.createClass({
                     <FilterBtns changeTable={this.changeTable} counters={counters} />
                     <input type='text' placeholder='Filter' value={this.state.value} onChange={this.filter} className='form-control'/>
                 </div>
-                <TableRedux logs={logs} filterBy={this.state.value} />
+                <LogTable logs={logs} filterBy={this.state.value} />
             </div>
 	);
     }
-});
+}
 
-var DateRange = React.createClass({
-    getInitialState: function () {
-        return {
+class DateRange extends Component {
+    constructor (props) {
+        super(props);
+        this.state = {
             startDate: moment().subtract(1, 'days'),
             endDate: moment(),
             focusedInput: null
         }
-    },
+        this.handleChange = this.handleChange.bind(this);
+        this.focusChange = this.focusChange.bind(this);
+    }
 
-    handleChange: function(obj) {
-        this.setState({
-            startDate: obj.startDate,
-            endDate: obj.endDate
-        });
-        this.props.updateLogs(obj.startDate.format('YYYY-MM-DD'), obj.endDate.format('YYYY-MM-DD'));
-    },
+    handleChange(obj) {
+        let { startDate, endDate } = obj;
+        this.setState({startDate, endDate});
+        this.props.updateLogs(startDate.format('YYYY-MM-DD'), endDate.format('YYYY-MM-DD'));
+    }
 
-    focusChange: function(focusedInput){
+    focusChange(focusedInput){
         this.setState({focusedInput: focusedInput});
-    },
+    }
 
-    render: function () {
+    render () {
         var state = this.props.state;
         return (
             <DateRangePicker
@@ -157,21 +164,23 @@ var DateRange = React.createClass({
             />
         );
     }
-});
+}
 
-var FilterBtns = React.createClass({
-    getInitialState: function () {
-        return {
+class FilterBtns extends Component {
+    constructor (props) {
+        super(props);
+        this.state = {
             values: Object.assign([], SEV)
-        }
-    },
+        };
+        this.onChange = this.onChange.bind(this);
+    }
 
-	onChange: function (values) {
+	onChange(values) {
         this.setState({values: values});
         this.props.changeTable(values);
-	},
+	}
 
-    render: function () {
+    render () {
         var me = this;
 		var btns = SEV.map(function(val, i){
 			return <Bootstrap.ToggleButton key={val} value={val}>{val} <span className="badge" style={{backgroundColor: COLORS[i]}}>{me.props.counters[val]}</span></Bootstrap.ToggleButton>;
@@ -182,16 +191,18 @@ var FilterBtns = React.createClass({
             </Bootstrap.ToggleButtonGroup>
 		);
     }
-});
+}
 
-var Table = React.createClass({
-    getInitialState: function () {
-        return {
+class LogTable extends Component {
+    constructor (props) {
+        super(props);
+        this.state = {
             selected_log: {}
-        }
-    },
+        };
+        this.rowSelected = this.rowSelected.bind(this);
+    }
 
-    rowSelected: function(evt) {
+    rowSelected(evt) {
         var selected_row = this.props.logs.find(function(log){
             return log.timestamp === evt.currentTarget.id;
         });
@@ -201,9 +212,9 @@ var Table = React.createClass({
         selected_row['message']['method'] = msg['data']['method'];
         delete selected_row['message']['data'];
         this.setState({selected_log: selected_row});
-    },
+    }
 
-    render: function () {
+    render() {
         var logs = this.props.logs.map(function(log, index) {
             var msg = log.message, className = "row-log-" + log.severity;
             /*try{
@@ -216,12 +227,12 @@ var Table = React.createClass({
             //if(this.state.selected_log.timestamp === log.timestamp)
             //    className = "info";
             return (
-                <Reactable.Tr key={log.timestamp} id={log.timestamp} className={className} onClick={this.rowSelected}>
-                    <Reactable.Td column="Timestamp" style={{minWidth: '100px'}}>{log.timestamp.substring(0,19).split('T').join(' ')}</Reactable.Td>
-                    <Reactable.Td column="Host">{log.host}</Reactable.Td>
-                    <Reactable.Td column="Severity">{log.severity}</Reactable.Td>
-                    <Reactable.Td column="Message" className="ellipsized-text2">{msg}</Reactable.Td>
-                </Reactable.Tr>
+                <Tr key={log.timestamp} id={log.timestamp} className={className} onClick={this.rowSelected}>
+                    <Td column="Timestamp" style={{minWidth: '100px'}}>{log.timestamp.substring(0,19).split('T').join(' ')}</Td>
+                    <Td column="Host">{log.host}</Td>
+                    <Td column="Severity">{log.severity}</Td>
+                    <Td column="Message" className="ellipsized-text2">{msg}</Td>
+                </Tr>
             );
         }.bind(this));
         var selected_log = [];
@@ -235,12 +246,12 @@ var Table = React.createClass({
         }
         var columns = ["Timestamp", "Host", "Severity", "Message"];
         return ( <div>
-            <Reactable.Table className="table striped card" columns={columns} itemsPerPage={10} pageButtonLimit={10} noDataText="No matching records found." sortable={true} filterable={columns} filterBy={this.props.filterBy} hideFilterInput>
+            <Table className="table striped card" columns={columns} itemsPerPage={10} pageButtonLimit={10} noDataText="No matching records found." sortable={true} filterable={columns} filterBy={this.props.filterBy} hideFilterInput>
                 {logs}
-            </Reactable.Table>
+            </Table>
         </div> );
     }
-});
+}
 
 
 Log = connect(function(state){

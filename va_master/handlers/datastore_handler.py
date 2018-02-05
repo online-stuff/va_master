@@ -7,6 +7,9 @@ import tornado.gen
 
 from pbkdf2 import crypt
 
+from va_master.consul_kv.datastore import KeyNotFound, StoreError
+
+
 #def compare_dicts(d1, d2):
 #    for key in d1:
 #        if key not in d2 or type(d1.get(key)) != type(d2.get(key)):
@@ -311,9 +314,14 @@ class DatastoreHandler(object):
         }
         raise tornado.gen.Return(panel)
 
+
+
+
     @tornado.gen.coroutine
     def import_states_from_states_data(self, states = []):
         states_data = yield self.get_states_data(states)
+
+        empty_panel = {'admin' : [], 'user' : []}
 
         for state in states_data: 
             for user_type in ['admin', 'user']: 
@@ -347,6 +355,8 @@ class DatastoreHandler(object):
     @tornado.gen.coroutine
     def get_states(self):
         states = yield self.datastore.get_recurse('states/')
+        if not get_states_without_modules: 
+            states = [x for x in states if x.get('module')]
         raise tornado.gen.Return(states)
 
     @tornado.gen.coroutine
@@ -379,6 +389,6 @@ class DatastoreHandler(object):
     @tornado.gen.coroutine
     def get_user_salt_functions(self, username):
         user = yield self.find_user(username)
-        salt_functions = [x for x in user.get('functions', []) if x.get('func_type', '') == 'salt']
+        salt_functions = [x['func_path'] for x in user.get('functions', []) if x.get('func_type', '') == 'salt']
 
         raise tornado.gen.Return(salt_functions)

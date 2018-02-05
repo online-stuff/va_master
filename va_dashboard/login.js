@@ -1,11 +1,21 @@
-var React = require('react');
+import React, { Component } from 'react';
 var Bootstrap = require('react-bootstrap');
-var Router = require('react-router');
-var connect = require('react-redux').connect;
+import { hashHistory } from 'react-router';
+import { connect } from 'react-redux';
 var Network = require('./network');
 
-var Login = React.createClass({
-    onSubmit: function(e) {
+class Login extends Component {
+    constructor(props){
+        super(props);
+        this.state = {
+            username: '', 
+            password: ''
+        };
+        this.onSubmit = this.onSubmit.bind(this);
+        this.onInput = this.onInput.bind(this);
+    }
+
+    onSubmit(e) {
         e.preventDefault();
         var data = {
             username: this.state.username,
@@ -24,22 +34,19 @@ var Login = React.createClass({
                 me.props.dispatch({type: 'LOGIN_ERROR'});
             }, 300);
         });
-    },
-    componentWillReceiveProps: function(props) {
+    }
+    componentWillReceiveProps(props) {
         if(props.auth.token){
-            Router.hashHistory.push('/');
+            hashHistory.push('/');
         }
-    },
-    componentDidMount: function () {
+    }
+    componentDidMount() {
         document.body.className = 'login';
-    },
-    componentWillUnmount: function () {
+    }
+    componentWillUnmount() {
         document.body.className = '';
-    },
-    getInitialState: function () {
-        return {username: '', password: ''};
-    },
-    render: function() {
+    }
+    render() {
         let status = null;
         if(this.props.auth.inProgress) {
             status = (<Bootstrap.Alert bsStyle='info'>Logging in...</Bootstrap.Alert>);
@@ -71,15 +78,15 @@ var Login = React.createClass({
             {status}
             </div>
         );
-    },
-    onInput: function (e) {
+    }
+    onInput(e) {
         if(e.target.name === 'username') {
             this.setState({username: e.target.value});
         } else {
             this.setState({password: e.target.value});
         }
     }
-});
+}
 
 module.exports = connect(function(state) {
     return {auth: state.auth};

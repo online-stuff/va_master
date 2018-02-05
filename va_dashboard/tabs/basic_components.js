@@ -1,20 +1,20 @@
-var React = require('react');
+import React, { Component } from 'react';
 var Bootstrap = require('react-bootstrap');
 var Network = require('../network');
 
-var Filter = React.createClass({
+class Filter extends Component {
 
-    componentDidMount: function(){
+    componentDidMount(){
 		var elem = this.refs[this.props.name], pos = elem.value.length;
 		elem.focus();
 		elem.setSelectionRange(pos, pos);
-    },
+    }
 
-    filter: function(e){
+    filter(e) {
         this.props.dispatch({type: 'FILTER', filterBy: e.target.value});
-    },
+    }
 
-    render: function () {
+    render () {
         return (
             <Bootstrap.InputGroup>
                 <input
@@ -23,7 +23,7 @@ var Filter = React.createClass({
                     className="form-control"
                     placeholder="Filter"
                     value={this.props.filter.filterBy}
-                    onChange={this.filter}
+                    onChange={(e) => this.filter(e)}
                     ref={this.props.name}
                 />
                 <Bootstrap.InputGroup.Addon>
@@ -32,21 +32,20 @@ var Filter = React.createClass({
             </Bootstrap.InputGroup>
         );
     }
-});
+}
 
-var Button = React.createClass({
+class Button extends Component {
 
-    openModal: function() {
+    openModal () {
         var modal = this.props.modalTemplate;
         this.props.dispatch({type: 'OPEN_MODAL', template: modal});
-    },
+    }
 
-    showTarget: function(target) {
-        console.log(target);
+    showTarget (target) {
         this.props.dispatch({type: 'TOGGLE'});
-    },
+    }
 
-    btn_action: function(action) {
+    btn_action (action) {
         var me = this;
         if("tblName" in this.props){
             var panel = this.props.panel, export_type = this.props.export_type;
@@ -69,13 +68,13 @@ var Button = React.createClass({
                 me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
             });
         }
-    },
+    }
 
-    render: function () {
+    render () {
         var onclick = null, glyph;
         switch (this.props.action) {
             case "modal":
-                onclick = this.openModal;
+                onclick = this.openModal.bind(this);
                 break;
             case "show":
                 onclick = this.showTarget.bind(this, this.props.target);
@@ -93,38 +92,29 @@ var Button = React.createClass({
             </Bootstrap.Button>
         );
     }
-});
+}
 
-var Heading = React.createClass({
+const Heading = (props) => {
+    return (
+        <h3>
+            {props.name}
+        </h3>
+    );
+}
 
-    render: function () {
-        return (
-            <h3>
-                {this.props.name}
-            </h3>
-        );
-    }
-});
+const Paragraph = (props) => {
+    return (
+        <div>
+            {props.name}
+        </div>
+    );
+}
 
-var Paragraph = React.createClass({
-
-    render: function () {
-        return (
-            <div>
-                {this.props.name}
-            </div>
-        );
-    }
-});
-
-var Frame = React.createClass({
-
-    render: function () {
-        return (
-            <iframe key={this.props.name} src={this.props.src} className="iframe"></iframe>
-        );
-    }
-});
+const Frame = (props) => {
+    return (
+        <iframe key={props.name} src={props.src} className="iframe"></iframe>
+    );
+}
 
 
 module.exports = {

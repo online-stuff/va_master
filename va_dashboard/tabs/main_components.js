@@ -1,147 +1,138 @@
-var React = require('react');
+import React, { Component } from 'react';
 var Bootstrap = require('react-bootstrap');
-var connect = require('react-redux').connect;
+import { connect } from 'react-redux';
 var Network = require('../network');
-var ReactDOM = require('react-dom');
+import { findDOMNode } from 'react-dom';
 var components = require('./basic_components');
-var Reactable = require('reactable');
-var Router = require('react-router');
-var LineChart = require("react-chartjs-2").Line;
-var defaults = require("react-chartjs-2").defaults;
+import { Table as Reactable, Tr, Th, Thead, Td } from 'reactable';
+import { hashHistory } from 'react-router';
+import { Line, Pie, Bar, defaults } from "react-chartjs-2";
+var moment = require('moment');
+import { DateRangePicker } from 'react-dates';
+import { getRandomColor } from './util';
 
-var Div = React.createClass({
-
-    render: function () {
-        var redux = {};
-        var elements = this.props.elements.map(function(element) {
-            element.key = element.name;
-            var Component = components[element.type];
-            redux[element.type] = connect(function(state){
-                var newstate = {auth: state.auth};
-                if(typeof element.reducers !== 'undefined'){
-                    var r = element.reducers;
-                    for (var i = 0; i < r.length; i++) {
-                        newstate[r[i]] = state[r[i]];
-                    }
+const Div = (props) => {
+    var redux = {};
+    var elements = props.elements.map(function(element) {
+        element.key = element.name;
+        var Component = components[element.type];
+        redux[element.type] = connect(function(state){
+            var newstate = {auth: state.auth};
+            if(typeof element.reducers !== 'undefined'){
+                var r = element.reducers;
+                for (var i = 0; i < r.length; i++) {
+                    newstate[r[i]] = state[r[i]];
                 }
-                return newstate;
-            })(Component);
-            var Redux = redux[element.type];
-            return React.createElement(Redux, element);
-        });
-        var classes = this.props.class;
-        if(typeof this.props.div !== 'undefined'){
-            //TODO add other classes
-            classes = this.props.div.show;
-        }
-        return (
-            <div className={classes}>
-                {elements}
-            </div>
-        );
-    }
-});
-
-var MultiTable = React.createClass({
-
-    render: function () {
-        var redux = {}, tables = [];
-        for(x in this.props.table){
-            if(x !== "path"){
-                var elements = this.props.elements.map(function(element) {
-                    element.name = x;
-                    element.key = element.type + element.name;
-                    var Component = components[element.type];
-                    redux[element.type] = connect(function(state){
-                        var newstate = {auth: state.auth};
-                        if(typeof element.reducers !== 'undefined'){
-                            var r = element.reducers;
-                            for (var i = 0; i < r.length; i++) {
-                                newstate[r[i]] = state[r[i]];
-                            }
-                        }
-                        return newstate;
-                    })(Component);
-                    var Redux = redux[element.type];
-                    return React.createElement(Redux, element);
-                }.bind(this));
-                tables.push(elements);
             }
-        }
-        return (
-            <div className="multi">
-                {tables}
-            </div>
-        );
+            return newstate;
+        })(Component);
+        var Redux = redux[element.type];
+        return React.createElement(Redux, element);
+    });
+    var classes = props.class;
+    if(typeof props.div !== 'undefined'){
+        //TODO add other classes
+        classes = props.div.show;
     }
-});
+    return (
+        <div className={classes}>
+            {elements}
+        </div>
+    );
+}
 
-var Chart = React.createClass({
-    getInitialState: function () {
+const MultiTable = (props) => {
+    var redux = {}, tables = [];
+    for(var x in props.table){
+        if(x !== "path"){
+            var elements = props.elements.map((element) => {
+                element.name = x;
+                element.key = element.type + element.name;
+                var Component = components[element.type];
+                redux[element.type] = connect(function(state){
+                    var newstate = {auth: state.auth};
+                    if(typeof element.reducers !== 'undefined'){
+                        var r = element.reducers;
+                        for (var i = 0; i < r.length; i++) {
+                            newstate[r[i]] = state[r[i]];
+                        }
+                    }
+                    return newstate;
+                })(Component);
+                var Redux = redux[element.type];
+                return React.createElement(Redux, element);
+            });
+            tables.push(elements);
+        }
+    }
+    return (
+        <div className="multi">
+            {tables}
+        </div>
+    );
+}
+
+class Chart extends Component {
+    constructor (props) {
+        super(props);
         defaults.global.legend.display = true;
         defaults.global.legend.position = 'right';
         var chartData = this.getData(this.props.data, false);
-        return {chartOptions: {
-                    maintainAspectRatio: false,
-                    responsive: true,
-                    scales: {
-                        xAxes: [{
-                            type: 'time',
-                            stacked: true,
-                            time: {
-                                displayFormats: {
-                                    minute: 'HH:mm',
-                                    hour: 'HH:mm',
-                                    second: 'HH:mm:ss',
-                                },
-                                tooltipFormat: 'DD/MM/YYYY HH:mm',
-                                unit: 'minute',
-                                unitStepSize: 5
-                            }
-                        }],
-                        yAxes: [{
-                            stacked: true
-                        }]
+        this.state = {chartOptions: {
+            maintainAspectRatio: false,
+            responsive: true,
+            scales: {
+                xAxes: [{
+                    type: 'time',
+                    stacked: true,
+                    time: {
+                        displayFormats: {
+                            minute: 'HH:mm',
+                            hour: 'HH:mm',
+                            second: 'HH:mm:ss',
+                        },
+                        tooltipFormat: 'DD/MM/YYYY HH:mm',
+                        unit: 'minute',
+                        unitStepSize: 5
                     }
-                }, chartData: chartData};
-    },
-    getData: function(data, check) {
+                }],
+                yAxes: [{
+                    stacked: true
+                }]
+            }
+        }, chartData: chartData};
+        this.getData = this.getData.bind(this);
+        this.btn_click = this.btn_click.bind(this);
+    }
+    getData(data, check) {
         var datasets = [], times = [], chartData = {}, prevColors = {};
         if(check){
-            for(var i=0; i < this.state.chartData.datasets.length; i++) {
-                dataset = this.state.chartData.datasets[i];
+            for(let i=0; i < this.state.chartData.datasets.length; i++) {
+                let dataset = this.state.chartData.datasets[i];
                 prevColors[dataset.label] = dataset.backgroundColor;
             }
         }
         for(var key in data){
             var obj = {}, prevColor = prevColors[key];
-            var color = prevColor || this.getRandomColor();
+            var color = prevColor || getRandomColor();
             obj.label = key;
             obj.data = [];
             var chart_data = data[key];
-            for(var i=0; i<chart_data.length; i++){
+            for(let i=0; i<chart_data.length; i++){
                 obj.data.push(chart_data[i].y);
             }
             obj.backgroundColor = color;
             obj.borderColor = color;
             datasets.push(obj);
         }
-        for(var i=0; i<data[key].length; i++){
+        for(let i=0; i<data[key].length; i++){
             times.push(data[key][i].x * 1000);
         }
         chartData.labels = times;
         chartData.datasets = datasets;
         return chartData;
-    },
-    getRandomColor: function() {
-        var letters = '0123456789ABCDEF'.split('');
-        var color = '#';
-        for (var i = 0; i < 6; i++ ) {
-            color += letters[Math.floor(Math.random() * 16)];
-        }
-        return color;
-    },
-    btn_click: function(period, interval, unit, step) {
+    }
+    btn_click (period, interval, unit, step) {
         var server_name = this.props.panel.server;
         var data = {"server_name": server_name, "args": [this.props.provider, this.props.service, period, interval]};
         var me = this;
@@ -153,12 +144,12 @@ var Chart = React.createClass({
         }).fail(function (msg) {
             me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
         });
-    },
-    render: function () {
+    }
+    render () {
         return (
             <div>
                 <div className="panel_chart">
-                    <LineChart name="chart" height={200} data={this.state.chartData} options={this.state.chartOptions} redraw />
+                    <Line name="chart" height={200} data={this.state.chartData} options={this.state.chartOptions} redraw />
                 </div>
                 <div id="chartBtns">
                   <button className='btn btn-primary bt-sm chartBtn' onClick = {this.btn_click.bind(this, "-1h", "300", 'minute', 5)}>Last hour</button>
@@ -170,10 +161,10 @@ var Chart = React.createClass({
             </div>
         );
     }
-});
+}
 
-var Table = React.createClass({
-    btn_clicked: function(id, evtKey){
+class Table extends Component {
+    btn_clicked(id, evtKey){
         var checkPath = 'path' in this.props.table && this.props.table.path.length > 0;
         if(!checkPath && 'args' in this.props.panel && this.props.panel.args !== ""){
             id.unshift(this.props.panel.args);
@@ -194,14 +185,14 @@ var Table = React.createClass({
                 args.push(id[0]);
             }
             var data = {"server_name": this.props.panel.server, "action": evtKey, "args": args};
-            var me = this;
+            let me = this;
             if(typeof evtKey === 'object' && evtKey.type === "download"){
                 data.action = evtKey.name;
                 data['url_function'] = 'get_backuppc_url';
                 Network.download_file('/api/panels/serve_file_from_url', this.props.auth.token, data).done(function(d) {
                     var data = new Blob([d], {type: 'octet/stream'});
                     var url = window.URL.createObjectURL(data);
-                    tempLink = document.createElement('a');
+                    let tempLink = document.createElement('a');
                     tempLink.style = "display: none";
                     tempLink.href = url;
                     tempLink.setAttribute('download', id[0]);
@@ -226,8 +217,8 @@ var Table = React.createClass({
         }else if(evtKey == 'chart'){
             var newName = this.props.name.replace(/\s/g, "_");
             var newId = id[0].replace(/:/g, "_");
-            var newId = newId.replace(/\s/g, "_");
-            Router.hashHistory.push('/chart_panel/' + this.props.panel.server + '/' + newName + '/' + newId);
+            newId = newId.replace(/\s/g, "_");
+            hashHistory.push('/chart_panel/' + this.props.panel.server + '/' + newName + '/' + newId);
         }else if('modals' in this.props && evtKey in this.props.modals){
             if("readonly" in this.props){
                 var rows = this.props.table[this.props.name].filter(function(row) {
@@ -237,7 +228,7 @@ var Table = React.createClass({
                     return false;
                 }.bind(this));
                 var readonly = {};
-                for(key in this.props.readonly){
+                for(let key in this.props.readonly){
                     readonly[this.props.readonly[key]] = rows[0][key];
                 }
                 this.props.dispatch({type: 'SET_READONLY', readonly: readonly});
@@ -248,10 +239,10 @@ var Table = React.createClass({
             modal.refresh_action = this.props.source;
             this.props.dispatch({type: 'OPEN_MODAL', template: modal});
         }else if("panels" in this.props && evtKey in this.props.panels){
-            Router.hashHistory.push('/subpanel/' + this.props.panels[evtKey] + '/' + this.props.panel.server + '/' + id[0]);
+            hashHistory.push('/subpanel/' + this.props.panels[evtKey] + '/' + this.props.panel.server + '/' + id[0]);
         }else{
             var data = {"server_name": this.props.panel.server, "action": evtKey, "args": id};
-            var me = this;
+            let me = this;
             Network.post('/api/panels/action', this.props.auth.token, data).done(function(msg) {
                 if(typeof msg === 'string'){
                     me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
@@ -273,17 +264,17 @@ var Table = React.createClass({
                 me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
             });
         }
-    },
-    linkClicked: function(action, event){
+    }
+    linkClicked(action, event){
         var linkVal = event.currentTarget.textContent, args = "";
         if(window.location.hash.indexOf('subpanel') > -1){
             args = this.props.panel.args + ","; 
         }
         args += linkVal;
         if("panels" in this.props && action in this.props.panels){
-            Router.hashHistory.push('/panel/' + this.props.panels[action] + '/' + this.props.panel.server + '/' + args);
+            hashHistory.push('/panel/' + this.props.panels[action] + '/' + this.props.panel.server + '/' + args);
         }else if("subpanels" in this.props && action in this.props.subpanels){
-            Router.hashHistory.push('/subpanel/' + this.props.subpanels[action] + '/' + this.props.panel.server + '/' + args);
+            hashHistory.push('/subpanel/' + this.props.subpanels[action] + '/' + this.props.panel.server + '/' + args);
         } else {
              var args = this.props.table.path.concat(linkVal);
              var data = {"server_name": this.props.panel.server, "action": action, "args": args};
@@ -298,8 +289,8 @@ var Table = React.createClass({
                  me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
              });
         }
-    },
-    render: function () {
+    }
+    render () {
         var pagination = "pagination" in this.props ? this.props.pagination : true;
         if(typeof this.props.table[this.props.name] === 'undefined')
             return null;
@@ -321,7 +312,7 @@ var Table = React.createClass({
             }
             cols.push(tmp.key);
             tbl_cols[i] = (
-                <Reactable.Th key={tmp.key} column={tmp.key} style={style}>{tmp.label}</Reactable.Th>
+                <Th key={tmp.key} column={tmp.key} style={style}>{tmp.label}</Th>
             );
         }
         if(!tbl_id){
@@ -329,7 +320,8 @@ var Table = React.createClass({
         }
         var action_col = false, action_length = 0;
         if(this.props.hasOwnProperty('actions')){
-            var action_col = true, action_length = this.props.actions.length;
+            action_col = true; 
+            action_length = this.props.actions.length;
             if(action_length > 1){
                 var actions = this.props.actions.map(function(action) {
                     var className = "";
@@ -342,14 +334,14 @@ var Table = React.createClass({
                 });
             }
         }
-        var rows = this.props.table[this.props.name].map(function(row) {
-            var columns, key, me = this;
+        var rows = this.props.table[this.props.name].map((row) => {
+            var columns, key;
             if(typeof row === "string"){
                 key = [this.props.name, row];
                 columns = (
-                    <Reactable.Td key={cols[0]} column={cols[0]}>
+                    <Td key={cols[0]} column={cols[0]}>
                         {row}
-                    </Reactable.Td>
+                    </Td>
                 );
             }else{
                 if(tbl_id instanceof Array){
@@ -360,8 +352,8 @@ var Table = React.createClass({
                 }else{
                     key = [row[tbl_id]];
                 }
-                columns = this.props.columns.map(function(col, index) {
-                    var key = col.key, colClass = "", colText = colVal = row[key];
+                columns = this.props.columns.map((col, index) => {
+                    var key = col.key, colClass = "", colText = row[key], colVal = row[key];
                     if(typeof col.href !== 'undefined'){
                         colText = <a href={colVal} target='_blank'>Link</a>
                     }
@@ -374,19 +366,19 @@ var Table = React.createClass({
                         if("action" in col){
                             var col_arr = col['action'].split(':');
                             if(col_arr[0] === "all" || col_arr[0] === row[col.colClass])
-                                colText = <span className={colClass} onClick={me.linkClicked.bind(me, col_arr[1])}>{colVal}</span>
+                                colText = <span className={colClass} onClick={this.linkClicked.bind(this, col_arr[1])}>{colVal}</span>
                         }
                     }
                     return (
-                        <Reactable.Td key={key} column={key} value={colVal}>
+                        <Td key={key} column={key} value={colVal}>
                             {colText}
-                        </Reactable.Td>
+                        </Td>
                     );
                 });
             }
             if(action_col){
                 action_col = (
-                    <Reactable.Td column="action">
+                    <Td column="action">
                         {action_length > 1 ? (
                             <Bootstrap.DropdownButton id={"dropdown-" + key[0]} bsStyle='primary' title="Choose" onSelect = {this.btn_clicked.bind(this, key)}>
                                 {actions}
@@ -396,7 +388,7 @@ var Table = React.createClass({
                                 {this.props.actions[0].name}
                             </Bootstrap.Button>
                         )}
-                    </Reactable.Td>
+                    </Td>
                 );
             }
             var rowClass = "";
@@ -404,12 +396,12 @@ var Table = React.createClass({
                 rowClass = "row-" + this.props.rowStyleCol + "-" + row[this.props.rowStyleCol];
             }
             return (
-                <Reactable.Tr className={rowClass} key={key}>
+                <Tr className={rowClass} key={key}>
                     {columns}
                     {action_col}
-                </Reactable.Tr>
+                </Tr>
             )
-        }.bind(this));
+        });
         var filterBy = "";
         if('filter' in this.props){
             filterBy = this.props.filter.filterBy;
@@ -420,32 +412,33 @@ var Table = React.createClass({
         }
         return (
             <div>
-            { pagination ? ( <Reactable.Table className={className} itemsPerPage={10} pageButtonLimit={10} noDataText="No matching records found." sortable={true} filterable={cols} >
-                <Reactable.Thead>
+            { pagination ? ( <Reactable className={className} itemsPerPage={10} pageButtonLimit={10} noDataText="No matching records found." sortable={true} filterable={cols} >
+                <Thead>
                     {tbl_cols}
-                </Reactable.Thead>
+                </Thead>
                 {rows}
-            </Reactable.Table> ) :
-            ( <Reactable.Table className={className} filterable={cols} filterBy={filterBy} noDataText="No matching records found." sortable={true} hideFilterInput >
-                <Reactable.Thead>
+            </Reactable> ) :
+            ( <Reactable className={className} filterable={cols} filterBy={filterBy} noDataText="No matching records found." sortable={true} hideFilterInput >
+                <Thead>
                     {tbl_cols}
-                </Reactable.Thead>
+                </Thead>
                 {rows}
-            </Reactable.Table> )}
+            </Reactable> )}
             </div>
         );
     }
-});
+}
 
 //TODO multiple group of checkboxes
-var Modal = React.createClass({
+class Modal extends Component {
 
-    getInitialState: function () {
+    constructor (props) {
+        super(props);
         var content = this.props.modal.template.content, data = [], checks = {};
-        for(j=0; j<content.length; j++){
+        for(var j=0; j<content.length; j++){
             if(content[j].type == "Form"){
                 var elem = content[j].elements;
-                for(i=0; i<elem.length; i++){
+                for(let i=0; i<elem.length; i++){
                     if(elem[i].type === 'dropdown')
                         data[i] = elem[i].value[0];
                     if(elem[i].type !== 'label')
@@ -459,19 +452,22 @@ var Modal = React.createClass({
         if("args" in this.props.modal.template){
             args = this.props.modal.template.args;
         }
-        return {
+        this.state = {
             data: data,
             focus: "",
             args: args,
             checks: checks
         };
-    },
+        this.close = this.close.bind(this);
+        this.action = this.action.bind(this);
+        this.form_changed = this.form_changed.bind(this);
+    }
 
-    close: function() {
+    close () {
         this.props.dispatch({type: 'CLOSE_MODAL'});
-    },
+    }
 
-    action: function(action_name) {
+    action (action_name) {
         var args = this.state.data.slice(0);
         var checks = this.state.checks, keys = Object.keys(checks);
         if(keys.length > 0){
@@ -489,27 +485,26 @@ var Modal = React.createClass({
             args.splice(keys[0], 0, check_vals);
         }
         var data = {"server_name": this.props.panel.server, "action": action_name, "args": this.state.args.concat(args)};
-        var me = this;
-        Network.post("/api/panels/action", this.props.auth.token, data).done(function(d) {
-            me.props.dispatch({type: 'CLOSE_MODAL'});
-            if('refresh_action' in me.props.modal.template){
+        Network.post("/api/panels/action", this.props.auth.token, data).done((d) => {
+            this.props.dispatch({type: 'CLOSE_MODAL'});
+            if('refresh_action' in this.props.modal.template){
                 var args = [];
-                if(me.props.panel.args !== "") args = [me.props.panel.args];
-                var data = {"server_name": me.props.panel.server, "action": me.props.modal.template.refresh_action, "args": args};
-                Network.post('/api/panels/action', me.props.auth.token, data).done(function(msg) {
+                if(this.props.panel.args !== "") args = [this.props.panel.args];
+                var data = {"server_name": this.props.panel.server, "action": this.props.modal.template.refresh_action, "args": args};
+                Network.post('/api/panels/action', this.props.auth.token, data).done(function(msg) {
                     if(typeof msg !== 'string'){
-                        me.props.dispatch({type: 'CHANGE_DATA', data: msg, name: me.props.modal.template.table_name});
+                        this.props.dispatch({type: 'CHANGE_DATA', data: msg, name: this.props.modal.template.table_name});
                     }else{
-                        me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
+                        this.props.dispatch({type: 'SHOW_ALERT', msg: msg});
                     }
                 });
             }
         }).fail(function (msg) {
-            me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
+            this.props.dispatch({type: 'SHOW_ALERT', msg: msg});
         });
-    },
+    }
 
-    form_changed: function(e) {
+    form_changed(e) {
         var name = e.target.name;
         var val = e.target.value;
         var id = e.target.id;
@@ -521,19 +516,19 @@ var Modal = React.createClass({
         }
         data[id] = val;
         this.setState({data: data});
-    },
+    }
 
-    render: function () {
-        var btns = this.props.modal.template.buttons.map(function(btn){
+    render () {
+        var redux = {}, action;
+        var btns = this.props.modal.template.buttons.map((btn) => {
             if(btn.action == "cancel"){
                 action = this.close;
             }else{
                 action = this.action.bind(this, btn.action);
             }
             return <Bootstrap.Button key={btn.name} onClick={action} bsStyle = {btn.class}>{btn.name}</Bootstrap.Button>;
-        }.bind(this));
+        });
 
-        var redux = {};
         var elements = this.props.modal.template.content.map(function(element) {
             element.key = element.name;
             var Component = components[element.type];
@@ -573,34 +568,33 @@ var Modal = React.createClass({
         </Bootstrap.Modal>
         );
     }
-});
+}
 
-var Path = React.createClass({
-    onClick: function(evt){
-        // console.log(evt.currentTarget.id)
-        // console.log(evt.currentTarget.textContent);
-        if(evt.currentTarget.id == 0) return;
-        var args = this.props.table.path.slice(0, parseInt(evt.currentTarget.id) + 1);
-        var data = {"server_name": this.props.panel.server, "action": this.props.action, "args": args};
-        var me = this;
-        Network.post('/api/panels/action', this.props.auth.token, data).done(function(msg) {
-            if(typeof msg === 'string'){
-                me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
-            }else{
-                me.props.dispatch({type: 'CHANGE_DATA', data: msg, name: me.props.target, initVal: args});
-            }
-        }).fail(function (msg) {
-            me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
-        });
-    },
-    render: function () {
-        var me = this, paths = [];
+class Path extends Component {
+	onClick(evt) {
+		// console.log(evt.currentTarget.id)
+		// console.log(evt.currentTarget.textContent);
+		if(evt.currentTarget.id == 0) return;
+		var args = this.props.table.path.slice(0, parseInt(evt.currentTarget.id) + 1);
+		var data = {"server_name": this.props.panel.server, "action": this.props.action, "args": args};
+		Network.post('/api/panels/action', this.props.auth.token, data).done((msg) => {
+			if(typeof msg === 'string'){
+				this.props.dispatch({type: 'SHOW_ALERT', msg: msg});
+			}else{
+				this.props.dispatch({type: 'CHANGE_DATA', data: msg, name: this.props.target, initVal: args});
+			}
+		}).fail((msg) => {
+			this.props.dispatch({type: 'SHOW_ALERT', msg: msg});
+		});
+	}
+    render () {
+        var paths = [];
         if("path" in this.props.table){
             //TODO remove link from first element in path
             //paths[0] = <li key="0" className="breadcrumb-item">{path}</li>;
             //var p = this.props.table.path.slice(1);
-            paths =  this.props.table.path.map(function(path, i){
-                return <li key={i} className="breadcrumb-item"><span id={i} className="link" onClick={me.onClick}>{path}</span></li>;
+            paths =  this.props.table.path.map((path, i) => {
+                return <li key={i} className="breadcrumb-item"><span id={i} className="link" onClick={(e) => this.onClick(e)}>{path}</span></li>;
             });
         }
         return (
@@ -609,12 +603,12 @@ var Path = React.createClass({
             </ol>
         );
     }
-});
+}
 
-var Form = React.createClass({
+class Form extends Component {
 
-    onSelect: function (action) {
-        var dropdown = ReactDOM.findDOMNode(this.refs.dropdown);
+    onSelect (action) {
+        var dropdown = findDOMNode(this.refs.dropdown);
         var host = dropdown.value.trim();
         var d_name = dropdown.name;
         var data = {"server_name": this.props.panel.server, "action": action, "args": [host]};
@@ -632,17 +626,17 @@ var Form = React.createClass({
         }).fail(function (msg) {
             me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
         });
-    },
+    }
 
-    componentDidMount: function(){
+    componentDidMount(){
         if("focus" in this.props && this.props.focus){
             var elem = this.refs[this.props.focus], pos = elem.value.length;
             elem.focus();
             elem.setSelectionRange(pos, pos);
         }
-    },
+    }
 
-    render: function () {
+    render () {
         var redux = {};
 
         var inputs = this.props.elements.map(function(element, index) {
@@ -672,7 +666,7 @@ var Form = React.createClass({
                                 </select>);
                     }
                     else if('form' in this.props && element.name in this.props.form.dropdowns){
-                        d_elem = this.props.form.dropdowns[element.name];
+                        let d_elem = this.props.form.dropdowns[element.name];
                         defaultValue = d_elem.select;
                         values = d_elem.values;
                     }else{
@@ -699,7 +693,7 @@ var Form = React.createClass({
                     }
                     if('args' in this.props){
                         for(var key in this.props.args){
-                            val = this.props.args[key]
+                            let val = this.props.args[key]
                             if(!val){
                                 val = this.props.name;
                             }
@@ -731,7 +725,169 @@ var Form = React.createClass({
             </form>
         );
     }
-});
+}
+
+class FilterForm extends Component {
+    constructor(props) {
+        super(props);
+        let inputs = {};
+        this.props.columns.map(col => {
+            let { name, type } = col
+            if(type !== 'dates'){
+                inputs[name] = '';
+            }
+        });
+        this.state = {
+            ...inputs,
+            startDate: moment().subtract(1, 'days'),
+            endDate: moment(),
+            focusedInput: null
+        };
+        this.sendFilter = this.sendFilter.bind(this);
+    }
+    sendFilter(){
+        Network.post('/api/panels/action', this.props.auth.token, this.state).done(msg => {
+            this.props.dispatch({type: 'CHANGE_DATA', name: this.props.target, data: msg.data});
+        }).fail(msg => {
+            this.props.dispatch({type: 'SHOW_ALERT', msg});
+        });
+    }
+    render(){
+        let inputs = this.props.columns.map(col => {
+            let { name, type } = col, input;
+            switch(type){
+                case 'dates':
+                    input = (
+						<DateRangePicker
+							displayFormat="DD/MM/YYYY"
+							startDate={this.state.startDate}
+							endDate={this.state.endDate}
+							onDatesChange={({ startDate, endDate }) => this.setState({ startDate, endDate })}
+							focusedInput={this.state.focusedInput}
+							onFocusChange={focusedInput => this.setState({ focusedInput })}
+							isOutsideRange={() => false}
+						/>
+                    );
+                    break;
+                default:
+                    input = <input type={type} value={this.state[name]} onChange={val => this.setState({name: val})} />;
+                    break;
+            }
+            return (
+                <div className="filter-form-input">
+                    <label>{name}</label>
+                    {input}
+                </div>
+            );
+        });
+        return (
+            <div>
+                {inputs}
+                <button className='btn btn-primary' onClick={this.sendFilter}>Filter</button>
+            </div>
+        );
+    }
+}
+
+const chartOptionsTime = {
+    maintainAspectRatio: false,
+    responsive: true,
+    scales: {
+        xAxes: [{
+            type: 'time',
+            stacked: true,
+            time: {
+                displayFormats: {
+                    minute: 'HH:mm',
+                    hour: 'HH:mm',
+                    second: 'HH:mm:ss',
+                },
+                tooltipFormat: 'DD/MM/YYYY HH:mm',
+                //unit: 'minute',
+                //i....unitStepSize: 5
+            }
+        }],
+        yAxes: [{
+            stacked: true
+        }]
+    }
+};
+
+const chartOptions = {
+	maintainAspectRatio: false,
+	responsive: true,
+	scales: {
+		xAxes: [{
+			stacked: true,
+		}],
+		yAxes: [{
+			stacked: true
+		}]
+	}
+};
+
+const chartOptionsPie = {
+	maintainAspectRatio: false,
+	//cutoutPercentage: 70,
+	//rotation: 1 * Math.PI,
+	//circumference: 1 * Math.PI
+};
+
+class CustomChart extends Component {
+    constructor(props) {
+        super(props);
+        let chartData = {chartData: this.parseData(props)};
+        this.state = chartData;
+    }
+    parseData(props) {
+        let { table, target, xCol, xColType, datasets, column } = props, xData = [];
+        let data = Object.assign([], datasets), chartData = {};
+        if(xCol){
+			table[target].map((row) => {
+				xData.push(row[xCol]); //new Date(row[xCol])
+                data.forEach(elem => {
+                    elem.data.push(row[elem.column]);
+                });
+			});
+        }else{
+            //data.forEach(elem => {
+            //    xData.push(elem.name);
+            //});
+			/*table[target].map((row) => {
+                xData.push(row[xCol]);
+                data.forEach(elem => {
+                    elem.data.push(row[column]);
+                });
+			});*/
+		}
+        chartData.labels = xData;
+        chartData.datasets = data;
+        return chartData;
+    }
+    componentWillReceiveProps(nextProps) {
+        let chartData = this.parseData(nextProps);
+        this.setState({ chartData });
+    }
+    render() {
+        let { name, height, chartType } = this.props, chart;
+        switch(chartType) {
+            case 'line':
+                chart = <Line name={name} height={height || 200} data={this.state.chartData} options={chartOptions} redraw />;
+                break;
+            case 'pie':
+                chart = <Pie data={this.state.chartData} options={chartOptionsPie}/>;
+                break;
+            case 'bar':
+                chart = <Bar data={this.state.chartData} options={chartOptions} redraw />
+                break;
+        }
+        return (
+            <div>
+                {chart}
+            </div>
+        );
+    }
+}
 
 components.Div = Div;
 components.MultiTable = MultiTable;
@@ -740,5 +896,6 @@ components.Table = Table;
 components.Form = Form;
 components.Modal = Modal;
 components.Path = Path;
+components.CustomChart = CustomChart;
 
 module.exports = components;
