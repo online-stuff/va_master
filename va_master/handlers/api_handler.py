@@ -97,6 +97,7 @@ class ApiHandler(tornado.web.RequestHandler):
         except: 
             import traceback
             traceback.print_exc()
+            raise
         return api_func
 
     @tornado.gen.coroutine
@@ -187,9 +188,6 @@ class ApiHandler(tornado.web.RequestHandler):
             result = {'success' : False, 'message' : 'There was an error performing a request : ' + str(e.message), 'data' : {}}
         raise tornado.gen.Return(result)
         
-
-
-
     @tornado.gen.coroutine
     def exec_method(self, method, path, data):
         try:
@@ -389,8 +387,12 @@ class LogHandler(FileSystemEventHandler):
             last_line = json.loads(last_line)
 
             msg = {"type" : "update", "message" : last_line}
+            print ('Stopped is : ', self.stopped)
             if not self.stopped: 
-                self.socket.write_message(json.dumps(msg))
+                try:
+                    self.socket.write_message(json.dumps(msg))
+                except : #TODO except socketclosederror
+                    pass
         except: 
             import traceback
             traceback.print_exc()
@@ -422,7 +424,7 @@ class LogMessagingSocket(tornado.websocket.WebSocketHandler):
 
             init_messages = self.get_messages(yesterday, datetime.datetime.now())
             hosts = list(set([x.get('host') for x in init_messages if x.get('host')]))
-
+            hosts = [{'value': x, 'label': x} for x in hosts]
             msg = {"type" : "init", "logs" : init_messages, 'hosts' : hosts}
             self.write_message(json.dumps(msg))
 
@@ -477,7 +479,7 @@ class LogMessagingSocket(tornado.websocket.WebSocketHandler):
     @tornado.gen.coroutine
     def handle_init_message(self, message):
         messages = yield self.handle_get_messages(message)
-        hosts = list(set([x.get('host') for x in messages['logs'] if x.get('host')]))
+        hosts = list(set([{'value': x.get('host'), 'label': x.get('host')} for x in messages['logs'] if x.get('host')]))
         messages['hosts'] = hosts
         raise tornado.gen.Return(messages)
 
@@ -505,7 +507,8 @@ class LogMessagingSocket(tornado.websocket.WebSocketHandler):
     @tornado.gen.coroutine
     def handle_observer(self, message):
         status_map = {
-           'start' : True, 
-           'stop' : False, 
+           'start' : False, 
+           'stop' : True, 
         }
         self.log_handler.stopped = status_map[message['status']]
+        print ('Now stopped is : ', self.log_handler.stopped)

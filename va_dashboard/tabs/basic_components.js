@@ -84,7 +84,7 @@ var Button = React.createClass({
                 onclick = this.btn_action.bind(this, this.props.action);
         }
         if(this.props.hasOwnProperty('glyph')){
-            glyph = <Bootstrap.Glyphicon glyph='plus' />;
+            glyph = <Bootstrap.Glyphicon glyph={this.props.glyph} />;
         }
         return (
             <Bootstrap.Button onClick={onclick}>
