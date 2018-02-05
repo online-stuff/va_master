@@ -10,22 +10,23 @@ Chart.defaults.global.defaultFontFamily = 'Ubuntu';
 Chart.pluginService.register({
     beforeDraw: function(chart) {
         if(chart.config.type === "doughnut"){
-            var width = chart.chart.width,
+            let width = chart.chart.width,
                 height = chart.chart.height,
-                ctx = chart.chart.ctx;
+                ctx = chart.chart.ctx, 
+                text, textX, textY;
 
             ctx.restore();
             var fontSize = (height / 114).toFixed(2);
 
             var allData = chart.data.datasets[0].data;
             if(chart.config.options.rotation == Math.PI){
-                var total = 0;
+                let total = 0;
                 for (var i in allData) {
                     if(!isNaN(allData[i]))
                         total += allData[i];
                 }
                 if(isNaN(allData[allData.length-1])){
-                    unit = "";
+                    let unit = "";
                     if(chart.titleBlock.options.text == "MEMORY"){
                         unit = " GB";
                     }else if(chart.titleBlock.options.text == "STORAGE"){
@@ -37,8 +38,8 @@ Chart.pluginService.register({
                     text = percentage.toString() + "%";
                 }
 
-                var textX = Math.round((width - ctx.measureText(text).width) / 2),
-                    textY = height / 1.2;
+                textX = Math.round((width - ctx.measureText(text).width) / 2);
+                textY = height / 1.2;
             }else{
                 fontSize = (height / 114).toFixed(2);
                 if(!allData[0])
@@ -51,8 +52,8 @@ Chart.pluginService.register({
                     text = chart.config.options.customInnerData;
                 }
 
-                var textX = Math.round((width - ctx.measureText(text).width) / 2),
-                    textY = height / 1.5;
+                textX = Math.round((width - ctx.measureText(text).width) / 2);
+                textY = height / 1.5;
             }
             ctx.font = fontSize + "em sans-serif";
             ctx.textBaseline = "middle";
@@ -67,7 +68,7 @@ class Overview extends Component {
     constructor (props) {
         super(props)
         defaults.global.legend.display = false;
-        this.state = {providers: {}, loading: true};
+        this.state = { providers: {}, loading: true };
         this.initLog = this.initLog.bind(this);
         this.getProviders = this.getProviders.bind(this);
     }
@@ -77,11 +78,10 @@ class Overview extends Component {
             provider += ":80";
         }
         var protocol =  window.location.protocol === "https:" ? "wss" : "ws";
-        this.ws = new WebSocket(protocol  +"://"+ provider +"/log");
+        this.ws = new WebSocket(protocol +"://"+ provider +"/log");
         var me = this;
         this.ws.onmessage = function (evt) {
             var data = JSON.parse(evt.data);
-            var logs = [];
             if(data.type === "update")
                 me.props.dispatch({type: 'UDDATE_LOGS', logs: data.message});
             else if(data.type === "init")
@@ -117,10 +117,10 @@ class Overview extends Component {
             return {auth: state.auth, logs: state.logs};
         })(Log);
         var diagram = {}, provider_rows = [];
-        for(var loc in this.state.providers) {
+        for(let loc in this.state.providers) {
             diagram[loc] = [];
         }
-        for(var loc in this.state.providers) {
+        for(let loc in this.state.providers) {
             var provider = this.state.providers[loc];
             for(var key=0; key < provider.length; key++){
                 var pp = provider[key], provider_servers = [];
@@ -135,7 +135,7 @@ class Overview extends Component {
         }
         const spinnerStyle = {
             top: '30%',
-            display: this.state.loading ? "block": "none",
+            display: this.state.loading ? "block": "none"
         };
         var provider_redux = null;
         if(provider_rows.length > 0){
@@ -187,7 +187,7 @@ const Diagram = (props) => {
             }
         },
         physics: {
-            enabled: false,
+            enabled: false
         }
     };
     var graph = {nodes: [], edges: []}, ll = 0;
@@ -200,8 +200,10 @@ const Diagram = (props) => {
         graph.edges.push({from: 'master', to: location});
         ll++;
 
-        for(var i=0; i<provider.length; i++){
-            var p = provider[i], txt = p.name, id = location + "/" + txt;
+        for(let i=0; i<provider.length; i++){
+            let p = provider[i];
+            txt = p.name;
+            let id = location + "/" + txt;
             if(txt){
                 txt = txt.length > 17 ? txt.substring(0,17) : txt;
                 graph.nodes.push({id: id, label: txt, shape: 'box', color: {border: '#696969', background: 'gray', highlight: {border: 'gray', background: '#909090'}}});
@@ -210,9 +212,9 @@ const Diagram = (props) => {
                 id = location;
             }
 
-            for(var j=0; j<p.servers.length; j++){
-                var server = p.servers[j];
-                var txt = server.name + "\nIP: " + server.ip, newId = id + "/" + server.name;
+            for(let j=0; j<p.servers.length; j++){
+                let server = p.servers[j], newId = id + "/" + server.name;
+                txt = server.name + "\nIP: " + server.ip;
                 graph.nodes.push({id: newId, label: txt, shape: 'box', color: '#4bae4f'});
                 graph.edges.push({from: id, to: newId});
             }
@@ -260,8 +262,8 @@ const Provider = (props) => {
     return (
         <div id="billing-panel-content">
             <DoughnutRedux data={chartData[0]} labels={labels} colors={colors} title="CPU" />
-            <DoughnutRedux data={chartData[1]} labels={labels} colors={colors} title="MEMORY"  />
-            <DoughnutRedux data={chartData[2]} labels={labels} colors={colors} title="STORAGE"  />
+            <DoughnutRedux data={chartData[1]} labels={labels} colors={colors} title="MEMORY" />
+            <DoughnutRedux data={chartData[2]} labels={labels} colors={colors} title="STORAGE" />
             <div className="billing-info">
                 <div>
                     <div className="provider-billing">{cost}</div>
@@ -308,23 +310,24 @@ class ProviderRows extends Component {
 
 const DoughnutComponent = (props) => {
     const chartOptions = {
-        maintainAspectRatio: false, title: {
-            display: true,
-            text: props.title
-        },
-        cutoutPercentage: 70,
-        rotation: 1 * Math.PI,
-        circumference: 1 * Math.PI
-    }, chartData = {
-        labels: props.labels,
-        datasets: [
-            {
-                data: props.data,
-                backgroundColor: props.colors,
-                hoverBackgroundColor: props.colors
-            }
-        ]
-    };
+            maintainAspectRatio: false, 
+            title: {
+                display: true,
+                text: props.title
+            },
+            cutoutPercentage: 70,
+            rotation: 1 * Math.PI,
+            circumference: 1 * Math.PI
+        }, chartData = {
+            labels: props.labels,
+            datasets: [
+                {
+                    data: props.data,
+                    backgroundColor: props.colors,
+                    hoverBackgroundColor: props.colors
+                }
+            ]
+        };
     return (
         <div className="chart">
             <Doughnut data={chartData} options={chartOptions}/>
@@ -398,10 +401,10 @@ const Log = (props) => {
                     }
                 }
                 message = timestamp.toISOString().slice(0, 10) + " " + hour + ":" + min + ":" + sec + ", " + message.user + ", " + log.provider + ", " + log.severity + ", " + message.path + ", " + msg;
-            } catch(err) {}
-        log_rows.push (
-            <div key={i} className={"logs " + logClass}>{message}</div>
-        );
+            } catch(err) { console.log('Log parsing error'); }
+            log_rows.push (
+                <div key={i} className={"logs " + logClass}>{message}</div>
+            );
         }
         brojac++;
     }
@@ -435,7 +438,7 @@ class LogChart extends Component {
                         displayFormats: {
                             minute: 'HH:mm',
                             hour: 'HH:mm',
-                            second: 'HH:mm:ss',
+                            second: 'HH:mm:ss'
                         },
                         tooltipFormat: 'DD/MM/YYYY HH:mm',
                         unit: 'minute',
@@ -486,8 +489,6 @@ class LogChart extends Component {
     }
 }
 
-Overview = connect(function(state) {
+module.exports = connect(function(state) {
     return {auth: state.auth};
-})(Overview);
-
-module.exports = Overview;
+})(Overview); 

@@ -1,13 +1,15 @@
 import React, { Component } from 'react';
 var Bootstrap = require('react-bootstrap');
-import {connect} from 'react-redux';
+import { connect } from 'react-redux';
 var Network = require('../network');
-import {findDOMNode} from 'react-dom';
+import { findDOMNode } from 'react-dom';
 var components = require('./basic_components');
-import {Table as Reactable, Tr, Th, Thead, Td} from 'reactable';
-import {hashHistory} from 'react-router';
-import {Line, defaults} from "react-chartjs-2";
-import {getRandomColor} from './util';
+import { Table as Reactable, Tr, Th, Thead, Td } from 'reactable';
+import { hashHistory } from 'react-router';
+import { Line, Pie, Bar, defaults } from "react-chartjs-2";
+var moment = require('moment');
+import { DateRangePicker } from 'react-dates';
+import { getRandomColor } from './util';
 
 const Div = (props) => {
     var redux = {};
@@ -105,8 +107,8 @@ class Chart extends Component {
     getData(data, check) {
         var datasets = [], times = [], chartData = {}, prevColors = {};
         if(check){
-            for(var i=0; i < this.state.chartData.datasets.length; i++) {
-                dataset = this.state.chartData.datasets[i];
+            for(let i=0; i < this.state.chartData.datasets.length; i++) {
+                let dataset = this.state.chartData.datasets[i];
                 prevColors[dataset.label] = dataset.backgroundColor;
             }
         }
@@ -116,14 +118,14 @@ class Chart extends Component {
             obj.label = key;
             obj.data = [];
             var chart_data = data[key];
-            for(var i=0; i<chart_data.length; i++){
+            for(let i=0; i<chart_data.length; i++){
                 obj.data.push(chart_data[i].y);
             }
             obj.backgroundColor = color;
             obj.borderColor = color;
             datasets.push(obj);
         }
-        for(var i=0; i<data[key].length; i++){
+        for(let i=0; i<data[key].length; i++){
             times.push(data[key][i].x * 1000);
         }
         chartData.labels = times;
@@ -183,14 +185,14 @@ class Table extends Component {
                 args.push(id[0]);
             }
             var data = {"server_name": this.props.panel.server, "action": evtKey, "args": args};
-            var me = this;
+            let me = this;
             if(typeof evtKey === 'object' && evtKey.type === "download"){
                 data.action = evtKey.name;
                 data['url_function'] = 'get_backuppc_url';
                 Network.download_file('/api/panels/serve_file_from_url', this.props.auth.token, data).done(function(d) {
                     var data = new Blob([d], {type: 'octet/stream'});
                     var url = window.URL.createObjectURL(data);
-                    tempLink = document.createElement('a');
+                    let tempLink = document.createElement('a');
                     tempLink.style = "display: none";
                     tempLink.href = url;
                     tempLink.setAttribute('download', id[0]);
@@ -215,7 +217,7 @@ class Table extends Component {
         }else if(evtKey == 'chart'){
             var newName = this.props.name.replace(/\s/g, "_");
             var newId = id[0].replace(/:/g, "_");
-            var newId = newId.replace(/\s/g, "_");
+            newId = newId.replace(/\s/g, "_");
             hashHistory.push('/chart_panel/' + this.props.panel.server + '/' + newName + '/' + newId);
         }else if('modals' in this.props && evtKey in this.props.modals){
             if("readonly" in this.props){
@@ -226,7 +228,7 @@ class Table extends Component {
                     return false;
                 }.bind(this));
                 var readonly = {};
-                for(key in this.props.readonly){
+                for(let key in this.props.readonly){
                     readonly[this.props.readonly[key]] = rows[0][key];
                 }
                 this.props.dispatch({type: 'SET_READONLY', readonly: readonly});
@@ -240,7 +242,7 @@ class Table extends Component {
             hashHistory.push('/subpanel/' + this.props.panels[evtKey] + '/' + this.props.panel.server + '/' + id[0]);
         }else{
             var data = {"server_name": this.props.panel.server, "action": evtKey, "args": id};
-            var me = this;
+            let me = this;
             Network.post('/api/panels/action', this.props.auth.token, data).done(function(msg) {
                 if(typeof msg === 'string'){
                     me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
@@ -318,7 +320,8 @@ class Table extends Component {
         }
         var action_col = false, action_length = 0;
         if(this.props.hasOwnProperty('actions')){
-            var action_col = true, action_length = this.props.actions.length;
+            action_col = true; 
+            action_length = this.props.actions.length;
             if(action_length > 1){
                 var actions = this.props.actions.map(function(action) {
                     var className = "";
@@ -663,7 +666,7 @@ class Form extends Component {
                                 </select>);
                     }
                     else if('form' in this.props && element.name in this.props.form.dropdowns){
-                        d_elem = this.props.form.dropdowns[element.name];
+                        let d_elem = this.props.form.dropdowns[element.name];
                         defaultValue = d_elem.select;
                         values = d_elem.values;
                     }else{
@@ -690,7 +693,7 @@ class Form extends Component {
                     }
                     if('args' in this.props){
                         for(var key in this.props.args){
-                            val = this.props.args[key]
+                            let val = this.props.args[key]
                             if(!val){
                                 val = this.props.name;
                             }
@@ -724,6 +727,168 @@ class Form extends Component {
     }
 }
 
+class FilterForm extends Component {
+    constructor(props) {
+        super(props);
+        let inputs = {};
+        this.props.columns.map(col => {
+            let { name, type } = col
+            if(type !== 'dates'){
+                inputs[name] = '';
+            }
+        });
+        this.state = {
+            ...inputs,
+            startDate: moment().subtract(1, 'days'),
+            endDate: moment(),
+            focusedInput: null
+        };
+        this.sendFilter = this.sendFilter.bind(this);
+    }
+    sendFilter(){
+        Network.post('/api/panels/action', this.props.auth.token, this.state).done(msg => {
+            this.props.dispatch({type: 'CHANGE_DATA', name: this.props.target, data: msg.data});
+        }).fail(msg => {
+            this.props.dispatch({type: 'SHOW_ALERT', msg});
+        });
+    }
+    render(){
+        let inputs = this.props.columns.map(col => {
+            let { name, type } = col, input;
+            switch(type){
+                case 'dates':
+                    input = (
+						<DateRangePicker
+							displayFormat="DD/MM/YYYY"
+							startDate={this.state.startDate}
+							endDate={this.state.endDate}
+							onDatesChange={({ startDate, endDate }) => this.setState({ startDate, endDate })}
+							focusedInput={this.state.focusedInput}
+							onFocusChange={focusedInput => this.setState({ focusedInput })}
+							isOutsideRange={() => false}
+						/>
+                    );
+                    break;
+                default:
+                    input = <input type={type} value={this.state[name]} onChange={val => this.setState({name: val})} />;
+                    break;
+            }
+            return (
+                <div className="filter-form-input">
+                    <label>{name}</label>
+                    {input}
+                </div>
+            );
+        });
+        return (
+            <div>
+                {inputs}
+                <button className='btn btn-primary' onClick={this.sendFilter}>Filter</button>
+            </div>
+        );
+    }
+}
+
+const chartOptionsTime = {
+    maintainAspectRatio: false,
+    responsive: true,
+    scales: {
+        xAxes: [{
+            type: 'time',
+            stacked: true,
+            time: {
+                displayFormats: {
+                    minute: 'HH:mm',
+                    hour: 'HH:mm',
+                    second: 'HH:mm:ss',
+                },
+                tooltipFormat: 'DD/MM/YYYY HH:mm',
+                //unit: 'minute',
+                //i....unitStepSize: 5
+            }
+        }],
+        yAxes: [{
+            stacked: true
+        }]
+    }
+};
+
+const chartOptions = {
+	maintainAspectRatio: false,
+	responsive: true,
+	scales: {
+		xAxes: [{
+			stacked: true,
+		}],
+		yAxes: [{
+			stacked: true
+		}]
+	}
+};
+
+const chartOptionsPie = {
+	maintainAspectRatio: false,
+	//cutoutPercentage: 70,
+	//rotation: 1 * Math.PI,
+	//circumference: 1 * Math.PI
+};
+
+class CustomChart extends Component {
+    constructor(props) {
+        super(props);
+        let chartData = {chartData: this.parseData(props)};
+        this.state = chartData;
+    }
+    parseData(props) {
+        let { table, target, xCol, xColType, datasets, column } = props, xData = [];
+        let data = Object.assign([], datasets), chartData = {};
+        if(xCol){
+			table[target].map((row) => {
+				xData.push(row[xCol]); //new Date(row[xCol])
+                data.forEach(elem => {
+                    elem.data.push(row[elem.column]);
+                });
+			});
+        }else{
+            //data.forEach(elem => {
+            //    xData.push(elem.name);
+            //});
+			/*table[target].map((row) => {
+                xData.push(row[xCol]);
+                data.forEach(elem => {
+                    elem.data.push(row[column]);
+                });
+			});*/
+		}
+        chartData.labels = xData;
+        chartData.datasets = data;
+        return chartData;
+    }
+    componentWillReceiveProps(nextProps) {
+        let chartData = this.parseData(nextProps);
+        this.setState({ chartData });
+    }
+    render() {
+        let { name, height, chartType } = this.props, chart;
+        switch(chartType) {
+            case 'line':
+                chart = <Line name={name} height={height || 200} data={this.state.chartData} options={chartOptions} redraw />;
+                break;
+            case 'pie':
+                chart = <Pie data={this.state.chartData} options={chartOptionsPie}/>;
+                break;
+            case 'bar':
+                chart = <Bar data={this.state.chartData} options={chartOptions} redraw />
+                break;
+        }
+        return (
+            <div>
+                {chart}
+            </div>
+        );
+    }
+}
+
 components.Div = Div;
 components.MultiTable = MultiTable;
 components.Chart = Chart;
@@ -731,5 +896,6 @@ components.Table = Table;
 components.Form = Form;
 components.Modal = Modal;
 components.Path = Path;
+components.CustomChart = CustomChart;
 
 module.exports = components;

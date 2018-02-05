@@ -1,13 +1,22 @@
 import React, { Component } from 'react';
 var Bootstrap = require('react-bootstrap');
 var Network = require('../network');
-import {connect} from 'react-redux';
-import {Table, Tr, Td} from 'reactable';
+import { connect } from 'react-redux';
+import { Table, Tr, Td } from 'reactable';
+import { ConfirmPopup } from './shared_components';
+import { getTableRowsWithAction } from './util';
+
+const tblCols = ['Provider name', 'IP', 'Instances', 'Driver', 'Status'];
 
 class Providers extends Component {
     constructor (props) {
         super(props);
-        this.state = {providers: [], loading: true, popupShow: false, popupData: {}};
+        this.state = {
+            providers: [], 
+            loading: true, 
+            popupShow: false, 
+            popupData: {}
+        };
         this.getCurrentProviders = this.getCurrentProviders.bind(this);
         this.confirm_action = this.confirm_action.bind(this);
         this.deleteProvider = this.deleteProvider.bind(this);
@@ -15,44 +24,43 @@ class Providers extends Component {
         this.popupClose = this.popupClose.bind(this);
     }
     getCurrentProviders () {
-        var me = this;
-        Network.post('/api/providers', this.props.auth.token, {}).done(function (data) {
-            me.setState({providers: data.providers, loading: false});
-        }).fail(function (msg) {
-            me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
+        Network.post('/api/providers', this.props.auth.token, {}).done(data => {
+            this.setState({ providers: data.providers, loading: false });
+        }).fail(msg => {
+            this.props.dispatch({ type: 'SHOW_ALERT', msg });
         });
     }
     componentDidMount() {
         this.getCurrentProviders();
     }
     confirm_action(e){
-        var data = {"provider_name": e.target.value};
-        this.setState({popupShow: true, popupData: data});
+        var data = { "provider_name": e.target.value };
+        this.setState({ popupShow: true, popupData: data });
     }
     deleteProvider (data){
-        var me = this;
-        Network.post('/api/providers/delete', this.props.auth.token, data).done(function(data) {
-            me.getCurrentProviders();
-        }).fail(function (msg) {
-            me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
+        Network.post('/api/providers/delete', this.props.auth.token, data).done(data => {
+            this.getCurrentProviders();
+        }).fail(msg => {
+            this.props.dispatch({ type: 'SHOW_ALERT', msg });
         });
     }
     addProvider () {
-        this.props.dispatch({type: 'OPEN_MODAL'});
+        this.props.dispatch({ type: 'OPEN_MODAL' });
     }
     popupClose() {
-        this.setState({popupShow: false});
+        this.setState({ popupShow: false });
     }
     render() {
-        var provider_rows = this.state.providers.map(function(provider) {
-            var status = "", className = "";
-            if(provider.status.success){
+        const { providers, loading, popupData, popupShow } = this.state;
+        var provider_rows = providers.map(provider => {
+            let { provider_name, provider_ip, servers, driver_name, status } = provider, className;
+            if(status.success){
                 status = "Online";
                 className = "row-provider-Online";
             }else{
-                popover = (
+                let popover = (
                     <Bootstrap.Popover title="Error">
-                        {provider.status.message}
+                        {status.message}
                     </Bootstrap.Popover>
                 );
                 status = (<Bootstrap.OverlayTrigger overlay={popover}><a>Offline</a></Bootstrap.OverlayTrigger>);
@@ -60,39 +68,27 @@ class Providers extends Component {
             }
             return (
                 <Tr key={provider.provider_name} className={className}>
-                    <Td column="Provider name">{provider.provider_name}</Td>
-                    <Td column="IP">{provider.provider_ip}</Td>
-                    <Td column="Instances">{provider.servers.length}</Td>
-                    <Td column="Driver">{provider.driver_name}</Td>
-                    <Td column="Status">{status}</Td>
-                    <Td column="Actions"><Bootstrap.Button type="button" bsStyle='primary' onClick={this.confirm_action} value={provider.provider_name}>
-                        Delete
-                    </Bootstrap.Button></Td>
+                    {getTableRowsWithAction(tblCols, [provider_name, provider_ip, servers.length, driver_name, status], 'Delete', provider_name, this.confirm_action)}
                 </Tr>
             );
-        }.bind(this));
-        var NewProviderFormRedux = connect(function(state){
-            return {auth: state.auth, alert: state.alert, modal: state.modal};
-        })(NewProviderForm);
-        var loading = this.state.loading;
+        });
         const spinnerStyle = {
             display: loading ? "block": "none",
         };
         const blockStyle = {
             visibility: loading ? "hidden": "visible",
         };
-        var sf_cols = ['Provider name', 'IP', 'Instances', 'Driver', 'Status'];
         return (<div className="app-containter">
             <NewProviderFormRedux changeProviders = {this.getCurrentProviders} />
             <span className="spinner" style={spinnerStyle} ><i className="fa fa-spinner fa-spin fa-3x" aria-hidden="true"></i></span>
             <div style={blockStyle} className="card">
                 <div className="card-body">
-                    <Table className="table striped" columns={['Provider name', 'IP', 'Instances', 'Driver', 'Status', 'Actions']} itemsPerPage={10} pageButtonLimit={10} noDataText="No matching records found." sortable={sf_cols} filterable={sf_cols} btnName="Add provider" btnClick={this.addProvider} title="Current providers" filterClassName="form-control" filterPlaceholder="Filter">
+                    <Table className="table striped" columns={[...tblCols, 'Actions']} itemsPerPage={10} pageButtonLimit={10} noDataText="No matching records found." sortable={tblCols} filterable={tblCols} btnName="Add provider" btnClick={this.addProvider} title="Current providers" filterClassName="form-control" filterPlaceholder="Filter">
                         {provider_rows}
                     </Table>
                 </div>
             </div>
-            <ConfirmPopup show={this.state.popupShow} data={this.state.popupData} close={this.popupClose} action={this.deleteProvider} />
+            <ConfirmPopup body={"Please confirm action: delete provider " + popupData.provider_name} show={popupShow} data={[popupData]} close={this.popupClose} action={this.deleteProvider} />
         </div>);
     }
 }
@@ -109,7 +105,7 @@ const ProviderStep = (props) => {
             formControl = (
                 <Bootstrap.FormControl componentClass='select' key={field.id} id={field.id} onChange={props.onFieldChange}>
                     <option key={-1} value=''>Choose</option>
-                    {this.props.optionChoices[field.id].map(function(option, i) {
+                    {props.optionChoices[field.id].map(function(option, i) {
                         return <option key={i} value={option}>{option}</option>
                     })}
                 </Bootstrap.FormControl>
@@ -124,13 +120,13 @@ const ProviderStep = (props) => {
                         {field.name} &nbsp;
                         <Bootstrap.Label bsStyle='info'> Info</Bootstrap.Label>
                         </h4>
-                        <p>{this.props.optionChoices[field.id]}</p>
+                        <p>{props.optionChoices[field.id]}</p>
                     </Bootstrap.Well>
                 </Bootstrap.FormGroup>
             );
         }
         else if(field.type === 'file'){
-            formControl = <Bootstrap.FormControl type='file' key={field.id} id={field.id} value={this.props.fieldValues[field.id]} onChange={props.onFieldChange} />;
+            formControl = <Bootstrap.FormControl type='file' key={field.id} id={field.id} value={props.fieldValues[field.id]} onChange={props.onFieldChange} />;
         }
         if(notAField) {
             fields.push(formControl);
@@ -162,12 +158,10 @@ class NewProviderForm extends Component {
         this.onSubmit = this.onSubmit.bind(this);
     }
     componentDidMount () {
-        var me = this;
-        Network.get('/api/drivers', this.props.auth.token).done(function(data) {
-            var newState = {drivers: data.drivers};
-            me.setState(newState);
-        }).fail(function (msg) {
-            me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
+        Network.get('/api/drivers', this.props.auth.token).done(data => {
+            this.setState({ drivers: data.drivers });
+        }).fail(msg => {
+            this.props.dispatch({type: 'SHOW_ALERT', msg});
         });
     }
     onDriverSelect (e) {
@@ -323,27 +317,11 @@ class NewProviderForm extends Component {
     }
 }
 
-const ConfirmPopup = (props) => {
-    return (
-        <Bootstrap.Modal show={props.show} onHide={props.close}>
-            <Bootstrap.Modal.Header closeButton>
-              <Bootstrap.Modal.Title>Confirm action</Bootstrap.Modal.Title>
-            </Bootstrap.Modal.Header>
+const NewProviderFormRedux = connect(function(state){
+	return {auth: state.auth, alert: state.alert, modal: state.modal};
+})(NewProviderForm);
 
-            <Bootstrap.Modal.Body>
-                <p>Please confirm action: delete provider {props.data.provider_name}</p>
-            </Bootstrap.Modal.Body>
-
-            <Bootstrap.Modal.Footer>
-                <Bootstrap.Button onClick={props.close}>Cancel</Bootstrap.Button>
-                <Bootstrap.Button onClick={props.action.bind(null, props.data)} bsStyle = "primary">Confirm</Bootstrap.Button>
-            </Bootstrap.Modal.Footer>
-        </Bootstrap.Modal>
-    );
-}
-
-Providers = connect(function(state){
+module.exports = connect(function(state){
     return {auth: state.auth, alert: state.alert};
 })(Providers);
 
-module.exports = Providers;

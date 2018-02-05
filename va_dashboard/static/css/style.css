@@ -453,14 +453,15 @@ table tr.row-state-Unknown{
     width: 97%;
 }
 .col-type-folder{
-    color: blue;
+    color: #006EAB;
     cursor: pointer;
 }
 .col-type-file{
     color: black;
 }
+
 .link{
-    color: blue;
+    color: #006EAB;
     cursor: pointer;
 }
 .tbl-ctrl {

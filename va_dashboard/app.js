@@ -259,7 +259,7 @@ function logs(state, action){
     return newState;
 };
 
-var mainReducer = combineReducers({auth: auth, table: table, filter: filter, modal: modal, apps: apps, div: div, panel: panel, alert: alert, form: form, sidebar: sidebar, logs: logs, menu: menu});
+var mainReducer = combineReducers({auth, table, filter, modal, apps, div, panel, alert, form, sidebar, logs, menu});
 var store = createStore(mainReducer);
 
 var Home = require('./tabs/home');
