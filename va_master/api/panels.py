@@ -165,11 +165,11 @@ def get_chart_data(server_name, args = ['va-directory', 'Ping']):
 def panel_action(handler, actions_list = [], server_name = '', action = '', args = [], kwargs = {}, module = None, dash_user = {}):
     """Performs a list of actions on multiple servers. If actions_list is not supplied, will use the rest of the arguments to call a single function on one server. """
     if not actions_list: 
-        actions_list = [{"server_name" : server_name, "action" : action, "args" : args, 'kwargs' : {}, 'module' : module}]
+        actions_list = [{"server_name" : server_name, "action" : action, "args" : args, 'kwargs' : kwargs, 'module' : module}]
 
     servers = [x['server_name'] for x in actions_list]
     results = {x : None for x in servers}
-    for action in actions_list: 
+    for action in actions_list:
         server_result = yield panel_action_execute(handler, server_name = action['server_name'], \
             dash_user = dash_user, \
             action = action['action'], \
@@ -197,6 +197,7 @@ def get_panel_for_user(handler, panel, server_name, dash_user, args = [], provid
     datastore_handler = handler.datastore_handler
     user_panels = yield list_panels(datastore_handler, dash_user)
     server_info = yield apps.get_app_info(server_name)
+    print ('Server info : ', server_info)
     state = server_info['role']
     #This is usually for get requests. Any arguments in the url that are not arguments of this function are assumed to be keyword arguments for salt.
     #TODO Also this is pretty shabby, and I need to find a better way to make GET salt requests work. 
@@ -211,7 +212,6 @@ def get_panel_for_user(handler, panel, server_name, dash_user, args = [], provid
     action = 'get_panel'
     if type(args) != list and args: 
         args = [args]
-    print ('Args are : ', args)
     args = [panel] + args
     args = [state['module']] + args
     panel  = yield panel_action_execute(handler, server_name, action, args, dash_user, kwargs = kwargs, module = 'va_utils')
@@ -229,7 +229,6 @@ def get_panel_pdf(handler, panel, server_name, dash_user, pdf_file = '/tmp/table
         raise tornado.gen.Return({'data_type' : 'file'})
     print ('Result returned : ', result)
     raise Exception('PDF returned a value - probably because of an error. ')
-
 
 @tornado.gen.coroutine
 def get_users(handler, user_type = 'users'):

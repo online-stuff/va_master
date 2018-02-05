@@ -1,13 +1,13 @@
-var React = require('react');
+import React, { Component } from 'react';
 var Bootstrap = require('react-bootstrap');
-var connect = require('react-redux').connect;
+import {connect} from 'react-redux';
 var Network = require('../network');
-var ReactDOM = require('react-dom');
 var widgets = require('./main_components');
 
-var ChartPanel = React.createClass({
-    getInitialState: function () {
-        return {
+class ChartPanel extends Component {
+    constructor (props) {
+        super(props);
+        this.state = {
             template: {
                 "title": "",
                 "help_url": "",
@@ -16,9 +16,10 @@ var ChartPanel = React.createClass({
             "provider": "",
             "service": ""
         };
-    },
+        this.getPanel = this.getPanel.bind(this);
+    }
 
-    getPanel: function (server, provider, service) {
+    getPanel (server, provider, service) {
         var me = this, id = 'monitoring.chart';
         var data = {'panel': id, 'server_name': server, 'provider': provider, 'service': service};
         console.log(data);
@@ -28,19 +29,19 @@ var ChartPanel = React.createClass({
         }).fail(function (msg) {
             me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
         });
-    },
+    }
 
-    componentDidMount: function () {
+    componentDidMount () {
         this.getPanel(this.props.params.server, this.props.params.provider, this.props.params.service);
-    },
+    }
 
-    componentWillReceiveProps: function (nextProps) {
+    componentWillReceiveProps (nextProps) {
         if (nextProps.params.server !== this.props.params.server || nextProps.params.provider !== this.props.params.provider || nextProps.params.service !== this.props.params.service) {
             this.getPanel(nextProps.params.server, nextProps.params.provider, nextProps.params.service);
         }
-    },
+    }
 
-    render: function () {
+    render () {
         var chartElem = null, content = this.state.template.content;
         if(content.length > 0){
             var element = content[0];
@@ -68,7 +69,7 @@ var ChartPanel = React.createClass({
         );
     }
 
-});
+}
 
 ChartPanel = connect(function(state){
     return {auth: state.auth, panel: state.panel, alert: state.alert};

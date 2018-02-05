@@ -499,8 +499,13 @@ table tr.row-state-Unknown{
     display: flex;
     align-items: center;
 }
-#log-btns button{
-    width: 80px;
+#filter-log > .btn-group{
+    width: 65%;
+}
+#filter-log > input{
+    width: 35%;
+    float: right;
+    height: 32px;
 }
 .selected-block{
     float: left;
@@ -627,11 +632,8 @@ table tr.row-provider-Offline{
 /*.DateInput__display-text--has-input{
     height: 24px;
 }*/
-.DateRangePicker__picker{
-    z-index: 1000!important;
-}
-#filter-log{
-    width: 70%;
+#filter-log .btn{
+    z-index: initial;
 }
 .card {
     box-shadow: 0 4px 8px 0 rgba(0,0,0,0.2);
@@ -668,4 +670,42 @@ table tr.row-provider-Offline{
     -webkit-line-clamp: 3;
     line-height: 13.3px;
     max-height: 40px; 
+}
+.row-log-info{
+    border-left: 5px solid #d3d3d3;
+}
+.row-log-notice{
+    border-left: 5px solid #d3d3d3;
+}
+.row-log-debug{
+    border-left: 5px solid #d3d3d3;
+}
+.row-log-warning{
+    border-left: 5px solid #dedc40;
+}
+.row-log-err{
+    border-left: 5px solid #de4040;
+}
+.row-log-crit{
+    border-left: 5px solid #de4040;
+}
+.row-log-alert{
+    border-left: 5px solid #de4040;
+}
+.row-log-emerg{
+    border-left: 5px solid #de4040;
+}
+.ellipsized-text2 {
+    font-size: 10px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: block;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-height: 20px!important;
+    max-height: 100%;
+}
+.btn > span.glyphicon{
+    padding-right: 5px;
 }
