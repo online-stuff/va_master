@@ -49,16 +49,16 @@ var Button = React.createClass({
     btn_action: function(action) {
         var me = this;
         if("tblName" in this.props){
-            var panel = this.props.panel;
+            var panel = this.props.panel, export_type = this.props.export_type;
             var filterVal = document.getElementById('reactableFilter').value;
-            var data = {server_name: panel.server, panel: panel.panel, args: panel.args, table_name: this.props.tblName, filter_field: filterVal};
-            Network.download_file('/api/panels/get_panel_pdf', this.props.auth.token, data).done(function(d) {
+            var data = {server_name: panel.server, panel: panel.panel, args: panel.args, table_name: this.props.tblName, filter_field: filterVal, export_type: export_type};
+            Network.download_file('/api/panels/export_table', this.props.auth.token, data).done(function(d) {
                 var data = new Blob([d], {type: 'octet/stream'});
                 var url = window.URL.createObjectURL(data);
                 tempLink = document.createElement('a');
                 tempLink.style = "display: none";
                 tempLink.href = url;
-                tempLink.setAttribute('download', panel.panel + '.pdf');
+                tempLink.setAttribute('download', panel.panel + '.' + export_type);
                 document.body.appendChild(tempLink);
                 tempLink.click();
                 setTimeout(function(){
