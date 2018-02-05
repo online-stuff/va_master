@@ -30,6 +30,8 @@ def get_paths():
             'panels/serve_file' : {'function' : salt_serve_file, 'args' : ['handler', 'server_name', 'action', 'args', 'kwargs', 'module']},
             'panels/serve_file_from_url' : {'function' : url_serve_file, 'args' : ['handler', 'server_name', 'url_function', 'module', 'args', 'kwargs']},
             'panels/get_panel_pdf' : {'function' : get_panel_pdf, 'args' : ['server_name', 'panel', 'pdf_file', 'provider', 'handler', 'args', 'kwargs', 'dash_user', 'filter_field']},
+            'panels/export_table' : {'function' : export_table, 'args' : ['handler', 'panel', 'server_name', 'dash_user', 'export_type', 'table_file', 'args', 'provider', 'kwargs', 'filter_field']}
+
         }
     }
     return paths
@@ -198,11 +200,10 @@ def get_panel_for_user(handler, panel, server_name, dash_user, args = [], provid
     state = server_info['role']
     #This is usually for get requests. Any arguments in the url that are not arguments of this function are assumed to be keyword arguments for salt.
     #TODO Also this is pretty shabby, and I need to find a better way to make GET salt requests work. 
-    if not args: 
-        ignored_kwargs = ['datastore', 'handler', 'datastore_handler', 'drivers_handler', 'panel', 'instance_name', 'dash_user', 'method', 'server_name', 'path']
-        kwargs = {x : kwargs[x] for x in kwargs if x not in ignored_kwargs}
-    else: 
-        kwargs = {}
+    ignored_kwargs = ['datastore', 'handler', 'datastore_handler', 'drivers_handler', 'panel', 'instance_name', 'dash_user', 'method', 'server_name', 'path']
+    if not kwargs: 
+        kwargs = {x : handler.data[x] for x in handler.data if x not in ignored_kwargs}
+
 
     state = yield datastore_handler.get_state(name = state)
 
@@ -215,17 +216,30 @@ def get_panel_for_user(handler, panel, server_name, dash_user, args = [], provid
     raise tornado.gen.Return(panel)
 
 @tornado.gen.coroutine
+def export_table(handler, panel, server_name, dash_user, export_type = 'pdf', table_file = '/tmp/table', args = [], provider = None, kwargs = {}, filter_field = ''):
+    table_func = 'va_pdf_utils.get_%s' % export_type
+    table_file = table_file + '.' + export_type
+    print ('Getting with func : ', table_func)
+    if not args: 
+        args = list(args)
+    cl = LocalClient()
+    panel = yield get_panel_for_user(handler = handler, panel = panel, server_name = server_name, dash_user = dash_user, args = args, provider = provider, kwargs = kwargs)
+    print ('Getting ', export_type, '  with filter : ', filter_field)
+    result = cl.cmd('G@role:va-master', fun = table_func, tgt_type = 'compound', kwarg = {'panel' : panel, 'table_file' : table_file, 'filter_field' : filter_field})
+    print ('Result is : ', result)
+    yield handler.serve_file(table_file)
+
+
+@tornado.gen.coroutine
 def get_panel_pdf(handler, panel, server_name, dash_user, pdf_file = '/tmp/table.pdf', args = [], provider = None, kwargs = {}, filter_field = ''):
     if not args: 
         args = list(args)
     cl = LocalClient()
     panel = yield get_panel_for_user(handler = handler, panel = panel, server_name = server_name, dash_user = dash_user, args = args, provider = provider, kwargs = kwargs)
     print ('Getting pdf with filter : ', filter_field)
-    result = cl.cmd('va-master', 'va_utils.get_pdf', kwarg = {'panel' : panel, 'pdf_file' : pdf_file, 'filter_field' : filter_field})
+    result = cl.cmd('G@role:va-master', fun = 'va_utils.get_pdf', tgt_type = 'compound', kwarg = {'panel' : panel, 'pdf_file' : pdf_file, 'filter_field' : filter_field})
     print ('Result is : ', result)
-    if not result['va-master']: 
-        yield handler.serve_file(pdf_file)
-        raise tornado.gen.Return({'data_type' : 'file'})
+    yield handler.serve_file(pdf_file)
 
 @tornado.gen.coroutine
 def get_users(handler, user_type = 'users'):
