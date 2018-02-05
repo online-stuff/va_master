@@ -140,11 +140,9 @@ class DateRange extends Component {
     }
 
     handleChange(obj) {
-        this.setState({
-            startDate: obj.startDate,
-            endDate: obj.endDate
-        });
-        this.props.updateLogs(obj.startDate.format('YYYY-MM-DD'), obj.endDate.format('YYYY-MM-DD'));
+        let { startDate, endDate } = obj;
+        this.setState({startDate, endDate});
+        this.props.updateLogs(startDate.format('YYYY-MM-DD'), endDate.format('YYYY-MM-DD'));
     }
 
     focusChange(focusedInput){

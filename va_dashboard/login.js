@@ -1,13 +1,16 @@
 import React, { Component } from 'react';
 var Bootstrap = require('react-bootstrap');
-import {hashHistory} from 'react-router';
-import {connect} from 'react-redux';
+import { hashHistory } from 'react-router';
+import { connect } from 'react-redux';
 var Network = require('./network');
 
 class Login extends Component {
     constructor(props){
         super(props);
-        this.state = {username: '', password: ''};
+        this.state = {
+            username: '', 
+            password: ''
+        };
         this.onSubmit = this.onSubmit.bind(this);
         this.onInput = this.onInput.bind(this);
     }

@@ -1,9 +1,10 @@
 import React, { Component } from 'react';
-import {connect} from 'react-redux';
+import { connect } from 'react-redux';
 var Network = require('../network');
 var Bootstrap = require('react-bootstrap');
-import {findDOMNode} from 'react-dom';
-import {Table, Tr, Td} from 'reactable';
+import { findDOMNode } from 'react-dom';
+import { Table, Tr, Td } from 'reactable';
+import { ConfirmPopup } from './shared_components';
 
 class Servers extends Component {
     constructor (props) {
@@ -151,6 +152,7 @@ class Servers extends Component {
             visibility: loaded ? "visible": "hidden",
         };
         var sf_cols = ['Hostname', 'IP', 'Size', 'Status', 'Host'];
+        var popupData = this.state.popupData;
 
         return (
             <div className="app-containter">
@@ -164,31 +166,11 @@ class Servers extends Component {
                             </Table>
                         </div>
                     </div>
-                    <ConfirmPopup show={this.state.popupShow} data={this.state.popupData} close={this.popupClose} action={this.btn_clicked} />
+                    <ConfirmPopup body={`Please confirm action: ${popupData[2]} server ${popupData[0]}`} show={this.state.popupShow} data={popupData} close={this.popupClose} action={this.btn_clicked} />
                 </div>
             </div>
         );
     }
-}
-
-const ConfirmPopup = (props) => {
-    var data = props.data;
-    return (
-        <Bootstrap.Modal show={props.show} onHide={props.close}>
-            <Bootstrap.Modal.Header closeButton>
-              <Bootstrap.Modal.Title>Confirm action</Bootstrap.Modal.Title>
-            </Bootstrap.Modal.Header>
-
-            <Bootstrap.Modal.Body>
-                <p>Please confirm action: {data[2]} server {data[0]}</p>
-            </Bootstrap.Modal.Body>
-
-            <Bootstrap.Modal.Footer>
-                <Bootstrap.Button onClick={props.close}>Cancel</Bootstrap.Button>
-                <Bootstrap.Button onClick={props.action.bind(null, data[0],data[1],data[2])} bsStyle = "primary">Confirm</Bootstrap.Button>
-            </Bootstrap.Modal.Footer>
-        </Bootstrap.Modal>
-    );
 }
 
 class UserStep extends Component {
