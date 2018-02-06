@@ -76,9 +76,9 @@ def panel_action_execute(handler, server_name, action, args = [], dash_user = ''
     print ('Calling salt module ', module + '.' + action, ' on ', server_name, ' with args : ', args, ' and kwargs : ', kwargs)
     result = cl.cmd(server_name, module + '.' + action , arg = args, kwarg = kwargs, timeout = timeout)
     result = result.get(server_name)
-    if type(result) == str:
-        print ('Result returned : ', result)
-        raise Exception('Calling %s on %s returned an error. ' % (module + '.' + action, server_name))
+#    if type(result) == str:
+#        print ('Result returned : ', result)
+#        raise Exception('Calling %s on %s returned an error. ' % (module + '.' + action, server_name))
 
     raise tornado.gen.Return(result)
 
@@ -197,7 +197,6 @@ def get_panel_for_user(handler, panel, server_name, dash_user, args = [], provid
     datastore_handler = handler.datastore_handler
     user_panels = yield list_panels(datastore_handler, dash_user)
     server_info = yield apps.get_app_info(server_name)
-    print ('Server info : ', server_info)
     state = server_info['role']
     #This is usually for get requests. Any arguments in the url that are not arguments of this function are assumed to be keyword arguments for salt.
     #TODO Also this is pretty shabby, and I need to find a better way to make GET salt requests work. 
