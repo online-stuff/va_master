@@ -193,7 +193,7 @@ def add_services_presets(datastore_handler, presets, server, **presets_kwargs):#
 
         #If the preset uses a script, it should be formatted with the required arguments, as the above ping example. 
         if preset.get('script'):
-            expected_args = [x[1] for x in 'ping -c1 {address} > /dev/null'._formatter_parser() if x[1]] #Using weird python string formatting methods ftw!
+            expected_args = [x[1] for x in preset['script']._formatter_parser() if x[1]] #Using weird python string formatting methods ftw!
             script_kwargs = {x : locals()[x] for x in expected_args} #TODO not sure if locals() is the way to go. We should probably restrict the available variables...
 
             preset['script'] = preset['script'].format(**script_kwargs)
