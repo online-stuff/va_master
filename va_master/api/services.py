@@ -2,7 +2,7 @@ import requests, json, subprocess
 
 import tornado.gen
 from salt.client import LocalClient
-
+import apps
 
 consul_url = 'http://localhost:8500/v1'
 consul_dir = '/etc/consul.d'
@@ -17,6 +17,7 @@ def get_paths():
             'services/by_status' : {'function' : get_services_with_status, 'args' : ['status']},
             'services/by_service' : {'function' : get_service, 'args' : ['service']},
             'services/get_monitoring_status' : {'function' : get_all_monitoring_data, 'args' : ['datastore_handler']},
+            'services/get_services_table_data' : {'function' : get_services_table_data, 'args' : []},
             'services/get_services_with_checks' : {'function' : get_all_checks, 'args' : []},
         },
         'post' : {
@@ -29,6 +30,47 @@ def get_paths():
         }
     }
     return paths
+
+@tornado.gen.coroutine
+def get_service_definition(service_name):
+    service_path = '/etc/consul.d/%s.json' % (service_name)
+    with open(service_path) as f: 
+        service_definition = json.load(f)
+
+    service_definition = service_definition.get('service', service_definition)
+
+    raise tornado.gen.Return(service_definition)
+
+@tornado.gen.coroutine
+def get_all_service_definitions():
+    services = yield list_services()
+    services = services.keys()
+    definitions = yield [get_service_definition(x) for x in services]
+    print ('Definitions at beginning ', definitions)
+#    definitions = [{"name" : x, "definition" : services[x]} for x in services]
+    raise tornado.gen.Return(definitions)
+
+@tornado.gen.coroutine
+def get_services_table_data():
+    definitions = yield get_all_service_definitions()
+    checks = yield get_all_checks()
+
+    services = [x for x in definitions if x.get('name') != 'consul' and x.get('name')]
+
+    for service in services: 
+        check_results = [checks[x] for x in checks if x == service['name']][0]
+        for i in range(len(service['checks'])):
+            service['checks'][i].update(check_results[i])
+
+    services_table = [{
+        'name' : s['name'], 
+        'address' : s['address'], 
+        'port' : s['port'], 
+        'check' : [{'interval' : c.get('interval'), 'name' : c['id'], 'status' : c['Status'], 'output' : c.get('Output')} for c in s['checks']],
+        'tags' : s['tags'], 
+    } for s in services]
+
+    raise tornado.gen.Return(services_table)
 
 @tornado.gen.coroutine
 def get_version(handler):
@@ -148,12 +190,14 @@ def add_services(services, server):
 
 
 @tornado.gen.coroutine
-def add_services_presets(server, presets):
+def add_services_presets(server, service_presets):
     """Creates services based on several presets and the info for the server. The info is required to get the id and the IP of the server. """
 
-    if type(server) == 'str': 
-        minion_info = yield apps.get_minion_info(server)
-
+    if type(server) == unicode: 
+        minion_info = yield apps.get_app_info(server)
+        print ('Minion is : ', minion_info)
+   
+    print ("server is : ", type(server))
     check_presets = {
         "tcp" :  {"id": minion_info['id'] + "_tcp", "name": "Check server TCP", "tcp": minion_info['ip4_interfaces']['eth0'][0], "interval": "30s", "timeout": "10s"}, 
         "ping" :  {"id": minion_info['id'] + "_ping", "name": "Ping server", "script" : "ping -c1 " + minion_info['ip4_interfaces']['eth0'][0] + " > /dev/null", "interval": "30s", "timeout": "10s"}, 
@@ -161,12 +205,12 @@ def add_services_presets(server, presets):
     }
 
 
-    unknown_presets = [p for p in presets if p not in check_presets.keys()]
+    unknown_presets = [p for p in check_presets if p not in check_presets.keys()]
     if unknown_presets:
         raise Exception('Presets %s not found in the list of available presets: %s' % (str(unknown_presets), str(check_presets.keys())))
 
     service = {"service": {"name": minion_info["id"] + "_services", "tags": ["hostsvc", "web", "http"], "address": minion_info['ip4_interfaces']['eth0'][0], "port": 443, "checks" : [ 
-        check_presets[p] for p in presets
+        check_presets[p] for p in check_presets
     ]}}
     yield add_service_with_definition(service, minion_info['id'])
 
