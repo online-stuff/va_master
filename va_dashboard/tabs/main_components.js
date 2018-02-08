@@ -657,7 +657,7 @@ class Form extends Component {
                     return ( <input id={index} key={element.name} className="form-control" type={type} name={element.name} value={this.props.form.readonly[element.name]} disabled /> );
                 }
                 if(type == "dropdown"){
-                    var action = "", defaultValue = "", values = [];
+                    var action = "", defaultValue = "", values = element.values;
                     if('modal' in this.props){
                         return (<select id={index} key={element.name} name={element.name} defaultValue={this.props.data[index]} onChange={this.props.form_changed} ref={element.name}>
                                     {values.map(function(option, i) {

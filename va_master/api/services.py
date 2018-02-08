@@ -2,7 +2,7 @@ import requests, json, subprocess
 
 import tornado.gen
 from salt.client import LocalClient
-
+import apps
 
 consul_url = 'http://localhost:8500/v1'
 consul_dir = '/etc/consul.d'
@@ -17,6 +17,7 @@ def get_paths():
             'services/by_status' : {'function' : get_services_with_status, 'args' : ['status']},
             'services/by_service' : {'function' : get_service, 'args' : ['service']},
             'services/get_monitoring_status' : {'function' : get_all_monitoring_data, 'args' : ['datastore_handler']},
+            'services/get_services_table_data' : {'function' : get_services_table_data, 'args' : []},
             'services/get_services_with_checks' : {'function' : get_all_checks, 'args' : []},
             'services/get_service_presets' : {'function' : get_presets, 'args' : ['datastore_handler']},
         },
@@ -34,6 +35,47 @@ def get_paths():
 def get_formatted_string_arguments(s):
     arguments = [x[1] for x in s._formatter_parser() if x[1]] #Using weird python string formatting methods ftw!
     return arguments
+
+@tornado.gen.coroutine
+def get_service_definition(service_name):
+    service_path = '/etc/consul.d/%s.json' % (service_name)
+    with open(service_path) as f: 
+        service_definition = json.load(f)
+
+    service_definition = service_definition.get('service', service_definition)
+
+    raise tornado.gen.Return(service_definition)
+
+@tornado.gen.coroutine
+def get_all_service_definitions():
+    services = yield list_services()
+    services = services.keys()
+    definitions = yield [get_service_definition(x) for x in services]
+    print ('Definitions at beginning ', definitions)
+#    definitions = [{"name" : x, "definition" : services[x]} for x in services]
+    raise tornado.gen.Return(definitions)
+
+@tornado.gen.coroutine
+def get_services_table_data():
+    definitions = yield get_all_service_definitions()
+    checks = yield get_all_checks()
+
+    services = [x for x in definitions if x.get('name') != 'consul' and x.get('name')]
+
+    for service in services: 
+        check_results = [checks[x] for x in checks if x == service['name']][0]
+        for i in range(len(service['checks'])):
+            service['checks'][i].update(check_results[i])
+
+    services_table = [{
+        'name' : s['name'], 
+        'address' : s['address'], 
+        'port' : s['port'], 
+        'check' : [{'interval' : c.get('interval'), 'name' : c['id'], 'status' : c['Status'], 'output' : c.get('Output')} for c in s['checks']],
+        'tags' : s['tags'], 
+    } for s in services]
+
+    raise tornado.gen.Return(services_table)
 
 @tornado.gen.coroutine
 def get_version(handler):
