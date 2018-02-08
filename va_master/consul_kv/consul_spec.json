@@ -75,6 +75,7 @@
         "module": "",
         "dependency": "",
         "version": "", 
-        "path": ""
+        "path": "", 
+        "salt_functions" : []
     }
 }

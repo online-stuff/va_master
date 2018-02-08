@@ -38,7 +38,7 @@ def get_app(config):
         (r"/", IndexHandler, path_settings),
         (r"/api/(.*)", ApiHandler, {'config': config}),
         (r"/static/(.*)", StaticHandler, path_settings),
-        (r"/log", LogMessagingSocket)
+        (r"/log", LogMessagingSocket, {'config' : config})
     ])
     # TODO: If config.release, disable debug mode for static assets
     # Note: running the debug mode is not dangerous in production, but it's slower.

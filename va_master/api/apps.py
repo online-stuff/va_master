@@ -64,11 +64,14 @@ def get_openvpn_users():
     salt_caller = Caller()
     openvpn_users = salt_caller.cmd('openvpn.list_users')
 
+    if type(openvpn_users) != str: 
+        print ('Openvpn users result : ', openvpn_users)
+        raise Exception("Could not get openvpn users list. Contact your administrator for more information. ")
+
     #openvpn_users returns {"revoked" : [list, of, revoked, users], "active" : [list, of, active, users], "status" : {"client_list" : [], "routing_table" : []}}
     #We want to convert it to {"revoked" : [], "status" : [client, list], active" : [{"name" : "", "check" : False, "connected" : True/False}]}
 
     users = {'revoked' : openvpn_users['revoked']}
-    print ('status is : ', openvpn_users['status'])
     users_names = [i['Common Name'] for i in openvpn_users['status']['client_list']]
     users['active'] = [{'name' : x, 'check' : False, 'connected' : x in users_names} for x in openvpn_users['active']]
     users['status'] = openvpn_users['status']['client_list'] or []
@@ -100,7 +103,10 @@ def add_openvpn_user(username):
 
     cl = Caller()
     success = cl.cmd('openvpn.add_user', username = username)
-    raise tornado.gen.Return(success)
+    if success:
+        print ('Adding user returned : ', success)
+        raise Exception('Adding an openvpn user returned with an error. ')
+    raise tornado.gen.Return({'success' : True, 'data' : None, 'message' : 'User added successfuly. '})
 
 @tornado.gen.coroutine
 def revoke_openvpn_user(username):
@@ -108,6 +114,12 @@ def revoke_openvpn_user(username):
 
     cl = Caller()
     success = cl.cmd('openvpn.revoke_user', username = username)
+
+    if success:
+        print ('Revoking user returned : ', success)
+        raise Exception('Revoking %s returned with an error. ' % (username))
+    raise tornado.gen.Return({'success' : True, 'data' : None, 'message' : 'User revoked successfuly. '})
+
     raise tornado.gen.Return(success)   
 
 @tornado.gen.coroutine
@@ -116,6 +128,9 @@ def list_user_logins(username):
 
     cl = Caller()
     success = cl.cmd('openvpn.list_user_logins', user = username)
+    if type(success) == str:
+        print ('User logins returned', success)
+        raise Exception('Listing user logins returned with an error. ')
     raise tornado.gen.Return(success)
 
 @tornado.gen.coroutine
@@ -124,6 +139,11 @@ def download_vpn_cert(username, handler):
 
     cl = Caller()
     cert = cl.cmd('openvpn.get_config', username = username)
+
+    cert_has_error = yield handler.has_error(cert)
+    if cert_has_error:
+        print ('Cert has an error: ', cert)
+        raise Exception('Getting certificate for %s returned with an error. ' % (username))
 
     vpn_cert_path = '/tmp/' + username + '_vpn.cert'
     with open(vpn_cert_path, 'w') as f: 
@@ -158,8 +178,7 @@ def get_states(handler, dash_user):
     for state in states_data: 
         state_panel = [x for x in panels_data if x['name'] == state['name']]
         if not state_panel: 
-            print ('No panel for : ', state['name'])
-            break
+            raise Exception('%s was not found in the list of states : %s', (state['name'], str([x['name'] for x in panels_data])))
         state_panel = state_panel[0]
         state['servers'] = state_panel['servers']
         state['panels'] = state.get('panels', default_panels)[dash_user['type']]
@@ -221,20 +240,15 @@ def validate_app_fields(handler):
     step = handler.data.pop('step')
 
     fields = yield driver.validate_app_fields(step, **kwargs)
-    if not fields: 
-        raise Exception('Some fields were not entered properly. ')
 
-    print ('In driver : ', driver)
     # If the state has extra fields, then there are 3 steps, otherwise just 2. 
     if step == 3: 
         handler.data.update(fields)
         try:
-            print ('In validate, will launch. ')
             result = yield handler.executor.submit(launch_app, handler)
         except: 
             import traceback
             traceback.print_exc()
-    print ('Fields : ', fields)
     raise tornado.gen.Return(fields)
 
 
@@ -245,7 +259,8 @@ def get_app_info(server_name):
     cl = Caller()
     server_info = cl.cmd('mine.get', server_name, 'inventory') 
     server_info = server_info.get(server_name)
-    print ('Server info : ', server_info)
+    if not server_info: 
+        raise Exception('Attempted to get app info for %s but mine.get returned empty. ' % (server_name))
     raise tornado.gen.Return(server_info)
 
 

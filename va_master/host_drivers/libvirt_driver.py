@@ -234,8 +234,14 @@ class LibVirtDriver(base.DriverBase):
     @tornado.gen.coroutine
     def get_networks(self):
         """ Networks are retrieved via the python api. """
-        networks = self.conn.listAllNetworks()
-        networks = [x.name() for x in networks]
+        try:
+            networks = self.conn.listAllNetworks()
+            networks = [x.name() for x in networks]
+        except: 
+            import traceback
+            print ('Error in get_networks in libvirt provider. ')
+            traceback.print_exc()
+            raise Exception("There was an error getting networks for the libvirt provider. ")
         raise tornado.gen.Return(networks)
 
     @tornado.gen.coroutine
@@ -253,8 +259,9 @@ class LibVirtDriver(base.DriverBase):
             images = [x.name() for x in images]
         except:
             import traceback
+            print ('Error in get_images in libvirt provider')
             traceback.print_exc()
-        print ('Got images : ', images)
+            raise Exception("There was an error getting images for the libvirt provider. ")
         raise tornado.gen.Return(images)
 
     @tornado.gen.coroutine
@@ -333,12 +340,24 @@ class LibVirtDriver(base.DriverBase):
         else: 
             servers = []
 
-        storage = [x for x in conn.listAllStoragePools() if x.name() == 'default'][0]
+        try:
+            storage = [x for x in conn.listAllStoragePools() if x.name() == 'default'][0]
+        except: 
+            import traceback
+            print ('Error getting storage in get_provider_data()')
+            traceback.print_exc()
+            raise Exception('Error getting storage for the libvirt provider. ')
 
         info = conn.getInfo()
         storage_info = storage.info()
-        used_disk = sum([x.info()[1] for x in storage.listAllVolumes()])
-        total_disk = sum([x.info()[2] for x in storage.listAllVolumes()])
+        try:
+            used_disk = sum([x.info()[1] for x in storage.listAllVolumes()])
+            total_disk = sum([x.info()[2] for x in storage.listAllVolumes()])
+        except: 
+            import traceback
+            print ('Error getting volumes for the default storage in get_provider_data()')
+            traceback.print_exc()
+            raise Exception('Error getting volumes for the default storage from the libvirt provider. ')
 
         
         provider_usage =  {
@@ -413,7 +432,9 @@ class LibVirtDriver(base.DriverBase):
                 self.field_values['provider_protocol'] = field_values['provider_protocol']
             except:
                 import traceback
+                print ('Error connecting to libvirt in validate_field_values()')
                 traceback.print_exc()
+                raise Exception('Could not connect to libvirt using the parameters - protocol: %s, provider_ip: %s. ' % (field_values['provider_protocol'], field_values['provider_ip']))
 
             self.field_values['networks'] = yield self.get_networks()
             self.field_values['images'] = yield self.get_images()
@@ -445,31 +466,88 @@ class LibVirtDriver(base.DriverBase):
         print ('Creating libvirt server. ')
         data.update(self.app_fields)
         provider_url = provider['provider_protocol'] + '://' + provider['provider_ip'] + '/system'
-        conn = libvirt.open(provider_url)
-        storage = [x for x in conn.listAllStoragePools() if x.name() == 'default'][0]
+
+        try:
+            conn = libvirt.open(provider_url)
+        except: 
+            import traceback
+            print ('Error connecting to libvirt at %s in create_server()' % provider_url)
+            traceback.print_exc()
+            raise Exception('Error connecting to libvirt with url : %s' % (provider_url))
+
+        try:
+            storage = [x for x in conn.listAllStoragePools() if x.name() == 'default'][0]
+        except: 
+            import traceback
+            print ('Error getting the default storage pool for the libvirt provider. ')
+            traceback.print_exc()
+            raise Exception('Error getting the default storage pool at %s' % (provider_url))
+
         flavour = self.flavours[data['size']]
         storage_disk = data.get('storage_disk', 0)
 
-        config_drive = yield self.create_config_drive(provider, data)
-        old_vol = [x for x in storage.listAllVolumes() if x.name() == data['image']][0]
-        new_vol = yield self.clone_libvirt_volume(storage, flavour['vol_capacity'], old_vol, data['server_name'] + '-volume.qcow2')
-        disks = [new_vol.name()]
+        try:
+            config_drive = yield self.create_config_drive(provider, data)
+        except: 
+            import traceback
+            print ('Error creating the config drive. ')
+            traceback.print_exc()
+            raise Exception('Error creating the config drive for the libvirt provider. ')
+
+        try:
+            old_vol = [x for x in storage.listAllVolumes() if x.name() == data['image']][0]
+            new_vol = yield self.clone_libvirt_volume(storage, flavour['vol_capacity'], old_vol, data['server_name'] + '-volume.qcow2')
+            disks = [new_vol.name()]
+
+        except: 
+            import traceback
+            print ('Error cloning the libvirt volume. ')
+            traceback.print_exc()
+            raise Exception('Error cloning the libvirt volume for the new minion. ')
+
         if storage_disk:
-            new_disk = yield self.create_libvirt_volume(storage, storage_disk, data['server_name'] + '-disk.qcow2')
-            disks.append(new_disk.name())
+            try:
+                new_disk = yield self.create_libvirt_volume(storage, storage_disk, data['server_name'] + '-disk.qcow2')
+                disks.append(new_disk.name())
+            except: 
+                import traceback
+                print ('Error creating libvirt volume with parameters storage_disk: %s, server_name: %s' % (storage_disk, data['server_name']))
+                traceback.print_exc()
+                raise Exception('Error creating additional libvirt volume. ')
+
         else: 
             disks.append(None)
-        print ('New disk created!. ')
 
-        iso_image = yield self.create_iso_image(provider_url, conn, data['server_name'], config_drive, old_vol)
+        try:
+            iso_image = yield self.create_iso_image(provider_url, conn, data['server_name'], config_drive, old_vol)
+        except: 
+            import traceback
+            print ('Error creating an iso image. ')
+            traceback.print_exc()
+            raise Exception('Error creating the iso image for the new minion. ')
 
-        new_xml = yield self.create_domain_xml(data['server_name'], disks, iso_image)
 
-        new_img = conn.defineXML(new_xml)
-        new_img.setMemory = flavour['memory']
-        new_img.setMaxMemory = flavour['max_memory']
-        new_img.setVcpus = flavour['num_cpus']
-        new_img.create()
+        try:
+            new_xml = yield self.create_domain_xml(data['server_name'], disks, iso_image)
+        except: 
+            import traceback
+            print ('Error generating the xml for the new minion. ')
+            traceback.print_exc()
+            raise Exception('Error generating the xml for the new minion. ')
+
+
+        try:
+            new_img = conn.defineXML(new_xml)
+            new_img.setMemory = flavour['memory']
+            new_img.setMaxMemory = flavour['max_memory']
+            new_img.setVcpus = flavour['num_cpus']
+            new_img.create()
+
+        except: 
+            import traceback
+            print ('Error creating a minion from the defined XML')
+            traceback.print_exc()
+            raise Exception('Error creating a minion with - XML was defined but the minion was not created. ')
 
         self.config_drive = BASE_CONFIG_DRIVE
 
