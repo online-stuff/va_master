@@ -18,10 +18,11 @@ def get_paths():
             'services/by_service' : {'function' : get_service, 'args' : ['service']},
             'services/get_monitoring_status' : {'function' : get_all_monitoring_data, 'args' : ['datastore_handler']},
             'services/get_services_with_checks' : {'function' : get_all_checks, 'args' : []},
+            'services/get_service_presets' : {'function' : get_presets, 'args' : ['datastore_handler']},
         },
         'post' : {
             'services/add' : {'function' : add_services, 'args' : ['services', 'server']},
-            'services/add_services_with_presets' : {'function' : add_services_presets, 'args' : [presets, server, service_name, address, port, tags]},
+            'services/add_service_with_preset' : {'function' : add_service_with_preset, 'args' : ['datastore_handler', 'preset', 'server', 'service_name', 'kwargs']},
 
         },
         'delete' : {
@@ -29,6 +30,10 @@ def get_paths():
         }
     }
     return paths
+
+def get_formatted_string_arguments(s):
+    arguments = [x[1] for x in s._formatter_parser() if x[1]] #Using weird python string formatting methods ftw!
+    return arguments
 
 @tornado.gen.coroutine
 def get_version(handler):
@@ -146,68 +151,70 @@ def add_services(services, server):
 
     yield add_service_with_definition(services, server)
 
+@tornado.gen.coroutine
+def generate_check_from_preset(preset, server, kwargs):
+    #We generate the check name as server_name_tcp or server_name_ping or whatever
+    preset['id'] = '%s_%s' % (server, preset['name'])
+
+    #If tcp is set, it's the address
+    if preset.get('tcp'): 
+        preset['tcp'] = kwargs['address']
+    
+    #If the preset uses a script, it should be formatted with the required arguments, like "script" : "ping -c1 {address} > /dev/null"
+    if preset.get('script'):
+        available_args = locals() #TODO not sure if locals() is the way to go. We should probably restrict the available variables...
+        expected_args = get_formatted_string_arguments(preset['script'])
+        available_args.update(kwargs)
+        script_kwargs = {x : available_args[x] for x in expected_args} 
+        preset['script'] = preset['script'].format(**script_kwargs)
+
+    #Finally, if there are any keys in the preset that are empty, those are values we want to take from the dashboard, such as timeout, interval etc. 
+    for key in preset: 
+        if not preset[key]: 
+            preset[key] = kwargs[key]
+
+    raise tornado.gen.Return(preset)
+
 
 #TODO finish function. 
+#kwargs should hold values as such : {"address" : "", "interval" : "", "timeout" : "", "port" : 443, "tags" : [], "other_arg" : "something"}
 @tornado.gen.coroutine
-def add_services_presets(datastore_handler, presets, server, **presets_kwargs):#server = '', service_name = '', address = '', port = 443, tags = []):
+def add_service_with_preset(datastore_handler, preset, server, service_name, kwargs = {}):#server = '', service_name = '', address = '', port = 443, tags = []):
     """Creates services based on several presets and the info for the server. The info is required to get the id and the IP of the server. """
 
     #If server is a string, and address is not set, we assume the server is a salt minion and we just take the data from mine. 
-
+    minion_info = {}
     if type(server) == 'str': 
         minion_info = yield apps.get_minion_info(server)
 
-    if not kwargs.get('address'):
-        address = minion_info['ip4_interfaces']['eth0'][0]
+    if not kwargs.get('address'): 
+        if not minion_info: 
+            raise Exception ("No `address` argument found in kwargs, and %s did not return mine data (probably because it's not a minion). Either use the ip address of the server or its minion id. ")
+        kwargs['address'] = minion_info['ip4_interfaces']['eth0'][0]
 
-    if not kwargs.get('service_name'):
-        service_name = server + '_services'
+    service_name = kwargs.get('service_name', server + '_services')
 
-    check_presets = yield datastore_handler.datastore.get_recursive('check_presets')
-    
+    check_presets = yield datastore_handler.datastore.get_recurse('service_presets/')
+    preset_search = [p for p in check_presets if p['name'] == preset]
+    if not preset: 
+        raise Exception ('Preset %s not found in list of presets %s. ' % (preset, str([x['name'] for x in check_presets])))
 
-#    check_presets_data = {
-#        "tcp" :  {"id": server_name + "_tcp", "name": "Check server TCP", "tcp": address, "interval": "30s", "timeout": "10s"}, 
-#        "ping" :  {"id": server_name + "_ping", "name": "Ping server", "script" : "ping -c1 " + address + " > /dev/null", "interval": "30s", "timeout": "10s"}, 
-#        "highstate" : {"id" : server_name + '_highstate', "name" : "Check highstate", "script" : "salt " + server_name + "state.highstate test=True | perl -lne 's/^Failed:\s+// or next; s/\s.*//; print'"}, 
-#    }
+    preset = preset_search[0]
 
-    unknown_presets = [p for p in presets if p not in check_presets.keys()]
-    if unknown_presets:
-        raise Exception('Presets %s not found in the list of available presets: %s' % (str(unknown_presets), str(check_presets.keys())))
+    check = yield generate_check_from_preset(preset, server, kwargs)
+    service = {"service": {"name": service_name, "tags": kwargs.get('tags', []), "address": kwargs['address'], "port": kwargs.get('port', 443), "checks" : [preset]}}
+    yield add_service_with_definition(service, server)
 
-    #Consul preset format: 
-    # {"name" : "Health check name", "script" : "Some script to execute, or empty", "timeout" : null}
-    # Scripts should be formattable if they use any arguments. For instance: "script" : "ping -c1 {address}
-
-    used_presets = [p for p in presets if p]
-    for p in used_presets:
-        preset = used_presets[p]
-
-        #We generate the check name as server_name_tcp or server_name_ping or whatever
-        preset['id'] = '%s_%s' % (server_name, p)
-
-        #If tcp is set, it's the address
-        if preset.get('tcp'): 
-            preset['tcp'] = address
-
-        #If the preset uses a script, it should be formatted with the required arguments, as the above ping example. 
+@tornado.gen.coroutine
+def get_presets(datastore_handler):
+    presets = yield datastore_handler.datastore.get_recurse('service_presets/')
+    for preset in presets:
+        preset_arguments = [x for x in preset if not preset.get(x)]
         if preset.get('script'):
-            expected_args = [x[1] for x in preset['script']._formatter_parser() if x[1]] #Using weird python string formatting methods ftw!
-            script_kwargs = {x : locals()[x] for x in expected_args} #TODO not sure if locals() is the way to go. We should probably restrict the available variables...
+            preset_arguments += get_formatted_string_arguments(preset['script'])
+        preset['arguments'] = preset_arguments
 
-            preset['script'] = preset['script'].format(**script_kwargs)
-
-        #Finally, if there are any keys in the preset that are empty, those are values we want to take from the dashboard, such as timeout, interval etc. 
-        for key in preset: 
-            if not preset[key]: 
-                preset[key] = kwargs[key]
-
-
-    service = {"service": {"name": service_name, "tags": tags, "address": address, "port": port, "checks" : [ 
-        check_presets[p] for p in presets
-    ]}}
-    yield add_service_with_definition(service, minion_info['id'])
+    raise tornado.gen.Return(presets)
 
 @tornado.gen.coroutine
 def delete_services(server):
