@@ -72,11 +72,10 @@ def bootstrap(master_config):
 
     from va_master.consul_kv import consul
 #    consul.ConsulProcess(master_config).start()
-
+    print ('Starting server')
     my_serv = tornado.httpserver.HTTPServer(app, ssl_options=ssl_ctx)
     my_serv.listen(master_config.https_port)
     master_config.logger.info('Server is listening at : %s. ' % str(master_config.https_port))
     master_config.logger.info('Starting server. ')
     tornado.ioloop.IOLoop.current().start()
-#    tornado.ioloop.IOLoop.instance().start()
-#    app.listen(my_config.server_port)
+
