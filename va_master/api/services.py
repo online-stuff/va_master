@@ -21,7 +21,7 @@ def get_paths():
         },
         'post' : {
             'services/add' : {'function' : add_services, 'args' : ['services', 'server']},
-            'services/add_preset' : {'function' : add_services_presets, 'args' : ['service_presets', 'server']},
+            'services/add_services_with_presets' : {'function' : add_services_presets, 'args' : [presets, server, service_name, address, port, tags]},
 
         },
         'delete' : {
@@ -147,25 +147,64 @@ def add_services(services, server):
     yield add_service_with_definition(services, server)
 
 
+#TODO finish function. 
 @tornado.gen.coroutine
-def add_services_presets(server, presets):
+def add_services_presets(datastore_handler, presets, server, **presets_kwargs):#server = '', service_name = '', address = '', port = 443, tags = []):
     """Creates services based on several presets and the info for the server. The info is required to get the id and the IP of the server. """
+
+    #If server is a string, and address is not set, we assume the server is a salt minion and we just take the data from mine. 
 
     if type(server) == 'str': 
         minion_info = yield apps.get_minion_info(server)
 
-    check_presets = {
-        "tcp" :  {"id": minion_info['id'] + "_tcp", "name": "Check server TCP", "tcp": minion_info['ip4_interfaces']['eth0'][0], "interval": "30s", "timeout": "10s"}, 
-        "ping" :  {"id": minion_info['id'] + "_ping", "name": "Ping server", "script" : "ping -c1 " + minion_info['ip4_interfaces']['eth0'][0] + " > /dev/null", "interval": "30s", "timeout": "10s"}, 
-        "highstate" : {"id" : minion_info['id'] + '_highstate', "name" : "Check highstate", "script" : "salt " + minion_info['id'] + "state.highstate test=True | perl -lne 's/^Failed:\s+// or next; s/\s.*//; print'"}, 
-    }
+    if not kwargs.get('address'):
+        address = minion_info['ip4_interfaces']['eth0'][0]
 
+    if not kwargs.get('service_name'):
+        service_name = server + '_services'
+
+    check_presets = yield datastore_handler.datastore.get_recursive('check_presets')
+    
+
+#    check_presets_data = {
+#        "tcp" :  {"id": server_name + "_tcp", "name": "Check server TCP", "tcp": address, "interval": "30s", "timeout": "10s"}, 
+#        "ping" :  {"id": server_name + "_ping", "name": "Ping server", "script" : "ping -c1 " + address + " > /dev/null", "interval": "30s", "timeout": "10s"}, 
+#        "highstate" : {"id" : server_name + '_highstate', "name" : "Check highstate", "script" : "salt " + server_name + "state.highstate test=True | perl -lne 's/^Failed:\s+// or next; s/\s.*//; print'"}, 
+#    }
 
     unknown_presets = [p for p in presets if p not in check_presets.keys()]
     if unknown_presets:
         raise Exception('Presets %s not found in the list of available presets: %s' % (str(unknown_presets), str(check_presets.keys())))
 
-    service = {"service": {"name": minion_info["id"] + "_services", "tags": ["hostsvc", "web", "http"], "address": minion_info['ip4_interfaces']['eth0'][0], "port": 443, "checks" : [ 
+    #Consul preset format: 
+    # {"name" : "Health check name", "script" : "Some script to execute, or empty", "timeout" : null}
+    # Scripts should be formattable if they use any arguments. For instance: "script" : "ping -c1 {address}
+
+    used_presets = [p for p in presets if p]
+    for p in used_presets:
+        preset = used_presets[p]
+
+        #We generate the check name as server_name_tcp or server_name_ping or whatever
+        preset['id'] = '%s_%s' % (server_name, p)
+
+        #If tcp is set, it's the address
+        if preset.get('tcp'): 
+            preset['tcp'] = address
+
+        #If the preset uses a script, it should be formatted with the required arguments, as the above ping example. 
+        if preset.get('script'):
+            expected_args = [x[1] for x in 'ping -c1 {address} > /dev/null'._formatter_parser() if x[1]] #Using weird python string formatting methods ftw!
+            script_kwargs = {x : locals()[x] for x in expected_args} #TODO not sure if locals() is the way to go. We should probably restrict the available variables...
+
+            preset['script'] = preset['script'].format(**script_kwargs)
+
+        #Finally, if there are any keys in the preset that are empty, those are values we want to take from the dashboard, such as timeout, interval etc. 
+        for key in preset: 
+            if not preset[key]: 
+                preset[key] = kwargs[key]
+
+
+    service = {"service": {"name": service_name, "tags": tags, "address": address, "port": port, "checks" : [ 
         check_presets[p] for p in presets
     ]}}
     yield add_service_with_definition(service, minion_info['id'])
