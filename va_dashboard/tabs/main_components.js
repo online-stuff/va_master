@@ -440,7 +440,7 @@ class Modal extends Component {
                 var elem = content[j].elements;
                 for(let i=0; i<elem.length; i++){
                     if(elem[i].type === 'dropdown')
-                        data[i] = elem[i].value[0];
+                        data[i] = elem[i].values[0];
                     if(elem[i].type !== 'label')
                         data[i] = elem[i].value;
                     if(elem[i].type === 'checkbox')

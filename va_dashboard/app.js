@@ -35,7 +35,7 @@ function auth(state, action){
     // Add into session
     window.localStorage.setItem('auth', JSON.stringify(newState));
     return newState;
-};
+}
 
 function menu(state, action){
     if(typeof state === 'undefined'){
@@ -103,11 +103,11 @@ function filter(state, action){
     }
 
     return newState;
-};
+}
 
 function modal(state, action){
     if(typeof state === 'undefined'){
-        return {isOpen: false, template: { title: "", content: [], buttons: [], args: []}, args: {}, modalType: ""};
+        return {isOpen: false, template: { title: "", content: [], buttons: [], args: []}, args: {}, modalType: "", rowIndex: ''};
     }
 
     var newState = Object.assign({}, state);
@@ -120,6 +120,9 @@ function modal(state, action){
         if("modalType" in action){
             newState.modalType = action.modalType;
         }
+        if("rowIndex" in action){
+            newState.rowIndex = action.rowIndex;
+        }
         newState.isOpen = true;
     }
     if(action.type == 'CLOSE_MODAL'){
@@ -127,10 +130,11 @@ function modal(state, action){
         newState.args = {};
         newState.isOpen = false;
         newState.modalType = "";
+        newState.rowIndex = "";
     }
 
     return newState;
-};
+}
 
 function apps(state, action){
     if(typeof state === 'undefined'){
@@ -146,7 +150,7 @@ function apps(state, action){
     }
 
     return newState;
-};
+}
 
 function div(state, action){
     if(typeof state === 'undefined'){
@@ -159,7 +163,7 @@ function div(state, action){
     }
 
     return newState;
-};
+}
 
 function panel(state, action){
     if(typeof state === 'undefined'){
@@ -178,7 +182,7 @@ function panel(state, action){
     }
 
     return newState;
-};
+}
 
 function alert(state, action){
     if(typeof state === 'undefined'){
@@ -196,7 +200,7 @@ function alert(state, action){
     }
 
     return newState;
-};
+}
 
 function form(state, action){
     if(typeof state === 'undefined'){
@@ -221,7 +225,7 @@ function form(state, action){
     }
 
     return newState;
-};
+}
 
 function sidebar(state, action){
     if(typeof state === 'undefined'){
@@ -237,7 +241,7 @@ function sidebar(state, action){
     }
 
     return newState;
-};
+}
 
 function logs(state, action){
     if(typeof state === 'undefined'){
@@ -257,7 +261,7 @@ function logs(state, action){
 
 
     return newState;
-};
+}
 
 var mainReducer = combineReducers({auth, table, filter, modal, apps, div, panel, alert, form, sidebar, logs, menu});
 var store = createStore(mainReducer);

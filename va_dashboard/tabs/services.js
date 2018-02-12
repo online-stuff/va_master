@@ -3,10 +3,18 @@ var Bootstrap = require('react-bootstrap');
 import { connect } from 'react-redux';
 var Network = require('../network');
 import { Table, Tr, Td } from 'reactable';
-import { getTableRowsWithActions } from './util';
+import { getTableRowWithActions, getTableRow, getModalHeader, getModalFooter, initializeFields, initializeFieldsWithValues, arr2str, objArr2str } from './util';
 import { ConfirmPopup } from './shared_components';
 
-const tblCols = ['Name', 'Address', 'Port'];
+const tblCols = ['Name', 'Address', 'Port', 'Tags', 'Checks'];
+const tblCols2 = ['Name', 'Status', 'Output', 'Interval'];
+const formInputs = [
+    {key: "name", label: "Name", type: "text"}, 
+    {key: "address", label: "Address", type: "text"}, 
+    {key: "port", label: "Port", type: "text"},
+    {key: "tags", label: "Tags", type: "text"},
+    {key: "check", label: "Checks", type: "text"}
+];
 
 class Services extends Component {
     constructor (props) {
@@ -15,8 +23,10 @@ class Services extends Component {
             services: [],
             loading: true,
 			popupShow: false,
-			popupData: {}
-
+			popupData: {},
+			selectedServiceName: '',
+			checks: [],
+			checksTableVisible: false
         };
         this.getCurrentServices = this.getCurrentServices.bind(this);
         this.confirm_action = this.confirm_action.bind(this);
@@ -24,12 +34,15 @@ class Services extends Component {
 		this.addService = this.addService.bind(this);
         this.editService = this.editService.bind(this);
         this.popupClose = this.popupClose.bind(this);
+        this.onLinkClick = this.onLinkClick.bind(this);
         this.doAction = this.doAction.bind(this);
+        this.editTable = this.editTable.bind(this);
     }
 
 	getCurrentServices () {
 		Network.get('api/services/get_services_table_data', this.props.auth.token).done(data => {
-			this.setState({ services: data, loading: false });
+            let { services, checks } = data;
+			this.setState({ services, checks, loading: false });
 		}).fail(msg => {
 			this.props.dispatch({ type: 'SHOW_ALERT', msg });
 		});
@@ -53,41 +66,58 @@ class Services extends Component {
     }
 
     addService () {
-        //this.props.dispatch({ type: 'OPEN_MODAL' });
+        this.props.dispatch({ type: 'OPEN_MODAL', modalType: "ADD" });
     }
 
-    editService (serviceName) {
-        //this.props.dispatch({ type: 'OPEN_MODAL' });
+    editService (service, index) {
+        this.props.dispatch({ type: 'OPEN_MODAL', modalType: "EDIT", args: service, rowIndex: index });
     }
+
+	editTable(type, data, i){
+        let services = Object.assign([], this.state.services);
+        if(type === 'add'){
+            services.push(data);
+        }else {
+            services[i] = data;
+        }
+        this.setState({services});
+	}
 
     popupClose() {
         this.setState({ popupShow: false });
     }
 
-    doAction(serviceName, evtKey) {
+    onLinkClick(serviceName, index) {
+		this.setState({ checksTableVisible: true, selectedServiceName: serviceName, checks: this.state.services[index].check});
+    }
+
+    doAction(serviceName, evtKey, index) {
         if(evtKey === "Edit"){
-            this.editService(serviceName);
+            this.editService(serviceName, index);
         }else {
             this.confirm_action(serviceName);
         }
     }
 
     render() {
-        let { services, loading, popupShow, popupData } = this.state;
-        let tblRows = services.map(service => {
-			let { name, address, port } = service;
+        let { services, loading, popupShow, popupData, checksTableVisible, selectedServiceName, checks } = this.state;
+        let tblRows = services.map((service, index) => {
+			let { name, address, port, tags, check } = service;
             return (
                 <Tr key={name}>
-                    {getTableRowsWithActions(tblCols, [name, address, port], ['Edit','Delete'], this.doAction, name)}
+                    {getTableRowWithActions(tblCols, [name, address, port, arr2str(tags), objArr2str(check, 'name')], ['Edit','Delete'], this.doAction, service, this.onLinkClick, index)}
                 </Tr>
             );
         });
         const spinnerStyle = {
             display: loading ? "block": "none"
         };
-        const blockStyle = {
-            visibility: loading ? "hidden": "visible"
+        let blockStyle = {
+            display: loading ? "none": "block"
         };
+        if(checksTableVisible){
+            blockStyle = { display: "none" };
+        }
         return ( 
             <div className="app-containter">
                 <span className="spinner" style={spinnerStyle} ><i className="fa fa-spinner fa-spin fa-3x" aria-hidden="true"></i></span>
@@ -98,11 +128,99 @@ class Services extends Component {
 						</Table>
 					</div>
                 </div>
+				{ checksTableVisible && <Checks service={selectedServiceName} checks={checks} /> }
+                <ModalRedux editTable={this.editTable} />
 				<ConfirmPopup body={"Please confirm action: delete service " + popupData.name} show={popupShow} data={[popupData]} close={this.popupClose} action={this.deleteService} />
             </div> 
         );
     }
 }
+
+const Checks = (props) => {
+	let { service, checks } = props;
+	let tblRows = checks.map(check => {
+		let { name, output, status, interval } = check;
+		return (
+			<Tr key={name}>
+				{getTableRow(tblCols2, [name, status, output, interval])}     
+			</Tr>
+		);
+	});
+    return (
+		<div className="card">
+			<div className="card-body">
+				<Table className="table striped" columns={tblCols2} itemsPerPage={10} pageButtonLimit={10} noDataText="No matching records found." sortable={tblCols2} filterable={tblCols2} title={`Current checks for ${service}`} filterClassName="form-control" filterPlaceholder="Filter">
+					{tblRows}
+				</Table>
+			</div>
+		</div>
+    );
+}
+
+class Modal extends Component {
+    constructor(props) {
+        super(props);
+        //let nFormInputs = Object.assign([], formInputs);
+        let { modalType, args } = props.modal;
+        let fields = initializeFields(formInputs);
+        this.state = { fields };
+        this.action = this.action.bind(this);
+        this.close = this.close.bind(this);
+        this.onFieldChange = this.onFieldChange.bind(this);
+    }
+
+    componentWillReceiveProps(nextProps){
+        let { modalType, args } = nextProps.modal;
+        let fields = (modalType === "ADD") ? initializeFields(formInputs) : initializeFieldsWithValues(formInputs, args);
+        this.setState({ fields });
+    }
+
+    onFieldChange(e) {
+        let { id, value } = e.target
+        this.setState({ id: value });
+    }
+
+    action() {
+		let modalType = this.props.modal.modalType;
+        let endpoint = `/api/service/${modalType === "ADD" ? 'add' : 'edit'}`;
+        /*Network.post(endpoint, this.props.auth.token, this.state).done(data => {
+            this.props.editTable(modalType, this.state, this.props.modal.rowIndex);
+        }).fail(msg => {
+            this.props.dispatch({ type: 'SHOW_ALERT', msg });
+        });*/
+    }
+
+    close() {
+        this.props.dispatch({type: 'CLOSE_MODAL'});
+    }
+
+    render() {
+        let { modalType, args } = this.props.modal;
+        let inputs = formInputs.map(field => {
+            return (
+                <Bootstrap.FormGroup key={field.key}>
+                    <Bootstrap.ControlLabel >{field.label}</Bootstrap.ControlLabel>
+                    <Bootstrap.FormControl type='text' key={field.key} id={field.key} value={this.state.fields[field.key]} onChange={this.onFieldChange} />
+                </Bootstrap.FormGroup>
+            );
+        });
+        return (
+            <Bootstrap.Modal show={this.props.modal.isOpen} onHide={this.close}>
+                {getModalHeader(modalType === "ADD" ? "Add service" : `Edit service ${args.name}`)}
+                <Bootstrap.Modal.Body>
+                    <form>
+                        {inputs}
+                    </form>
+                </Bootstrap.Modal.Body>
+                {getModalFooter([{label: 'Cancel', onClick: this.close}, {label: modalType === "ADD" ? "Add service" : "Apply change", bsStyle: 'primary', onClick: this.action}])}
+            </Bootstrap.Modal>
+        );
+    }
+}
+
+const ModalRedux = connect(function(state){
+    return {auth: state.auth, modal: state.modal, alert: state.alert};
+})(Modal);
 
 module.exports = connect(function(state){
     return {auth: state.auth, alert: state.alert};
