@@ -18,7 +18,7 @@ def get_paths():
             'services/by_status' : {'function' : get_services_with_status, 'args' : ['status']},
             'services/by_service' : {'function' : get_service, 'args' : ['service']},
             'services/get_monitoring_status' : {'function' : get_all_monitoring_data, 'args' : ['datastore_handler']},
-            'services/get_services_table_data' : {'function' : get_services_table_data, 'args' : []},
+            'services/get_services_table_data' : {'function' : get_services_table_data, 'args' : ['datastore_handler']},
             'services/get_services_with_checks' : {'function' : get_all_checks, 'args' : []},
             'services/get_service_presets' : {'function' : get_presets, 'args' : ['datastore_handler']},
         },
@@ -82,10 +82,10 @@ def get_services_table_data(datastore_handler):
         'tags' : s['tags'], 
     } for s in services]
 
-    presets = yield get_presets()
+    presets = yield get_presets(datastore_handler)
     presets = [{"label" : x['name'], 'value' : x['name']} for x in presets]
     result = {'services' : services_table, 'presets' : presets}
-    raise tornado.gen.Return(services_table)
+    raise tornado.gen.Return(result)
 
 @tornado.gen.coroutine
 def get_version(handler):
@@ -183,10 +183,10 @@ def create_service_from_state(state_name, service_name, service_address, service
 
 #TODO check if the definition is alright, raise exception if not. 
 @tornado.gen.coroutine
-def add_service_with_definition(service_definition, server):
+def add_service_with_definition(service_definition, service_name):
     """Adds a service with a definition. The definition has the standard consul service format. """
     service_text = json.dumps(service_definition)
-    service_conf = consul_dir + '/%s.json' % server
+    service_conf = consul_dir + '/%s.json' % service_name
 
     with open(service_conf, 'w') as f:
         f.write(service_text)
@@ -231,7 +231,7 @@ def generate_check_from_preset(preset, server, **kwargs):
 #TODO finish function. 
 #kwargs should hold values as such : {"address" : "", "interval" : "", "timeout" : "", "port" : 443, "tags" : [], "other_arg" : "something"}
 @tornado.gen.coroutine
-def add_service_with_preset(datastore_handler, preset, server, service_name = '', address = '', port = 443, tags = ['hostsvc', 'web']):
+def add_service_with_preset(datastore_handler, preset, server, service_name = '', address = '', port = 443, tags = ['hostsvc', 'web', 'http']):
     """Creates services based on several presets and the info for the server. The info is required to get the id and the IP of the server. """
 
     service_name = service_name or server + '_services'
@@ -248,16 +248,10 @@ def add_service_with_preset(datastore_handler, preset, server, service_name = ''
 
 
     preset = yield datastore_handler.get_object('service_preset', name = preset)
-##    check_presets = yield get_presets(datastore_handler)
-#    preset_search = [p for p in check_presets if p['name'] == preset]
-#    if not preset_search: 
-#        raise Exception ('Preset %s not found in list of presets %s. ' % (preset, str([x['name'] for x in check_presets])))
-
-#    preset = preset_search[0]
 
     check = yield generate_check_from_preset(preset, server, address = address, tags = tags, port = port)
     service = {"service": {"name": service_name, "tags": tags, "address": address, "port": port, "checks" : [preset]}}
-    yield add_service_with_definition(service, server)
+    yield add_service_with_definition(service, service_name)
 
 @tornado.gen.coroutine
 def get_presets(datastore_handler):
