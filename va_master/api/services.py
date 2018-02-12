@@ -5,6 +5,7 @@ from salt.client import LocalClient
 import apps
 
 consul_url = 'http://localhost:8500/v1'
+
 consul_dir = '/etc/consul.d'
 
 def get_paths():
@@ -23,7 +24,7 @@ def get_paths():
         },
         'post' : {
             'services/add' : {'function' : add_services, 'args' : ['services', 'server']},
-            'services/add_service_with_preset' : {'function' : add_service_with_preset, 'args' : ['datastore_handler', 'preset', 'server', 'service_name', 'kwargs']},
+            'services/add_service_with_preset' : {'function' : add_service_with_preset, 'args' : ['datastore_handler', 'preset', 'server', 'service_name', 'address', 'tags', 'port']},
 
         },
         'delete' : {
@@ -35,6 +36,12 @@ def get_paths():
 def get_formatted_string_arguments(s):
     arguments = [x[1] for x in s._formatter_parser() if x[1]] #Using weird python string formatting methods ftw!
     return arguments
+
+@tornado.gen.coroutine
+def get_presets(datastore_handler):
+    check_presets = yield datastore_handler.datastore.get_recurse('service_presets/')
+
+    raise tornado.gen.Return(check_presets)
 
 @tornado.gen.coroutine
 def get_service_definition(service_name):
@@ -56,7 +63,7 @@ def get_all_service_definitions():
     raise tornado.gen.Return(definitions)
 
 @tornado.gen.coroutine
-def get_services_table_data():
+def get_services_table_data(datastore_handler):
     definitions = yield get_all_service_definitions()
     checks = yield get_all_checks()
 
@@ -75,6 +82,9 @@ def get_services_table_data():
         'tags' : s['tags'], 
     } for s in services]
 
+    presets = yield get_presets()
+    presets = [{"label" : x['name'], 'value' : x['name']} for x in presets]
+    result = {'services' : services_table, 'presets' : presets}
     raise tornado.gen.Return(services_table)
 
 @tornado.gen.coroutine
@@ -194,7 +204,7 @@ def add_services(services, server):
     yield add_service_with_definition(services, server)
 
 @tornado.gen.coroutine
-def generate_check_from_preset(preset, server, kwargs):
+def generate_check_from_preset(preset, server, **kwargs):
     #We generate the check name as server_name_tcp or server_name_ping or whatever
     preset['id'] = '%s_%s' % (server, preset['name'])
 
@@ -221,30 +231,32 @@ def generate_check_from_preset(preset, server, kwargs):
 #TODO finish function. 
 #kwargs should hold values as such : {"address" : "", "interval" : "", "timeout" : "", "port" : 443, "tags" : [], "other_arg" : "something"}
 @tornado.gen.coroutine
-def add_service_with_preset(datastore_handler, preset, server, service_name, kwargs = {}):#server = '', service_name = '', address = '', port = 443, tags = []):
+def add_service_with_preset(datastore_handler, preset, server, service_name = '', address = '', port = 443, tags = ['hostsvc', 'web']):
     """Creates services based on several presets and the info for the server. The info is required to get the id and the IP of the server. """
+
+    service_name = service_name or server + '_services'
 
     #If server is a string, and address is not set, we assume the server is a salt minion and we just take the data from mine. 
     minion_info = {}
     if type(server) == 'str': 
         minion_info = yield apps.get_minion_info(server)
 
-    if not kwargs.get('address'): 
+    if not address: 
         if not minion_info: 
-            raise Exception ("No `address` argument found in kwargs, and %s did not return mine data (probably because it's not a minion). Either use the ip address of the server or its minion id. ")
-        kwargs['address'] = minion_info['ip4_interfaces']['eth0'][0]
+            raise Exception ("No `address` argument found, and %s did not return mine data (maybe it's not a minion?). Either use the ip address of the server or its minion id. " % (server))
+        address = minion_info['ip4_interfaces']['eth0'][0]
 
-    service_name = kwargs.get('service_name', server + '_services')
 
-    check_presets = yield datastore_handler.datastore.get_recurse('service_presets/')
-    preset_search = [p for p in check_presets if p['name'] == preset]
-    if not preset: 
-        raise Exception ('Preset %s not found in list of presets %s. ' % (preset, str([x['name'] for x in check_presets])))
+    preset = yield datastore_handler.get_object('service_preset', name = preset)
+##    check_presets = yield get_presets(datastore_handler)
+#    preset_search = [p for p in check_presets if p['name'] == preset]
+#    if not preset_search: 
+#        raise Exception ('Preset %s not found in list of presets %s. ' % (preset, str([x['name'] for x in check_presets])))
 
-    preset = preset_search[0]
+#    preset = preset_search[0]
 
-    check = yield generate_check_from_preset(preset, server, kwargs)
-    service = {"service": {"name": service_name, "tags": kwargs.get('tags', []), "address": kwargs['address'], "port": kwargs.get('port', 443), "checks" : [preset]}}
+    check = yield generate_check_from_preset(preset, server, address = address, tags = tags, port = port)
+    service = {"service": {"name": service_name, "tags": tags, "address": address, "port": port, "checks" : [preset]}}
     yield add_service_with_definition(service, server)
 
 @tornado.gen.coroutine
