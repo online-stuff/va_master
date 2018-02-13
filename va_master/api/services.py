@@ -24,7 +24,7 @@ def get_paths():
         },
         'post' : {
             'services/add' : {'function' : add_services, 'args' : ['services', 'server']},
-            'services/add_service_with_preset' : {'function' : add_service_with_preset, 'args' : ['datastore_handler', 'preset', 'server', 'service_name', 'address', 'tags', 'port']},
+            'services/add_service_with_presets' : {'function' : add_service_with_preset, 'args' : ['datastore_handler', 'presets', 'server', 'service_name', 'address', 'tags', 'port']},
 
         },
         'delete' : {
@@ -58,7 +58,6 @@ def get_all_service_definitions():
     services = yield list_services()
     services = services.keys()
     definitions = yield [get_service_definition(x) for x in services]
-    print ('Definitions at beginning ', definitions)
 #    definitions = [{"name" : x, "definition" : services[x]} for x in services]
     raise tornado.gen.Return(definitions)
 
@@ -71,8 +70,18 @@ def get_services_table_data(datastore_handler):
 
     for service in services: 
         check_results = [checks[x] for x in checks if x == service['name']][0]
-        for i in range(len(service['checks'])):
-            service['checks'][i].update(check_results[i])
+        if len(check_results) != len(service['checks']):
+            service['checks'] = [{
+                'interval' : 'n/a',
+                'name' : 'n/a',
+                'id' : 'n/a',
+                'timeout' : 'n/a',
+                'Status' : 'Critical', 
+                'Output' : 'Could not receive health check data for ' + service['name']
+            }]
+        else:
+            for i in range(len(service['checks'])):
+                service['checks'][i].update(check_results[i])
 
     services_table = [{
         'name' : s['name'], 
@@ -231,25 +240,31 @@ def generate_check_from_preset(preset, server, **kwargs):
 #TODO finish function. 
 #kwargs should hold values as such : {"address" : "", "interval" : "", "timeout" : "", "port" : 443, "tags" : [], "other_arg" : "something"}
 @tornado.gen.coroutine
-def add_service_with_preset(datastore_handler, preset, server, service_name = '', address = '', port = 443, tags = ['hostsvc', 'web', 'http']):
+def add_service_with_preset(datastore_handler, presets, server, service_name = '', address = '', port = 443, tags = []):
     """Creates services based on several presets and the info for the server. The info is required to get the id and the IP of the server. """
 
     service_name = service_name or server + '_services'
+    port = port or 443
+    tags = tags or ['hostsvc', 'web', 'http']
 
     #If server is a string, and address is not set, we assume the server is a salt minion and we just take the data from mine. 
     minion_info = {}
-    if type(server) == 'str': 
-        minion_info = yield apps.get_minion_info(server)
+    if type(server) in [str, unicode]: 
+        minion_info = yield apps.get_app_info(server)
 
     if not address: 
         if not minion_info: 
             raise Exception ("No `address` argument found, and %s did not return mine data (maybe it's not a minion?). Either use the ip address of the server or its minion id. " % (server))
         address = minion_info['ip4_interfaces']['eth0'][0]
 
+    checks = []
 
-    preset = yield datastore_handler.get_object('service_preset', name = preset)
+    for preset in presets:
+        preset = yield datastore_handler.get_object('service_preset', name = preset)
 
-    check = yield generate_check_from_preset(preset, server, address = address, tags = tags, port = port)
+        check = yield generate_check_from_preset(preset, server, address = address, tags = tags, port = port)
+        checks.append(check)
+
     service = {"service": {"name": service_name, "tags": tags, "address": address, "port": port, "checks" : [preset]}}
     yield add_service_with_definition(service, service_name)
 
