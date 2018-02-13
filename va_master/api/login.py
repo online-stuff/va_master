@@ -131,6 +131,7 @@ def create_user_api(handler, user, password, user_type = 'user'):
 def user_login(datastore_handler, username, password):
     """Looks for a user with the specified username and checks the specified password against the found user's password. Creates a token if the login is successful. """
 
+    token = None
     body = None
     try: 
         if '@' in username: 

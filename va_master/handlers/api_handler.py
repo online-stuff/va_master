@@ -213,7 +213,7 @@ class ApiHandler(tornado.web.RequestHandler):
             if api_func['function'] not in [user_login]:#, url_serve_file_test]: 
                 auth_successful = yield self.handle_user_auth(path)
                 if not auth_successful: 
-                    raise tornado.gen.Return()
+                    raise tornado.gen.Return({"success" : False, "message" : "Authentication not successful for " + api_func['function'].func_name, "data" : {}})
 
             result = yield self.handle_func(api_func, data)
 
