@@ -37,6 +37,12 @@ def get_paths():
     return paths
 
 
+def get_minion_role(minion_name):
+    cl = LocalClient()
+    role = cl.cmd(minion_name, 'grains.get', arg = ['role'])[minion_name]
+    return role
+
+
 @tornado.gen.coroutine
 def new_panel(datastore_handler, server_name, role):
     """ Adds the panel_name to the list of servers for the specified role. """
@@ -59,15 +65,14 @@ def panel_action_execute(handler, server_name, action, args = [], dash_user = ''
     """
     datastore_handler = handler.datastore_handler
 
-    server_info = yield apps.get_app_info(server_name)
-    state = server_info['role']
+    state = get_minion_role(server_name) 
 
     if dash_user.get('username'):
         user_funcs = yield datastore_handler.get_user_salt_functions(dash_user['username'])
         if action not in user_funcs and dash_user['type'] != 'admin':
             print ('Function not supported')
             raise Exception('User attempting to execute a salt function but does not have permission. ')
-        
+
     state = yield datastore_handler.get_state(name = state)
     if not state: state = {'module' : 'openvpn'}
 
@@ -198,14 +203,12 @@ def get_panel_for_user(handler, panel, server_name, dash_user, args = [], provid
 
     datastore_handler = handler.datastore_handler
     user_panels = yield list_panels(datastore_handler, dash_user)
-    server_info = yield apps.get_app_info(server_name)
-    state = server_info['role']
+    state = get_minion_role(server_name) 
     #This is usually for get requests. Any arguments in the url that are not arguments of this function are assumed to be keyword arguments for salt.
     #TODO Also this is pretty shabby, and I need to find a better way to make GET salt requests work. 
     ignored_kwargs = ['datastore', 'handler', 'datastore_handler', 'drivers_handler', 'panel', 'instance_name', 'dash_user', 'method', 'server_name', 'path', 'args']
     if not kwargs: 
         kwargs = {x : handler.data[x] for x in handler.data if x not in ignored_kwargs}
-
 
     state = yield datastore_handler.get_state(name = state)
 
@@ -221,7 +224,6 @@ def get_panel_for_user(handler, panel, server_name, dash_user, args = [], provid
 def export_table(handler, panel, server_name, dash_user, export_type = 'pdf', table_file = '/tmp/table', args = [], provider = None, kwargs = {}, filter_field = ''):
     table_func = 'va_pdf_utils.get_%s' % export_type
     table_file = table_file + '.' + export_type
-    print ('Getting with func : ', table_func)
     if not args: 
         args = list(args)
     cl = LocalClient()
@@ -272,13 +274,9 @@ def get_all_functions(handler):
     cl = LocalClient()
 
     all_salt_functions = cl.cmd('va-master', 'sys.doc')['va-master']
-    print ('States : ', states)
-    print ('States with keys : ', {state['name']: state.get('module') for state in states})
     states_functions = {
         state['module'] : {x.split('.')[1] : {'doc' : all_salt_functions[x] or 'No description available. '} for x in all_salt_functions if x.startswith(state['module'])}
     for state in states}
-
-    print ('States functions are : ', states_functions)
 
 
     salt_functions = {state['module'] : {

@@ -76,11 +76,11 @@ def bootstrap(master_config):
     my_serv.listen(master_config.https_port)
     master_config.logger.info('Server is listening at : %s. ' % str(master_config.https_port))
     master_config.logger.info('Starting server. ')
-    try:
-        tornado.ioloop.IOLoop.current().start()
-    except: 
-        master_config.logger.info('Caught exception in ioloop: ')
-        import traceback
-        traceback.print_exc()
+#    try:
+    tornado.ioloop.IOLoop.current().start()
+#    except: 
+#        master_config.logger.info('Caught exception in ioloop: ')
+#        import traceback
+#        traceback.print_exc()
 
 
