@@ -1,4 +1,4 @@
-import requests, json, subprocess
+import requests, json, subprocess, os
 
 import tornado.gen
 from salt.client import LocalClient
@@ -24,11 +24,11 @@ def get_paths():
         },
         'post' : {
             'services/add' : {'function' : add_services, 'args' : ['services', 'server']},
-            'services/add_service_with_presets' : {'function' : add_service_with_preset, 'args' : ['datastore_handler', 'presets', 'server', 'service_name', 'address', 'tags', 'port']},
+            'services/add_service_with_presets' : {'function' : add_service_with_presets, 'args' : ['datastore_handler', 'presets', 'server', 'name', 'address', 'tags', 'port']},
 
         },
         'delete' : {
-            'services/delete' : {'function' : delete_services, 'args' : ['server']},
+            'services/delete' : {'function' : delete_service, 'args' : ['name']},
         }
     }
     return paths
@@ -88,7 +88,7 @@ def get_services_table_data(datastore_handler):
         'address' : s['address'], 
         'port' : s['port'], 
         'check' : [{'interval' : c.get('interval'), 'name' : c['id'], 'status' : c['Status'], 'output' : c.get('Output')} for c in s['checks']],
-        'tags' : s['tags'], 
+        'tags' : ', '.join(s['tags']), 
     } for s in services]
 
     presets = yield get_presets(datastore_handler)
@@ -240,12 +240,12 @@ def generate_check_from_preset(preset, server, **kwargs):
 #TODO finish function. 
 #kwargs should hold values as such : {"address" : "", "interval" : "", "timeout" : "", "port" : 443, "tags" : [], "other_arg" : "something"}
 @tornado.gen.coroutine
-def add_service_with_preset(datastore_handler, presets, server, service_name = '', address = '', port = 443, tags = []):
+def add_service_with_presets(datastore_handler, presets, server, name = '', address = '', port = 443, tags = ''):
     """Creates services based on several presets and the info for the server. The info is required to get the id and the IP of the server. """
 
-    service_name = service_name or server + '_services'
+    name = name or server + '_services'
     port = port or 443
-    tags = tags or ['hostsvc', 'web', 'http']
+    tags = tags.split(',')
 
     #If server is a string, and address is not set, we assume the server is a salt minion and we just take the data from mine. 
     minion_info = {}
@@ -265,8 +265,9 @@ def add_service_with_preset(datastore_handler, presets, server, service_name = '
         check = yield generate_check_from_preset(preset, server, address = address, tags = tags, port = port)
         checks.append(check)
 
-    service = {"service": {"name": service_name, "tags": tags, "address": address, "port": port, "checks" : [preset]}}
-    yield add_service_with_definition(service, service_name)
+    service = {"service": {"name": name, "tags": tags, "address": address, "port": port, "checks" : [preset]}}
+    yield add_service_with_definition(service, name)
+
 
 @tornado.gen.coroutine
 def get_presets(datastore_handler):
@@ -280,9 +281,9 @@ def get_presets(datastore_handler):
     raise tornado.gen.Return(presets)
 
 @tornado.gen.coroutine
-def delete_services(server):
+def delete_service(name):
     """Deletes all services for a server. """
-    service_conf = consul_dir + '/%s.json' % server
+    service_conf = consul_dir + '/%s.json' % name
     os.remove(service_conf)
 
     reload_systemctl()

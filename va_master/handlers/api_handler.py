@@ -23,6 +23,7 @@ def invalid_url(path, method):
 
 class ApiHandler(tornado.web.RequestHandler):
     executor = ThreadPoolExecutor(max_workers= 4)
+    status = 200
 
     def initialize(self, config, include_version=False):
         try:
@@ -209,15 +210,16 @@ class ApiHandler(tornado.web.RequestHandler):
 
             api_func = self.fetch_func(method, path, data)
 
-            if api_func['function'] not in [user_login]:#, url_serve_file_test]: 
+            if api_func['function'] not in [user_login]:
+
                 auth_successful = yield self.handle_user_auth(path)
                 if not auth_successful: 
                     raise tornado.gen.Return()
 
             result = yield self.handle_func(api_func, data)
-
+            status = self.status or 200
             yield self.log_message(path = path, data = data, func = api_func['function'], result = {})#log_result)
-            self.json(result)
+            self.json(result, status)
         except: 
             import traceback
             traceback.print_exc()
@@ -415,7 +417,6 @@ class LogMessagingSocket(tornado.websocket.WebSocketHandler):
             except: 
                 self.config.logger.warning('Could not open %s and read messages. Returning empty list. ' % self.logfile)
                 self.messages = []
-
             json_msgs = []
             for message in self.messages: 
                 try:
@@ -427,6 +428,8 @@ class LogMessagingSocket(tornado.websocket.WebSocketHandler):
                 json_msgs.append(j_msg)
 
             self.messages = json_msgs 
+            self.config.logger.info('Got %s messages. ' % (len(self.messages, )))
+
             yesterday = datetime.datetime.now() + dateutil.relativedelta.relativedelta(days = -1)
 
             init_messages = self.get_messages(yesterday, datetime.datetime.now())
@@ -434,7 +437,7 @@ class LogMessagingSocket(tornado.websocket.WebSocketHandler):
             hosts = list(set([x.get('host') for x in init_messages if x.get('host')]))
             hosts = [{'value': x, 'label': x} for x in hosts]
             msg = {"type" : "init", "logs" : init_messages, 'hosts' : hosts}
-            print ('Socket wrote message : ', {'type' : msg['type'], 'logs' : '...', 'hosts' : msg['hosts']})
+            print ('Writing message : ', {'type' : msg['type'], 'logs' : '...', 'hosts' : msg['hosts']})
             self.write_message(json.dumps(msg))
 
             self.log_handler = LogHandler(self)
@@ -442,6 +445,8 @@ class LogMessagingSocket(tornado.websocket.WebSocketHandler):
             observer = Observer()
             observer.schedule(self.log_handler, path = log_path)
             observer.start()
+            self.config.logger.info('Socket started log handler and observer. ')
+
         except: 
             import traceback
             traceback.print_exc()

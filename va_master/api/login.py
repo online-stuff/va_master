@@ -17,7 +17,7 @@ def get_paths():
         'get' : {
         },
         'post' : {
-            'login' : {'function' : user_login, 'args' : ['datastore_handler', 'username', 'password']},
+            'login' : {'function' : user_login, 'args' : ['handler', 'username', 'password']},
             'new_user' : {'function' : create_user_api, 'args' : ['user', 'password', 'user_type']}
         }
     }
@@ -131,38 +131,34 @@ def create_user_api(handler, user, password, user_type = 'user'):
 
 
 @tornado.gen.coroutine
-def user_login(datastore_handler, username, password):
+def user_login(handler, username, password):
     """Looks for a user with the specified username and checks the specified password against the found user's password. Creates a token if the login is successful. """
 
+    datastore_handler = handler.datastore_handler
     body = None
-    try: 
-        if '@' in username: 
-            yield ldap_login(handler)
-            raise tornado.gen.Return()
+    if '@' in username: 
+        yield ldap_login(handler)
+        raise tornado.gen.Return()
 
 
-        account_info = yield datastore_handler.find_user(username)
+    account_info = yield datastore_handler.find_user(username)
 
-        invalid_acc_hash = crypt('__invalidpassword__')
+    invalid_acc_hash = crypt('__invalidpassword__')
 
-        if not account_info:
-            # Prevent timing attacks
-            account_info = {
-                'password_hash': invalid_acc_hash,
-                'username': '__invalid__',
-                'timestamp_created': 0
-            }
-        pw_hash = account_info['password_hash']
-        if crypt(password, pw_hash) == pw_hash:
-            token = yield get_or_create_token(datastore_handler, username, user_type = account_info['user_type'])
-            raise tornado.gen.Return({'token': token})
-        raise Exception ("Invalid password: " + password) 
+    if not account_info:
+        # Prevent timing attacks
+        account_info = {
+            'password_hash': invalid_acc_hash,
+            'username': '__invalid__',
+            'timestamp_created': 0
+        }
+    pw_hash = account_info['password_hash']
+    if crypt(password, pw_hash) == pw_hash:
+        token = yield get_or_create_token(datastore_handler, username, user_type = account_info['user_type'])
+        raise tornado.gen.Return({'token': token})
+    handler.status = 401
+    raise Exception ("Invalid password: " + password) 
 
-    except tornado.gen.Return:
-        raise
-    except: 
-        import traceback
-        traceback.print_exc()
 
 
 @tornado.gen.coroutine
