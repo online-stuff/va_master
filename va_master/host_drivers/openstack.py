@@ -264,8 +264,9 @@ class OpenStackDriver(base.DriverBase):
              
 
             tenant_id = tenant['id']
-            tenant_usage = yield self.get_openstack_value(self.token_data, 'compute', 'os-simple-tenant-usage/' + tenant_id)
+            tenant_usage = yield self.get_openstack_value(self.token_data, 'compute', 'os-simple-tenant-usage/' + tenant_id)# + '?start=2017-02-02T09:49:58')
             tenant_usage = tenant_usage['tenant_usage']
+#            print ('Usage is : ', tenant_usage)
             servers = [
                 {
                     'hostname' : x['name'], 
