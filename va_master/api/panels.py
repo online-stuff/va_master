@@ -169,7 +169,7 @@ def get_chart_data(server_name, args = ['va-directory', 'Ping']):
     raise tornado.gen.Return(result)
 
 @tornado.gen.coroutine
-def panel_action(handler, actions_list = [], server_name = '', action = '', args = [], kwargs = {}, module = None, dash_user = {}):
+def panel_action(handler, actions_list = [], server_name = '', action = '', args = [], kwargs = {}, module = None, dash_user = {}, call_functions = []):
     """Performs a list of actions on multiple servers. If actions_list is not supplied, will use the rest of the arguments to call a single function on one server. """
     if not actions_list: 
         actions_list = [{"server_name" : server_name, "action" : action, "args" : args, 'kwargs' : kwargs, 'module' : module}]
@@ -177,13 +177,21 @@ def panel_action(handler, actions_list = [], server_name = '', action = '', args
     servers = [x['server_name'] for x in actions_list]
     results = {x : None for x in servers}
     for action in actions_list:
+        server_key = action['server_name']
         server_result = yield panel_action_execute(handler, server_name = action['server_name'], \
             dash_user = dash_user, \
             action = action['action'], \
             args = action['args'], \
             kwargs = action['kwargs'], \
             module = action['module'])
-        results[action['server_name']] = server_result
+        results[server_key] = server_result
+
+        #call_functions is a list of functions to call at the end of the action. Usually used with actions such as va_directory.add_user, which then wants to get the data of list_users
+        if call_functions: 
+            results[server_key] = {}
+            for f in call_functions: 
+                new_result = yield panel_action_execute(handler, server_name = action['server_name'], dash_user = dash_user, action = f['action'], module = action['module'])[server_key]
+                results[server_key][f['table_name']] = new_result
 
     if len(results.keys()) == 1: 
         results = results[results.keys()[0]]
