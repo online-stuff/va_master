@@ -78,12 +78,17 @@ function table(state, action){
         newState = action.tables;
         // newState.path = [];
     }
-    if(action.type == 'CHANGE_DATA'){
+    else if(action.type == 'CHANGE_DATA'){
         newState[action.name] = action.data;
         if("passVal" in action){
             newState["path"].push(action.passVal);
         }else if("initVal" in action){
             newState["path"] = action.initVal;
+        }
+    }
+    else if(action.type == 'CHANGE_MULTI_DATA'){
+        for(let key in action.data){
+            newState[key] = action.data[key];
         }
     }
     return newState;
@@ -107,7 +112,7 @@ function filter(state, action){
 
 function modal(state, action){
     if(typeof state === 'undefined'){
-        return {isOpen: false, template: { title: "", content: [], buttons: [], args: []}, args: {}, modalType: "", rowIndex: ''};
+        return {isOpen: false, template: { title: "", content: [], buttons: [], args: [], kwargs: {}}, args: {}, modalType: "", rowIndex: ''};
     }
 
     var newState = Object.assign({}, state);
@@ -123,10 +128,13 @@ function modal(state, action){
         if("rowIndex" in action){
             newState.rowIndex = action.rowIndex;
         }
+        if("kwargs" in action){
+            newState.kwargs = action.kwargs;
+        }
         newState.isOpen = true;
     }
     if(action.type == 'CLOSE_MODAL'){
-        newState.template = { title: "", content: [], buttons: [], args: []};
+        newState.template = { title: "", content: [], buttons: [], args: [], kwargs: {}};
         newState.args = {};
         newState.isOpen = false;
         newState.modalType = "";

@@ -1,6 +1,16 @@
 import React, { Component } from 'react';
 import { Table, Tr, Td } from 'reactable';
 import { Button, DropdownButton, MenuItem, Modal } from 'react-bootstrap';
+import { connect } from 'react-redux';
+var Network = require('../network');
+
+function isEmpty(obj) {
+    for(var key in obj) {
+        if(obj.hasOwnProperty(key))
+            return false;
+    }
+    return true;
+}
 
 function getRandomColor() {
     var letters = '0123456789ABCDEF'.split('');
@@ -22,24 +32,24 @@ function getRandomColors(count) {
     }
     return colors;
 }
-function arr2str(arr) {
-    return arr.join(', ').slice(0, -2);
+function arr2str(arr, delimiter=', ') {
+    return arr.join(delimiter);
 }
-function str2arr(str) {
-    return str.join(', ');
+function str2arr(str, delimiter=', ') {
+    return str.split(delimiter);
 }
 function obj2str(obj, key){
     return obj[key];
 }
-function obj2arr(arr, key){
+function reduceArr(arr, key){
     return arr.map(obj => obj[key]);
 }
 function objArr2str(arr, key) {
-    return arr2str(obj2arr(arr, key));
+    return arr2str(reduceArr(arr, key));
 }
 function getTableRow(columns, data) {
     return columns.map((col, index) => {
-        return <Td key={col} column={col}>{data[index]}</Td>
+        return <Td key={col} column={col}>{data[index]}</Td>;
     });
 }
 function getTableRowWithLink(columns, data, onClick, index) {
@@ -54,7 +64,7 @@ function getTableRowWithAction(columns, data, btnText, btnVal, btnClick, onLinkC
 function getTableRowWithActions(columns, data, actions, action, param, onLinkClick, rowIndex) {
     let rows = onLinkClick ? getTableRowWithLink(columns, data, onLinkClick, rowIndex) : getTableRow(columns, data);
     let items = actions.map(a => {
-        return <MenuItem eventKey={a}>{a}</MenuItem>
+        return <MenuItem key={a} eventKey={a}>{a}</MenuItem>
     });
     rows.push((
         <Td key="Actions" column="Actions">
@@ -71,9 +81,9 @@ function getModalHeader(title){
     );
 }
 function getModalFooter(buttons){
-    let btns = buttons.map(btn => {
+    let btns = buttons.map((btn, i) => {
         let { label, bsStyle, onClick } = btn;
-        return <Button onClick={onClick} bsStyle={bsStyle}>{label}</Button>;
+        return <Button key={i} onClick={onClick} bsStyle={bsStyle}>{label}</Button>;
     });
 	return (
 		<Modal.Footer>
@@ -98,7 +108,54 @@ function initializeFieldsWithValues(fields, values) {
     return state;
 }
 
+function initSelectOptions(arr){
+    return arr.map(o => ({label: o, value: o}));
+}
+
+function getReduxComponent(ReactComponent, reducers){
+    return connect(state => {
+        let newstate = {auth: state.auth};
+        if(reducers){
+            for (let i = 0; i < reducers.length; i++) {
+                let r = reducers[i];
+                newstate[r] = state[r];
+            }
+        }
+        return newstate;
+    })(ReactComponent);
+}
+
+function callPanelAction(token, data, callbackSuccess, callbackError){
+	Network.post('/api/panels/action', token, data).done(msg => {
+		if(typeof msg === 'string'){
+			callbackSuccess(msg);
+		}
+	}).fail(msg => {
+		callbackError(msg);
+	});
+}
+
+function download(url, token, data, fileWithExt, callback){
+	Network.download_file(url, token, data).done(function(d) {
+		var data = new Blob([d], {type: 'octet/stream'});
+		var url = window.URL.createObjectURL(data);
+		let tempLink = document.createElement('a');
+		tempLink.style = "display: none";
+		tempLink.href = url;
+		tempLink.setAttribute('download', fileWithExt);
+		document.body.appendChild(tempLink);
+		tempLink.click();
+		setTimeout(function(){
+			document.body.removeChild(tempLink);
+			window.URL.revokeObjectURL(url);
+		}, 100);
+	}).fail(function (msg) {
+		callback(msg);
+	});
+}
+
 module.exports = {
+    isEmpty,
     getRandomColor,
     getRandomColors,
     getTableRow,
@@ -109,6 +166,10 @@ module.exports = {
     initializeFields,
     initializeFieldsWithValues,
     arr2str,
-    obj2arr,
-    objArr2str
+    reduceArr,
+    objArr2str,
+    initSelectOptions,
+    getReduxComponent,
+    callPanelAction,
+	download
 }

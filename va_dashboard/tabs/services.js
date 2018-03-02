@@ -3,8 +3,18 @@ var Bootstrap = require('react-bootstrap');
 import { connect } from 'react-redux';
 var Network = require('../network');
 import { Table, Tr, Td } from 'reactable';
-import { getTableRowWithActions, getTableRow, getModalHeader, getModalFooter, initializeFields, initializeFieldsWithValues, arr2str, objArr2str } from './util';
+import { 
+        getTableRowWithActions, 
+        getTableRow, 
+        getModalHeader, 
+        getModalFooter, 
+        initializeFields, 
+        initializeFieldsWithValues, 
+        reduceArr, 
+        objArr2str 
+    } from './util';
 import { ConfirmPopup } from './shared_components';
+import Select from 'react-select-plus';
 
 const tblCols = ['Name', 'Address', 'Port', 'Tags', 'Checks'];
 const tblCols2 = ['Name', 'Status', 'Output', 'Interval'];
@@ -12,8 +22,8 @@ const formInputs = [
     {key: "name", label: "Name", type: "text"}, 
     {key: "address", label: "Address", type: "text"}, 
     {key: "port", label: "Port", type: "text"},
-    {key: "tags", label: "Tags", type: "text"},
-    {key: "check", label: "Checks", type: "text"}
+    {key: "tags", label: "Tags", type: "text"}
+    //{key: "presets", label: "Checks", type: "select"}
 ];
 
 class Services extends Component {
@@ -25,7 +35,7 @@ class Services extends Component {
 			popupShow: false,
 			popupData: {},
 			selectedServiceName: '',
-			checks: [],
+			presets: [],
 			checksTableVisible: false
         };
         this.getCurrentServices = this.getCurrentServices.bind(this);
@@ -41,8 +51,8 @@ class Services extends Component {
 
 	getCurrentServices () {
 		Network.get('api/services/get_services_table_data', this.props.auth.token).done(data => {
-            let { services, checks } = data;
-			this.setState({ services, checks, loading: false });
+            let { services, presets } = data;
+			this.setState({ services, presets, loading: false });
 		}).fail(msg => {
 			this.props.dispatch({ type: 'SHOW_ALERT', msg });
 		});
@@ -52,13 +62,14 @@ class Services extends Component {
         this.getCurrentServices();
     }
 
-    confirm_action(serviceName){
-        var data = { "name": serviceName };
+    confirm_action(service){
+        var data = { "name": service.name };
         this.setState({ popupShow: true, popupData: data });
     }
 
     deleteService (data){
-        Network.post('/api/service/delete', this.props.auth.token, data).done(data => {
+        this.popupClose();
+        Network.delete('/api/services/delete', this.props.auth.token, data).done(data => {
             this.getCurrentServices();
         }).fail(msg => {
             this.props.dispatch({ type: 'SHOW_ALERT', msg });
@@ -75,7 +86,7 @@ class Services extends Component {
 
 	editTable(type, data, i){
         let services = Object.assign([], this.state.services);
-        if(type === 'add'){
+        if(type === 'ADD'){
             services.push(data);
         }else {
             services[i] = data;
@@ -91,7 +102,7 @@ class Services extends Component {
 		this.setState({ checksTableVisible: true, selectedServiceName: serviceName, checks: this.state.services[index].check});
     }
 
-    doAction(serviceName, evtKey, index) {
+    doAction(serviceName, index, evtKey) {
         if(evtKey === "Edit"){
             this.editService(serviceName, index);
         }else {
@@ -105,7 +116,7 @@ class Services extends Component {
 			let { name, address, port, tags, check } = service;
             return (
                 <Tr key={name}>
-                    {getTableRowWithActions(tblCols, [name, address, port, arr2str(tags), objArr2str(check, 'name')], ['Edit','Delete'], this.doAction, service, this.onLinkClick, index)}
+                    {getTableRowWithActions(tblCols, [name, address, port, tags, objArr2str(check, 'name')], ['Edit','Delete'], this.doAction, service, this.onLinkClick, index)}
                 </Tr>
             );
         });
@@ -129,7 +140,7 @@ class Services extends Component {
 					</div>
                 </div>
 				{ checksTableVisible && <Checks service={selectedServiceName} checks={checks} /> }
-                <ModalRedux editTable={this.editTable} />
+                <ModalRedux presetsOptions={this.state.presets} getCurrentServices={this.getCurrentServices} />
 				<ConfirmPopup body={"Please confirm action: delete service " + popupData.name} show={popupShow} data={[popupData]} close={this.popupClose} action={this.deleteService} />
             </div> 
         );
@@ -163,46 +174,79 @@ class Modal extends Component {
         //let nFormInputs = Object.assign([], formInputs);
         let { modalType, args } = props.modal;
         let fields = initializeFields(formInputs);
-        this.state = { fields };
+        fields.presets = "";
+        fields.interval = "";
+        fields.timeout = "";
+        fields.server = "";
+        this.state = fields;
         this.action = this.action.bind(this);
         this.close = this.close.bind(this);
         this.onFieldChange = this.onFieldChange.bind(this);
+        this.getInput = this.getInput.bind(this);
+        this.onSelectChange = this.onSelectChange.bind(this);
+        this.getInputGroup = this.getInputGroup.bind(this);
     }
 
     componentWillReceiveProps(nextProps){
         let { modalType, args } = nextProps.modal;
         let fields = (modalType === "ADD") ? initializeFields(formInputs) : initializeFieldsWithValues(formInputs, args);
-        this.setState({ fields });
+        this.setState({ ...fields });
     }
 
     onFieldChange(e) {
         let { id, value } = e.target
-        this.setState({ id: value });
+        this.setState({ [id]: value });
+    }
+
+    onSelectChange(key, val) {
+        if(key in this.state){
+            this.setState({ [key]: val });
+        }
     }
 
     action() {
 		let modalType = this.props.modal.modalType;
-        let endpoint = `/api/service/${modalType === "ADD" ? 'add' : 'edit'}`;
-        /*Network.post(endpoint, this.props.auth.token, this.state).done(data => {
-            this.props.editTable(modalType, this.state, this.props.modal.rowIndex);
+        let check = modalType === "ADD";
+        let endpoint = `/api/services/${check ? 'add_service_with_presets' : 'edit_service_with_presets'}`;
+        let data = Object.assign({}, this.state);
+        if(check)
+            data.presets = reduceArr(data.presets, 'value');
+        Network.post(endpoint, this.props.auth.token, data).done(data => {
+            //this.props.editTable(modalType, this.state, this.props.modal.rowIndex);
+            this.close();
+            this.props.getCurrentServices();
         }).fail(msg => {
             this.props.dispatch({ type: 'SHOW_ALERT', msg });
-        });*/
+        });
     }
 
     close() {
         this.props.dispatch({type: 'CLOSE_MODAL'});
     }
 
+    getInput(type, key) {
+        switch(type){
+            case 'text':
+                return <Bootstrap.FormControl type='text' id={key} value={this.state[key]} onChange={this.onFieldChange} />
+            case 'select':
+                return <Select name={key} id={key} options={this.props[key + 'Options']} multi={true} value={this.state[key]} onChange={this.onSelectChange.bind(null, key)} />
+        }
+    }
+
+    getInputGroup(type, key, label) {
+		return (
+			<Bootstrap.FormGroup key={key}>
+				<Bootstrap.ControlLabel >{label}</Bootstrap.ControlLabel>
+				{this.getInput(type, key)}
+			</Bootstrap.FormGroup>
+		);
+    }
+
     render() {
         let { modalType, args } = this.props.modal;
         let inputs = formInputs.map(field => {
-            return (
-                <Bootstrap.FormGroup key={field.key}>
-                    <Bootstrap.ControlLabel >{field.label}</Bootstrap.ControlLabel>
-                    <Bootstrap.FormControl type='text' key={field.key} id={field.key} value={this.state.fields[field.key]} onChange={this.onFieldChange} />
-                </Bootstrap.FormGroup>
-            );
+            let { type, key, label } = field;
+			return this.getInputGroup(type, key, label);
         });
         return (
             <Bootstrap.Modal show={this.props.modal.isOpen} onHide={this.close}>
@@ -210,6 +254,7 @@ class Modal extends Component {
                 <Bootstrap.Modal.Body>
                     <form>
                         {inputs}
+                        {modalType === "ADD" && [this.getInputGroup('select', 'presets', 'Checks'), this.getInputGroup('text', 'server', 'Server'), this.getInputGroup('text', 'interval', 'Interval'), this.getInputGroup('text', 'timeout', 'Timeout')]}
                     </form>
                 </Bootstrap.Modal.Body>
                 {getModalFooter([{label: 'Cancel', onClick: this.close}, {label: modalType === "ADD" ? "Add service" : "Apply change", bsStyle: 'primary', onClick: this.action}])}
