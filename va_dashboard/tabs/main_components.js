@@ -7,8 +7,9 @@ import { Table as Reactable, Tr, Th, Thead, Td } from 'reactable';
 import { hashHistory } from 'react-router';
 import { Line, Pie, Bar, defaults } from "react-chartjs-2";
 var moment = require('moment');
-import { DateRangePicker } from 'react-dates';
+import { DateRangePicker, SingleDatePicker } from 'react-dates';
 import { getRandomColor, getRandomColors, getReduxComponent, getModalHeader, getModalFooter, download } from './util';
+import Select from 'react-select';
 
 const Div = (props) => {
     let redux = {};
@@ -226,7 +227,6 @@ class Table extends Component {
 					}
                     Network.post('/api/panels/action', this.props.auth.token, data).done(msg => {
 						if(refreshActions){
-							console.log(msg);//CHANGE_MULTI_DATA
                             this.props.dispatch({type: 'CHANGE_MULTI_DATA', data: msg});
 						}else if(typeof msg !== 'string'){
                             this.props.dispatch({type: 'CHANGE_DATA', data: msg, name});
@@ -667,16 +667,18 @@ class FilterForm extends Component {
         super(props);
         let inputs = {};
         this.props.columns.map(col => {
-            let { name, type } = col
-            if(type !== 'dates'){
-                inputs[name] = '';
+            let { name, type, value } = col
+            if(type !== 'date' && type !== 'dates'){
+                inputs[name] = value;
             }
         });
         this.state = {
             ...inputs,
             startDate: moment().subtract(1, 'days'),
             endDate: moment(),
-            focusedInput: null
+			date: moment(),
+            focusedInput: null,
+            focused: false
         };
         this.sendFilter = this.sendFilter.bind(this);
     }
@@ -689,7 +691,7 @@ class FilterForm extends Component {
     }
     render(){
         let inputs = this.props.columns.map(col => {
-            let { name, type } = col, input;
+            let { name, type, label } = col, input;
             switch(type){
                 case 'dates':
                     input = (
@@ -704,8 +706,22 @@ class FilterForm extends Component {
 						/>
                     );
                     break;
+                case 'date':
+                    input = (
+						<SingleDatePicker 
+							displayFormat="DD/MM/YYYY"
+							date={this.state.date}
+                            focused={this.state.focused}
+							onDateChange={date => this.setState({date})}
+                            onFocusChange={focused => this.setState({ focused })}
+						/>
+                    );
+                    break;
+                case 'multiSelect':
+                    input = <Select options={col.values} multi={true} placeholder={label} value={this.state[name]} onChange={val => this.setState({[name]: val})} />;
+                    break;
                 default:
-                    input = <input type={type} value={this.state[name]} onChange={val => this.setState({name: val})} />;
+                    input = <input type={type} value={this.state[name]} onChange={val => this.setState({[name]: val})} />;
                     break;
             }
             return (
@@ -724,52 +740,6 @@ class FilterForm extends Component {
     }
 }
 
-const chartOptionsTime = {
-    maintainAspectRatio: false,
-    responsive: true,
-    scales: {
-        xAxes: [{
-            type: 'time',
-            stacked: true,
-            time: {
-                displayFormats: {
-                    year: 'YYYY-MM-DD',
-                    quarter: 'YYYY-MM-DD',
-                    minute: 'HH:mm',
-                    hour: 'HH:mm',
-                    second: 'HH:mm:ss'
-                },
-                tooltipFormat: 'DD/MM/YYYY HH:mm',
-                unit: 'day',
-                unitStepSize: 1
-            }
-        }],
-        yAxes: [{
-            stacked: true
-        }]
-    }
-};
-
-const chartOptions = {
-	maintainAspectRatio: false,
-	responsive: true,
-	scales: {
-		xAxes: [{
-			stacked: true
-		}],
-		yAxes: [{
-			stacked: true
-		}]
-	}
-};
-
-const chartOptionsPie = {
-	maintainAspectRatio: false
-	//cutoutPercentage: 70,
-	//rotation: 1 * Math.PI,
-	//circumference: 1 * Math.PI
-};
-
 class CustomChart extends Component {
     constructor(props) {
         super(props);
@@ -777,7 +747,7 @@ class CustomChart extends Component {
         this.state = chartData;
     }
     parseData(props) {
-        let { table, target, xCol, xColType, datasets, column, chartType, unit, unitStepSize } = props, xData = [];
+        let { table, target, xCol, xColType, datasets, column, chartType } = props, xData = [];
         let data = Object.assign([], datasets), chartData = {};
         if(xCol){
             if(xColType == 'date'){
@@ -787,8 +757,6 @@ class CustomChart extends Component {
                         elem.data.push(row[elem.column]);
                     });
                 });
-                if(unitStepSize) chartOptionsTime.scales.xAxes.time.unitStepSize = unitStepSize;
-                if(unit) chartOptionsTime.scales.xAxes.time.unit = unit;
             }
             if(chartType == 'pie'){
 				data.forEach(elem => {
@@ -806,7 +774,7 @@ class CustomChart extends Component {
 				});
             }else {
 				table[target].map((row) => {
-					xData.push(row[xCol]); //new Date(row[xCol])
+					xData.push(row[xCol]);
 					data.forEach(elem => {
 						elem.data.push(row[elem.column]);
 					});
@@ -823,7 +791,6 @@ class CustomChart extends Component {
                 });
 			});*/
 		}
-        console.log(data);
         chartData.labels = xData;
         chartData.datasets = data;
         return chartData;
@@ -833,17 +800,17 @@ class CustomChart extends Component {
         this.setState({ chartData });
     }
     render() {
-        let { name, height, chartType, xColType } = this.props, chart;
-        let co = xColType == 'date' ? chartOptionsTime : chartOptions;
+        let { name, height, width, chartType, xColType, options } = this.props, chart;
+        //let co = xColType == 'date' ? chartOptionsTime : chartOptions;
         switch(chartType) {
             case 'line':
-                chart = <Line name={name} height={height || 200} data={this.state.chartData} options={co} redraw />;
+                chart = <Line height={height || 200} width={width || 200} data={this.state.chartData} options={options} redraw />;
                 break;
             case 'pie':
-                chart = <Pie data={this.state.chartData} options={chartOptionsPie}/>;
+                chart = <Pie height={height || 200} width={width || 200} data={this.state.chartData} options={options}/>;
                 break;
             case 'bar':
-                chart = <Bar data={this.state.chartData} options={co} redraw />
+                chart = <Bar height={height || 200} width={width || 200} data={this.state.chartData} options={options} redraw />
                 break;
         }
         return (
