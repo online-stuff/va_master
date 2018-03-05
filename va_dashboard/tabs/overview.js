@@ -128,7 +128,7 @@ class Overview extends Component {
                     provider_servers.push( {name: ii.hostname, ip: ii.ip} );
                 }
                 diagram[loc].push({name: pp.provider_name, servers: provider_servers});
-                if(pp.provider_name)
+                if(pp.provider_name && pp.provider_usage.used_cpus && pp.provider_usage.used_ram && pp.provider_usage.used_disk)
                     provider_rows.push({name: pp.provider_name, servers: pp.servers, provider_usage: pp.provider_usage});
             }
         }
@@ -263,7 +263,7 @@ const Provider = (props) => {
             <DoughnutRedux data={chartData[0]} labels={labels} colors={colors} title="CPU" />
             <DoughnutRedux data={chartData[1]} labels={labels} colors={colors} title="MEMORY" />
             <DoughnutRedux data={chartData[2]} labels={labels} colors={colors} title="STORAGE" />
-            <div className="billing-info">
+            <div className="billing-info" style={{visibility: 'hidden'}}>
                 <div>
                     <div className="provider-billing">{cost}</div>
                     <div>Current monthly cost</div>
