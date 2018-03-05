@@ -75,6 +75,13 @@
         "module": "",
         "dependency": "",
         "version": "", 
-        "path": ""
+        "path": "", 
+        "salt_functions" : []
+    }, 
+    "service_preset" : {
+        "consul_handle" : "service_presets/{name}",
+        "name" : "Health check name", 
+        "script" : "Some script to execute, or empty",
+        "**kwargs" : "Any other keyword arguments"
     }
 }

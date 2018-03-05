@@ -222,8 +222,7 @@ class Home extends Component {
     }
 }
 
-Home = connect(function(state) {
+module.exports = connect(function(state) {
     return {auth: state.auth, alert: state.alert, menu: state.menu}
 })(Home);
 
-module.exports = Home;

@@ -11,6 +11,12 @@ body{
     font-family: Ubuntu, sans-serif;
 }
 
+.alert-danger {
+    color: black !important;
+    background-color: white !important;
+    border-color: gray !important;
+}
+
 body.login {
     background: #006eab;
 }
@@ -19,6 +25,9 @@ body.login {
     display: block;
     margin-bottom: 50px;
 }
+
+
+
 
 ul.left-menu{
     list-style: none;
@@ -54,7 +63,7 @@ ul.left-menu a.active{
     color: #fff;
 }*/
 
-.splash-login{
+#splash-login{
     background: #fff;
     box-shadow: 0 3px 7px rgba(0, 0, 0, 0.3);
     border-radius: 6px;
@@ -64,6 +73,10 @@ ul.left-menu a.active{
     width: 390px;
     margin-left: -195px;
     padding: 20px 30px;
+}
+
+#splash-login button {
+    margin-top: 20px;
 }
 
 .navbar{
@@ -464,6 +477,16 @@ table tr.row-state-Unknown{
     color: #006EAB;
     cursor: pointer;
 }
+
+
+h3 {
+    font-size: 18px !important;
+}
+
+h4 {
+    font-size: 24px !important;
+}
+
 .tbl-ctrl {
     position: absolute;
     left: 5px;
@@ -575,32 +598,36 @@ table tr.row-provider-Offline{
 .reactable-pagination a{
     padding: 4px 8px;
     color: #333;
+    border: 1px solid;
+    border-color: #ccc;
+    border-radius: 4px;
+    background-color: #fff
 }
 .reactable-pagination a:focus{
     text-decoration: none;
+    border: 1px solid;
+    border-color: #ccc;
+/* 
+    border-color: #2e6da4;
+    background-color: #337ab7 */
 }
 .reactable-pagination a:hover{
+    border: 1px solid;
+    border-color: #adadad;
     text-decoration: none;
-    color: white !important;
-    background-color: #585858;
-    background: -webkit-gradient(linear, left top, left bottom, color-stop(0%, #585858), color-stop(100%, #111));
-    background: -webkit-linear-gradient(top, #585858 0%, #111 100%);
-    background: linear-gradient(to bottom, #585858 0%, #111 100%);
+    background-color: #e6e6e6
 }
 .reactable-pagination a:active {
-    outline: none;
-    background-color: #2b2b2b;
-    background: -webkit-gradient(linear, left top, left bottom, color-stop(0%, #2b2b2b), color-stop(100%, #0c0c0c));
-    background: -webkit-linear-gradient(top, #2b2b2b 0%, #0c0c0c 100%);
-    background: linear-gradient(to bottom, #2b2b2b 0%, #0c0c0c 100%);
-    box-shadow: inset 0 0 3px #111;
+    border: 1px solid;
+    color: #fff;
+    border-color: #ccc;
+    background-color: #337ab7
 }
 .reactable-current-page{
-    border: 1px solid #979797;
-    background-color: white;
-    background: -webkit-gradient(linear, left top, left bottom, color-stop(0%, #fff), color-stop(100%, #dcdcdc));
-    background: -webkit-linear-gradient(top, #fff 0%, #dcdcdc 100%);
-    background: linear-gradient(to bottom, #fff 0%, #dcdcdc 100%);
+    border: 1px solid;
+    color: #fff !important;
+    border-color: #2e6da4 !important;
+    background-color: #337ab7 !important
 }
 .reactable-pagination .disabled, .reactable-pagination .disabled:hover{
     cursor: default;
@@ -710,3 +737,64 @@ table tr.row-provider-Offline{
 .btn > span.glyphicon{
     padding-right: 5px;
 }
+
+/* OVERRIDES FOR BOOTSTRAP */
+
+ div ul.dropdown-menu{
+    right:0;
+    left:auto;
+    margin: 2px -2px 0;
+    min-width: 60px;
+} 
+
+.reactable-filter-input{
+    border-radius: 4px;
+    border: 1px solid #ccc;
+    box-shadow: inset 0 1px 1px rgba(0,0,0,.075);
+    padding: 6px 12px;
+}
+
+.glyphicon.not-disabled {
+    cursor: pointer;
+}
+
+.glyphicon.disabled {
+    cursor: default;
+    color: #d3d3d3;
+}
+
+
+/* 
+.reactable-page-button{
+    border-radius: 4px;
+    color: #333;
+    background-color: #fff;
+    border-color: #ccc !important;
+}
+
+.reactable-next-page{
+    border-radius: 4px;
+    color: #333;
+    background-color: #fff;
+    border-color: #ccc !important;
+}
+
+.reactable-previous-page{
+    border-radius: 4px;
+    color: #333;
+    background-color: #fff;
+    border-color: #ccc !important;
+}
+
+.reactable-current-page{
+    border-radius: 4px;
+    color: #333;
+    background-color: #337ab7;
+    border-color: #ccc !important;
+} 
+
+.reactable-current-page{
+    color: #533;
+    background-color: #130ab7 !important;
+    border-color: #c1c !important;
+}*/

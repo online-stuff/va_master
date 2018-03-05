@@ -84,10 +84,10 @@ class Panel extends Component {
         });
         var loading = this.state.loading;
         const spinnerStyle = {
-            display: loading ? "block": "none",
+            display: loading ? "block": "none"
         };
         const blockStyle = {
-            visibility: loading ? "hidden": "visible",
+            visibility: loading ? "hidden": "visible"
         };
         return (
             <div>
@@ -103,8 +103,7 @@ class Panel extends Component {
 
 }
 
-Panel = connect(function(state){
+module.exports = connect(function(state){
     return {auth: state.auth, panel: state.panel, alert: state.alert, table: state.table, filter: state.filter};
 })(Panel);
 
-module.exports = Panel;

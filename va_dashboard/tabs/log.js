@@ -37,7 +37,7 @@ class Log extends Component {
             host += ":80";
         }
         var protocol =  window.location.protocol === "https:" ? "wss" : "ws";
-        this.ws = new WebSocket(protocol  +"://"+ host +"/log");
+        this.ws = new WebSocket(`${protocol}://${host}/log`);
         var me = this;
         this.ws.onmessage = function (evt) {
             var data = JSON.parse(evt.data);
@@ -187,7 +187,7 @@ class FilterBtns extends Component {
 		});
 		return (
             <Bootstrap.ToggleButtonGroup type="checkbox" value={this.state.values} onChange={this.onChange}>
-			    {btns}
+                {btns}
             </Bootstrap.ToggleButtonGroup>
 		);
     }
@@ -206,7 +206,7 @@ class LogTable extends Component {
         var selected_row = this.props.logs.find(function(log){
             return log.timestamp === evt.currentTarget.id;
         });
-        var selected_row = Object.assign({}, selected_row);
+        selected_row = Object.assign({}, selected_row);
         var msg = JSON.parse(selected_row['message']);
         selected_row['message'] = msg;
         selected_row['message']['method'] = msg['data']['method'];
@@ -254,8 +254,7 @@ class LogTable extends Component {
 }
 
 
-Log = connect(function(state){
+module.exports = connect(function(state){
     return {auth: state.auth, alert: state.alert};
 })(Log);
 
-module.exports = Log;

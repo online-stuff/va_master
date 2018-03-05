@@ -109,7 +109,7 @@ class Servers extends Component {
         for(var i = 0; i < this.state.servers.length; i++){
             // provider_name = this.state.providers[i].provider_name;
             var rows = this.state.servers[i].servers.map(function(app) {
-                ipaddr = app.ip;
+                let ipaddr = app.ip;
                 if(Array.isArray(ipaddr)){
                     if(ipaddr.length > 0){
                         var ips = ipaddr.join(", ");

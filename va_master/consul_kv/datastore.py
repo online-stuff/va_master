@@ -83,13 +83,16 @@ class ConsulStore(DataStore):
     @tornado.gen.coroutine
     def get_exec(self, doc_id, params = {}):
         is_ok = False
+        resp = []
         try:
             url = '%s/v1/kv/%s' % (self.path, doc_id)
             if params: 
                 url = url_concat(url, params)
             resp = yield self.client.fetch(url)
             resp = [x['Value'] for x in json.loads(resp.body)]
-            resp = [json.loads(base64.b64decode(x)) for x in resp]
+            resp = [base64.b64decode(x) for x in resp]
+
+            resp = [json.loads(x) for x in resp]
 #            if len(resp) == 1: resp = resp[0]
             is_ok = True
         except tornado.httpclient.HTTPError as e:
@@ -98,6 +101,7 @@ class ConsulStore(DataStore):
             else:
                 raise StoreError(e)
         except Exception as e:
+            print ('Error processing : ', doc_id, ' and current resp is : ', resp)
             raise StoreError(e)
         if is_ok:
             raise tornado.gen.Return(resp)
@@ -113,6 +117,8 @@ class ConsulStore(DataStore):
         try:
             result = yield self.get_exec(doc_id, params = {"recurse" : True})
         except: 
+            import traceback
+            traceback.print_exc()
             result = []
         raise tornado.gen.Return(result)
 

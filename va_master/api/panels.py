@@ -30,10 +30,16 @@ def get_paths():
             'panels/serve_file' : {'function' : salt_serve_file, 'args' : ['handler', 'server_name', 'action', 'args', 'kwargs', 'module']},
             'panels/serve_file_from_url' : {'function' : url_serve_file, 'args' : ['handler', 'server_name', 'url_function', 'module', 'args', 'kwargs']},
             'panels/get_panel_pdf' : {'function' : get_panel_pdf, 'args' : ['server_name', 'panel', 'pdf_file', 'provider', 'handler', 'args', 'kwargs', 'dash_user', 'filter_field']},
-            'panels/export_table' : {'function' : export_table, 'args' : ['handler', 'panel', 'server_name', 'dash_user', 'export_type', 'table_file', 'args', 'provider', 'kwargs', 'filter_field']},
+            'panels/export_table' : {'function' : export_table, 'args' : ['handler', 'panel', 'server_name', 'dash_user', 'export_type', 'table_file', 'args', 'provider', 'kwargs', 'filter_field']}
         }
     }
     return paths
+
+
+def get_minion_role(minion_name):
+    cl = LocalClient()
+    role = cl.cmd(minion_name, 'grains.get', arg = ['role'])[minion_name]
+    return role
 
 
 @tornado.gen.coroutine
@@ -57,15 +63,14 @@ def panel_action_execute(handler, server_name, action, args = [], dash_user = ''
     If module is not passed, looks up the panels and retrieves the module from there. 
     """
     datastore_handler = handler.datastore_handler
+
+    state = get_minion_role(server_name) 
+
     if dash_user.get('username'):
         user_funcs = yield datastore_handler.get_user_salt_functions(dash_user['username'])
         if action not in user_funcs and dash_user['type'] != 'admin':
             print ('Function not supported')
             raise Exception('User attempting to execute a salt function but does not have permission. ')
-            #TODO actually not allow user to do anything. This is just for testing atm. 
-        
-    server_info = yield apps.get_app_info(server_name)
-    state = server_info['role']
 
     state = yield datastore_handler.get_state(name = state)
     if not state: state = {'module' : 'openvpn'}
@@ -77,6 +82,9 @@ def panel_action_execute(handler, server_name, action, args = [], dash_user = ''
     print ('Calling salt module ', module + '.' + action, ' on ', server_name, ' with args : ', args, ' and kwargs : ', kwargs)
     result = cl.cmd(server_name, module + '.' + action , arg = args, kwarg = kwargs, timeout = timeout)
     result = result.get(server_name)
+#    if type(result) == str:
+#        print ('Result returned : ', result)
+#        raise Exception('Calling %s on %s returned an error. ' % (module + '.' + action, server_name))
 
     raise tornado.gen.Return(result)
 
@@ -160,7 +168,7 @@ def get_chart_data(server_name, args = ['va-directory', 'Ping']):
     raise tornado.gen.Return(result)
 
 @tornado.gen.coroutine
-def panel_action(handler, actions_list = [], server_name = '', action = '', args = [], kwargs = {}, module = None, dash_user = {}):
+def panel_action(handler, actions_list = [], server_name = '', action = '', args = [], kwargs = {}, module = None, dash_user = {}, call_functions = []):
     """Performs a list of actions on multiple servers. If actions_list is not supplied, will use the rest of the arguments to call a single function on one server. """
     if not actions_list: 
         actions_list = [{"server_name" : server_name, "action" : action, "args" : args, 'kwargs' : kwargs, 'module' : module}]
@@ -168,13 +176,21 @@ def panel_action(handler, actions_list = [], server_name = '', action = '', args
     servers = [x['server_name'] for x in actions_list]
     results = {x : None for x in servers}
     for action in actions_list:
+        server_key = action['server_name']
         server_result = yield panel_action_execute(handler, server_name = action['server_name'], \
             dash_user = dash_user, \
             action = action['action'], \
             args = action['args'], \
             kwargs = action['kwargs'], \
             module = action['module'])
-        results[action['server_name']] = server_result
+        results[server_key] = server_result
+
+        #call_functions is a list of functions to call at the end of the action. Usually used with actions such as va_directory.add_user, which then wants to get the data of list_users
+        if call_functions: 
+            results[server_key] = {}
+            for f in call_functions: 
+                new_result = yield panel_action_execute(handler, server_name = action['server_name'], dash_user = dash_user, action = f['action'], module = action['module'])[server_key]
+                results[server_key][f['table_name']] = new_result
 
     if len(results.keys()) == 1: 
         results = results[results.keys()[0]]
@@ -194,15 +210,12 @@ def get_panel_for_user(handler, panel, server_name, dash_user, args = [], provid
 
     datastore_handler = handler.datastore_handler
     user_panels = yield list_panels(datastore_handler, dash_user)
-    server_info = yield apps.get_app_info(server_name)
-    print ('Server info : ', server_info)
-    state = server_info['role']
+    state = get_minion_role(server_name) 
     #This is usually for get requests. Any arguments in the url that are not arguments of this function are assumed to be keyword arguments for salt.
     #TODO Also this is pretty shabby, and I need to find a better way to make GET salt requests work. 
-    ignored_kwargs = ['datastore', 'handler', 'datastore_handler', 'drivers_handler', 'panel', 'instance_name', 'dash_user', 'method', 'server_name', 'path']
+    ignored_kwargs = ['datastore', 'handler', 'datastore_handler', 'drivers_handler', 'panel', 'instance_name', 'dash_user', 'method', 'server_name', 'path', 'args']
     if not kwargs: 
         kwargs = {x : handler.data[x] for x in handler.data if x not in ignored_kwargs}
-        print ('No kwargs, so I got : ', kwargs)
 
     state = yield datastore_handler.get_state(name = state)
 
@@ -215,24 +228,10 @@ def get_panel_for_user(handler, panel, server_name, dash_user, args = [], provid
     raise tornado.gen.Return(panel)
 
 @tornado.gen.coroutine
-def get_panel_pdf(handler, panel, server_name, dash_user, pdf_file = '/tmp/table.pdf', args = [], provider = None, kwargs = {}, filter_field = ''):
-    if not args: 
-        args = list(args)
-    cl = LocalClient()
-    panel = yield get_panel_for_user(handler = handler, panel = panel, server_name = server_name, dash_user = dash_user, args = args, provider = provider, kwargs = kwargs)
-    kwargs = {'panel' : panel, 'pdf_file' : pdf_file, 'filter_field' : filter_field}
-
-    print ('Getting pdf with filter : ', filter_field, ' and kwarg: ', kwargs.keys())
-    result = cl.cmd('aek', 'va_pdf_utils.get_pdf', kwarg = kwargs)
-    print ('Result is : ', result)
-    yield handler.serve_file(pdf_file)
-    raise tornado.gen.Return({'data_type' : 'file'})
-
-@tornado.gen.coroutine
 def export_table(handler, panel, server_name, dash_user, export_type = 'pdf', table_file = '/tmp/table', args = [], provider = None, kwargs = {}, filter_field = ''):
     table_func = 'va_pdf_utils.get_%s' % export_type
     table_file = table_file + '.' + export_type
-    if not args:
+    if not args: 
         args = list(args)
     cl = LocalClient()
     panel = yield get_panel_for_user(handler = handler, panel = panel, server_name = server_name, dash_user = dash_user, args = args, provider = provider, kwargs = kwargs)
@@ -241,6 +240,18 @@ def export_table(handler, panel, server_name, dash_user, export_type = 'pdf', ta
     print ('Result is : ', result)
     yield handler.serve_file(table_file)
 
+
+@tornado.gen.coroutine
+def get_panel_pdf(handler, panel, server_name, dash_user, pdf_file = '/tmp/table.pdf', args = [], provider = None, kwargs = {}, filter_field = ''):
+    if not args: 
+        args = list(args)
+    cl = LocalClient()
+    panel = yield get_panel_for_user(handler = handler, panel = panel, server_name = server_name, dash_user = dash_user, args = args, provider = provider, kwargs = kwargs)
+    result = cl.cmd('va-master', 'va_utils.get_pdf', kwarg = {'panel' : panel, 'pdf_file' : pdf_file, 'filter_field' : filter_field})
+    if not result['va-master']: 
+        yield handler.serve_file(pdf_file)
+        raise tornado.gen.Return({'data_type' : 'file'})
+    raise Exception('PDF returned a value - probably because of an error. ')
 
 @tornado.gen.coroutine
 def get_users(handler, user_type = 'users'):
@@ -264,7 +275,20 @@ def get_users(handler, user_type = 'users'):
 def get_all_functions(handler):
     """Gets all functions returned by the get_functions methods for all the api modules and formats them properly for the dashboard. """
     functions = {m : handler.paths[m] for m in ['post', 'get']}
-    salt_functions = {} #TODO salt functinos should look like {backuppc:[list, of, functions], owncloud : [list, of, ofunctions]}
+    states = yield handler.datastore_handler.get_states()
+
+    cl = LocalClient()
+
+    all_salt_functions = cl.cmd('va-master', 'sys.doc')['va-master']
+    states_functions = {
+        state['module'] : {x.split('.')[1] : {'doc' : all_salt_functions[x] or 'No description available. '} for x in all_salt_functions if x.startswith(state['module'])}
+    for state in states}
+
+
+    salt_functions = {state['module'] : {
+        x : states_functions[state['module']][x] for x in states_functions[state['module']] if x in state.get('salt_functions', [])
+    } for state in states}
+
 
     functions.update(salt_functions)
 
@@ -275,7 +299,7 @@ def get_all_functions(handler):
                     {
                         'label' : i, 
                         'value' : i, 
-                        'description' : functions[f][i]['function'].__doc__}
+                        'description' : functions[f][i].get('doc') or functions[f][i]['function'].__doc__}
                     for i in functions[f]
                 ] 
         } for f in functions]

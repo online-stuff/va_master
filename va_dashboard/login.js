@@ -56,26 +56,31 @@ class Login extends Component {
         }
 
         return (
-            <div className='splash-login'>
-            <form className='login-form form-horizontal' onSubmit={this.onSubmit}>
-                <img src='/static/logo-splash.png' alt='VapourApps' className='splash-logo'/>
-                <Bootstrap.FormGroup controlId='username'>
-                    <Bootstrap.ControlLabel>Username</Bootstrap.ControlLabel>
-                    <Bootstrap.FormControl type='text' placeholder='Enter username...'
-                      name='username' onChange={this.onInput} value={this.state.username}/>
-                </Bootstrap.FormGroup>
+            <div id='splash-login'>
+                <form onSubmit={this.onSubmit}>
+                    <img src='/static/logo-splash.png' alt='VapourApps' className='splash-logo'/>
+                    <Bootstrap.FormGroup controlId='username'>
+                        <Bootstrap.ControlLabel>Username</Bootstrap.ControlLabel>
+                        <Bootstrap.InputGroup>
+                            <Bootstrap.InputGroup.Addon><Bootstrap.Glyphicon glyph="user" /></Bootstrap.InputGroup.Addon>
+                            <Bootstrap.FormControl type='text' placeholder='Enter username...'
+                          name='username' onChange={this.onInput} value={this.state.username} />
+                        </Bootstrap.InputGroup>
+                    </Bootstrap.FormGroup>
 
-                <Bootstrap.FormGroup controlId='username'>
-                    <Bootstrap.ControlLabel>Password</Bootstrap.ControlLabel>
-                    <Bootstrap.FormControl placeholder='Enter password...' type='password'
-                      name='password' onChange={this.onInput} value={this.state.password} />
-                </Bootstrap.FormGroup>
-
-                <Bootstrap.FormGroup>
-                    <Bootstrap.Button bsStyle='primary' type='submit'>Log in</Bootstrap.Button>
-                </Bootstrap.FormGroup>
-            </form>
-            {status}
+                    <Bootstrap.FormGroup controlId='password'>
+                        <Bootstrap.ControlLabel>Password</Bootstrap.ControlLabel>
+                        <Bootstrap.InputGroup>
+                            <Bootstrap.InputGroup.Addon><Bootstrap.Glyphicon glyph="lock" /></Bootstrap.InputGroup.Addon>
+                            <Bootstrap.FormControl placeholder='Enter password...' type='password'
+                          name='password' onChange={this.onInput} value={this.state.password} />
+                        </Bootstrap.InputGroup>
+                    </Bootstrap.FormGroup>
+                    <Bootstrap.FormGroup>
+                    <Bootstrap.Button bsStyle='primary' type='submit' block>Log in</Bootstrap.Button>
+                    </Bootstrap.FormGroup>
+                </form>
+                {status}
             </div>
         );
     }
