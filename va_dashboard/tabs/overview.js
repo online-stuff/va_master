@@ -1,7 +1,6 @@
 import React, { Component } from 'react';
 import {connect} from 'react-redux';
 import {Chart, Doughnut, Bar, defaults} from "react-chartjs-2";
-import {Glyphicon} from 'react-bootstrap';
 import Graph from'react-graph-vis';
 var Network = require('../network');
 import {getRandomColors} from './util'; 
@@ -294,14 +293,16 @@ class ProviderRows extends Component {
             this.setState({index: this.state.index - 1});
     }
     render() {
-        var provider = this.props.providers[this.state.index];
+        let provider = this.props.providers[this.state.index];
+        let class1 = this.state.index <= 0 ? 'disabled' : 'not-disabled';
+        let class2 = this.state.index >= this.props.providers.length - 1 ? 'disabled' : 'not-disabled';
         return (
             <div className="provider-billing-block card panel-default custom-panel" style={{marginBottom: '0px'}}>
                 <div className="panel-heading">{provider.name + " / Instances: " + provider.servers.length}</div>
                 <div className="panel-body">
-                    <Glyphicon glyph='arrow-left' onClick={this.prevProvider}></Glyphicon>
+                    <span className={'glyphicon glyphicon-arrow-left ' + class1} onClick={this.prevProvider}></span>
                     <Provider key={provider.name} title={provider.name} chartData={provider.servers} provider_usage={provider.provider_usage} />
-                    <Glyphicon glyph='arrow-right' onClick={this.nextProvider}></Glyphicon>
+                    <span className={'glyphicon glyphicon-arrow-right ' + class2} onClick={this.nextProvider}></span>
                 </div>
             </div>
         );
