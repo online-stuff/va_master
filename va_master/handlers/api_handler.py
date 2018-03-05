@@ -113,7 +113,6 @@ class ApiHandler(tornado.web.RequestHandler):
                 user_functions = [x.get('func_path', '') for x in user_functions]
 
                 user_functions += self.paths.get('user_allowed', [])
-
                 if path not in user_functions: 
                     self.json({'success' : False, 'message' : 'User ' + user['username'] + ' tried to access ' + path + ' but it is not in their allowed functions : ' + str(user_functions)})
                     auth_successful = False
@@ -205,7 +204,6 @@ class ApiHandler(tornado.web.RequestHandler):
             }
 
             user = yield get_current_user(self)
-            print ('Data is : ', data)
             data['dash_user'] = user
 
             api_func = self.fetch_func(method, path, data)
@@ -365,6 +363,7 @@ class ApiHandler(tornado.web.RequestHandler):
 
             print ('Serving file with : ', source, kwargs, chunk_size)
             result = yield self.send_data(source, kwargs, chunk_size)
+            print ('Sent data and result is : ', result)
             self.finish()
         except: 
             import traceback

@@ -137,29 +137,34 @@ class GenericDriver(base.DriverBase):
             raise tornado.gen.Return(provider_data)
            
         provider_usage = {
-            'total_disk_usage_gb' : 0, 
-            'current_disk_usage_mb' : 0, 
-            'cpus_usage' :0, 
+            'total_disk_usage_gb' : None, 
+            'current_disk_usage_mb' : None, 
+            'cpus_usage' :None, 
         }
-
-#        servers = [
-#            {
-#                'providername' : 'name', 
-#                'ipv4' : 'ipv4', 
-#                'local_gb' : 0, 
-#                'memory_mb' : 0, 
-#                'status' : 'n/a', 
-#            } for x in data['servers']
-#        ]
 
         servers = yield self.get_servers(provider)
 
+        provider_usage = {
+            'max_cpus' : None,
+            'used_cpus' : None, # TODO calculate cpus from servers
+            'free_cpus' : None,
+            'max_ram' : None,
+            'used_ram' : None, # TODO calculate ram from servers
+            'free_ram' : None,
+            'max_disk' : None,
+            'used_disk' : None, # TODO calculate disk from servers
+            'free_disk' : None,
+            'max_servers' : None,
+            'used_servers' : len(servers),
+            'free_servers' : None
+        }
+
         provider_data = {
-            'servers' : servers, 
-            'limits' : {},
-            'provider_usage' : provider_usage, 
+            'servers' : servers,
+            'provider_usage' : provider_usage,
             'status' : {'success' : True, 'message': ''}
         }
+
         raise tornado.gen.Return(provider_data)
 
 

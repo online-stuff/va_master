@@ -340,6 +340,7 @@ class LibVirtDriver(base.DriverBase):
         used_disk = sum([x.info()[1] for x in storage.listAllVolumes()])
         total_disk = sum([x.info()[2] for x in storage.listAllVolumes()])
 
+        print ('My servers are : ', servers)
         
         provider_usage =  {
             'max_cpus' : conn.getMaxVcpus(None), 
@@ -351,9 +352,11 @@ class LibVirtDriver(base.DriverBase):
             'free_disk' : storage_info[3] / 2.0**30, 
             'max_servers' : 'n/a', 
             'used_servers' : len(servers),
-      }
+        }
         provider_usage['free_cpus'] = provider_usage['max_cpus'] - provider_usage['used_cpus']
         provider_usage['free_ram'] = provider_usage['max_ram'] - provider_usage['used_ram']
+
+        print ('And my usage : ', provider_usage)
 
         provider_info = {
             'servers' : servers,
