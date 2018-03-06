@@ -604,13 +604,13 @@ class Form extends Component {
                 if(type == "dropdown"){
                     var action = "", defaultValue = "", values = element.values;
                     if('modal' in this.props){
-                        let selectInput = (<select id={index} key={name} name={name} defaultValue={this.props.data[name]} onChange={this.props.form_changed} ref={name}>
+                        let selectInput = (<select id={index} key={name} className="form-control" name={name} defaultValue={this.props.data[name]} onChange={this.props.form_changed} ref={name}>
                                     {values.map(function(option, i) {
                                         return <option key={i} value={option}>{option}</option>
                                     })}
                                 </select>);
                         if('label' in element)
-                            return <div class="form-group">
+                            return <div className="form-group">
                                 <label for={index}>{element.label}</label>
                                 {selectInput}
                             </div>;
@@ -627,13 +627,13 @@ class Form extends Component {
                     if("action" in element){
                         action = this.onSelect.bind(this, element.action);
                     }
-                    let selectInput = ( <select ref="dropdown" id={index} key={name} onChange={action} name={name} defaultValue={defaultValue}>
+                    let selectInput = ( <select ref="dropdown" id={index} key={name} className="form-control" onChange={action} name={name} defaultValue={defaultValue}>
                         {values.map(function(option, i) {
                             return <option key={i} value={option}>{option}</option>
                         })}
                     </select> );
                     if('label' in element)
-                        return <div class="form-group">
+                        return <div className="form-group">
                                 <label for={index}>{element.label}</label>
                                 {selectInput}
                             </div>;
