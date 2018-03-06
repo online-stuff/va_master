@@ -604,11 +604,17 @@ class Form extends Component {
                 if(type == "dropdown"){
                     var action = "", defaultValue = "", values = element.values;
                     if('modal' in this.props){
-                        return (<select id={index} key={name} name={name} defaultValue={this.props.data[name]} onChange={this.props.form_changed} ref={name}>
+                        let selectInput = (<select id={index} key={name} name={name} defaultValue={this.props.data[name]} onChange={this.props.form_changed} ref={name}>
                                     {values.map(function(option, i) {
                                         return <option key={i} value={option}>{option}</option>
                                     })}
                                 </select>);
+                        if('label' in element)
+                            return <div class="form-group">
+                                <label for={index}>{element.label}</label>
+                                {selectInput}
+                            </div>;
+                        else return selectInput;
                     }
                     else if('form' in this.props && name in this.props.form.dropdowns){
                         let d_elem = this.props.form.dropdowns[name];
@@ -621,11 +627,18 @@ class Form extends Component {
                     if("action" in element){
                         action = this.onSelect.bind(this, element.action);
                     }
-                    return ( <select ref="dropdown" id={index} key={name} onChange={action} name={name} defaultValue={defaultValue}>
+                    let selectInput = ( <select ref="dropdown" id={index} key={name} onChange={action} name={name} defaultValue={defaultValue}>
                         {values.map(function(option, i) {
                             return <option key={i} value={option}>{option}</option>
                         })}
                     </select> );
+                    if('label' in element)
+                        return <div class="form-group">
+                                <label for={index}>{element.label}</label>
+                                {selectInput}
+                            </div>;
+                    else return selectInput;
+ 
                 }
                 return ( <input id={index} key={name} type={type} name={name} className="form-control" value={this.props.data[name]} placeholder={element.label} onChange={this.props.form_changed} ref={name} /> );
             }

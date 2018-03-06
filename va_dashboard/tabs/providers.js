@@ -4,7 +4,7 @@ var Network = require('../network');
 import { connect } from 'react-redux';
 import { Table, Tr, Td } from 'reactable';
 import { ConfirmPopup } from './shared_components';
-import { getTableRowsWithAction } from './util';
+import { getTableRowWithAction } from './util';
 
 const tblCols = ['Provider name', 'IP', 'Instances', 'Driver', 'Status'];
 
@@ -68,7 +68,7 @@ class Providers extends Component {
             }
             return (
                 <Tr key={provider.provider_name} className={className}>
-                    {getTableRowsWithAction(tblCols, [provider_name, provider_ip, servers.length, driver_name, status], 'Delete', provider_name, this.confirm_action)}
+                    {getTableRowWithAction(tblCols, [provider_name, provider_ip, servers.length, driver_name, status], 'Delete', provider_name, this.confirm_action)}
                 </Tr>
             );
         });
