@@ -665,33 +665,59 @@ class Form extends Component {
 class FilterForm extends Component {
     constructor(props) {
         super(props);
-        let inputs = {};
-        this.props.columns.map(col => {
-            let { name, type, value } = col
+        let inputs = {}, selects = [];
+        this.props.elements.map(elem => {
+            let { name, type, value } = elem;
             if(type !== 'date' && type !== 'dates'){
                 inputs[name] = value;
+                if(type === 'multiSelect'){
+                    selects.push(name);
+                }
             }
         });
         this.state = {
             ...inputs,
-            startDate: moment().subtract(1, 'days'),
-            endDate: moment(),
-			date: moment(),
+            startDate: null,
+            endDate: null,
+			date: null,
             focusedInput: null,
-            focused: false
+            focused: false,
+            selects,
+            isOpen: false
         };
         this.sendFilter = this.sendFilter.bind(this);
+        this.open = this.open.bind(this);
+        this.close = this.close.bind(this);
     }
     sendFilter(){
-        Network.post('/api/panels/action', this.props.auth.token, this.state).done(msg => {
-            this.props.dispatch({type: 'CHANGE_DATA', name: this.props.target, data: msg.data});
+        const {startDate, endDate, selects} = this.state;
+        let data = Object.assign({}, this.state);
+        if(startDate && endDate){
+            data.date_from = startDate.unix();
+            data.date_to = endDate.unix();
+        }
+        if(selects.length > 0){
+            selects.map(name => {
+                data[name] = data[name].map(elem => elem.value);
+            });
+        }
+        //['startDate', 'endDate', 'date', 'focusedInput', 'focused', 'selects'].forEach(key => delete data[key]);
+        data = {"server_name": this.props.panel.server, "action": this.props.action, "kwargs": data};
+        Network.post('/api/panels/action', this.props.auth.token, data).done(msg => {
+            this.props.dispatch({type: 'CHANGE_DATA', name: this.props.target, data: msg});
         }).fail(msg => {
             this.props.dispatch({type: 'SHOW_ALERT', msg});
         });
     }
+    open(){
+        this.setState({isOpen: true});
+    }
+    close(){
+        this.setState({isOpen: false});
+    }
     render(){
-        let inputs = this.props.columns.map(col => {
-            let { name, type, label } = col, input;
+        let inputs = this.props.elements.map(elem => {
+            let { name, type, label } = elem, input;
             switch(type){
                 case 'dates':
                     input = (
@@ -718,14 +744,14 @@ class FilterForm extends Component {
                     );
                     break;
                 case 'multiSelect':
-                    input = <Select options={col.values} multi={true} placeholder={label} value={this.state[name]} onChange={val => this.setState({[name]: val})} />;
+                    input = <Select options={elem.values} multi={true} placeholder={label} value={this.state[name]} onChange={val => this.setState({[name]: val})} />;
                     break;
                 default:
-                    input = <input type={type} value={this.state[name]} onChange={val => this.setState({[name]: val})} />;
+                    input = <input type={type} className="form-control" value={this.state[name]} onChange={e => this.setState({[name]: e.target.value})} />;
                     break;
             }
             return (
-                <div className="filter-form-input">
+                <div className="form-group">
                     <label>{name}</label>
                     {input}
                 </div>
@@ -733,8 +759,16 @@ class FilterForm extends Component {
         });
         return (
             <div>
-                {inputs}
-                <button className='btn btn-primary' onClick={this.sendFilter}>Filter</button>
+                <button className='btn btn-default' onClick={this.open}>Filter</button>
+                <Bootstrap.Modal show={this.state.isOpen} onHide={this.close}>
+                    { getModalHeader(this.props.title) }
+                    <Bootstrap.Modal.Body>
+                        <form>
+                            {inputs}
+                        </form>
+                    </Bootstrap.Modal.Body>
+                    { getModalFooter([{label: 'Filter', bsStyle: 'primary', onClick: this.sendFilter}]) }
+                </Bootstrap.Modal>
             </div>
         );
     }
@@ -829,5 +863,6 @@ components.Form = Form;
 components.Modal = Modal;
 components.Path = Path;
 components.CustomChart = CustomChart;
+components.FilterForm = FilterForm;
 
 module.exports = components;
