@@ -5,7 +5,7 @@ import { findDOMNode } from 'react-dom';
 var components = require('./basic_components');
 import { Table as Reactable, Tr, Th, Thead, Td } from 'reactable';
 import { hashHistory } from 'react-router';
-import { Line, Pie, Bar, defaults } from "react-chartjs-2";
+import { default as ChartComponent, defaults } from "react-chartjs-2";
 var moment = require('moment');
 import { DateRangePicker, SingleDatePicker } from 'react-dates';
 import { getRandomColor, getRandomColors, getReduxComponent, getModalHeader, getModalFooter, download } from './util';
@@ -771,12 +771,12 @@ class FilterForm extends Component {
             );
         });
         return (
-            <div>
+            <div style={{display: 'inline'}}>
                 <button className='btn btn-default' onClick={this.open}>Filter</button>
                 <Bootstrap.Modal show={this.state.isOpen} onHide={this.close}>
                     { getModalHeader(this.props.title) }
                     <Bootstrap.Modal.Body>
-                        <form>
+                        <form className="filter-form">
                             {inputs}
                         </form>
                     </Bootstrap.Modal.Body>
@@ -796,7 +796,8 @@ class CustomChart extends Component {
     parseData(props) {
         let { table, target, xCol, xColType, datasets, column, chartType } = props, xData = [];
         let data = Object.assign([], datasets), chartData = {};
-        if(xCol){
+        // TODO remove when panel template is stored in redux
+        if(target in table){
             if(xColType == 'date'){
                 table[target].map((row) => {
                     xData.push(new Date(row[xCol] * 1000));
@@ -827,17 +828,7 @@ class CustomChart extends Component {
 					});
 				});
             }
-        }else{
-            //data.forEach(elem => {
-            //    xData.push(elem.name);
-            //});
-			/*table[target].map((row) => {
-                xData.push(row[xCol]);
-                data.forEach(elem => {
-                    elem.data.push(row[column]);
-                });
-			});*/
-		}
+        }
         chartData.labels = xData;
         chartData.datasets = data;
         return chartData;
@@ -847,22 +838,10 @@ class CustomChart extends Component {
         this.setState({ chartData });
     }
     render() {
-        let { name, height, width, chartType, xColType, options } = this.props, chart;
-        //let co = xColType == 'date' ? chartOptionsTime : chartOptions;
-        switch(chartType) {
-            case 'line':
-                chart = <Line height={height || 200} width={width || 200} data={this.state.chartData} options={options} redraw />;
-                break;
-            case 'pie':
-                chart = <Pie height={height || 200} width={width || 200} data={this.state.chartData} options={options}/>;
-                break;
-            case 'bar':
-                chart = <Bar height={height || 200} width={width || 200} data={this.state.chartData} options={options} redraw />
-                break;
-        }
+        let { name, height, width, chartType, xColType, options } = this.props;
         return (
             <div>
-                {chart}
+                <ChartComponent type={chartType} height={height || 200} width={width || 200} data={this.state.chartData} options={options} redraw />
             </div>
         );
     }
