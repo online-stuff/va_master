@@ -763,6 +763,14 @@ table tr.row-provider-Offline{
     color: #d3d3d3;
 }
 
+.filter-form {
+    width: 100%;
+}
+
+.filter-form .DateRangePicker {
+    display: block;
+}
+
 
 /* 
 .reactable-page-button{
