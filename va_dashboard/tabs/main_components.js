@@ -209,7 +209,7 @@ class Table extends Component {
             modal.refreshAction = this.props.source;
             this.props.dispatch({type: 'OPEN_MODAL', template: modal});
         }else if("panels" in this.props && evtKey in this.props.panels){
-            hashHistory.push('/subpanel/' + this.props.panels[evtKey] + '/' + this.props.panel.server + '/' + id[0]);
+            hashHistory.push('/subpanel/' + this.props.panels[evtKey] + '/' + this.props.panel.server + '/' + id.join());
         }else{
             data = {"server_name": this.props.panel.server, "action": evtKey, "args": id};
             Network.post('/api/panels/action', this.props.auth.token, data).done(msg => {

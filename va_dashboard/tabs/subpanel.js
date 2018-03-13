@@ -20,19 +20,17 @@ class Subpanel extends Component {
     }
 
     getPanel (id, server, args) {
-        var me = this, args = args.indexOf(',') > -1 ? args.split(",") : args;
+        args = args.indexOf(',') > -1 ? args.split(",") : args;
         var data = {'panel': id, 'server_name': server, 'args': args};
-        console.log(data);
         this.props.dispatch({type: 'CHANGE_PANEL', panel: id, server: server, args: args});
-        Network.post('/api/panels/get_panel', this.props.auth.token, data).done(function (data) {
-            console.log(data.tbl_source);
-            me.props.dispatch({type: 'ADD_DATA', tables: data.tbl_source});
+        Network.post('/api/panels/get_panel', this.props.auth.token, data).done(data => {
+            this.props.dispatch({type: 'ADD_DATA', tables: data.tbl_source});
             if(typeof data.form_source !== 'undefined'){
-                me.props.dispatch({type: 'ADD_DROPDOWN', dropdowns: data.form_source});
+                this.props.dispatch({type: 'ADD_DROPDOWN', dropdowns: data.form_source});
             }
-            me.setState({template: data, args: args});
-        }).fail(function (msg) {
-            me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
+            this.setState({template: data, args: args});
+        }).fail(msg => {
+            this.props.dispatch({type: 'SHOW_ALERT', msg: msg});
         });
     }
 
@@ -86,8 +84,7 @@ class Subpanel extends Component {
 
 }
 
-Subpanel = connect(function(state){
+module.exports = connect(function(state){
     return {auth: state.auth, panel: state.panel, alert: state.alert, table: state.table};
 })(Subpanel);
 
-module.exports = Subpanel;
