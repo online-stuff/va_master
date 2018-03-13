@@ -133,7 +133,7 @@ class Chart extends Component {
         return (
             <div>
                 <div className="panel_chart">
-                    <Line name="chart" height={200} data={chartData} options={chartOptions} redraw />
+                    <ChartComponent type='line' name="chart" height={200} data={chartData} options={chartOptions} redraw />
                 </div>
                 <div id="chartBtns">
                   <button className='btn btn-primary bt-sm chartBtn' onClick = {this.btn_click.bind(this, "-1h", "300", 'minute', 5)}>Last hour</button>
