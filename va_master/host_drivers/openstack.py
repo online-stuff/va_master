@@ -299,6 +299,30 @@ class OpenStackDriver(base.DriverBase):
 
         raise tornado.gen.Return({'success' : True, 'message' : ''})
 
+
+    @tornado.gen.coroutine
+    def get_billing_data(self, provider):
+        
+        provider_url = 'http://' + provider['provider_ip'] + '/v2.0'
+        auth = identity.Password(auth_url=provider_url,
+               username=provider['username'],
+               password=provider['password'],
+               project_name=provider['tenant'])
+        sess = session.Session(auth = auth, verify = False)
+        nova = client.Client(2, session = sess)
+
+        usage = novaclient.v2.usage.UsageManager(nova)
+
+        #For testing, we probably want to make the user enter the period? 
+        month_ago = datetime.datetime.now() - datetime.timedelta(days = 30)
+        usage_data = usage.list(start = month_ago, end = datetime.datetime.now())
+
+        server_usages = usage_data.server_usages
+        #TODO finish function - should calculate server cost from usages. 
+
+
+
+
     @tornado.gen.coroutine
     def get_provider_data(self, provider, get_servers = True, get_billing = True):
         """ Gets various data about the provider and all the servers using the get_openstack_value() method. Returns the data in the same format as defined in the base driver. """

@@ -18,6 +18,7 @@ def get_paths():
         'post' : {
             'providers' : {'function' : list_providers, 'args' : ['handler']},
             'providers/info' : {'function' : get_provider_info, 'args' : ['handler', 'dash_user', 'required_providers', 'get_billing', 'get_servers', 'sort_by_location']},
+            'providers/billing' : {'function' : get_providers_billing, 'args' : ['handler']},
             'providers/new/validate_fields' : {'function' : validate_new_provider_fields, 'args' : ['handler', 'driver_id', 'field_values', 'step_index']},
             'providers/delete' : {'function' : delete_provider, 'args' : ['datastore_handler', 'provider_name']},
             'providers/add_provider' : {'function' : add_provider, 'args' : ['datastore_handler', 'field_values', 'driver_name']},
@@ -136,6 +137,20 @@ def validate_new_provider_fields(handler, driver_id, field_values, step_index):
         }
     raise tornado.gen.Return(result)
 
+
+@tornado.gen.coroutine
+def get_providers_billing(handler):
+    drivers_handler = handler.drivers_handler
+    datastore_handler = handler.datastore_handler
+
+    providers = yield datastore_handler.list_providers()
+
+    provider_drivers = yield [drivers_handler.get_driver_by_id(x['driver_name']) for x in providers]
+    providers_data = [x[0].get_provider_billing(provider = x[1]) for x in zip(provider_drivers, providers)]
+
+    result = yield providers_data
+
+    raise tornado.gen.Return(result)
 
 
 @tornado.gen.coroutine
