@@ -4,7 +4,7 @@ from tornado.httpclient import AsyncHTTPClient, HTTPRequest
 import tornado.gen
 import json
 
-import subprocess
+import subprocess, datetime, calendar
 
 import boto3
 
@@ -72,8 +72,13 @@ class AWSDriver(base.DriverBase):
         self.aws_config = AWS_CONFIG_TEMPLATE
 
 
-    def get_client(self, provider):
+    def get_session(self, provider):
         session = boto3.session.Session(aws_access_key_id = provider['aws_access_key_id'], aws_secret_access_key = provider['aws_secret_access_key'], region_name = provider['region'])
+        return session
+       
+
+    def get_client(self, provider):
+        session = self.get_session(provider)
         client = session.client('ec2')
         self.aws_client = client
         return client
@@ -122,36 +127,62 @@ class AWSDriver(base.DriverBase):
     @tornado.gen.coroutine
     def get_sec_groups(self):
         sec_result = self.aws_client.describe_security_groups()
-        print ('Sec result is : ', sec_result)
         sec_groups = sec_result['SecurityGroups']
         return [x['GroupName'] for x in sec_groups]
    
     @tornado.gen.coroutine
     def get_networks(self):
         net_result = self.aws_client.describe_network_interfaces()
-        print ('Net result is : ', net_result)
-        networks = net_result['NetworkInterfaces'] or ['default']
+        networks = net_result['NetworkInterfaces']
+        networks = [x['NetworkInterfaceId'] for x in networks] or ['default']
         return networks
 
     @tornado.gen.coroutine
     def get_servers(self, provider):
+        session = self.get_session(provider)
         client = self.get_client(provider)
-        result = client.describe_instances()
-        servers = result['Reservations']
+        pricing = session.client('pricing')
+
+        instances = client.describe_instances()
+        instances = instances['Reservations']
+
+        if instances: 
+            instances = instances[0]['Instances']
+        else: 
+            raise tornado.gen.Return([])
+
+        #We create filters for each different instance_type so we can get their pricing information. 
+        instance_types = [x['InstanceType'] for x in instances]
+        filters = [{"Type" : "TERM_MATCH", "Field" : "instanceType", "Value" : x} for x in instance_types]
+        filters.append({"Type" : "TERM_MATCH", "Field" : "productFamily", "Value" : "Compute Instance"})
+
+
+        pricing_kwargs = {'ServiceCode' : 'AmazonEC2', 'Filters' : filters}
+        pricing_data_page = pricing.get_products(**pricing_kwargs)
+
+        pricing_data = [json.loads(p)['product']['attributes'] for p in pricing_data_page['PriceList']]
+
+        new_pricing_data = []
+
+        for element in pricing_data:
+            if element['instanceType'] not in [x['instanceType'] for x in new_pricing_data]: 
+                new_pricing_data.append(element)
+
+        servers = [{
+                    'hostname' : 'name',
+                    'ip' : i['PublicIpAddress'],
+                    'size' : '',
+                    'used_disk' : '',
+                    'used_ram' : p['memory'],
+                    'used_cpu' : p['vcpu'],
+                    'status' : i['State']['Name'],
+                    'cost' : 0,  #TODO see if I can actually get the cost. 
+                    'estimated_cost' : 0, 
+                    'provider' : provider['provider_name'],
+                } 
+        for i in instances for p in new_pricing_data if i['InstanceType'] == p['instanceType']]
+
         raise tornado.gen.Return(servers)
-
-        #TODO servers are returned in a format I don't yet know, need to create some so I can test this. 
-        #Should be like this: 
-#        servers = [
-#            {
-#                'hostname' : 'name', 
-#                'ipv4' : 'ipv4', 
-#                'local_gb' : 0, 
-#                'memory_mb' : 0, 
-#                'status' : 'n/a', 
-#            } for x in data['servers']
-#        ]
-
 
     @tornado.gen.coroutine
     def get_provider_data(self, provider, get_servers = True, get_billing = True):
@@ -170,6 +201,49 @@ class AWSDriver(base.DriverBase):
             'status' : {'success' : True, 'message' : ''},
         }
         raise tornado.gen.Return(provider_data)
+
+
+    @tornado.gen.coroutine
+    def get_provider_billing(self, provider):
+        session = self.get_session(provider)
+        print (session)
+        cw = session.client('cloudwatch')
+        
+        now = datetime.datetime.now()
+        number_days = calendar.monthrange(now.year, now.month)[1]
+
+        start = datetime.datetime(day = 1, month = now.month, year = now.year)
+        end = datetime.datetime(day = number_days, month = now.month, year = now.year)
+
+        #This looks really iffy, but I think it works kinda ok. 
+
+        result = cw.get_metric_statistics(Namespace = 'AWS/Billing', Dimensions = [{"Name" : "Currency", "Value" : "USD"}], MetricName = 'EstimatedCharges', StartTime = start, EndTime = end, Period = 60 * 60 * 24 * number_days, Statistics = ['Sum'])
+        total_cost = result['Datapoints'][0]['Sum']
+        
+        #This looks like it should work for servers but it returns an empty list. 
+#        server_billing = cw.get_metric_statistics(Namespace = 'AWS/Billing', Dimensions = [{"Name" : "Currency", "Value" : "USD"}, {"Name" : "InstanceID", "Value" : i['InstanceId']}], MetricName = 'EstimatedCharges', StartTime = start_time, EndTime = end_time, Period = period, Statistics = statistics)
+
+        servers = yield self.get_servers(provider)
+        servers.append({
+            'hostname' : 'Total cost',
+            'ip' : '',
+            'size' : '',
+            'used_disk' : '',
+            'used_ram' : '',
+            'used_cpu' : '',
+            'status' : '',
+            'cost' : total_cost,
+            'estimated_cost' : total_cost, 
+            'provider' : provider['provider_name'],
+        })
+
+        billing_data = {
+            'provider' : provider, 
+            'servers' : servers,
+            'total_cost' : total_cost
+        }
+        raise tornado.gen.Return(billing_data)
+        
 
     @tornado.gen.coroutine
     def validate_field_values(self, step_index, field_values):

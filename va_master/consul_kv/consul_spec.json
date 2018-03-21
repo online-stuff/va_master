@@ -83,5 +83,12 @@
         "name" : "Health check name", 
         "script" : "Some script to execute, or empty",
         "**kwargs" : "Any other keyword arguments"
+    },
+    "server" : {
+        "consul_handle" : "server/{hostname}",
+        "type" : "managed/unmanaged",
+        "ip_address" : "127.0.0.1",
+        "available_functions" : [],
+        "hostname" : ""
     }
 }

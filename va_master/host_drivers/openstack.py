@@ -264,8 +264,9 @@ class OpenStackDriver(base.DriverBase):
              
 
             tenant_id = tenant['id']
-            tenant_usage = yield self.get_openstack_value(self.token_data, 'compute', 'os-simple-tenant-usage/' + tenant_id)
+            tenant_usage = yield self.get_openstack_value(self.token_data, 'compute', 'os-simple-tenant-usage/' + tenant_id)# + '?start=2017-02-02T09:49:58')
             tenant_usage = tenant_usage['tenant_usage']
+#            print ('Usage is : ', tenant_usage)
             servers = [
                 {
                     'hostname' : x['name'], 
@@ -297,6 +298,32 @@ class OpenStackDriver(base.DriverBase):
             raise tornado.gen.Return({'success' : False, 'message' : 'Error connecting to libvirt provider. ' + e.message})
 
         raise tornado.gen.Return({'success' : True, 'message' : ''})
+
+
+    @tornado.gen.coroutine
+    def get_provider_billing(self, provider):
+        
+        raise tornado.gen.Return(None)
+
+        provider_url = 'http://' + provider['provider_ip'] + '/v2.0'
+        auth = identity.Password(auth_url=provider_url,
+               username=provider['username'],
+               password=provider['password'],
+               project_name=provider['tenant'])
+        sess = session.Session(auth = auth, verify = False)
+        nova = client.Client(2, session = sess)
+
+        usage = novaclient.v2.usage.UsageManager(nova)
+
+        #For testing, we probably want to make the user enter the period? 
+        month_ago = datetime.datetime.now() - datetime.timedelta(days = 30)
+        usage_data = usage.list(start = month_ago, end = datetime.datetime.now())
+
+        server_usages = usage_data.server_usages
+        #TODO finish function - should calculate server cost from usages. 
+
+
+
 
     @tornado.gen.coroutine
     def get_provider_data(self, provider, get_servers = True, get_billing = True):
