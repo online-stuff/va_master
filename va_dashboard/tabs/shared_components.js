@@ -20,7 +20,124 @@ const ConfirmPopup = (props) => {
     );
 }
 
+class PivotTable extends Component{
+    constructor(props){
+        super(props);
+        let inList = [], notInList = [], rows = {};
+        this.props.data.forEach(elem => {
+            if(elem.key in this.props.dataSource[0]){
+                inList.push(elem);
+            }else{
+                notInList.push(elem);
+            }
+        });
+        this.props.dataSource.forEach(elem => {
+            let result = {};
+            inList.forEach(e => {
+                result[e.key] = elem[e.key];
+            });
+            notInList.forEach(e => {
+				result[e.key] = this.sumRows(e.type, e.key, elem.subRows);
+			});
+            rows[elem[this.props.rows[0].key]] = result;
+        });
+        this.state = {
+            selected: []
+        };
+		this.getTableData = this.getTableData.bind(this);
+		this.selectRow = this.selectRow.bind(this);
+    }
+
+    getTableData(source, row, result){
+        source.forEach(elem => {
+            result.push(<td>{row[elem.key]}</td>);
+        });
+        return result;
+    }
+
+    selectRow(key){
+        let selected = Object.assign([], this.state.selected);
+        let index = selected.indexOf(key);
+        if(index > -1){
+            selected.splice(index, 1);
+        }else{
+            selected.push(key);
+        }
+        this.setState({selected});
+    }
+
+    sumRows(type, key, data){
+        let result = '';
+        switch(type){
+            case 'number':
+                result = 0;
+                data.forEach(d => {
+                    result += d[key];
+                });
+                break;
+            case 'string':
+                let obj = {};
+                data.forEach(d => {
+                    obj[d[key]] = '';
+                });
+                result = Object.keys(obj).join(', ');
+                break;
+            case 'count':
+                let obj = {};
+                data.forEach(d => {
+					let elem = d[key];
+                    obj[elem] = elem in obj ? obj[elem]++ : 0;
+                });
+                result = Object.keys(obj).join(', ');
+                break; 
+        }
+        return result;
+    }
+
+    render(){
+        let ths = this.props.data.map(elem => <th>{elem.label}</th>);
+        let selected = this.state.selected;
+        return ( 
+        <div className="pivot-table">
+            <table className="table">
+                <thead>
+                    <tr>{[<th></th>, <th></th>].concat(ths)}</tr>
+                </thead>
+                <tbody>
+                    {this.props.dataSource.map(row => {
+                        let tblKey = this.props.rows[0].key;
+                        if(selected.indexOf(row[tblKey]) > -1){
+                            let tblKey2 = this.props.rows[1].key;
+                            let trs = [], tds = [];
+                            if(row.subRows.length > 0){
+                                let firstRow = row.subRows[0];
+                                tds.push(<td><span className='glyphicon glyphicon-chevron-down' onClick={this.selectRow.bind(null, row[tblKey])}></span>{row[tblKey]}</td>);
+                                tds.push(<td>{firstRow[tblKey2]}</td>);
+                                tds = this.getTableData(this.props.data, firstRow, tds);
+                                trs.push(<tr key={firstRow[tblKey2]}>{tds}</tr>);
+                                row.subRows.slice(1).forEach(subRow => {
+                                    tds = [<td></td>, <td>{subRow[tblKey2]}</td>];
+                                    tds = this.getTableData(this.props.data, subRow, tds);
+                                    trs.push(<tr key={subRow[tblKey2]}>{tds}</tr>);
+                                });
+                            }
+							return trs;
+                        }else {
+                            let tds = [<td colSpan="2"><span className='glyphicon glyphicon-chevron-right' onClick={this.selectRow.bind(null, row[tblKey])}></span>{row[tblKey]}</td>];
+                            tds = this.getTableData(this.props.data, row, tds);
+							return (
+								<tr key={row[tblKey]}>{tds}</tr>
+							)
+                        }
+                    })}
+                </tbody>
+           </table> 
+        </div> 
+        );
+    }
+}
 
 module.exports = {
     ConfirmPopup,
+    PivotTable
 };

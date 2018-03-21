@@ -1,25 +1,32 @@
-var React = require('react');
+import React, { Component } from 'react';
 var Bootstrap = require('react-bootstrap');
-var connect = require('react-redux').connect;
+import {connect} from 'react-redux';
 var Network = require('../network');
-var ReactDOM = require('react-dom');
-var Router = require('react-router');
+import { PivotTable } from './shared_components';
 
-var Billing = React.createClass({
-    getInitialState: function () {
-        return {
-            logs: []
+class Billing extends Component{
+    constructor (props) {
+        super(props);
+        this.state = {
+            config: {
+				dataSource: [
+                    {provider: 'provider', cpu: 4, memory: 8, hdd: 1000, cost: 10000, e_cost: 20000, subRows: [{server: 'server', cpu: 4, memory: 8, hdd: 1000, cost: 10000, e_cost: 20000}, {server: 'server2', cpu: 4, memory: 8, hdd: 1000, cost: 10000, e_cost: 20000}]},{provider: 'provider2', cpu: 4, memory: 8, hdd: 1000, cost: 10000, e_cost: 20000, subRows: [{server: 'server', cpu: 4, memory: 8, hdd: 1000, cost: 10000, e_cost: 20000}, {server: 'server3', cpu: 4, memory: 8, hdd: 1000, cost: 10000, e_cost: 20000}]}
+				],
+				rows    : [ {key: 'provider', label: 'Provider'}, {key: 'server', label: 'Server'} ],
+				data    : [ {key: 'cpu', label: 'CPU', type: 'number'}, {key: 'memory', label: 'Memory', type: 'number'}, {key: 'hdd', label: 'HDD', type: 'number'}, {key: 'cost', label: 'Cost', type: 'number'}, {key: 'e_cost', label: 'Estimated cost', type: 'number'} ]
+            }
         }
-    },
-
-    render: function () {
-        return ( <div> </div> );
     }
-});
+
+    componentDidMount () {
+    }
+
+    render() {
+        return ( <PivotTable {... this.state.config} /> );
+    }
+}
 
 
-Billing = connect(function(state){
+module.exports = connect(function(state){
     return {auth: state.auth, alert: state.alert};
 })(Billing);
-
-module.exports = Billing;
