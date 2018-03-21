@@ -53,6 +53,7 @@ class ApiHandler(tornado.web.RequestHandler):
             self.write(json.dumps(obj))
             self.flush()
         except: 
+            print ('Error with ', obj)
             import traceback
             traceback.print_exc()
 #        self.finish()

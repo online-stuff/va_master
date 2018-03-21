@@ -301,8 +301,10 @@ class OpenStackDriver(base.DriverBase):
 
 
     @tornado.gen.coroutine
-    def get_billing_data(self, provider):
+    def get_provider_billing(self, provider):
         
+        raise tornado.gen.Return(None)
+
         provider_url = 'http://' + provider['provider_ip'] + '/v2.0'
         auth = identity.Password(auth_url=provider_url,
                username=provider['username'],

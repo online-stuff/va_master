@@ -114,6 +114,10 @@ class GenericDriver(base.DriverBase):
         raise tornado.gen.Return(servers)
         
 
+    @tornado.gen.coroutine
+    def get_provider_billing(self, provider):
+        raise tornado.gen.Return(None)
+
 
     @tornado.gen.coroutine
     def get_provider_data(self, provider, get_servers = True, get_billing = True):

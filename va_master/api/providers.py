@@ -139,7 +139,7 @@ def validate_new_provider_fields(handler, driver_id, field_values, step_index):
 
 
 @tornado.gen.coroutine
-def get_providers_billing(handler):
+def get_providers_billing_data(handler):
     drivers_handler = handler.drivers_handler
     datastore_handler = handler.datastore_handler
 
@@ -149,9 +149,58 @@ def get_providers_billing(handler):
     providers_data = [x[0].get_provider_billing(provider = x[1]) for x in zip(provider_drivers, providers)]
 
     result = yield providers_data
+    result = [x for x in result if x]
 
     raise tornado.gen.Return(result)
 
+
+@tornado.gen.coroutine
+def get_providers_billing(handler):
+    providers_billing_data = yield get_providers_billing_data(handler)
+    result = { 
+        'dataSource': [{
+            'provider': provider['provider']['provider_name'], 
+#            'cpu': server['used_cpu'], 
+#            'memory': server['used_ram'], 
+#            'hdd': server['used_disk'], 
+#            'cost': server['cost'], 
+#            'e_cost': server['estimated_cost'], 
+            'subRows': [{
+                'server': server['hostname'], 
+                'cpu': server['used_cpu'], 
+                'memory': server['used_ram'], 
+                'hdd': server['used_disk'], 
+                'cost': server['cost'], 
+                'e_cost': server['estimated_cost']
+            } for server in provider['servers']]
+        } for provider in providers_billing_data], 
+        'rows': [
+        {
+            'key': 'provider', 
+            'label': 'Provider'
+        }, {
+            'key': 'server', 
+            'label': 'Server' 
+        }], 
+        'data': [ 
+        {
+            'key': 'cpu', 
+            'label': 'CPU'
+        }, {
+            'key': 'memory', 
+            'label': 'Memory'
+        }, {
+            'key': 'hdd', 
+            'label': 'HDD'
+        }, {
+            'key': 'cost', 
+            'label': 'Cost'
+        }, {
+            'key': 'e_cost', 
+            'label': 'Estimated cost'
+        }] 
+    }
+    raise tornado.gen.Return(result)
 
 @tornado.gen.coroutine
 def get_provider_info(handler, dash_user, get_billing = True, get_servers = True, required_providers = [], sort_by_location = False):
