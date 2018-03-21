@@ -72,10 +72,9 @@ def panel_action_execute(handler, server_name, action, args = [], dash_user = ''
             print ('Function not supported')
             raise Exception('User attempting to execute a salt function but does not have permission. ')
 
-    state = yield datastore_handler.get_state(name = state)
-    if not state: state = {'module' : 'openvpn'}
-
     if not module:
+        state = yield datastore_handler.get_state(name = state)
+        if not state: state = {'module' : 'openvpn'}
         module = state['module']
 
     cl = salt.client.LocalClient()
