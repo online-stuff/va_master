@@ -12,13 +12,14 @@ def get_paths():
             'drivers' : {'function' : list_drivers, 'args' : ['drivers_handler']},
             'providers/get_trigger_functions': {'function' : get_providers_triggers, 'args' : ['provider_name']},
             'providers/get_provider_billing' : {'function' : get_provider_billing, 'args' : ['provider_name']},
+            'providers/billing' : {'function' : get_providers_billing, 'args' : ['handler']},
+
             'providers' : {'function' : list_providers, 'args' : ['handler']},
 
         },
         'post' : {
             'providers' : {'function' : list_providers, 'args' : ['handler']},
             'providers/info' : {'function' : get_provider_info, 'args' : ['handler', 'dash_user', 'required_providers', 'get_billing', 'get_servers', 'sort_by_location']},
-            'providers/billing' : {'function' : get_providers_billing, 'args' : ['handler']},
             'providers/new/validate_fields' : {'function' : validate_new_provider_fields, 'args' : ['handler', 'driver_id', 'field_values', 'step_index']},
             'providers/delete' : {'function' : delete_provider, 'args' : ['datastore_handler', 'provider_name']},
             'providers/add_provider' : {'function' : add_provider, 'args' : ['datastore_handler', 'field_values', 'driver_name']},
@@ -185,19 +186,24 @@ def get_providers_billing(handler):
         'data': [ 
         {
             'key': 'cpu', 
-            'label': 'CPU'
+            'label': 'CPU',
+            'type' : 'number', 
         }, {
             'key': 'memory', 
-            'label': 'Memory'
+            'label': 'Memory',
+            'type' : 'number',
         }, {
             'key': 'hdd', 
-            'label': 'HDD'
+            'label': 'HDD',
+            'type' : 'number',
         }, {
             'key': 'cost', 
-            'label': 'Cost'
+            'label': 'Cost',
+            'type' : 'number',
         }, {
             'key': 'e_cost', 
-            'label': 'Estimated cost'
+            'label': 'Estimated cost',
+            'type' : 'number',
         }] 
     }
     raise tornado.gen.Return(result)

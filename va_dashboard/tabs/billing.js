@@ -8,21 +8,24 @@ class Billing extends Component{
     constructor (props) {
         super(props);
         this.state = {
-            config: {
-				dataSource: [
-                    {provider: 'provider', cpu: 4, memory: 8, hdd: 1000, cost: 10000, e_cost: 20000, subRows: [{server: 'server', cpu: 4, memory: 8, hdd: 1000, cost: 10000, e_cost: 20000}, {server: 'server2', cpu: 4, memory: 8, hdd: 1000, cost: 10000, e_cost: 20000}]},{provider: 'provider2', cpu: 4, memory: 8, hdd: 1000, cost: 10000, e_cost: 20000, subRows: [{server: 'server', cpu: 4, memory: 8, hdd: 1000, cost: 10000, e_cost: 20000}, {server: 'server3', cpu: 4, memory: 8, hdd: 1000, cost: 10000, e_cost: 20000}]}
-				],
-				rows    : [ {key: 'provider', label: 'Provider'}, {key: 'server', label: 'Server'} ],
-				data    : [ {key: 'cpu', label: 'CPU', type: 'number'}, {key: 'memory', label: 'Memory', type: 'number'}, {key: 'hdd', label: 'HDD', type: 'number'}, {key: 'cost', label: 'Cost', type: 'number'}, {key: 'e_cost', label: 'Estimated cost', type: 'number'} ]
-            }
-        }
+            config: {}
+        };
     }
 
     componentDidMount () {
+        Network.get('/api/providers/billing', this.props.auth.token, {}).done(config => {
+            this.setState({config});
+        });
     }
 
     render() {
-        return ( <PivotTable {... this.state.config} /> );
+        let table = 'dataSource' in this.state.config ? <PivotTable {... this.state.config} /> : null;
+        return (
+            <div>
+                <h4>Billing</h4>
+                {table}
+            </div>
+        );
     }
 }
 
