@@ -304,25 +304,24 @@ class OpenStackDriver(base.DriverBase):
     @tornado.gen.coroutine
     def get_provider_billing(self, provider):
 
-        provider_url = 'http://' + provider['provider_ip'] + '/v2.0'
-        auth = identity.Password(auth_url=provider_url,
-               username=provider['username'],
-               password=provider['password'],
-               project_name=provider['tenant'])
-        sess = session.Session(auth = auth, verify = False)
-        nova = client.Client(2, session = sess)
-
-        usage = novaclient.v2.usage.UsageManager(nova)
-
-        #For testing, we probably want to make the user enter the period? 
-        month_ago = datetime.datetime.now() - datetime.timedelta(days = 30)
-        usage_data = usage.list(start = month_ago, end = datetime.datetime.now())
-
-#        server_usages = usage_data.server_usages
-        #TODO finish function - should calculate server cost from usages. 
+#        provider_url = 'http://' + provider['provider_ip'] + '/v2.0'
+#        auth = identity.Password(auth_url=provider_url,
+#               username=provider['username'],
+#               password=provider['password'],
+#               project_name=provider['tenant'])
+#        sess = session.Session(auth = auth, verify = False)
+#        nova = client.Client(2, session = sess)
+#
+#        usage = novaclient.v2.usage.UsageManager(nova)
+#
+#        #For testing, we probably want to make the user enter the period? 
+#        month_ago = datetime.datetime.now() - datetime.timedelta(days = 30)
+#        usage.get(tenant_id = tenant_id, start = month_ago, end = datetime.datetime.now()
 
         total_cost = 0
-        servers = [{
+        servers = yield self.get_servers(provider)
+
+        servers.append({
             'hostname' : 'Total cost',
             'ip' : '',
             'size' : '',
@@ -333,7 +332,7 @@ class OpenStackDriver(base.DriverBase):
             'cost' : total_cost,
             'estimated_cost' : 0, 
             'provider' : provider['provider_name'],
-        }]
+        })
 
         billing_data = {
             'provider' : provider, 
