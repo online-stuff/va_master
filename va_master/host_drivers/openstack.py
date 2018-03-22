@@ -7,10 +7,9 @@ except:
 
 from tornado.httpclient import AsyncHTTPClient, HTTPRequest
 import tornado.gen
-import json
-import subprocess
-import os
+import json, datetime, subprocess, os
 
+import novaclient
 from novaclient import client
 
 from keystoneauth1 import loading
@@ -277,6 +276,8 @@ class OpenStackDriver(base.DriverBase):
                     'used_ram' : y['memory_mb'], 
                     'used_cpu' : y['vcpus'],
                     'status' : x['status'], 
+                    'cost' : 0,  #TODO find way to calculate costs
+                    'estimated_cost' : 0,
                     'provider' : provider['provider_name'], 
                 } for x in nova_servers for y in tenant_usage['server_usages'] for f in flavors if y['name'] == x['name'] and f['id'] == x['flavor']['id']
             ]
@@ -302,8 +303,6 @@ class OpenStackDriver(base.DriverBase):
 
     @tornado.gen.coroutine
     def get_provider_billing(self, provider):
-        
-        raise tornado.gen.Return(None)
 
         provider_url = 'http://' + provider['provider_ip'] + '/v2.0'
         auth = identity.Password(auth_url=provider_url,
@@ -319,8 +318,29 @@ class OpenStackDriver(base.DriverBase):
         month_ago = datetime.datetime.now() - datetime.timedelta(days = 30)
         usage_data = usage.list(start = month_ago, end = datetime.datetime.now())
 
-        server_usages = usage_data.server_usages
+#        server_usages = usage_data.server_usages
         #TODO finish function - should calculate server cost from usages. 
+
+        total_cost = 0
+        servers = [{
+            'hostname' : 'Total cost',
+            'ip' : '',
+            'size' : '',
+            'used_disk' : 0,
+            'used_ram' : 0,
+            'used_cpu' : 0,
+            'status' : '',
+            'cost' : total_cost,
+            'estimated_cost' : 0, 
+            'provider' : provider['provider_name'],
+        }]
+
+        billing_data = {
+            'provider' : provider, 
+            'servers' : servers,
+            'total_cost' : total_cost
+        }
+        raise tornado.gen.Return(billing_data)
 
 
 
