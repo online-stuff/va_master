@@ -141,6 +141,7 @@ class AWSDriver(base.DriverBase):
     def get_servers(self, provider):
         session = self.get_session(provider)
         client = self.get_client(provider)
+        rs = session.resource('ec2')
         pricing = session.client('pricing')
 
         instances = client.describe_instances()
@@ -150,6 +151,9 @@ class AWSDriver(base.DriverBase):
             instances = instances[0]['Instances']
         else: 
             raise tornado.gen.Return([])
+
+        instance_hdd = lambda instance: sum([rs.Volume(i['Ebs']['VolumeId']).size for i in instance['BlockDeviceMappings']])
+#        instance_hdd = lambda instance: instance['BLockDeviceMappings']
 
         #We create filters for each different instance_type so we can get their pricing information. 
         instance_types = [x['InstanceType'] for x in instances]
@@ -172,7 +176,7 @@ class AWSDriver(base.DriverBase):
                     'hostname' : 'name',
                     'ip' : i['PublicIpAddress'],
                     'size' : '',
-                    'used_disk' : '',
+                    'used_disk' : instance_hdd(i),
                     'used_ram' : p['memory'],
                     'used_cpu' : p['vcpu'],
                     'status' : i['State']['Name'],
@@ -228,9 +232,9 @@ class AWSDriver(base.DriverBase):
             'hostname' : 'Total cost',
             'ip' : '',
             'size' : '',
-            'used_disk' : '',
-            'used_ram' : '',
-            'used_cpu' : '',
+            'used_disk' : 0,
+            'used_ram' : 0,
+            'used_cpu' : 0,
             'status' : '',
             'cost' : total_cost,
             'estimated_cost' : total_cost, 

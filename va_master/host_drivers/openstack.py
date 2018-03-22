@@ -7,10 +7,9 @@ except:
 
 from tornado.httpclient import AsyncHTTPClient, HTTPRequest
 import tornado.gen
-import json
-import subprocess
-import os
+import json, datetime, subprocess, os
 
+import novaclient
 from novaclient import client
 
 from keystoneauth1 import loading
@@ -277,6 +276,8 @@ class OpenStackDriver(base.DriverBase):
                     'used_ram' : y['memory_mb'], 
                     'used_cpu' : y['vcpus'],
                     'status' : x['status'], 
+                    'cost' : 0,  #TODO find way to calculate costs
+                    'estimated_cost' : 0,
                     'provider' : provider['provider_name'], 
                 } for x in nova_servers for y in tenant_usage['server_usages'] for f in flavors if y['name'] == x['name'] and f['id'] == x['flavor']['id']
             ]
@@ -302,25 +303,43 @@ class OpenStackDriver(base.DriverBase):
 
     @tornado.gen.coroutine
     def get_provider_billing(self, provider):
-        
-        raise tornado.gen.Return(None)
 
-        provider_url = 'http://' + provider['provider_ip'] + '/v2.0'
-        auth = identity.Password(auth_url=provider_url,
-               username=provider['username'],
-               password=provider['password'],
-               project_name=provider['tenant'])
-        sess = session.Session(auth = auth, verify = False)
-        nova = client.Client(2, session = sess)
+#        provider_url = 'http://' + provider['provider_ip'] + '/v2.0'
+#        auth = identity.Password(auth_url=provider_url,
+#               username=provider['username'],
+#               password=provider['password'],
+#               project_name=provider['tenant'])
+#        sess = session.Session(auth = auth, verify = False)
+#        nova = client.Client(2, session = sess)
+#
+#        usage = novaclient.v2.usage.UsageManager(nova)
+#
+#        #For testing, we probably want to make the user enter the period? 
+#        month_ago = datetime.datetime.now() - datetime.timedelta(days = 30)
+#        usage.get(tenant_id = tenant_id, start = month_ago, end = datetime.datetime.now()
 
-        usage = novaclient.v2.usage.UsageManager(nova)
+        total_cost = 0
+        servers = yield self.get_servers(provider)
 
-        #For testing, we probably want to make the user enter the period? 
-        month_ago = datetime.datetime.now() - datetime.timedelta(days = 30)
-        usage_data = usage.list(start = month_ago, end = datetime.datetime.now())
+        servers.append({
+            'hostname' : 'Total cost',
+            'ip' : '',
+            'size' : '',
+            'used_disk' : 0,
+            'used_ram' : 0,
+            'used_cpu' : 0,
+            'status' : '',
+            'cost' : total_cost,
+            'estimated_cost' : 0, 
+            'provider' : provider['provider_name'],
+        })
 
-        server_usages = usage_data.server_usages
-        #TODO finish function - should calculate server cost from usages. 
+        billing_data = {
+            'provider' : provider, 
+            'servers' : servers,
+            'total_cost' : total_cost
+        }
+        raise tornado.gen.Return(billing_data)
 
 
 
