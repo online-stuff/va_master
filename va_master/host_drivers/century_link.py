@@ -64,12 +64,12 @@ class CenturyLinkDriver(base.DriverBase):
         self.datacenter = [x for x in clc.v2.Datacenter.Datacenters() if provider['location'] in x.location][0]
         return self.datacenter
 
-    def get_servers(self, provider):
+    def get_servers_api(self, provider):
         servers = self.datacenter.Groups().Get(provider['defaults']['sec_group']).Servers()
         return servers
 
     def get_servers_list(self, provider):
-        servers_list = self.get_servers(provider).Servers()
+        servers_list = self.get_servers_api(provider).Servers()
         return servers_list      
 
     @tornado.gen.coroutine
@@ -105,7 +105,7 @@ class CenturyLinkDriver(base.DriverBase):
         self.account = clc.v2.Account()
         self.get_datacenter(provider)
 
-        servers_list = self.get_servers_list(provider)
+        servers_list = self.get_servers_list_api(provider)
         server = [x for x in servers_list if server_name in x.id] or [None]
         server = server[0]
         if not server: 
@@ -133,7 +133,7 @@ class CenturyLinkDriver(base.DriverBase):
         raise tornado.gen.Return({'success' : True, 'message' : ''})
 
     @tornado.gen.coroutine
-    def get_provider_billing(self, provider):
+    def get_provider_billing_data(self, provider):
         self.get_datacenter(provider)
         group = self.datacenter.Groups().Get(provider['defaults']['sec_group'])
         group_links = group.data['links']
@@ -142,9 +142,16 @@ class CenturyLinkDriver(base.DriverBase):
         billing_info = clc.v2.API.Call('get', billing_link)
         billing_info = billing_info['groups'][group.id]['servers']
 
-        billing_info = [{'hostname' : x.upper(), 'monthly_estimate' : billing_info[x]['monthlyEstimate'], 'month_to_date' : billing_info[x]['monthToDate'], 'current_hour' : billing_info[x]['currentHour']} for x in billing_info]
+        billing_info = [{'hostname' : x.upper(), 'estimated_cost' : billing_info[x]['monthlyEstimate'], 'cost' : billing_info[x]['monthToDate'], 'current_hour' : billing_info[x]['currentHour']} for x in billing_info]
 
         raise tornado.gen.Return(billing_info)
+
+    @tornado.gen.coroutine
+    def get_provider_billing(self, provider): 
+        servers = yield self.get_servers(provider)
+        print ('Servers are : ', servers)
+        raise tornado.gen.Return(None)
+
 
     @tornado.gen.coroutine
     def get_servers(self, provider, get_billing = True):
@@ -170,14 +177,6 @@ class CenturyLinkDriver(base.DriverBase):
 
         } for x in servers]
 
-        if get_billing: 
-            servers_billing = yield self.get_provider_billing(provider)
-            for x in servers: 
-                server_billing = [i for i in servers_billing if x['hostname'] == i['hostname']] or [{}]
-                server_billing = server_billing[0]
-
-                x.update(server_billing)
-
         raise tornado.gen.Return(servers)
 
 
@@ -199,8 +198,16 @@ class CenturyLinkDriver(base.DriverBase):
             self.account = clc.v2.Account()
             if get_servers: 
                 servers = yield self.get_servers(provider, get_billing)
+                if get_billing: 
+                    servers_billing = yield self.get_provider_billing_data(provider)
+                    for x in servers: 
+                        server_billing = [i for i in servers_billing if x['hostname'] == i['hostname']] or [{}]
+                        server_billing = server_billing[0]
+
+                        x.update(server_billing)
             else: 
                 servers = []
+
             provider_data = {
                 'servers' : servers, 
                 'provider_usage' : {
