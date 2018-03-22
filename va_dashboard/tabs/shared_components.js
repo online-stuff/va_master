@@ -39,7 +39,7 @@ class PivotTable extends Component{
             notInList.forEach(e => {
 				result[e.key] = this.sumRows(e.type, e.key, elem.subRows);
 			});
-            rows[this.props.rows[0].key] = result;
+            rows[elem[this.props.rows[0].key]] = result;
         });
         this.state = {
             selected: [],
@@ -85,9 +85,12 @@ class PivotTable extends Component{
             case 'count':
                 data.forEach(d => {
 					let elem = d[key];
-                    obj[elem] = elem in obj ? obj[elem]++ : 0;
+                    obj[elem] = elem in obj ? ++obj[elem] : 1;
                 });
-                result = Object.keys(obj).join(', ');
+                for(let key in obj){
+                    result += `${obj[key]} ${key}, `;
+                }
+                result = result.slice(0, -2);
                 break; 
         }
         return result;
@@ -123,7 +126,7 @@ class PivotTable extends Component{
 							return trs;
                         }else {
                             let tds = [<td colSpan="2"><span className='glyphicon glyphicon-chevron-right' onClick={this.selectRow.bind(null, row[tblKey])}></span>{row[tblKey]}</td>];
-                            tds = this.getTableData(this.props.data, this.state.rows[tblKey], tds);
+                            tds = this.getTableData(this.props.data, this.state.rows[row[tblKey]], tds);
 							return (
 								<tr key={row[tblKey]}>{tds}</tr>
 							)
