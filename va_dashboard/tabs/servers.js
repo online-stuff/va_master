@@ -76,16 +76,15 @@ class Servers extends Component {
     }
 
     btn_clicked(provider, server, evtKey){
-        var me = this;
         var data = {provider_name: provider, server_name: server, action: evtKey};
         Network.post('/api/apps/action', this.props.auth.token, data).done(function(d) {
-            Network.post('/api/providers/info', me.props.auth.token, {providers: []}).done(function(data) {
-                me.setState({providers: data, popupShow: false});
+            Network.post('/api/providers/info', this.props.auth.token, {providers: []}).done(data => {
+                this.setState({providers: data, popupShow: false});
             }).fail(function (msg) {
-                me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
+                this.props.dispatch({type: 'SHOW_ALERT', msg: msg});
             });
-        }).fail(function (msg) {
-            me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
+        }).fail(msg => {
+            this.props.dispatch({type: 'SHOW_ALERT', msg: msg});
         });
     }
 
@@ -146,10 +145,10 @@ class Servers extends Component {
 
         var loaded = this.state.loaded;
         const spinnerStyle = {
-            display: loaded ? "none": "block",
+            display: loaded ? "none": "block"
         };
         const blockStyle = {
-            visibility: loaded ? "visible": "hidden",
+            visibility: loaded ? "visible": "hidden"
         };
         var sf_cols = ['Hostname', 'IP', 'Size', 'Status', 'Host'];
         var popupData = this.state.popupData;
@@ -224,18 +223,17 @@ class UserStep extends Component {
     }
     onSubmit() {
         //e.preventDefault();
-        var me = this;
         var type_user = this.state.user;
         if(type_user === "existing"){
             var data = {'step': 2};
             for(var i=0; i<this.state.fields.length; i++){
-                field = this.state.fields[i];
+                let field = this.state.fields[i];
                 data[field] = findDOMNode(this.refs[field]).value;
             }
-            Network.post('/api/apps/new/validate_fields', this.props.auth.token, data).done(function(data) {
-                me.props.goToNextStep();
-            }).fail(function (msg) {
-                me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
+            Network.post('/api/apps/new/validate_fields', this.props.auth.token, data).done(data => {
+                this.props.goToNextStep();
+            }).fail(msg => {
+                this.props.dispatch({type: 'SHOW_ALERT', msg: msg});
             });
         }else{
             this.props.goToNextStep();
@@ -258,12 +256,11 @@ class SSHStep extends Component {
 
     onSubmit() {
         //e.preventDefault();
-        var me = this;
         this.setState({progress: 0});
-        interval = setInterval(function(){
-            if(me.props.status == 'launching' && me.state.progress <= 80){
-                var newProgress = me.state.progress + 10;
-                me.setState({progress: newProgress})
+        let interval = setInterval(() => {
+            if(this.props.status == 'launching' && this.state.progress <= 80){
+                var newProgress = this.state.progress + 10;
+                this.setState({progress: newProgress})
             }else{
                 clearInterval(interval);
             }
@@ -278,11 +275,11 @@ class SSHStep extends Component {
         };
         if(!this.state.auth)
             data['password'] = findDOMNode(this.refs.password).value;
-        Network.post('/api/apps/new/validate_fields', this.props.auth.token, data).done(function(data) {
-            //me.setState({status: 'launched'});
-            me.props.launchServer();
+        Network.post('/api/apps/new/validate_fields', this.props.auth.token, data).done(data => {
+            //this.setState({status: 'launched'});
+            this.props.launchServer();
         }).fail(function (msg) {
-            me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
+            this.props.dispatch({type: 'SHOW_ALERT', msg: msg});
         });
     }
 
@@ -515,7 +512,7 @@ class HostStep extends Component {
         //e.preventDefault();
         var me = this;
         this.setState({progress: 0});
-        interval = setInterval(function(){
+        let interval = setInterval(function(){
             if(me.props.status == 'launching' && me.state.progress <= 80){
                 var newProgress = me.state.progress + 10;
                 me.setState({progress: newProgress})
@@ -586,17 +583,17 @@ class ServerForm extends Component {
     nextStep () {
         if(this.state.stepIndex === 1){
             var nextStep = this.state.step2 ? 2 : 3;
-            var me = this, server_name = findDOMNode(this.refs.name).value;
+            var server_name = findDOMNode(this.refs.name).value;
             var data = {step: 1, role: findDOMNode(this.refs.role).value, server_name: server_name};
             if(!this.state.standalone)
                 data.provider_name = this.state.provider_name;
-            Network.post('/api/apps/new/validate_fields', this.props.auth.token, data).done(function(d) {
-                me.setState({stepIndex: nextStep, server_name: server_name});
-            }).fail(function (msg) {
-                me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
+            Network.post('/api/apps/new/validate_fields', this.props.auth.token, data).done(d => {
+                this.setState({stepIndex: nextStep, server_name: server_name});
+            }).fail(msg => {
+                this.props.dispatch({type: 'SHOW_ALERT', msg: msg});
             });
         } else {
-            // me.setState({isLoading: true});
+            // this.setState({isLoading: true});
             var stepIndex = this.state.stepIndex;
             var step_name = "step" + stepIndex;
             if(stepIndex === 3) this.setState({status: 'launching'});
@@ -647,7 +644,7 @@ class ServerForm extends Component {
         }else{
             step3 = (
                 <Bootstrap.Tab title='Choose provider' eventKey={3}>
-                    <HostStepRedux provider_name = {this.props.hostname} providers = {this.props.providers} provider_usage = {this.props.provider_usage} options = {this.props.options} defaults = {this.props.defaults} ref="step3" changeStep = {this.changeStep} server_name = {this.state.server_name} status = {this.state.status}  launchServer = {this.launchServer} />
+                    <HostStepRedux provider_name = {this.props.hostname} providers = {this.props.providers} provider_usage = {this.props.provider_usage} options = {this.props.options} defaults = {this.props.defaults} ref="step3" changeStep = {this.changeStep} server_name = {this.state.server_name} status = {this.state.status} launchServer = {this.launchServer} />
                 </Bootstrap.Tab>
             );
         }
@@ -724,8 +721,6 @@ const Stats = (props) => {
     );
 }
 
-Servers = connect(function(state){
+module.exports = connect(function(state){
     return {auth: state.auth, apps: state.apps, alert: state.alert};
 })(Servers);
-
-module.exports = Servers;
