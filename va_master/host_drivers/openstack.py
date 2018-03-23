@@ -327,6 +327,10 @@ class OpenStackDriver(base.DriverBase):
         total_memory = int_to_bytes(total_memory)
         provider['memory'] = total_memory
 
+
+        for server in servers: 
+            server['used_ram'] = int_to_bytes(server['used_ram'] * (2 ** 20))
+
         billing_data = {
             'provider' : provider, 
             'servers' : servers,
