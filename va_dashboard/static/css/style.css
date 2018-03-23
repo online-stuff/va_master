@@ -904,3 +904,7 @@ label {
     font-size: 12px;
     padding-right: 3px;
 }
+
+.sumRow {
+    background-color: #eee;
+}

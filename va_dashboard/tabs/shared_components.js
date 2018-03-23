@@ -73,19 +73,21 @@ class PivotTable extends Component{
             case 'number':
                 result = 0;
                 data.forEach(d => {
-                    result += d[key];
+                    result += d[key] ? d[key] : 0;
                 });
                 break;
             case 'string':
                 data.forEach(d => {
-                    obj[d[key]] = '';
+                    if(d[key])
+                        obj[d[key]] = '';
                 });
                 result = Object.keys(obj).join(', ');
                 break;
             case 'count':
                 data.forEach(d => {
-					let elem = d[key];
-                    obj[elem] = elem in obj ? ++obj[elem] : 1;
+                    let elem = d[key];
+                    if(elem)
+                        obj[elem] = elem in obj ? ++obj[elem] : 1;
                 });
                 for(let key in obj){
                     result += `${obj[key]} ${key}, `;
@@ -122,6 +124,9 @@ class PivotTable extends Component{
                                     tds = this.getTableData(this.props.data, subRow, tds);
                                     trs.push(<tr key={subRow[tblKey2]}>{tds}</tr>);
                                 });
+                                tds = [<th colSpan="2">Sum</th>];
+                                tds = this.getTableData(this.props.data, this.state.rows[row[tblKey]], tds);
+                                trs.push(<tr key="sum" className="sumRow">{tds}</tr>);
                             }
 							return trs;
                         }else {
