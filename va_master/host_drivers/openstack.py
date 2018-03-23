@@ -303,20 +303,7 @@ class OpenStackDriver(base.DriverBase):
 
     @tornado.gen.coroutine
     def get_provider_billing(self, provider):
-
-#        provider_url = 'http://' + provider['provider_ip'] + '/v2.0'
-#        auth = identity.Password(auth_url=provider_url,
-#               username=provider['username'],
-#               password=provider['password'],
-#               project_name=provider['tenant'])
-#        sess = session.Session(auth = auth, verify = False)
-#        nova = client.Client(2, session = sess)
-#
-#        usage = novaclient.v2.usage.UsageManager(nova)
-#
-#        #For testing, we probably want to make the user enter the period? 
-#        month_ago = datetime.datetime.now() - datetime.timedelta(days = 30)
-#        usage.get(tenant_id = tenant_id, start = month_ago, end = datetime.datetime.now()
+        #TODO provide should have some sort of costing mechanism, and we multiply used stuff by some price. 
 
         total_cost = 0
         servers = yield self.get_servers(provider)
