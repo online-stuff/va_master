@@ -5,6 +5,8 @@ except:
     import base
     from base import Step, StepResult
 
+from base import bytes_to_int, int_to_bytes
+
 from tornado.httpclient import AsyncHTTPClient, HTTPRequest
 import tornado.gen
 import json, datetime, subprocess, os
@@ -309,7 +311,7 @@ class OpenStackDriver(base.DriverBase):
         servers = yield self.get_servers(provider)
 
         servers.append({
-            'hostname' : 'Total cost',
+            'hostname' : 'Other Costs',
             'ip' : '',
             'size' : '',
             'used_disk' : 0,
@@ -320,6 +322,10 @@ class OpenStackDriver(base.DriverBase):
             'estimated_cost' : 0, 
             'provider' : provider['provider_name'],
         })
+
+        total_memory = sum([x['used_ram'] for x in servers]) * 2**20
+        total_memory = int_to_bytes(total_memory)
+        provider['memory'] = total_memory
 
         billing_data = {
             'provider' : provider, 

@@ -158,23 +158,27 @@ def get_providers_billing_data(handler):
 @tornado.gen.coroutine
 def get_providers_billing(handler):
     providers_billing_data = yield get_providers_billing_data(handler)
+    providers = []
+    for provider in providers_billing_data: 
+        p = {
+                'provider': provider['provider']['provider_name'], 
+                'subRows': [{
+                    'server': server['hostname'], 
+                    'cpu': server['used_cpu'], 
+                    'memory': server['used_ram'], 
+                    'hdd': server['used_disk'], 
+                    'cost': server['cost'], 
+                    'e_cost': server['estimated_cost']
+                } for server in provider['servers']]
+
+        }
+        for attr in ['cpu', 'memory', 'hdd', 'cost', 'e_cost']: 
+            if provider['provider'].get(attr): 
+                p[attr] = provider['provider'][attr]
+        providers.append(p)
+
     result = { 
-        'dataSource': [{
-            'provider': provider['provider']['provider_name'], 
-#            'cpu': server['used_cpu'], 
-#            'memory': server['used_ram'], 
-#            'hdd': server['used_disk'], 
-#            'cost': server['cost'], 
-#            'e_cost': server['estimated_cost'], 
-            'subRows': [{
-                'server': server['hostname'], 
-                'cpu': server['used_cpu'], 
-                'memory': server['used_ram'], 
-                'hdd': server['used_disk'], 
-                'cost': server['cost'], 
-                'e_cost': server['estimated_cost']
-            } for server in provider['servers']]
-        } for provider in providers_billing_data], 
+        'dataSource': providers, 
         'rows': [
         {
             'key': 'provider', 

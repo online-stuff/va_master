@@ -4,6 +4,22 @@ import tornado.gen
 from tornado.httpclient import AsyncHTTPClient, HTTPRequest
 import time
 
+prefixes = {'KiB' : 10, 'MiB' : 20, 'GiB' : 30, 'TiB' : 40}
+
+def bytes_to_int(b):
+    b = b.split(' ')
+    i = float(b[0]) * (2 ** prefixes[b[1]])
+
+    return i
+
+def int_to_bytes(i):
+    prefix = 'GiB'
+    b = float(i) / (2 ** prefixes[prefix])
+    b = str(b) + ' ' + prefix
+
+    return b
+
+
 from va_master.handlers.datastore_handler import DatastoreHandler
 
 class Step(object):

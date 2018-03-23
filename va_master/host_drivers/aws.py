@@ -1,5 +1,6 @@
 from . import base
 from .base import Step, StepResult
+from base import bytes_to_int, int_to_bytes
 from tornado.httpclient import AsyncHTTPClient, HTTPRequest
 import tornado.gen
 import json
@@ -173,12 +174,12 @@ class AWSDriver(base.DriverBase):
                 new_pricing_data.append(element)
 
         servers = [{
-                    'hostname' : 'name',
+                    'hostname' : i['PublicDnsName'],
                     'ip' : i['PublicIpAddress'],
                     'size' : '',
                     'used_disk' : instance_hdd(i),
                     'used_ram' : p['memory'],
-                    'used_cpu' : p['vcpu'],
+                    'used_cpu' : int(p['vcpu']),
                     'status' : i['State']['Name'],
                     'cost' : 0,  #TODO see if I can actually get the cost. 
                     'estimated_cost' : 0, 
@@ -210,7 +211,6 @@ class AWSDriver(base.DriverBase):
     @tornado.gen.coroutine
     def get_provider_billing(self, provider):
         session = self.get_session(provider)
-        print (session)
         cw = session.client('cloudwatch')
         
         now = datetime.datetime.now()
@@ -223,13 +223,15 @@ class AWSDriver(base.DriverBase):
 
         result = cw.get_metric_statistics(Namespace = 'AWS/Billing', Dimensions = [{"Name" : "Currency", "Value" : "USD"}], MetricName = 'EstimatedCharges', StartTime = start, EndTime = end, Period = 60 * 60 * 24 * number_days, Statistics = ['Sum'])
         total_cost = result['Datapoints'][0]['Sum']
-        
-        #This looks like it should work for servers but it returns an empty list. 
-#        server_billing = cw.get_metric_statistics(Namespace = 'AWS/Billing', Dimensions = [{"Name" : "Currency", "Value" : "USD"}, {"Name" : "InstanceID", "Value" : i['InstanceId']}], MetricName = 'EstimatedCharges', StartTime = start_time, EndTime = end_time, Period = period, Statistics = statistics)
-
+        total_cost = float("{0:.2f}".format(total_cost))
         servers = yield self.get_servers(provider)
+        
+        total_memory = sum([bytes_to_int(s['used_ram']) for s in servers])
+        total_memory = int_to_bytes(total_memory)
+        provider['memory'] = total_memory
+
         servers.append({
-            'hostname' : 'Total cost',
+            'hostname' : 'Other costs',
             'ip' : '',
             'size' : '',
             'used_disk' : 0,
@@ -240,6 +242,7 @@ class AWSDriver(base.DriverBase):
             'estimated_cost' : total_cost, 
             'provider' : provider['provider_name'],
         })
+
 
         billing_data = {
             'provider' : provider, 
