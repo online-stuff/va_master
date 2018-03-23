@@ -4,7 +4,7 @@ var Network = require('../network');
 import { connect } from 'react-redux';
 import { Table, Tr, Td } from 'reactable';
 import { ConfirmPopup } from './shared_components';
-import { getTableRowWithAction } from './util';
+import { getTableRowWithAction, getSpinner } from './util';
 
 const tblCols = ['Provider name', 'IP', 'Instances', 'Driver', 'Status'];
 
@@ -73,14 +73,14 @@ class Providers extends Component {
             );
         });
         const spinnerStyle = {
-            display: loading ? "block": "none",
+            display: loading ? "block": "none"
         };
         const blockStyle = {
-            visibility: loading ? "hidden": "visible",
+            visibility: loading ? "hidden": "visible"
         };
         return (<div className="app-containter">
             <NewProviderFormRedux changeProviders = {this.getCurrentProviders} />
-            <span className="spinner" style={spinnerStyle} ><i className="fa fa-spinner fa-spin fa-3x" aria-hidden="true"></i></span>
+            {getSpinner(spinnerStyle)}
             <div style={blockStyle} className="card">
                 <div className="card-body">
                     <Table className="table striped" columns={[...tblCols, 'Actions']} itemsPerPage={10} pageButtonLimit={10} noDataText="No matching records found." sortable={tblCols} filterable={tblCols} btnName="Add provider" btnClick={this.addProvider} title="Current providers" filterClassName="form-control" filterPlaceholder="Filter">
@@ -202,7 +202,7 @@ class NewProviderForm extends Component {
     render() {
         var steps = [];
         var driverOptions = [<option key="-1" value=''>Select driver</option>];
-        for(var i = 0; i < this.state.drivers.length; i++) {
+        for(let i = 0; i < this.state.drivers.length; i++) {
             var driver = this.state.drivers[i];
             driverOptions.push(
                 <option value={driver.id} key={driver.id}>{driver.friendly_name}</option>
@@ -229,7 +229,7 @@ class NewProviderForm extends Component {
         }
 
         var errors = [];
-        for(var i = 0; i < this.state.errors.length; i++){
+        for(let i = 0; i < this.state.errors.length; i++){
             var err = this.state.errors[i];
             errors.push(
                 <Bootstrap.Alert key={i} bsStyle='danger'>{err}</Bootstrap.Alert>
@@ -274,32 +274,30 @@ class NewProviderForm extends Component {
     nextStep() {
         if(this.state.currentDriver === null) return;
         if(this.state.stepIndex === -1){
-            var me = this;
-            var data = {driver_id: this.state.currentDriver.id, step_index: -1, field_values: {}};
-            Network.post('/api/providers/new/validate_fields', this.props.auth.token, data).done(function(d) {
-                me.setState({stepIndex: d.new_step_index, optionChoices: d.option_choices});
-            }).fail(function (msg) {
-                me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
+            let data = {driver_id: this.state.currentDriver.id, step_index: -1, field_values: {}};
+            Network.post('/api/providers/new/validate_fields', this.props.auth.token, data).done(d => {
+                this.setState({stepIndex: d.new_step_index, optionChoices: d.option_choices});
+            }).fail(msg => {
+                this.props.dispatch({type: 'SHOW_ALERT', msg: msg});
             });
         } else {
-            var me = this;
-            me.setState({isLoading: true});
-            var data = {driver_id: this.state.currentDriver.id, step_index: this.state.stepIndex,
+            this.setState({isLoading: true});
+            let data = {driver_id: this.state.currentDriver.id, step_index: this.state.stepIndex,
                 field_values: this.state.fieldValues};
-            Network.post('/api/providers/new/validate_fields', this.props.auth.token, data).done(function(d) {
-                var mergeChoices = Object.assign({}, me.state.optionChoices);
+            Network.post('/api/providers/new/validate_fields', this.props.auth.token, data).done(d => {
+                var mergeChoices = Object.assign({}, this.state.optionChoices);
                 for(var id in d.option_choices){
                     mergeChoices[id] = d.option_choices[id];
                 }
                 if(d.new_step_index == -1 && d.errors.length == 0){
-                    setTimeout(function(){
-                         me.props.changeProviders();
+                    setTimeout(() => {
+                         this.props.changeProviders();
                     }, 2000);
                 }else{
-                    me.setState({stepIndex: d.new_step_index, optionChoices: mergeChoices, errors: d.errors, isLoading: false});
+                    this.setState({stepIndex: d.new_step_index, optionChoices: mergeChoices, errors: d.errors, isLoading: false});
                 }
-            }).fail(function (msg) {
-                me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
+            }).fail(msg => {
+                this.props.dispatch({type: 'SHOW_ALERT', msg: msg});
             });
             //var data = {driver_id: this.state.currentDriver.id, current_index: this.state.stepIndex,
             //}

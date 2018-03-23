@@ -154,6 +154,10 @@ function download(url, token, data, fileWithExt, callback){
 	});
 }
 
+function getSpinner(spinnerStyle){
+    return <span className="spinner" style={spinnerStyle} ><i className="fa fa-spinner fa-spin fa-3x" aria-hidden="true"></i></span>;
+}
+
 module.exports = {
     isEmpty,
     getRandomColor,
@@ -171,5 +175,6 @@ module.exports = {
     initSelectOptions,
     getReduxComponent,
     callPanelAction,
-	download
+    download,
+    getSpinner
 }

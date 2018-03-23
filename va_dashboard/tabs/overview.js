@@ -3,7 +3,7 @@ import {connect} from 'react-redux';
 import {Chart, Doughnut, Bar, defaults} from "react-chartjs-2";
 import Graph from'react-graph-vis';
 var Network = require('../network');
-import {getRandomColors} from './util'; 
+import {getRandomColors, getSpinner} from './util'; 
 
 Chart.defaults.global.defaultFontFamily = 'Ubuntu';
 Chart.pluginService.register({
@@ -144,7 +144,7 @@ class Overview extends Component {
             <div>
                 <DiagramRedux providers={diagram} />
                 <div className="graph-block">
-                    <span className="spinner" style={spinnerStyle} ><i className="fa fa-spinner fa-spin fa-3x" aria-hidden="true"></i></span>
+                    {getSpinner(spinnerStyle)}
                     {provider_redux}
                 </div>
                 <LogRedux />

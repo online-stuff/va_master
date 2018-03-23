@@ -3,6 +3,7 @@ var Bootstrap = require('react-bootstrap');
 import {connect} from 'react-redux';
 var Network = require('../network');
 import { PivotTable } from './shared_components';
+import { getSpinner } from './util';
 
 class Billing extends Component{
     constructor (props) {
@@ -19,11 +20,19 @@ class Billing extends Component{
     }
 
     render() {
-        let table = 'dataSource' in this.state.config ? <PivotTable {... this.state.config} /> : null;
+        let loaded = 'dataSource' in this.state.config;
+        const spinnerStyle = {
+            display: loaded ? "none" : "block"
+        };
         return (
             <div>
-                <h4>Billing</h4>
-                {table}
+                {getSpinner(spinnerStyle)}
+                {loaded && <div className="card">
+                    <div className="card-body">
+                        <h4>Billing</h4>
+                        <PivotTable {... this.state.config} />
+                    </div>
+                </div>}
             </div>
         );
     }
