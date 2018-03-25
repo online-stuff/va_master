@@ -8,7 +8,7 @@ from va_master.consul_kv.datastore import ConsulStore
 import tornado.ioloop
 
 datastore = ConsulStore()
-datastore_handler = DatastoreHandler(datastore, '/opt/va_master/va_master/consul_kv/consul_spec.json')
+datastore_handler = DatastoreHandler(datastore, '../consul_kv/consul_spec.json')
 
 run_sync = tornado.ioloop.IOLoop.instance().run_sync
 
