@@ -9,6 +9,7 @@ setuptools.setup(
   author='Filip Dimitrovski',
   install_requires=[
     'tornado',
+    'OpenSSL',
     'salt',
     'apache-libcloud',
     'python-novaclient',
