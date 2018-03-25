@@ -8,7 +8,7 @@ from va_master.consul_kv.datastore import ConsulStore
 
 import tornado.ioloop
 
-folder_pwd = os.path.join(os.path.dirname(os.path.realpath(__file__)), '..')
+folder_pwd = os.path.join(os.path.dirname(os.path.realpath(__file__)), '')
 datastore = ConsulStore()
 datastore_handler = DatastoreHandler(datastore, folder_pwd+'../consul_kv/consul_spec.json')
 
