@@ -31,7 +31,7 @@ class Config(object):
         self.https_port = 443
         self.server_static_path = get_server_static()
         self.deploy_pool_count = 3
-        self.ssh_key_path = '/root/.ssh/'
+        self.ssh_key_path = '~/.ssh/'
         self.ssh_key_name = 'va-master' 
 
         self.https_crt = folder_pwd + '../../ssl/cert.crt'
