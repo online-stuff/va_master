@@ -25,8 +25,8 @@ class DriversHandler(object):
     def get_drivers(self):
         if not self.drivers: 
             init_vals = yield self.datastore_handler.get_init_vals()
+            va_flavours = yield self.datastore_handler.datastore.get('va_flavours')
             host_ip =  init_vals['fqdn'] 
-            va_flavours = init_vals['va_flavours']
 
             kwargs = {
                 'host_ip' : host_ip, 

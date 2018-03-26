@@ -362,3 +362,35 @@ def set_settings(settings):
         f.write(yaml.dump(a, default_flow_style=False))
 
 
+@tornado.gen.coroutine
+def add_server_to_datastore(datastore_handler, server_name, ip_address = None, hostname = None, server_type = None, user_type = None, provider_name = None, kwargs = {}):
+    server = {}
+    for attr in ['ip_address', 'hostname', 'provider_name']: 
+        server[attr] = locals()[attr]
+
+    yield datastore_handler.insert_object(object_type = 'server', server_name = server_name, data = server)
+
+    if server_type: 
+        server = yield manage_server_type(datastore_handler, server_name, server_type, user_type, provider_name, kwargs)
+
+    raise tornado.gen.Return(server)
+
+
+@tornado.gen.coroutine
+def manage_server_type(datastore_handler, server_name, new_type, user_type = None, provider_name = None, kwargs = {}):
+    if new_type in ['ssh', 'winexe']:
+        new_subtype = user_type
+    elif new_type in ['provider']: 
+        new_subtype = provider_name
+
+    if not new_subtype: 
+        raise Exception("Tried to change " + str(server_name) + " type to " + str(new_type) + " but could not get subtype. If managing with provider, make sure to set `provider_name`, if managing with SSH or winexe, set `user_type`")
+
+    server = yield datastore_handler.get_object(object_type = 'server', server_name = server_name)
+    type_actions = yield datastore_handler.get_object(object_type = 'managed_functions', manage_type = new_type, manage_subtype = new_subtype)
+    server['type'] = new_type
+    server['available_actions'] = type_actions['actions']
+    server.update(kwargs)
+
+    yield datastore_handler.insert_object(object_type = 'server', data = server, server_name = 'server_name')
+    raise tornado.gen.Return(server)

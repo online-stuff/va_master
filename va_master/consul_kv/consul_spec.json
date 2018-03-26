@@ -86,9 +86,14 @@
     },
     "server" : {
         "consul_handle" : "server/{hostname}",
-        "type" : "managed/unmanaged",
+        "managed_by" : "unmanaged/ssh/provider/winexe/app",
+        "provider_name" : "some_provider",
         "ip_address" : "127.0.0.1",
-        "available_functions" : [],
+        "available_actions" : [],
         "hostname" : ""
+    },
+    "managed_actions" : {
+        "consul_handle" : "managed_by/{manage_type}/{manage_subtype}",
+        "actions" : []
     }
 }

@@ -8,7 +8,7 @@ import tornado.gen
 from pbkdf2 import crypt
 
 from va_master.consul_kv.datastore import KeyNotFound, StoreError
-
+from va_master.consul_kv.initial_consul_data import initial_consul_data
 
 #def compare_dicts(d1, d2):
 #    for key in d1:
@@ -66,7 +66,7 @@ class DatastoreHandler(object):
         raise tornado.gen.Return(result)
 
     @tornado.gen.coroutine
-    def insert_init_vals(self, init_vals):
+    def insert_init_vals(self, init_vals, rewrite = True):
         try:
             old_vals = yield self.datastore.get('init_vals')
         except: 
@@ -75,6 +75,15 @@ class DatastoreHandler(object):
         old_vals.update(init_vals)
         yield self.datastore.insert('init_vals', old_vals)
 
+
+        for key in initial_consul_data:
+            try: 
+                old_data = yield self.datastore.get(key)
+            except: 
+                old_data = {}
+            if rewrite or not old_data:
+                yield self.datastore.insert(key, initial_consul_data[key])
+
     @tornado.gen.coroutine
     def get_init_vals(self):
         try:
@@ -82,6 +91,7 @@ class DatastoreHandler(object):
         except: 
             yield self.datastore.insert('init_vals', {})
             init_vals = {}
+
 
         raise tornado.gen.Return(init_vals)
 
