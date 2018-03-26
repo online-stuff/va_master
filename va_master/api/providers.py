@@ -244,6 +244,7 @@ def get_provider_info(handler, dash_user, get_billing = True, get_servers = True
             server['icon'] = server_panel[0]['icon']
             datastore_server = yield datastore_handler.get_object(object_type = 'server', server_name = server.get('hostname', ''))
             server.update(datastore_server)
+            server['managed_by'] = server.get('managed_by', ['unmanaged'])
 
     for info in zip(providers_info, providers): 
         info[0]['provider_name'] = info[1]['provider_name']

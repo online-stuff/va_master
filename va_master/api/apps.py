@@ -367,7 +367,7 @@ def set_settings(settings):
 @tornado.gen.coroutine
 def add_server_to_datastore(datastore_handler, server_name, ip_address = None, hostname = None, manage_type = None, user_type = None, driver_name = None, kwargs = {}):
     server = {}
-    for attr in ['ip_address', 'hostname', 'driver_name']: 
+    for attr in ['ip_address', 'hostname']: 
         server[attr] = locals()[attr]
 
     yield datastore_handler.insert_object(object_type = 'server', server_name = server_name, data = server)
@@ -402,10 +402,10 @@ def manage_server_type(datastore_handler, server_name, new_type, user_type = Non
     new_subtype = None
     if new_type in ['ssh', 'winexe']:
         new_subtype = user_type
-        server['user_type'] = user_type
+        server['%s_user_type' % new_type] = user_type
     elif new_type in ['provider']: 
         new_subtype = driver_name
-        server['driver_name'] = driver_name
+        server['drivers'] = server.get('drivers', []) + [driver_name]
     elif new_type == 'app': 
         server_data = yield handle_app(datastore_handler, server_name = server_name, role = role)
         raise tornado.gen.Return(server_data)
@@ -415,7 +415,7 @@ def manage_server_type(datastore_handler, server_name, new_type, user_type = Non
 
     type_actions = yield datastore_handler.get_object(object_type = 'managed_actions', manage_type = new_type, manage_subtype = new_subtype)
     server['type'] = 'managed'
-    server['managed_by'] = new_type
+    server['managed_by'] = server.get('managed_by', []) + [new_type]
     server['available_actions'] = server.get('avaiable_actions', []) + type_actions['actions']
     server.update(kwargs)
 
