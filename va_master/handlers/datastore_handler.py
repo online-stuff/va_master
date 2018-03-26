@@ -54,7 +54,12 @@ class DatastoreHandler(object):
     def get_object(self, object_type, **handle_data):
         object_spec = self.spec[object_type]
         object_handle = object_spec['consul_handle'].format(**handle_data)
-        result = yield self.datastore.get(object_handle)
+        try:
+            result = yield self.datastore.get(object_handle)
+        except KeyNotFound: 
+#            import traceback
+#            traceback.print_exc()
+            result = {}
         raise tornado.gen.Return(result)
 
     @tornado.gen.coroutine

@@ -397,12 +397,15 @@ def handle_app(datastore_handler, server_name, role):
 
 @tornado.gen.coroutine
 def manage_server_type(datastore_handler, server_name, new_type, user_type = None, driver_name = None, role = None, kwargs = {}):
-    print ('My role is : ', role)
+    server = yield datastore_handler.get_object(object_type = 'server', server_name = server_name)
+
     new_subtype = None
     if new_type in ['ssh', 'winexe']:
         new_subtype = user_type
+        server['user_type'] = user_type
     elif new_type in ['provider']: 
         new_subtype = driver_name
+        server['driver_name'] = driver_name
     elif new_type == 'app': 
         server_data = yield handle_app(datastore_handler, server_name = server_name, role = role)
         raise tornado.gen.Return(server_data)
@@ -410,9 +413,9 @@ def manage_server_type(datastore_handler, server_name, new_type, user_type = Non
     if not new_subtype: 
         raise Exception("Tried to change " + str(server_name) + " type to " + str(new_type) + " but could not get subtype. If managing with provider, make sure to set `driver_name`, if managing with SSH or winexe, set `user_type`")
 
-    server = yield datastore_handler.get_object(object_type = 'server', server_name = server_name)
     type_actions = yield datastore_handler.get_object(object_type = 'managed_actions', manage_type = new_type, manage_subtype = new_subtype)
-    server['type'] = new_type
+    server['type'] = 'managed'
+    server['managed_by'] = new_type
     server['available_actions'] = server.get('avaiable_actions', []) + type_actions['actions']
     server.update(kwargs)
 
