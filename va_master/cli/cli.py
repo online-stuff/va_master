@@ -110,6 +110,7 @@ def handle_configurations(fqdn = None):
             cli_environment.write_supervisor_conf()
             cli_success('Configured Supervisor.')
         except:
+            import traceback
             cli_error('Failed configuring Supervisor: ')
             traceback.print_exc()
             result = False # We failed with step #1
