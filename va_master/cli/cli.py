@@ -18,7 +18,7 @@ import cli_environment
 import unittest
 consul_conf_path = '/etc/consul.json'
 run_sync = tornado.ioloop.IOLoop.instance().run_sync
-
+folder_pwd = os.path.join(os.path.dirname(os.path.realpath(__file__)), '')
 
 def is_cli():
     # TODO: Find a way to separate a CLI entrypoint execution versus
@@ -210,7 +210,7 @@ def handle_init(args):
     cli_config = config.Config(init_vals = values)
 
     store = cli_config.datastore
-    datastore_handler = DatastoreHandler(store, '/opt/va_master/va_master/consul_kv/consul_spec.json')
+    datastore_handler = DatastoreHandler(store, folder_pwd + '../consul_kv/consul_spec.json')
 
 
     check_datastore_connection(values, store)
