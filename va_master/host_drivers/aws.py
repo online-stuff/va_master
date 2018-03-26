@@ -210,7 +210,6 @@ class AWSDriver(base.DriverBase):
     @tornado.gen.coroutine
     def get_provider_billing(self, provider):
         session = self.get_session(provider)
-        print (session)
         cw = session.client('cloudwatch')
         
         now = datetime.datetime.now()
@@ -223,7 +222,11 @@ class AWSDriver(base.DriverBase):
 
         result = cw.get_metric_statistics(Namespace = 'AWS/Billing', Dimensions = [{"Name" : "Currency", "Value" : "USD"}], MetricName = 'EstimatedCharges', StartTime = start, EndTime = end, Period = 60 * 60 * 24 * number_days, Statistics = ['Sum'])
         total_cost = result['Datapoints'][0]['Sum']
-        
+
+        #Reduce to 2 decimal places. 
+        total_cost = '{0:.2f}'.format(total_cost)
+
+
         #This looks like it should work for servers but it returns an empty list. 
 #        server_billing = cw.get_metric_statistics(Namespace = 'AWS/Billing', Dimensions = [{"Name" : "Currency", "Value" : "USD"}, {"Name" : "InstanceID", "Value" : i['InstanceId']}], MetricName = 'EstimatedCharges', StartTime = start_time, EndTime = end_time, Period = period, Statistics = statistics)
 
