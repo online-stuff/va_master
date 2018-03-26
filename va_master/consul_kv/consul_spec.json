@@ -85,7 +85,7 @@
         "**kwargs" : "Any other keyword arguments"
     },
     "server" : {
-        "consul_handle" : "server/{hostname}",
+        "consul_handle" : "server/{server_name}",
         "managed_by" : "unmanaged/ssh/provider/winexe/app",
         "provider_name" : "some_provider",
         "ip_address" : "127.0.0.1",
@@ -93,7 +93,7 @@
         "hostname" : ""
     },
     "managed_actions" : {
-        "consul_handle" : "managed_by/{manage_type}/{manage_subtype}",
+        "consul_handle" : "managed_actions/{manage_type}/{manage_subtype}",
         "actions" : []
     }
 }

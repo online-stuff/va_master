@@ -41,7 +41,6 @@ class DatastoreHandler(object):
     @tornado.gen.coroutine
     def insert_object(self, object_type, data = {}, **handle_data):
         new_object_spec = self.spec[object_type]
-
         handle_data = handle_data.get('handle_data', handle_data)
         new_object_handle = new_object_spec['consul_handle'].format(**handle_data)
 
