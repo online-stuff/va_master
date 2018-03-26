@@ -35,6 +35,8 @@ def get_paths():
             'apps/revoke_vpn_user': {'function' : revoke_openvpn_user, 'args' : ['username']},
             'apps/list_user_logins': {'function' : list_user_logins, 'args' : ['username']},
             'apps/download_vpn_cert': {'function' : download_vpn_cert, 'args' : ['username', 'handler']},
+            'servers/add_server' :  {'function' : add_server_to_datastore, 'args' : ['datastore_handler', 'server_name', 'ip_address', 'hostname', 'manage_type', 'user_type', 'driver_name']},
+            'servers/manage_server' : {'function' : manage_server_type, 'args' : ['datastore_handler', 'server_name', 'new_type', 'user_type', 'driver_name', 'role']},
         }
     }
     return paths
@@ -362,3 +364,60 @@ def set_settings(settings):
         f.write(yaml.dump(a, default_flow_style=False))
 
 
+@tornado.gen.coroutine
+def add_server_to_datastore(datastore_handler, server_name, ip_address = None, hostname = None, manage_type = None, user_type = None, driver_name = None, kwargs = {}):
+    server = {}
+    for attr in ['ip_address', 'hostname', 'driver_name']: 
+        server[attr] = locals()[attr]
+
+    yield datastore_handler.insert_object(object_type = 'server', server_name = server_name, data = server)
+
+    if manage_type: 
+        print ('Calling with ', datastore_handler, server_name, manage_type, user_type, driver_name, kwargs)
+        server = yield manage_server_type(datastore_handler, server_name, manage_type, user_type = user_type, driver_name = driver_name, kwargs = kwargs)
+
+    raise tornado.gen.Return(server)
+
+
+@tornado.gen.coroutine
+def handle_app(datastore_handler, server_name, role):
+    if not role: 
+        raise Exception('Tried to convert ' + str(server_name) + " to app, but the role argument is empty. ")
+
+    server = yield datastore_handler.get_object(object_type = 'server', server_name = server_name)
+    yield panels.new_panel(datastore_handler, server_name = server_name, role = role)
+
+    server['type'] = 'app'
+    server['available_actions'] = server.get('available_actions', []) + [] # TODO get panel actions and add here
+
+    yield datastore_handler.insert_object(object_type = 'server', data = server, server_name = server_name)
+
+    raise tornado.gen.Return(server)
+
+
+@tornado.gen.coroutine
+def manage_server_type(datastore_handler, server_name, new_type, user_type = None, driver_name = None, role = None, kwargs = {}):
+    server = yield datastore_handler.get_object(object_type = 'server', server_name = server_name)
+
+    new_subtype = None
+    if new_type in ['ssh', 'winexe']:
+        new_subtype = user_type
+        server['user_type'] = user_type
+    elif new_type in ['provider']: 
+        new_subtype = driver_name
+        server['driver_name'] = driver_name
+    elif new_type == 'app': 
+        server_data = yield handle_app(datastore_handler, server_name = server_name, role = role)
+        raise tornado.gen.Return(server_data)
+
+    if not new_subtype: 
+        raise Exception("Tried to change " + str(server_name) + " type to " + str(new_type) + " but could not get subtype. If managing with provider, make sure to set `driver_name`, if managing with SSH or winexe, set `user_type`")
+
+    type_actions = yield datastore_handler.get_object(object_type = 'managed_actions', manage_type = new_type, manage_subtype = new_subtype)
+    server['type'] = 'managed'
+    server['managed_by'] = new_type
+    server['available_actions'] = server.get('avaiable_actions', []) + type_actions['actions']
+    server.update(kwargs)
+
+    yield datastore_handler.insert_object(object_type = 'server', data = server, server_name = server_name)
+    raise tornado.gen.Return(server)

@@ -70,13 +70,9 @@ def get_user_type(handler):
 @tornado.gen.coroutine
 def is_token_valid(datastore_handler, token, user_type = 'admin'):
     valid = True
-    try:
-        user = yield datastore_handler.get_object('by_token', user_type = user_type, token = token)
-    except datastore_handler.datastore.KeyNotFound:
+    user = yield datastore_handler.get_object('by_token', user_type = user_type, token = token)
+    if not user: 
         raise tornado.gen.Return(False)
-    except Exception as e: 
-        import traceback
-        traceback.print_exc()
     valid = (user['username'] != '__invalid__')
     raise tornado.gen.Return(valid)
 

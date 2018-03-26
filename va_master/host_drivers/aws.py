@@ -223,6 +223,7 @@ class AWSDriver(base.DriverBase):
 
         result = cw.get_metric_statistics(Namespace = 'AWS/Billing', Dimensions = [{"Name" : "Currency", "Value" : "USD"}], MetricName = 'EstimatedCharges', StartTime = start, EndTime = end, Period = 60 * 60 * 24 * number_days, Statistics = ['Sum'])
         total_cost = result['Datapoints'][0]['Sum']
+
         total_cost = float("{0:.2f}".format(total_cost))
         servers = yield self.get_servers(provider)
         
