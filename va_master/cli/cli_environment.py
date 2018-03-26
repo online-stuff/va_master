@@ -20,7 +20,7 @@ DATASTORE_ATTEMPTS = 5
 # Supervisor configuration file path
 SUPERVISOR_CONF_PATH = '/etc/supervisor/conf.d/va_scheduler.conf'
 # Consul configuration file path
-CONSUL_CONF_PATH = '/etc/consul.json'
+CONSUL_CONF_PATH = '/etc/consul.d/consul.json'
 # The template of running programs for Supervisor daemon
 SUPERVISOR_TEMPLATE = '''[supervisord]
 loglevel=debug
