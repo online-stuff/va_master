@@ -176,8 +176,6 @@ class NewStateForm extends Component {
     }
 }
 
-Store = connect(function(state){
+module.exports = connect(function(state){
     return {auth: state.auth, apps: state.apps, alert: state.alert};
 })(Store);
-
-module.exports = Store;

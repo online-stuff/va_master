@@ -5,6 +5,14 @@ var Bootstrap = require('react-bootstrap');
 import { findDOMNode } from 'react-dom';
 import { Table, Tr, Td } from 'reactable';
 import { ConfirmPopup } from './shared_components';
+import { getModalHeader, getModalFooter, capitalizeFirstLetter, getFormFields } from './util';
+
+
+const SERVER_TYPES = ['unmanaged', 'ssh', 'provider', 'winexe', 'app'];
+const SSH_FIELDS = [{type: 'text', key: 'ip', size: 9, label: 'IP address'}, {type: 'text', key: 'location', size: 9, label: 'Location'}, {type: 'number', key: 'port', size: 9, label: 'SSH port'}, {type: 'text', key: 'username', size: 9, label: 'Username'}]
+const PROVIDER_FIELDS = [{type: 'text', key: 'provider_name', size: 9, label: 'Provider'}];
+const WINEXE_FIELDS = [];
+const APP_FIELDS = [{type: 'text', key: 'role', size: 9, label: 'Role'}];
 
 class Servers extends Component {
     constructor (props) {
@@ -20,13 +28,19 @@ class Servers extends Component {
             options: {sizes: [], networks: [], images: [], sec_groups: []},
             provider_usage: [{used_cpus: "", max_cpus: "", used_ram: "", max_ram: "", used_disk: "", max_disk: "", used_servers: "", max_servers: ""}],
             popupShow: false,
-            popupData: ['','','']
+            popupData: ['','',''],
+            managePopupShow: false,
+            managed_by: [],
+            selectedServer: ''
         };
         this.getData = this.getData.bind(this);
         this.btn_clicked = this.btn_clicked.bind(this);
         this.confirm_action = this.confirm_action.bind(this);
         this.popupClose = this.popupClose.bind(this);
         this.openModal = this.openModal.bind(this);
+        this.managePopupClose = this.managePopupClose.bind(this);
+        this.reloadTable = this.reloadTable.bind(this);
+        this.getActions = this.getActions.bind(this);
     }
 
     getData() {
@@ -77,10 +91,10 @@ class Servers extends Component {
 
     btn_clicked(provider, server, evtKey){
         var data = {provider_name: provider, server_name: server, action: evtKey};
-        Network.post('/api/apps/action', this.props.auth.token, data).done(function(d) {
+        Network.post('/api/apps/action', this.props.auth.token, data).done(d => {
             Network.post('/api/providers/info', this.props.auth.token, {providers: []}).done(data => {
                 this.setState({providers: data, popupShow: false});
-            }).fail(function (msg) {
+            }).fail(msg => {
                 this.props.dispatch({type: 'SHOW_ALERT', msg: msg});
             });
         }).fail(msg => {
@@ -88,9 +102,11 @@ class Servers extends Component {
         });
     }
 
-    confirm_action(provider, server, evtKey){
+    confirm_action(provider, server, managed_by, evtKey){
         if(evtKey == 'reboot' || evtKey == 'delete')
             this.setState({popupShow: true, popupData: [provider, server, evtKey]});
+        else if(evtKey == 'manage')
+            this.setState({managePopupShow: true, selectedServer: server, managed_by});
         else
             this.btn_clicked(provider, server, evtKey);
     }
@@ -101,6 +117,28 @@ class Servers extends Component {
 
     openModal () {
         this.props.dispatch({type: 'OPEN_MODAL'});
+    }
+
+    managePopupClose () {
+        this.setState({managePopupShow: false});
+    }
+
+    reloadTable () {
+        this.setState({managePopupShow: false});
+        Network.post('/api/providers/info', this.props.auth.token, {providers: []}).done(data => {
+            this.setState({servers: data});
+        });
+    }
+
+    getActions(actions) {
+        let result = [];
+        for(let key in actions){
+            result.push(<Bootstrap.MenuItem header>{key}</Bootstrap.MenuItem>);
+            actions[key].forEach(a => {
+                result.push(<Bootstrap.MenuItem eventKey={a}>{capitalizeFirstLetter(a)}</Bootstrap.MenuItem>);
+            });
+        }
+        return result;
     }
 
     render () {
@@ -118,19 +156,20 @@ class Servers extends Component {
                     }
                 }
                 var rowClass = "row-app-" + app.status;
+                let managed_by = app.managed_by.map(m => {
+                    return <span className={`tag tag-${m}`}>{m}</span>;
+                });
                 return (
                     <Tr key={app.hostname} className={rowClass}>
                         <Td column="Hostname">{app.hostname}</Td>
                         <Td column="IP">{ipaddr}</Td>
                         <Td column="Size">{app.size}</Td>
                         <Td column="Status">{app.status}</Td>
-                        <Td column="Provider">{app.provider}</Td>
+                        <Td column="Managed by"><div>{managed_by}</div></Td>
                         <Td column="Actions">
-                            <Bootstrap.DropdownButton id={'dropdown-' + app.hostname} bsStyle='primary' title="Choose" onSelect = {this.confirm_action.bind(null, app.provider, app.hostname)}>
-                                <Bootstrap.MenuItem className="danger" eventKey="reboot">Reboot</Bootstrap.MenuItem>
-                                <Bootstrap.MenuItem className="danger" eventKey="delete">Delete</Bootstrap.MenuItem>
-                                <Bootstrap.MenuItem eventKey="start">Start</Bootstrap.MenuItem>
-                                <Bootstrap.MenuItem eventKey="stop">Stop</Bootstrap.MenuItem>
+                            <Bootstrap.DropdownButton id={'dropdown-' + app.hostname} bsStyle='primary' title="Choose" onSelect = {this.confirm_action.bind(null, app.provider, app.hostname, app.managed_by)}>
+                                <Bootstrap.MenuItem eventKey="manage">Manage</Bootstrap.MenuItem>
+                                {this.getActions(app.available_actions)}
                             </Bootstrap.DropdownButton>
                         </Td>
                     </Tr>
@@ -150,8 +189,12 @@ class Servers extends Component {
         const blockStyle = {
             visibility: loaded ? "visible": "hidden"
         };
-        var sf_cols = ['Hostname', 'IP', 'Size', 'Status', 'Host'];
+        var sf_cols = ['Hostname', 'IP', 'Size', 'Status'];
         var popupData = this.state.popupData;
+
+        var ManagePopupRedux = connect(function(state){
+            return {auth: state.auth, alert: state.alert};
+        })(ManagePopup);
 
         return (
             <div className="app-containter">
@@ -160,12 +203,13 @@ class Servers extends Component {
                     <ServerFormRedux loaded={loaded} providers = {this.state.providers} states = {this.state.states} provider_name = {this.state.hostname} role = {this.state.role} defaults = {this.state.defaults} options = {this.state.options} provider_usage = {this.state.provider_usage} getData = {this.getData} onChange = {this.onChange} onChangeRole = {this.onChangeRole} />
                     <div style={blockStyle} className="card">
                         <div className="card-body">
-                            <Table className="table striped" columns={['Hostname', 'IP', 'Size', 'Status', 'Provider', 'Actions']} itemsPerPage={10} pageButtonLimit={10} noDataText="No matching records found." sortable={sf_cols} filterable={sf_cols} btnName="Create server" btnClick={this.openModal} title="Current servers" filterClassName="form-control" filterPlaceholder="Filter">
+                            <Table className="table striped" columns={['Hostname', 'IP', 'Size', 'Status', 'Managed by', 'Actions']} itemsPerPage={10} pageButtonLimit={10} noDataText="No matching records found." sortable={sf_cols} filterable={sf_cols} btnName="Create server" btnClick={this.openModal} title="Current servers" filterClassName="form-control" filterPlaceholder="Filter">
                                 {app_rows}
                             </Table>
                         </div>
                     </div>
                     <ConfirmPopup body={`Please confirm action: ${popupData[2]} server ${popupData[0]}`} show={this.state.popupShow} data={popupData} close={this.popupClose} action={this.btn_clicked} />
+                    <ManagePopupRedux isOpen={this.state.managePopupShow} close={this.managePopupClose} manage={this.manage} managed_by={this.state.managed_by} server={this.state.selectedServer} reload={this.reloadTable} />
                 </div>
             </div>
         );
@@ -719,6 +763,121 @@ const Stats = (props) => {
             <label>INSTANCES: </label>{props.provider_usage.used_servers} / {props.provider_usage.max_servers}<br/>
         </Bootstrap.Col>
     );
+}
+
+class ManagePopup extends Component {
+    constructor (props) {
+        super(props);
+        this.state = {selected: '', auth: false};
+        this.onChange = this.onChange.bind(this);
+        this.onSubmit = this.onSubmit.bind(this);
+        this.toggleAuth = this.toggleAuth.bind(this);
+    }
+
+    onChange(e) {
+        this.setState({selected: e.target.value});
+    }
+
+	toggleAuth (e) {
+		this.setState({auth: e.target.checked});
+	}
+
+    onSubmit() {
+        let selected = this.state.selected;
+        let data = {new_type: selected, server_name: this.props.server};
+        let fields = [];
+        switch(selected){
+            case 'ssh':
+                if(this.state.auth){
+                    fields = SSH_FIELDS;
+                }else{
+                    fields = SSH_FIELDS.concat([{key: 'password'}]);
+                }
+                break;
+            case 'winexe':
+                fields = WINEXE_FIELDS;
+                break;
+            case 'provider':
+                fields = PROVIDER_FIELDS;
+                break;
+            case 'app':
+                fields = APP_FIELDS;
+                break;
+        }
+		for(var i=0; i<fields.length; i++){
+			let field = fields[i].key;
+			data[field] = findDOMNode(this.refs[field]).value;
+		}
+        Network.post('/api/servers/manage_server', this.props.auth.token, data).done(data => {
+			this.props.reload();
+        }).fail(msg => {
+			this.props.dispatch({type: 'SHOW_ALERT', msg: msg});
+		});
+    }
+
+    render(){
+        let filtered = SERVER_TYPES.filter(s => {
+            return this.props.managed_by.indexOf(s) > -1 ? false : true;
+        });
+        let extraFields = "";
+        switch(this.state.selected){
+            case 'ssh':
+                extraFields = getFormFields(SSH_FIELDS);
+                extraFields.push(
+                    <Bootstrap.FormGroup>
+                        <div className="col-sm-offset-3 col-sm-9">
+                            <div className="checkbox">
+                                <label>
+                                    <input type="checkbox" onChange={this.toggleAuth} />
+                                    Use SSH Key Auth?
+                                </label>
+                            </div>
+                        </div>
+                    </Bootstrap.FormGroup>
+                );
+                if(!this.state.auth){
+                    extraFields.push(
+                        <Bootstrap.FormGroup>
+                            <Bootstrap.Col componentClass={Bootstrap.ControlLabel} sm={3}>
+                                Password
+                            </Bootstrap.Col>
+                            <Bootstrap.Col sm={9}>
+                                <Bootstrap.FormControl type="password" ref='password' />
+                            </Bootstrap.Col>
+                        </Bootstrap.FormGroup>
+                    );
+                }
+                break;
+            case 'winexe':
+                extraFields = getFormFields(WINEXE_FIELDS);
+                break;
+            case 'provider':
+                extraFields = getFormFields(PROVIDER_FIELDS);
+                break;
+            case 'app':
+                extraFields = getFormFields(APP_FIELDS);
+                break;
+        }
+        return (
+            <Bootstrap.Modal show={this.props.isOpen} onHide={this.props.close}>
+                { getModalHeader('Manage') }
+                <Bootstrap.Modal.Body>
+                    <form className="form-horizontal" style={{width: '90%'}}>
+                        <div className="form-group">
+                            <label className="col-sm-3 control-label">Manage by</label>
+                            <div className="col-sm-9">
+                                <select className="form-control" onChange={this.onChange}>
+                                    {filtered.map(f => <option value={f}>{f}</option>)}
+                                </select>
+                            </div>
+                        </div>
+                        {extraFields}
+                    </form>
+                </Bootstrap.Modal.Body>
+                { getModalFooter([{ label: 'Cancel', onClick: this.props.close }, { label: 'Manage', onClick: this.onSubmit, bsStyle: 'primary' }]) }
+            </Bootstrap.Modal>
+        );
+    }
 }
 
 module.exports = connect(function(state){

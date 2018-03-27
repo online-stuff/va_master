@@ -908,3 +908,35 @@ label {
 .sumRow {
     background-color: #eee;
 }
+
+.tag {
+    padding: 5px;
+    color: white;
+    border-radius: 4px;
+    margin-left: 5px;
+    font-size: 12px;
+}
+
+.tag:first-of-type {
+    margin-left: 0px;
+}
+
+.tag-provider {
+    background: #006eab;
+}
+
+.tag-ssh {
+    background: #009688;
+}
+
+.tag-unmanaged {
+    background: #666060;
+}
+
+.tag-winexe {
+    background: #376273;
+}
+
+.tag-app {
+    background: #B3E5FC;
+}

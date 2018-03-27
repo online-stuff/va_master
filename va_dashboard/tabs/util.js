@@ -1,6 +1,6 @@
 import React, { Component } from 'react';
 import { Table, Tr, Td } from 'reactable';
-import { Button, DropdownButton, MenuItem, Modal } from 'react-bootstrap';
+import { Button, DropdownButton, MenuItem, Modal, FormGroup } from 'react-bootstrap';
 import { connect } from 'react-redux';
 var Network = require('../network');
 
@@ -158,6 +158,23 @@ function getSpinner(spinnerStyle){
     return <span className="spinner" style={spinnerStyle} ><i className="fa fa-spinner fa-spin fa-3x" aria-hidden="true"></i></span>;
 }
 
+function capitalizeFirstLetter(text){
+    return text[0].toUpperCase() + text.substr(1);
+}
+
+function getFormFields(fields){
+    return fields.map(f => {
+        return (
+            <FormGroup>
+                <label className={`col-sm-${12-f.size} control-label`}>{f.label}</label>
+                <div className={`col-sm-${f.size}`}>
+                    <input type={f.type} className="form-control" ref={f.key} />
+                </div>
+            </FormGroup>
+        );
+    });
+}
+
 module.exports = {
     isEmpty,
     getRandomColor,
@@ -176,5 +193,7 @@ module.exports = {
     getReduxComponent,
     callPanelAction,
     download,
-    getSpinner
+    getSpinner,
+    capitalizeFirstLetter,
+    getFormFields
 }
