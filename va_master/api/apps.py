@@ -306,6 +306,8 @@ def launch_app(handler):
         import traceback
         traceback.print_exc()
 
+    yield add_server_to_datastore(handler.datastore_handler, server_name = data['server_name'], hostname = data['server_name'], manage_type = 'provider', driver_name = provider['driver_name'])
+
     if data.get('role', True):
 
         minion_info = None
@@ -322,6 +324,8 @@ def launch_app(handler):
 
         if not minion_info: 
             raise tornado.gen.Return({"success" : False, "message" : "No minion_info, something probably went wrong with trying to start the instance. ", "data" : None})
+        else: 
+            yield manage_server_type(handler.datastore_handler, server_name = data['server_name'], new_type = 'app', role = data['role'])
 
     raise tornado.gen.Return(result)
 
