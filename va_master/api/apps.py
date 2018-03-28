@@ -11,7 +11,8 @@ import salt_manage_pillar
 from salt.client import Caller, LocalClient
 
 import panels, services, providers
-from paramiko import SSHClient, AutoAddPolicy
+from va_master.handlers.ssh_handler import handle_ssh_action
+
 
 def get_paths():
     paths = {
@@ -31,7 +32,7 @@ def get_paths():
             'state/add' : {'function' : create_new_state,'args' : ['file', 'body', 'filename']},
             'apps/new/validate_fields' : {'function' : validate_app_fields, 'args' : ['handler']},
             'apps' : {'function' : launch_app, 'args' : ['handler']},
-            'apps/action' : {'function' : perform_server_action, 'args' : ['handler', 'provider_name', 'action', 'server_name']},
+            'apps/action' : {'function' : perform_server_action, 'args' : ['handler', 'provider_name', 'action', 'server_name', 'action_type', 'kwargs']},
             'apps/add_vpn_user': {'function' : add_openvpn_user, 'args' : ['username']},
             'apps/revoke_vpn_user': {'function' : revoke_openvpn_user, 'args' : ['username']},
             'apps/list_user_logins': {'function' : list_user_logins, 'args' : ['username']},
@@ -155,10 +156,23 @@ def download_vpn_cert(username, handler):
     handler.serve_file(vpn_cert_path)
     raise tornado.gen.Return({'data_type' : 'file'})
 
-
 @tornado.gen.coroutine
-def perform_server_action(handler, provider_name, action, server_name): 
+def perform_server_action(handler, action, server_name, provider_name = '', action_type = 'provider', kwargs = {}): 
     """Calls required action on the server through the driver. """
+
+    server = yield handler.datastore_handler.get_object('server', server_name = server_name)
+
+    result = None
+    if action_type == 'ssh' : 
+        result = yield handle_ssh_action(action = action, ip_addr = server['ip_address'], port = server.get('port'), username = server.get('username'), password = server.get('password'))
+    elif action_type == 'app' : 
+        result = yield handle_app_action(action = action, server_name = server_name)
+    else: 
+        if not provider_name: 
+            raise Exception('Called action ' + str(action) + ' on ' + str(server_name) + ' with action type ' + str(action_type) + ' and provider name ' + str(provider_name) + '. Expected action type to be ssh, app or provider. If type is provider, then provider_name cannot be empty. ')
+
+    if result:
+        raise tornado.gen.Return(result)
 
     provider, driver = yield providers.get_provider_and_driver(handler, provider_name) 
     success = yield driver.server_action(provider, server_name, action)
