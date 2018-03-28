@@ -254,7 +254,7 @@ def get_provider_info(handler, dash_user, get_billing = True, get_servers = True
                 datastore_server = yield apps.manage_server_type(datastore_handler, server_name = server.get('hostname'), new_type = 'provider', driver_name = provider_kv['driver_name'])
             server.update(datastore_server)
             server['managed_by'] = server.get('managed_by', ['unmanaged'])
-            server['available_actions'] = server.get('available_actions', [])
+            server['available_actions'] = server.get('available_actions', {})
 
     providers_info = [x for x in providers_info if x['provider_name']]
 

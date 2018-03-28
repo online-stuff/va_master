@@ -145,13 +145,14 @@ class AWSDriver(base.DriverBase):
         rs = session.resource('ec2')
         pricing = session.client('pricing')
 
-        instances = client.describe_instances()
-        instances = instances['Reservations']
-
-        if instances: 
-            instances = instances[0]['Instances']
-        else: 
+        reservations = client.describe_instances()
+        reservations = reservations['Reservations']
+        if not reservations:
             raise tornado.gen.Return([])
+
+        print ('Reservations are : ', reservations)
+        instances = reservations[0].get('Instances', [])
+
 
         instance_hdd = lambda instance: sum([rs.Volume(i['Ebs']['VolumeId']).size for i in instance['BlockDeviceMappings']])
 #        instance_hdd = lambda instance: instance['BLockDeviceMappings']
@@ -175,7 +176,7 @@ class AWSDriver(base.DriverBase):
 
         servers = [{
                     'hostname' : i['PublicDnsName'],
-                    'ip' : i['PublicIpAddress'],
+                    'ip' : i.get('PublicIpAddress', ''),
                     'size' : '',
                     'used_disk' : instance_hdd(i),
                     'used_ram' : p['memory'],

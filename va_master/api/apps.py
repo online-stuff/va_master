@@ -11,6 +11,7 @@ import salt_manage_pillar
 from salt.client import Caller, LocalClient
 
 import panels, services, providers
+from paramiko import SSHClient, AutoAddPolicy
 
 def get_paths():
     paths = {
@@ -36,7 +37,7 @@ def get_paths():
             'apps/list_user_logins': {'function' : list_user_logins, 'args' : ['username']},
             'apps/download_vpn_cert': {'function' : download_vpn_cert, 'args' : ['username', 'handler']},
             'servers/add_server' :  {'function' : add_server_to_datastore, 'args' : ['datastore_handler', 'server_name', 'ip_address', 'hostname', 'manage_type', 'user_type', 'driver_name']},
-            'servers/manage_server' : {'function' : manage_server_type, 'args' : ['datastore_handler', 'server_name', 'new_type', 'user_type', 'driver_name', 'role']},
+            'servers/manage_server' : {'function' : manage_server_type, 'args' : ['datastore_handler', 'server_name', 'new_type', 'username', 'driver_name', 'role']},
         }
     }
     return paths
@@ -369,16 +370,18 @@ def set_settings(settings):
 
 
 @tornado.gen.coroutine
-def add_server_to_datastore(datastore_handler, server_name, ip_address = None, hostname = None, manage_type = None, user_type = None, driver_name = None, kwargs = {}):
+def add_server_to_datastore(datastore_handler, server_name, ip_address = None, hostname = None, manage_type = None, username = None, driver_name = None, kwargs = {}):
     server = {}
     for attr in ['ip_address', 'hostname']: 
         server[attr] = locals()[attr]
 
+    server['available_actions'] = {}
+
     yield datastore_handler.insert_object(object_type = 'server', server_name = server_name, data = server)
 
     if manage_type: 
-        print ('Calling with ', datastore_handler, server_name, manage_type, user_type, driver_name, kwargs)
-        server = yield manage_server_type(datastore_handler, server_name, manage_type, user_type = user_type, driver_name = driver_name, kwargs = kwargs)
+        print ('Calling with ', datastore_handler, server_name, manage_type, username, driver_name, kwargs)
+        server = yield manage_server_type(datastore_handler, server_name, manage_type, username = username, driver_name = driver_name, kwargs = kwargs)
 
     raise tornado.gen.Return(server)
 
@@ -392,6 +395,7 @@ def handle_app(datastore_handler, server_name, role):
     yield panels.new_panel(datastore_handler, server_name = server_name, role = role)
 
     server['type'] = 'app'
+    server['managed_by'] = list(set(server.get('managed_by', []) + ['app']))
     server['available_actions'] = server.get('available_actions', []) + [] # TODO get panel actions and add here
 
     yield datastore_handler.insert_object(object_type = 'server', data = server, server_name = server_name)
@@ -399,8 +403,30 @@ def handle_app(datastore_handler, server_name, role):
     raise tornado.gen.Return(server)
 
 
+def test_ssh(username, ip_address, password = None, port = None):
+    cl = SSHClient()
+    cl.load_system_host_keys()
+    cl.set_missing_host_key_policy(AutoAddPolicy())
+    connect_kwargs = {
+        'username' : username, 
+    }
+    key_path = "TODO"
+
+    if data.get('port'): 
+        connect_kwargs['port'] = int(port)
+
+    if data.get('password'): 
+        connect_kwargs['password'] = password
+    else: 
+        connect_kwargs['key_filename'] = key_path + '.pem'
+
+    print ('Attempting connect with : ', connect_kwargs)
+    cl.connect(data.get('ip'), **connect_kwargs)
+
+
 @tornado.gen.coroutine
-def manage_server_type(datastore_handler, server_name, new_type, user_type = None, driver_name = None, role = None, kwargs = {}):
+def manage_server_type(datastore_handler, server_name, new_type, username = None, driver_name = None, role = None, kwargs = {}):
+    user_type = 'root' if username == 'root' else 'user'
     server = yield datastore_handler.get_object(object_type = 'server', server_name = server_name)
 
     new_subtype = None
@@ -419,8 +445,9 @@ def manage_server_type(datastore_handler, server_name, new_type, user_type = Non
 
     type_actions = yield datastore_handler.get_object(object_type = 'managed_actions', manage_type = new_type, manage_subtype = new_subtype)
     server['type'] = 'managed'
-    server['managed_by'] = server.get('managed_by', []) + [new_type]
-    server['available_actions'] = server.get('avaiable_actions', []) + type_actions['actions']
+    server['managed_by'] = list(set(server.get('managed_by', []) + [new_type]))
+    server['available_actions'] = server.get('available_actions', {})
+    server['available_actions'][new_type] = type_actions['actions']
     server.update(kwargs)
 
     yield datastore_handler.insert_object(object_type = 'server', data = server, server_name = server_name)
