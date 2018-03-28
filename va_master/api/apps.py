@@ -38,7 +38,7 @@ def get_paths():
             'apps/list_user_logins': {'function' : list_user_logins, 'args' : ['username']},
             'apps/download_vpn_cert': {'function' : download_vpn_cert, 'args' : ['username', 'handler']},
             'servers/add_server' :  {'function' : add_server_to_datastore, 'args' : ['datastore_handler', 'server_name', 'ip_address', 'hostname', 'manage_type', 'user_type', 'driver_name']},
-            'servers/manage_server' : {'function' : manage_server_type, 'args' : ['datastore_handler', 'server_name', 'new_type', 'username', 'driver_name', 'role']},
+            'servers/manage_server' : {'function' : manage_server_type, 'args' : ['datastore_handler', 'server_name', 'new_type', 'username', 'driver_name', 'role', 'ip_address']},
         }
     }
     return paths
@@ -439,7 +439,7 @@ def test_ssh(username, ip_address, password = None, port = None):
 
 
 @tornado.gen.coroutine
-def manage_server_type(datastore_handler, server_name, new_type, username = None, driver_name = None, role = None, kwargs = {}):
+def manage_server_type(datastore_handler, server_name, new_type, ip_address = None, username = None, driver_name = None, role = None, kwargs = {}):
     user_type = 'root' if username == 'root' else 'user'
     server = yield datastore_handler.get_object(object_type = 'server', server_name = server_name)
 
@@ -447,6 +447,7 @@ def manage_server_type(datastore_handler, server_name, new_type, username = None
     if new_type in ['ssh', 'winexe']:
         new_subtype = user_type
         server['%s_user_type' % new_type] = user_type
+        server['ip_address'] = ip_address
     elif new_type in ['provider']: 
         new_subtype = driver_name
         server['drivers'] = server.get('drivers', []) + [driver_name]
@@ -455,7 +456,7 @@ def manage_server_type(datastore_handler, server_name, new_type, username = None
         raise tornado.gen.Return(server_data)
 
     if not new_subtype: 
-        raise Exception("Tried to change " + str(server_name) + " type to " + str(new_type) + " but could not get subtype. If managing with provider, make sure to set `driver_name`, if managing with SSH or winexe, set `user_type`")
+        raise Exception("Tried to change " + str(server_name) + " type to " + str(new_type) + " but could not get subtype. If managing with provider, make sure to set `driver_name`, if managing with SSH or winexe, set `ip_address` and `username`. ")
 
     type_actions = yield datastore_handler.get_object(object_type = 'managed_actions', manage_type = new_type, manage_subtype = new_subtype)
     server['type'] = 'managed'

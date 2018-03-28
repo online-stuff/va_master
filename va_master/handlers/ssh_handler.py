@@ -19,27 +19,29 @@ def get_ssh_result(cmd):
 def get_forms():
     forms = {
         'restart_service' : {
-            'name' : 'restart_process', 
-            'submit_action' : 'restart_process',
-            'label' : 'Restart process', 
+            'name' : 'restart_service', 
+            'submit_action' : 'restart_service',
+            'label' : 'Restart service', 
+            'type' : 'modal',
             'data' : [
-                get_processes,
-                'text_input', 
-                'button',
+                {'type' : 'text', 'key' : 'service_list', 'label' : 'Service list', 'data' : get_processes},
+                {'type' : 'text', 'key' : 'service_name', 'label' : 'Service name'},
             ]
         }, 
         'show_processes' : {
             'name' : 'show_processes', 
             'label' : 'Show processes', 
+            'type' : 'modal',
             'data' : [
-                get_processes,
+                {'type' : 'text', 'key' : 'process_list', 'label' : 'Process list', 'data' : get_processes},
             ]
         },
         'show_services' : {
             'name' : 'show_services', 
             'label' : 'Show services', 
+            'type' : 'modal',
             'data' : [
-                get_services, 
+                {'type' : 'text', 'key' : 'service_list', 'label' : 'Service list', 'data' : get_services}, 
             ]
         },
 
@@ -52,10 +54,12 @@ def get_form(action):
     form = yield get_forms()
     form = form[action]
     for i in range(len(form['data'])): 
-        if callable(type(form['data'][i])): 
-            list_func = form['data'][i]
-            print ('Func is : ', list_func)
-            form['data'][i] = yield list_func()
+        if callable(form['data'][i]['data']):
+            list_func = form['data'][i]['data']
+            print ('Func is : ', list_func) 
+            result = yield list_func()
+            result = '</br>'.join(result)
+            form['data'][i]['data'] = result
             print ('Data now is : ', form['data'])
 
     raise tornado.gen.Return(form)
