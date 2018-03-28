@@ -15,6 +15,7 @@ class Log extends Component {
         super(props);
         this.state = {
             logs: [],
+            newLogs: 0,
             value: "",
             checked: Object.assign([], SEV),
             status: 1,
@@ -38,25 +39,26 @@ class Log extends Component {
         }
         var protocol =  window.location.protocol === "https:" ? "wss" : "ws";
         this.ws = new WebSocket(`${protocol}://${host}/log`);
-        var me = this;
-        this.ws.onmessage = function (evt) {
+        this.ws.onmessage = evt => {
             var data = JSON.parse(evt.data);
             var logs = [], hosts = [];
             if(data.type === "update"){
-                let log = data.message, host = log.host; 
-                hosts = me.state.hosts;
-                logs = me.state.logs.concat([log]);
+                let newLog = data.message, host = newLog.host; 
+                hosts = this.state.hosts;
+                logs = this.state.logs.concat([newLog]);
                 let h = hosts.map((host) => host.value);
-                if(!host in h)
+                if(h.indexOf(host) === -1)
                     hosts.push({value: host, label: host});
+                this.setState({logs, hosts, selected_hosts: hosts, newLogs: this.state.newLogs+1});
             }
-            else if(data.type === "init")
+            else if(data.type === "init"){
                 logs = data.logs, hosts = data.hosts;
-            me.setState({logs: logs, hosts: hosts, selected_hosts: hosts});
+                this.setState({logs, hosts, selected_hosts: hosts});
+            }
         };
-        this.ws.onerror = function(evt){
-            me.ws.close();
-            me.props.dispatch({type: 'SHOW_ALERT', msg: "Socket error."});
+        this.ws.onerror = evt => {
+            this.ws.close();
+            this.props.dispatch({type: 'SHOW_ALERT', msg: "Socket error."});
         };
     }
     componentDidMount() {
@@ -102,26 +104,27 @@ class Log extends Component {
         var hosts = this.state.selected_hosts.map(function(h){
             return h.value;
         });
-        var logs = this.state.logs.filter(function(l){
+        var logs = this.state.logs.filter(l => {
             if(SEV.indexOf(l.severity) > -1)
                 counters[l.severity]++;
             if(this.state.checked.indexOf(l.severity) > -1 && hosts.indexOf(l.host) > -1)
                 return true;
             return false;
-        }, this);
+        });
+        logs.reverse();
         var status = this.state.status;
         return (
             <div id="log-page">
                 <div>
                     <Bootstrap.Button onClick={this.changeStatus} value={status} style={{marginRight: '20px', textTransform: 'capitalize'}}>{this.state.statuses[status]} Live</Bootstrap.Button>
                     <DateRange updateLogs={this.updateLogs} state={status} />
-                    <Select name="hosts" options={this.state.hosts} multi={true} placeholder="Filter hosts" value={this.state.selected_hosts} onChange={this.onChangeHost} style={{marginLeft: '20px', width: '300px'}} />
+                    <Select name="hosts" options={this.state.hosts} multi={true} placeholder="Filter hosts" value={this.state.selected_hosts} onChange={this.onChangeHost} style={{marginLeft: '20px', width: '500px'}} />
                 </div>
                 <div id='filter-log'>
                     <FilterBtns changeTable={this.changeTable} counters={counters} />
                     <input type='text' placeholder='Filter' value={this.state.value} onChange={this.filter} className='form-control'/>
                 </div>
-                <LogTable logs={logs} filterBy={this.state.value} />
+                <LogTable logs={logs} filterBy={this.state.value} newLogsNum={this.state.newLogs} />
             </div>
 	);
     }
@@ -217,6 +220,8 @@ class LogTable extends Component {
     render() {
         var logs = this.props.logs.map(function(log, index) {
             var msg = log.message, className = "row-log-" + log.severity;
+            if(index < this.props.newLogsNum)
+                className += ' new-log';
             /*try{
                 var log_json = JSON.parse(msg);
                 msg = msg.function;

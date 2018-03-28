@@ -587,7 +587,7 @@ h4 {
 }
 
 #log-page>div:first-child {
-    width: 70%;
+    width: 100%;
     display: flex;
     align-items: center;
 }
@@ -930,7 +930,7 @@ label {
 }
 
 .tag-unmanaged {
-    background: #666060;
+    background: #8c8c8c;
 }
 
 .tag-winexe {
@@ -938,5 +938,9 @@ label {
 }
 
 .tag-app {
-    background: #B3E5FC;
+    background: #1597df;
+}
+
+.new-log {
+    background: rgba(255, 252, 69, 0.53);
 }

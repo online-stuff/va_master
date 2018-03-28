@@ -165,6 +165,7 @@ class Servers extends Component {
                         <Td column="IP">{ipaddr}</Td>
                         <Td column="Size">{app.size}</Td>
                         <Td column="Status">{app.status}</Td>
+                        <Td column="Provider">{app.provider}</Td>
                         <Td column="Managed by"><div>{managed_by}</div></Td>
                         <Td column="Actions">
                             <Bootstrap.DropdownButton id={'dropdown-' + app.hostname} bsStyle='primary' title="Choose" onSelect = {this.confirm_action.bind(null, app.provider, app.hostname, app.managed_by)}>
@@ -203,7 +204,7 @@ class Servers extends Component {
                     <ServerFormRedux loaded={loaded} providers = {this.state.providers} states = {this.state.states} provider_name = {this.state.hostname} role = {this.state.role} defaults = {this.state.defaults} options = {this.state.options} provider_usage = {this.state.provider_usage} getData = {this.getData} onChange = {this.onChange} onChangeRole = {this.onChangeRole} />
                     <div style={blockStyle} className="card">
                         <div className="card-body">
-                            <Table className="table striped" columns={['Hostname', 'IP', 'Size', 'Status', 'Managed by', 'Actions']} itemsPerPage={10} pageButtonLimit={10} noDataText="No matching records found." sortable={sf_cols} filterable={sf_cols} btnName="Create server" btnClick={this.openModal} title="Current servers" filterClassName="form-control" filterPlaceholder="Filter">
+                            <Table className="table striped" columns={['Hostname', 'IP', 'Size', 'Status', 'Provider', 'Managed by', 'Actions']} itemsPerPage={10} pageButtonLimit={10} noDataText="No matching records found." sortable={sf_cols} filterable={sf_cols} btnName="Create server" btnClick={this.openModal} title="Current servers" filterClassName="form-control" filterPlaceholder="Filter">
                                 {app_rows}
                             </Table>
                         </div>
