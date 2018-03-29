@@ -15,32 +15,36 @@ def get_ssh_result(cmd):
         raise Exception('Error performing SSH command. Command is: ' + cmd + '. Error is : ' + result[2].read())
     return result[1].read()
 
+
+#Forms are made to work well with the front-end, where we have to define the type of result we return, as well as a list of elements that will be shown on the form. 
+#Typically, functions starting with show_* are functions that will return some sort of a form. Anything else is a more generic function that returns lists or simpler JSON. 
 @tornado.gen.coroutine
 def get_forms():
     forms = {
-        'restart_service' : {
-            'name' : 'restart_service', 
-            'submit_action' : 'restart_service',
-            'label' : 'Restart service', 
-            'type' : 'modal',
-            'data' : [
-                {'type' : 'text', 'key' : 'service_list', 'label' : 'Service list', 'data' : get_processes},
-                {'type' : 'text', 'key' : 'service_name', 'label' : 'Service name'},
-            ]
-        }, 
+        'restart_service' : [
+            get_processes,
+            {
+                'submit_action' : 'restart_service',
+                'elements' : [
+                    {'type' : 'text', 'key' : 'service_name', 'label' : 'Service name'},
+                ],
+                'type' : 'form', 
+                'label' : 'Restart service',
+            }
+        ], 
         'show_processes' : {
             'name' : 'show_processes', 
             'label' : 'Show processes', 
-            'type' : 'modal',
-            'data' : [
+            'type' : 'form',
+            'elements' : [
                 {'type' : 'text', 'key' : 'process_list', 'label' : 'Process list', 'data' : get_processes},
             ]
         },
         'show_services' : {
             'name' : 'show_services', 
             'label' : 'Show services', 
-            'type' : 'modal',
-            'data' : [
+            'type' : 'form',
+            'elements' : [
                 {'type' : 'text', 'key' : 'service_list', 'label' : 'Service list', 'data' : get_services}, 
             ]
         },
@@ -53,14 +57,12 @@ def get_forms():
 def get_form(action):
     form = yield get_forms()
     form = form[action]
-    for i in range(len(form['data'])): 
-        if callable(form['data'][i]['data']):
-            list_func = form['data'][i]['data']
-            print ('Func is : ', list_func) 
+    for i in range(len(form)): 
+        if callable(form[i]):
+            list_func = form[i]
             result = yield list_func()
             result = '</br>'.join(result)
-            form['data'][i]['data'] = result
-            print ('Data now is : ', form['data'])
+            form[i] = {'data' : result}
 
     raise tornado.gen.Return(form)
 
@@ -93,9 +95,9 @@ def get_services():
     raise tornado.gen.Return(result)
 
 @tornado.gen.coroutine
-def restart_process(service_name):
-    if not process_id: 
-        result = yield get_form('restart_process')
+def restart_service(service_name = None):
+    if not service_name: 
+        result = yield get_form('restart_service')
     else: 
         cmd = 'service %s restart' % (service_name)
         result = get_ssh_result(cmd)
