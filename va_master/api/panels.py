@@ -228,7 +228,7 @@ def get_panel_for_user(handler, panel, server_name, dash_user, args = [], provid
 
 @tornado.gen.coroutine
 def export_table(handler, panel, server_name, dash_user, export_type = 'pdf', table_file = '/tmp/table', args = [], provider = None, kwargs = {}, filter_field = ''):
-    table_func = 'va_pdf_utils.get_%s' % export_type
+    table_func = 'va_utils.get_%s' % export_type
     table_file = table_file + '.' + export_type
     if not args: 
         args = list(args)

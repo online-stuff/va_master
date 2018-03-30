@@ -20,6 +20,22 @@ const ConfirmPopup = (props) => {
     );
 }
 
+const TextPopup = (props) => {
+    let { show, body, title } = props.data;
+    return (
+        <Bootstrap.Modal show={show} onHide={props.close}>
+            <Bootstrap.Modal.Header closeButton>
+                <Bootstrap.Modal.Title>{title}</Bootstrap.Modal.Title>
+            </Bootstrap.Modal.Header>
+
+            <Bootstrap.Modal.Body bsClass='modal-body scrollable'>
+                <p dangerouslySetInnerHTML={{__html: body}}></p>
+            </Bootstrap.Modal.Body>
+
+        </Bootstrap.Modal>
+    );
+}
+
 class PivotTable extends Component{
     constructor(props){
         super(props);
@@ -146,5 +162,6 @@ class PivotTable extends Component{
 
 module.exports = {
     ConfirmPopup,
-    PivotTable
+    PivotTable,
+	TextPopup
 };

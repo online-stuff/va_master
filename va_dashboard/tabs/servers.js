@@ -4,8 +4,8 @@ var Network = require('../network');
 var Bootstrap = require('react-bootstrap');
 import { findDOMNode } from 'react-dom';
 import { Table, Tr, Td } from 'reactable';
-import { ConfirmPopup } from './shared_components';
-import { getModalHeader, getModalFooter, capitalizeFirstLetter, getFormFields } from './util';
+import { ConfirmPopup, TextPopup } from './shared_components';
+import { getModalHeader, getModalFooter, getFormFields } from './util';
 
 
 const SERVER_TYPES = ['unmanaged', 'ssh', 'provider', 'winexe', 'app'];
@@ -29,18 +29,29 @@ class Servers extends Component {
             provider_usage: [{used_cpus: "", max_cpus: "", used_ram: "", max_ram: "", used_disk: "", max_disk: "", used_servers: "", max_servers: ""}],
             popupShow: false,
             popupData: ['','',''],
-            managePopupShow: false,
             managed_by: [],
-            selectedServer: ''
+            selectedServer: '',
+            dynamicPopup:{
+                isOpen: false,
+                fields: {},
+                type: '',
+                title: '',
+            },
+            txtPopup: {
+                show: false,
+                body: '',
+                title: ''
+            }
         };
         this.getData = this.getData.bind(this);
-        this.btn_clicked = this.btn_clicked.bind(this);
-        this.confirm_action = this.confirm_action.bind(this);
+        this.proceedAction = this.proceedAction.bind(this);
+        this.doAction = this.doAction.bind(this);
         this.popupClose = this.popupClose.bind(this);
         this.openModal = this.openModal.bind(this);
-        this.managePopupClose = this.managePopupClose.bind(this);
+        this.dynamicPopupClose = this.dynamicPopupClose.bind(this);
         this.reloadTable = this.reloadTable.bind(this);
         this.getActions = this.getActions.bind(this);
+		this.txtPopupClose = this.txtPopupClose.bind(this);
     }
 
     getData() {
@@ -89,7 +100,7 @@ class Servers extends Component {
         this.props.dispatch({type: 'RESET_APP'});
     }
 
-    btn_clicked(provider, server, evtKey){
+    proceedAction(provider, server, evtKey){
         var data = {provider_name: provider, server_name: server, action: evtKey};
         Network.post('/api/apps/action', this.props.auth.token, data).done(d => {
             Network.post('/api/providers/info', this.props.auth.token, {providers: []}).done(data => {
@@ -102,29 +113,49 @@ class Servers extends Component {
         });
     }
 
-    confirm_action(provider, server, managed_by, evtKey){
-        if(evtKey == 'reboot' || evtKey == 'delete')
-            this.setState({popupShow: true, popupData: [provider, server, evtKey]});
-        else if(evtKey == 'manage')
-            this.setState({managePopupShow: true, selectedServer: server, managed_by});
-        else
-            this.btn_clicked(provider, server, evtKey);
+    doAction(provider, server, managed_by, evtKey){
+        if(evtKey == 'manage')
+            this.setState({dynamicPopup: {isOpen: true, type: 'manage', fields: {}, title: 'Manage'}, selectedServer: server, managed_by});
+        else {
+            let arr = evtKey.split(':');
+            if(arr[0] === 'confirm')
+                this.setState({popupShow: true, popupData: [provider, server, arr[1]]});
+            else if(arr[0] === 'form'){
+                Network.post('/api/apps/action', this.props.auth.token, {provider_name: provider, server_name: server, action: arr[1]}).done(d => {
+                    this.setState({dynamicPopup: {isOpen: true, fields: d, type: 'action', title: arr[2]}, selectedServer: server});
+                }).fail(msg => {
+                    this.props.dispatch({type: 'SHOW_ALERT', msg: msg});
+                });
+            }else if(arr[0] === 'text'){
+                Network.post('/api/apps/action', this.props.auth.token, {provider_name: provider, server_name: server, action: arr[1]}).done(d => {
+                    this.setState({txtPopup: {show: true, body: d, title: arr[2]}});
+                }).fail(msg => {
+                    this.props.dispatch({type: 'SHOW_ALERT', msg: msg});
+                });
+            }
+            else
+                this.proceedAction(provider, server, arr[1]);
+        }
     }
 
     popupClose() {
         this.setState({popupShow: false});
     }
 
+    txtPopupClose() {
+        this.setState({txtPopup: {show: false, title: '', body: ''}});
+    }
+
     openModal () {
         this.props.dispatch({type: 'OPEN_MODAL'});
     }
 
-    managePopupClose () {
-        this.setState({managePopupShow: false});
+    dynamicPopupClose () {
+        this.setState({dynamicPopup: {isOpen: false, title: '', fields: {}, type: ''}});
     }
 
     reloadTable () {
-        this.setState({managePopupShow: false});
+        this.setState({dynamicPopup: {isOpen: false, title: '', fields: {}, type: ''}});
         Network.post('/api/providers/info', this.props.auth.token, {providers: []}).done(data => {
             this.setState({servers: data});
         });
@@ -133,9 +164,9 @@ class Servers extends Component {
     getActions(actions) {
         let result = [];
         for(let key in actions){
-            result.push(<Bootstrap.MenuItem header>{key}</Bootstrap.MenuItem>);
+            result.push(<Bootstrap.MenuItem header key={key}>{key}</Bootstrap.MenuItem>);
             actions[key].forEach(a => {
-                result.push(<Bootstrap.MenuItem eventKey={a}>{capitalizeFirstLetter(a)}</Bootstrap.MenuItem>);
+                result.push(<Bootstrap.MenuItem eventKey={`${a.type}:${key}/${a.name}:${a.label}`} key={`${key}/${a.name}`}>{a.name}</Bootstrap.MenuItem>);
             });
         }
         return result;
@@ -168,7 +199,7 @@ class Servers extends Component {
                         <Td column="Provider">{app.provider}</Td>
                         <Td column="Managed by"><div>{managed_by}</div></Td>
                         <Td column="Actions">
-                            <Bootstrap.DropdownButton id={'dropdown-' + app.hostname} bsStyle='primary' title="Choose" onSelect = {this.confirm_action.bind(null, app.provider, app.hostname, app.managed_by)}>
+                            <Bootstrap.DropdownButton id={'dropdown-' + app.hostname} bsStyle='primary' title="Choose" onSelect = {this.doAction.bind(null, app.provider, app.hostname, app.managed_by)}>
                                 <Bootstrap.MenuItem eventKey="manage">Manage</Bootstrap.MenuItem>
                                 {this.getActions(app.available_actions)}
                             </Bootstrap.DropdownButton>
@@ -193,9 +224,9 @@ class Servers extends Component {
         var sf_cols = ['Hostname', 'IP', 'Size', 'Status'];
         var popupData = this.state.popupData;
 
-        var ManagePopupRedux = connect(function(state){
+        var DynamicPopupRedux = connect(function(state){
             return {auth: state.auth, alert: state.alert};
-        })(ManagePopup);
+        })(DynamicPopup);
 
         return (
             <div className="app-containter">
@@ -209,8 +240,9 @@ class Servers extends Component {
                             </Table>
                         </div>
                     </div>
-                    <ConfirmPopup body={`Please confirm action: ${popupData[2]} server ${popupData[0]}`} show={this.state.popupShow} data={popupData} close={this.popupClose} action={this.btn_clicked} />
-                    <ManagePopupRedux isOpen={this.state.managePopupShow} close={this.managePopupClose} manage={this.manage} managed_by={this.state.managed_by} server={this.state.selectedServer} reload={this.reloadTable} />
+                    <ConfirmPopup body={`Please confirm action: ${popupData[2]} server ${popupData[1]}`} show={this.state.popupShow} data={popupData} close={this.popupClose} action={this.proceedAction} />
+                    {this.state.dynamicPopup.type && <DynamicPopupRedux data={this.state.dynamicPopup} close={this.dynamicPopupClose} manage={this.manage} managed_by={this.state.managed_by} server={this.state.selectedServer} reload={this.reloadTable} />}
+                    <TextPopup data={this.state.txtPopup} close={this.txtPopupClose} />
                 </div>
             </div>
         );
@@ -766,13 +798,15 @@ const Stats = (props) => {
     );
 }
 
-class ManagePopup extends Component {
+class DynamicPopup extends Component {
     constructor (props) {
         super(props);
-        this.state = {selected: '', auth: false};
-        this.onChange = this.onChange.bind(this);
+        if(props.type === 'manage'){
+            this.state = {selected: '', auth: false};
+            this.onChange = this.onChange.bind(this);
+            this.toggleAuth = this.toggleAuth.bind(this);
+        }
         this.onSubmit = this.onSubmit.bind(this);
-        this.toggleAuth = this.toggleAuth.bind(this);
     }
 
     onChange(e) {
@@ -784,98 +818,138 @@ class ManagePopup extends Component {
 	}
 
     onSubmit() {
-        let selected = this.state.selected;
-        let data = {new_type: selected, server_name: this.props.server};
-        let fields = [];
-        switch(selected){
-            case 'ssh':
-                if(this.state.auth){
-                    fields = SSH_FIELDS;
-                }else{
-                    fields = SSH_FIELDS.concat([{key: 'password'}]);
+        if(this.props.type === 'manage'){
+            let selected = this.state.selected;
+            let data = {new_type: selected, server_name: this.props.server};
+            let fields = [];
+            switch(selected){
+                case 'ssh':
+                    if(this.state.auth){
+                        fields = SSH_FIELDS;
+                    }else{
+                        fields = SSH_FIELDS.concat([{key: 'password'}]);
+                    }
+                    break;
+                case 'winexe':
+                    fields = WINEXE_FIELDS;
+                    break;
+                case 'provider':
+                    fields = PROVIDER_FIELDS;
+                    break;
+                case 'app':
+                    fields = APP_FIELDS;
+                    break;
+            }
+            for(let i=0; i<fields.length; i++){
+                let field = fields[i].key;
+                data[field] = findDOMNode(this.refs[field]).value;
+            }
+            Network.post('/api/servers/manage_server', this.props.auth.token, data).done(data => {
+                this.props.reload();
+            }).fail(msg => {
+                this.props.dispatch({type: 'SHOW_ALERT', msg: msg});
+            });
+        }else{
+            let data = {server_name: this.props.server};
+            let fields = [];
+            this.props.fields.forEach(f => {
+                if(f.type == 'form'){
+                    fields = f.elements;
+                    data['action'] = f.submit_action;
                 }
-                break;
-            case 'winexe':
-                fields = WINEXE_FIELDS;
-                break;
-            case 'provider':
-                fields = PROVIDER_FIELDS;
-                break;
-            case 'app':
-                fields = APP_FIELDS;
-                break;
+			});
+            for(let i=0; i<fields.length; i++){
+                let field = fields[i].key;
+                data[field] = findDOMNode(this.refs[field]).value;
+            }
+            Network.post('/api/apps/action', this.props.auth.token, data).done(d => {
+                this.props.close();
+            }).fail(msg => {
+                this.props.dispatch({type: 'SHOW_ALERT', msg: msg});
+            });
+
         }
-		for(var i=0; i<fields.length; i++){
-			let field = fields[i].key;
-			data[field] = findDOMNode(this.refs[field]).value;
-		}
-        Network.post('/api/servers/manage_server', this.props.auth.token, data).done(data => {
-			this.props.reload();
-        }).fail(msg => {
-			this.props.dispatch({type: 'SHOW_ALERT', msg: msg});
-		});
     }
 
     render(){
-        let filtered = SERVER_TYPES.filter(s => {
-            return this.props.managed_by.indexOf(s) > -1 ? false : true;
-        });
-        let extraFields = "";
-        switch(this.state.selected){
-            case 'ssh':
-                extraFields = getFormFields(SSH_FIELDS);
-                extraFields.push(
-                    <Bootstrap.FormGroup>
-                        <div className="col-sm-offset-3 col-sm-9">
-                            <div className="checkbox">
-                                <label>
-                                    <input type="checkbox" onChange={this.toggleAuth} />
-                                    Use SSH Key Auth?
-                                </label>
-                            </div>
-                        </div>
-                    </Bootstrap.FormGroup>
-                );
-                if(!this.state.auth){
+        let body, btnLabel;
+        let { title, type, fields, isOpen } = this.props.data;
+        if(type === 'manage'){
+            let filtered = SERVER_TYPES.filter(s => {
+                return this.props.managed_by.indexOf(s) > -1 ? false : true;
+            });
+            let extraFields = "";
+            switch(this.state.selected){
+                case 'ssh':
+                    extraFields = getFormFields(SSH_FIELDS);
                     extraFields.push(
                         <Bootstrap.FormGroup>
-                            <Bootstrap.Col componentClass={Bootstrap.ControlLabel} sm={3}>
-                                Password
-                            </Bootstrap.Col>
-                            <Bootstrap.Col sm={9}>
-                                <Bootstrap.FormControl type="password" ref='password' />
-                            </Bootstrap.Col>
+                            <div className="col-sm-offset-3 col-sm-9">
+                                <div className="checkbox">
+                                    <label>
+                                        <input type="checkbox" onChange={this.toggleAuth} />
+                                        Use SSH Key Auth?
+                                    </label>
+                                </div>
+                            </div>
                         </Bootstrap.FormGroup>
                     );
-                }
-                break;
-            case 'winexe':
-                extraFields = getFormFields(WINEXE_FIELDS);
-                break;
-            case 'provider':
-                extraFields = getFormFields(PROVIDER_FIELDS);
-                break;
-            case 'app':
-                extraFields = getFormFields(APP_FIELDS);
-                break;
+                    if(!this.state.auth){
+                        extraFields.push(
+                            <Bootstrap.FormGroup>
+                                <Bootstrap.Col componentClass={Bootstrap.ControlLabel} sm={3}>
+                                    Password
+                                </Bootstrap.Col>
+                                <Bootstrap.Col sm={9}>
+                                    <Bootstrap.FormControl type="password" ref='password' />
+                                </Bootstrap.Col>
+                            </Bootstrap.FormGroup>
+                        );
+                    }
+                    break;
+                case 'winexe':
+                    extraFields = getFormFields(WINEXE_FIELDS);
+                    break;
+                case 'provider':
+                    extraFields = getFormFields(PROVIDER_FIELDS);
+                    break;
+                case 'app':
+                    extraFields = getFormFields(APP_FIELDS);
+                    break;
+            }
+            body = (
+                  <form className="form-horizontal" style={{width: '90%'}}>
+                      <div className="form-group">
+                          <label className="col-sm-3 control-label">Manage by</label>
+                          <div className="col-sm-9">
+                              <select className="form-control" onChange={this.onChange}>
+                                  {filtered.map(f => <option value={f}>{f}</option>)}
+                              </select>
+                          </div>
+                      </div>
+                      {extraFields}
+                  </form>
+            );
+            btnLabel = 'Manage';
+        }else {
+            let formFields = [];
+            fields.forEach(f => {
+              if(f.type == 'form'){
+                  formFields.push(<form className="form-horizontal" style={{width: '90%'}}>{getFormFields(f.elements)}</form>);
+                  btnLabel = f.label;
+              }else{
+                  formFields.push(<div dangerouslySetInnerHTML={{__html: f.data}}></div>);
+              }
+            });
+            body = <div>{formFields}</div>;
         }
         return (
-            <Bootstrap.Modal show={this.props.isOpen} onHide={this.props.close}>
-                { getModalHeader('Manage') }
-                <Bootstrap.Modal.Body>
-                    <form className="form-horizontal" style={{width: '90%'}}>
-                        <div className="form-group">
-                            <label className="col-sm-3 control-label">Manage by</label>
-                            <div className="col-sm-9">
-                                <select className="form-control" onChange={this.onChange}>
-                                    {filtered.map(f => <option value={f}>{f}</option>)}
-                                </select>
-                            </div>
-                        </div>
-                        {extraFields}
-                    </form>
+            <Bootstrap.Modal show={isOpen} onHide={this.props.close}>
+                { getModalHeader(title) }
+                <Bootstrap.Modal.Body bsClass='modal-body scrollable'>
+					{body}
                 </Bootstrap.Modal.Body>
-                { getModalFooter([{ label: 'Cancel', onClick: this.props.close }, { label: 'Manage', onClick: this.onSubmit, bsStyle: 'primary' }]) }
+                { getModalFooter([{ label: 'Cancel', onClick: this.props.close }, { label: btnLabel, onClick: this.onSubmit, bsStyle: 'primary' }]) }
             </Bootstrap.Modal>
         );
     }

@@ -157,8 +157,14 @@ def download_vpn_cert(username, handler):
     raise tornado.gen.Return({'data_type' : 'file'})
 
 @tornado.gen.coroutine
-def perform_server_action(handler, action, server_name, provider_name = '', action_type = 'provider', kwargs = {}): 
+def perform_server_action(handler, action, server_name, provider_name = '', action_type = '', kwargs = {}): 
     """Calls required action on the server through the driver. """
+
+    #Either we expect {action_type: ssh, action: some_action} or action: ssh/some_action  (or provider | app for the action type)
+    if not action_type: 
+        if '/' not in action: 
+            raise Exception('action_type argument is empty, so action is expected to be in format <action_type/<action> (example: ssh/show_processes), but instead action was : ' + str(action))
+        action_type, action = action.split('/')
 
     server = yield handler.datastore_handler.get_object('server', server_name = server_name)
 
@@ -458,10 +464,12 @@ def manage_server_type(datastore_handler, server_name, new_type, ip_address = No
     if not new_subtype: 
         raise Exception("Tried to change " + str(server_name) + " type to " + str(new_type) + " but could not get subtype. If managing with provider, make sure to set `driver_name`, if managing with SSH or winexe, set `ip_address` and `username`. ")
 
+    print ('Looking for type : ', new_type, ' and subtype ', new_subtype)
     type_actions = yield datastore_handler.get_object(object_type = 'managed_actions', manage_type = new_type, manage_subtype = new_subtype)
     server['type'] = 'managed'
     server['managed_by'] = list(set(server.get('managed_by', []) + [new_type]))
     server['available_actions'] = server.get('available_actions', {})
+    print ('Type actions are : ', type_actions)
     server['available_actions'][new_type] = type_actions['actions']
     server.update(kwargs)
 

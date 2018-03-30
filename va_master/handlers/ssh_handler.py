@@ -22,33 +22,18 @@ def get_ssh_result(cmd):
 def get_forms():
     forms = {
         'restart_service' : [
-            get_processes,
+            get_processes, 
             {
-                'submit_action' : 'restart_service',
+                'submit_action' : 'ssh/restart_service',
                 'elements' : [
-                    {'type' : 'text', 'key' : 'service_name', 'label' : 'Service name'},
+                    {'type' : 'text', 'key' : 'service_name', 'label' : 'Service name', 'size': 9},
                 ],
                 'type' : 'form', 
                 'label' : 'Restart service',
             }
         ], 
-        'show_processes' : {
-            'name' : 'show_processes', 
-            'label' : 'Show processes', 
-            'type' : 'form',
-            'elements' : [
-                {'type' : 'text', 'key' : 'process_list', 'label' : 'Process list', 'data' : get_processes},
-            ]
-        },
-        'show_services' : {
-            'name' : 'show_services', 
-            'label' : 'Show services', 
-            'type' : 'form',
-            'elements' : [
-                {'type' : 'text', 'key' : 'service_list', 'label' : 'Service list', 'data' : get_services}, 
-            ]
-        },
-
+        'show_processes' : get_processes,
+        'show_services' : get_services, 
     }
     raise tornado.gen.Return(forms)
 
@@ -65,6 +50,12 @@ def get_form(action):
             form[i] = {'data' : result}
 
     raise tornado.gen.Return(form)
+
+#NOTE this wil probably change in the future. 
+@tornado.gen.coroutine
+def format_list(l):
+    l = '</br>'.join(l)
+    return l
 
 @tornado.gen.coroutine
 def get_processes():
@@ -106,8 +97,9 @@ def restart_service(service_name = None):
 
 @tornado.gen.coroutine
 def show_processes():
-    form = yield get_form('show_processes')
-    raise tornado.gen.Return(form)
+    processes = yield get_processes()
+    processes = yield format_list(processes)
+    raise tornado.gen.Return(processes)
 
 @tornado.gen.coroutine
 def show_usage():
@@ -115,8 +107,10 @@ def show_usage():
 
 @tornado.gen.coroutine
 def show_services():
-    form = yield get_form('show_services')
-    raise tornado.gen.Return(form)
+    services = yield get_services()
+    services = yield format_list(services)
+#    form = yield get_form('show_services')
+    raise tornado.gen.Return(services)
 
 @tornado.gen.coroutine
 def handle_ssh_action(action, ip_addr, username = '', password = '', port = None, kwargs = {}):
