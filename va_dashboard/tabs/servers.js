@@ -35,7 +35,7 @@ class Servers extends Component {
                 isOpen: false,
                 fields: {},
                 type: '',
-                title: '',
+                title: ''
             },
             txtPopup: {
                 show: false,
@@ -103,11 +103,12 @@ class Servers extends Component {
     proceedAction(provider, server, evtKey){
         var data = {provider_name: provider, server_name: server, action: evtKey};
         Network.post('/api/apps/action', this.props.auth.token, data).done(d => {
-            Network.post('/api/providers/info', this.props.auth.token, {providers: []}).done(data => {
+            this.props.dispatch({type: 'SHOW_ALERT', msg: d, success: true});
+            /*Network.post('/api/providers/info', this.props.auth.token, {providers: []}).done(data => {
                 this.setState({providers: data, popupShow: false});
             }).fail(msg => {
                 this.props.dispatch({type: 'SHOW_ALERT', msg: msg});
-            });
+            });*/
         }).fail(msg => {
             this.props.dispatch({type: 'SHOW_ALERT', msg: msg});
         });

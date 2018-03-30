@@ -215,7 +215,7 @@ class Home extends Component {
                     <div className="page-content" style={this.state.collapse?{'left': '0', 'width': '96.4vw'}:{'left': '15.4vw', 'width': '81vw'}}>
                         {this.props.children}
                     </div>
-                    {this.props.alert.show && React.createElement(Bootstrap.Alert, {bsStyle: 'danger', onDismiss: this.handleAlertDismiss, className: "messages"}, this.props.alert.msg) }
+                    {this.props.alert.show && React.createElement(Bootstrap.Alert, {bsStyle: this.props.alert.className, onDismiss: this.handleAlertDismiss, className: "messages"}, this.props.alert.msg) }
                 </div>
             </div>
         );

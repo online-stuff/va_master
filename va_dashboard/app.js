@@ -194,13 +194,14 @@ function panel(state, action){
 
 function alert(state, action){
     if(typeof state === 'undefined'){
-        return {msg: '', show: false};
+        return {msg: '', show: false, className: ''};
     }
 
     var newState = Object.assign({}, state);
     if(action.type == 'SHOW_ALERT'){
         newState.msg = action.msg;
         newState.show = true;
+        newState.className = action.success ? 'success' : 'danger';
     }
     if(action.type == 'HIDE_ALERT'){
         newState.msg = '';

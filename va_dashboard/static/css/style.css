@@ -13,12 +13,6 @@ body {
     font-family: Ubuntu, sans-serif;
 }
 
-.alert-danger {
-    color: black !important;
-    background-color: white !important;
-    border-color: gray !important;
-}
-
 body.login {
     background: #006eab;
 }
@@ -943,4 +937,9 @@ label {
 
 .new-log {
     background: rgba(255, 252, 69, 0.53);
+}
+
+.scrollable {
+    max-height: 350px;
+    overflow-y: scroll;
 }
