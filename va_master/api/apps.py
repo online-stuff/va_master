@@ -176,13 +176,16 @@ def perform_server_action(handler, action, server_name, provider_name = '', acti
     else: 
         if not provider_name: 
             raise Exception('Called action ' + str(action) + ' on ' + str(server_name) + ' with action type ' + str(action_type) + ' and provider name ' + str(provider_name) + '. Expected action type to be ssh, app or provider. If type is provider, then provider_name cannot be empty. ')
+        
+        provider, driver = yield providers.get_provider_and_driver(handler, provider_name) 
+        result = yield driver.server_action(provider, server_name, action)
 
-    if result:
-        raise tornado.gen.Return(result)
+    if type(result) != dict : 
+        result = {'message' : '', 'success' : True, 'data' : result}
 
-    provider, driver = yield providers.get_provider_and_driver(handler, provider_name) 
-    success = yield driver.server_action(provider, server_name, action)
-    raise tornado.gen.Return(success)
+    result['message'] = 'Action %s completed successfuly. ' % action
+    print ('Result is : ', result)
+    raise tornado.gen.Return(result)
 
 
 @tornado.gen.coroutine

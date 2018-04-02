@@ -412,7 +412,6 @@ class OpenStackDriver(base.DriverBase):
         """ Performs server actions using a nova client. """
         try:
             provider_url = 'http://' + provider['provider_ip'] + '/v2.0'
-            print ('Creating novaclient with username : ', provider['username'], 'password : ', provider['password'], 'url : ', provider_url)
             auth = identity.Password(auth_url=provider_url,
                    username=provider['username'],
                    password=provider['password'],
@@ -425,13 +424,18 @@ class OpenStackDriver(base.DriverBase):
         except Exception as e:
             import traceback
             traceback.print_exc()
-            raise tornado.gen.Return({'success' : False, 'message' : 'Could not get server. ' + e.message})
+
+            raise Exception('Could not get server' + server_name + '. ' + e.message)
         try:
             success = getattr(server, action)()
         except Exception as e:
-            raise tornado.gen.Return({'success' : False, 'message' : 'Action was not performed. ' + e.message})
+            import traceback
+            traceback.print_exc()
 
-        raise tornado.gen.Return({'success' : True, 'message' : ''})
+            raise Exception('Action ' + action + ' was not performed on ' + server_name + '. Reason: ' + e.message)
+
+        print ('All is well!')
+        raise tornado.gen.Return({'success' : True, 'message' : '', 'data' : {}})
 
 
 

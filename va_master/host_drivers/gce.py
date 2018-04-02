@@ -221,7 +221,7 @@ class GCEDriver(base.DriverBase):
             success = getattr(server, action)()
             print ('Made action : ', success)
         except Exception as e:
-            raise tornado.gen.Return({'success' : False, 'message' : 'Action was not performed. ' + e.message})
+            raise tornado.gen.Return({'success' : False, 'message' : 'Action was not performed. ' + e.message, 'data' : {}})
 
         raise tornado.gen.Return({'success' : True, 'message' : ''})
 
