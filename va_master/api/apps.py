@@ -68,7 +68,7 @@ def get_openvpn_users():
     salt_caller = Caller()
     openvpn_users = salt_caller.cmd('openvpn.list_users')
 
-    if type(openvpn_users) != str: 
+    if type(openvpn_users) == str: 
         print ('Openvpn users result : ', openvpn_users)
         raise Exception("Could not get openvpn users list. Contact your administrator for more information. ")
 

@@ -32,8 +32,6 @@ def get_forms():
                 'label' : 'Restart service',
             }
         ], 
-        'show_processes' : get_processes,
-        'show_services' : get_services, 
     }
     raise tornado.gen.Return(forms)
 
