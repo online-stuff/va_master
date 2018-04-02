@@ -242,7 +242,7 @@ class Servers extends Component {
                         </div>
                     </div>
                     <ConfirmPopup body={`Please confirm action: ${popupData[2]} server ${popupData[1]}`} show={this.state.popupShow} data={popupData} close={this.popupClose} action={this.proceedAction} />
-                    {this.state.dynamicPopup.type && <DynamicPopupRedux data={this.state.dynamicPopup} close={this.dynamicPopupClose} manage={this.manage} managed_by={this.state.managed_by} server={this.state.selectedServer} reload={this.reloadTable} />}
+                    {this.state.dynamicPopup.type && <DynamicPopupRedux {...this.state.dynamicPopup} close={this.dynamicPopupClose} managed_by={this.state.managed_by} server={this.state.selectedServer} reload={this.reloadTable} />}
                     <TextPopup data={this.state.txtPopup} close={this.txtPopupClose} />
                 </div>
             </div>
@@ -874,7 +874,7 @@ class DynamicPopup extends Component {
 
     render(){
         let body, btnLabel;
-        let { title, type, fields, isOpen } = this.props.data;
+        let { title, type, fields, isOpen } = this.props;
         if(type === 'manage'){
             let filtered = SERVER_TYPES.filter(s => {
                 return this.props.managed_by.indexOf(s) > -1 ? false : true;
