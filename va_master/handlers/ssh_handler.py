@@ -85,11 +85,16 @@ def get_services():
 
 @tornado.gen.coroutine
 def restart_service(service_name = None):
+    message = ''
     if not service_name: 
         result = yield get_form('restart_service')
     else: 
         cmd = 'service %s restart' % (service_name)
         result = get_ssh_result(cmd)
+        message = 'Service %s restarted. ' % (service_name)
+
+
+    result = {'message' : message, 'data' : result,  'success' : True}
 
     raise tornado.gen.Return(result)
 
@@ -97,6 +102,7 @@ def restart_service(service_name = None):
 def show_processes():
     processes = yield get_processes()
     processes = yield format_list(processes)
+    result = {'data' : processes, 'success' : True, 'message' : ''}
     raise tornado.gen.Return(processes)
 
 @tornado.gen.coroutine
@@ -107,6 +113,7 @@ def show_usage():
 def show_services():
     services = yield get_services()
     services = yield format_list(services)
+    services = {'data' : services, 'success' : True, 'message' : ''}
 #    form = yield get_form('show_services')
     raise tornado.gen.Return(services)
 
