@@ -175,13 +175,10 @@ class ApiHandler(tornado.web.RequestHandler):
                 if result.get('data_type', 'json') == 'file' : 
                     raise tornado.gen.Return(None)
             if self.formatted_result(result) or self.data.get('plain_result'): 
-                print ('Result is already formatted: ', result)
                 pass 
             elif self.has_error(result): 
-                print ('Result has error : ', result)
                 result = {'success' : False, 'message' : result, 'data' : {}} 
             else: 
-                print ('Result is good! ', result)
                 result = {'success' : True, 'message' : '', 'data' : result}
         except tornado.gen.Return: 
             raise
@@ -190,6 +187,8 @@ class ApiHandler(tornado.web.RequestHandler):
             import traceback
             traceback.print_exc()
             result = {'success' : False, 'message' : 'There was an error performing a request : ' + str(e.message), 'data' : {}}
+        if not result['success'] and not self.status: 
+            self.status = 400
         raise tornado.gen.Return(result)
         
     @tornado.gen.coroutine
