@@ -68,7 +68,7 @@ def get_openvpn_users():
     salt_caller = Caller()
     openvpn_users = salt_caller.cmd('openvpn.list_users')
 
-    if type(openvpn_users) != str: 
+    if type(openvpn_users) == str: 
         print ('Openvpn users result : ', openvpn_users)
         raise Exception("Could not get openvpn users list. Contact your administrator for more information. ")
 
@@ -180,10 +180,10 @@ def perform_server_action(handler, action, server_name, provider_name = '', acti
         provider, driver = yield providers.get_provider_and_driver(handler, provider_name) 
         result = yield driver.server_action(provider, server_name, action)
 
-    if type(result) != dict : 
-        result = {'message' : '', 'success' : True, 'data' : result}
+    if type(result) != dict: 
+        result = {'success' : True, 'message' : '', 'data' : result}
 
-    result['message'] = 'Action %s completed successfuly. ' % action
+#    result['message'] = 'Action %s completed successfuly. ' % action
     print ('Result is : ', result)
     raise tornado.gen.Return(result)
 

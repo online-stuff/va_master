@@ -411,6 +411,7 @@ class OpenStackDriver(base.DriverBase):
     def server_action(self, provider, server_name, action):
         """ Performs server actions using a nova client. """
         try:
+            message = "Action %s performed on %s successfuly. " % (action, server_name)
             provider_url = 'http://' + provider['provider_ip'] + '/v2.0'
             auth = identity.Password(auth_url=provider_url,
                    username=provider['username'],
@@ -435,7 +436,7 @@ class OpenStackDriver(base.DriverBase):
             raise Exception('Action ' + action + ' was not performed on ' + server_name + '. Reason: ' + e.message)
 
         print ('All is well!')
-        raise tornado.gen.Return({'success' : True, 'message' : '', 'data' : {}})
+        raise tornado.gen.Return({'success' : True, 'message' : message, 'data' : {}})
 
 
 

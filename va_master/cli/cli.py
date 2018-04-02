@@ -294,6 +294,8 @@ def handle_test_api(args):
     from va_master import tests
     from va_master.tests import va_panels_tests, va_providers_tests, va_states_tests, va_test_base, va_testcase, va_users_tests, va_vpn_tests
 
+    tests = args.get('tests')
+
     api_test_suite = unittest.TestSuite()
     all_tests = [
             va_panels_tests.VAPanelsTests,
@@ -302,6 +304,9 @@ def handle_test_api(args):
             va_users_tests.VAUsersTests,
             va_vpn_tests.VAVPNTests,
     ]
+
+    if tests: 
+        all_tests = [x for x in all_tests for t in tests if t in str(x)]
 
     for t in all_tests: 
         api_test_suite.addTest(unittest.TestLoader().loadTestsFromTestCase(t))
@@ -349,9 +354,7 @@ def entry():
     new_user.set_defaults(sub='new_user')
 
     test_api = subparsers.add_parser('test-api', help='Runs through (some of) the API endpoints and tests their results. ')
-#    test_api.add_argument('--token', help = 'Enter the token which the test suite will use. ')
-#    test_api.add_argument('--generate-endpoints', help = 'If set to True, it will generate an api_endpoints.json file which you can edit to set up default arguments for all the functions. You may delete functions that you do not want in the test from this file. ', dest = 'generate_endpoints', action = 'store_true')
-#    test_api.add_argument('--base-url', help = 'Enter the base url. Default : 127.0.0.1', default = 'https://127.0.0.1:443/api/')
+    test_api.add_argument('--tests', nargs = '+', help = 'List of test_modules to run, example --tests va_vpn_tests va_provider_tests', default = [])
     test_api.set_defaults(sub='test_api')
 
     args = parser.parse_args()
