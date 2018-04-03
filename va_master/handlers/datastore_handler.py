@@ -1,4 +1,4 @@
-import json, glob, yaml, datetime
+import json, glob, yaml, datetime, os
 import requests
 import subprocess
 import traceback
@@ -24,7 +24,11 @@ from va_master.consul_kv.initial_consul_data import initial_consul_data
 
 class DatastoreHandler(object):
 
-    def __init__(self, datastore, datastore_spec_path):
+    def __init__(self, datastore, datastore_spec_path = '/va_master/consul_kv/consul_spec.json'):
+        master_path = os.getcwd() 
+
+        datastore_spec_path = master_path + datastore_spec_path
+
         self.datastore = datastore
 
         with open(datastore_spec_path) as f: 

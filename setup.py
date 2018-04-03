@@ -26,7 +26,6 @@ setuptools.setup(
     'pyopenssl',
     'netifaces',
     'appdirs',
-    'OpenSSL',
     'vapour_linux_amd64;platform_system=="Linux"',
     'vapour_windows_amd64;platform_system=="Windows"',
   ],

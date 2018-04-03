@@ -216,7 +216,7 @@ def handle_init(args):
     cli_config = config.Config(init_vals = values)
 
     store = cli_config.datastore
-    datastore_handler = DatastoreHandler(store, '/opt/va_master/va_master/consul_kv/consul_spec.json')
+    datastore_handler = DatastoreHandler(store)
 
 
     check_datastore_connection(values, store)

@@ -19,9 +19,6 @@ def int_to_bytes(i):
 
     return b
 
-
-from va_master.handlers.datastore_handler import DatastoreHandler
-
 class Step(object):
     def __init__(self, name):
         self.name = name
