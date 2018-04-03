@@ -112,7 +112,7 @@ function filter(state, action){
 
 function modal(state, action){
     if(typeof state === 'undefined'){
-        return {isOpen: false, template: { title: "", content: [], buttons: [], args: [], kwargs: {}, refreshAction: ''}, args: {}, modalType: "", rowIndex: ''};
+        return {isOpen: false, template: { title: "", content: [], buttons: [], args: [], kwargs: {}}, args: {}, modalType: "", rowIndex: ''};
     }
 
     var newState = Object.assign({}, state);
@@ -300,7 +300,7 @@ class App extends Component {
   render() {
     return (
         <Router history={hashHistory}>
-            <Route path='/' component={Home}>
+            <Route path='/' component={Home} onChange={() => store.dispatch({type: 'HIDE_ALERT'})}>
                 <IndexRoute component={Overview} />
                 <Route path='/providers' component={Providers} />
                 <Route path='/servers' component={Servers} />

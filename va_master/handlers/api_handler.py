@@ -188,7 +188,6 @@ class ApiHandler(tornado.web.RequestHandler):
             traceback.print_exc()
             result = {'success' : False, 'message' : 'There was an error performing a request : ' + str(e.message), 'data' : {}}
 
-        print ('Result is : ', result['success'], ' and self status : ', self.status)
         if not result['success'] and not self.status: 
             self.status = 400
         raise tornado.gen.Return(result)
