@@ -112,7 +112,7 @@ function filter(state, action){
 
 function modal(state, action){
     if(typeof state === 'undefined'){
-        return {isOpen: false, template: { title: "", content: [], buttons: [], args: [], kwargs: {}}, args: {}, modalType: "", rowIndex: ''};
+        return {isOpen: false, template: { title: "", content: [], buttons: [], args: [], kwargs: {}, refreshAction: ''}, args: {}, modalType: "", rowIndex: ''};
     }
 
     var newState = Object.assign({}, state);
