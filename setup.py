@@ -9,6 +9,7 @@ setuptools.setup(
   author='VapourApps',
   install_requires=[
     'tornado',
+    'pyopenSSL',
     'salt',
     'apache-libcloud',
     'python-novaclient',

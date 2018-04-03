@@ -337,6 +337,7 @@ class DatastoreHandler(object):
 
     @tornado.gen.coroutine
     def import_states_from_states_data(self, states = []):
+        empty_panel = {'admin' : [], 'user' : []}
         states_data = yield self.get_states_data(states)
 
         empty_panel = {'admin' : [], 'user' : []}

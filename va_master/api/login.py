@@ -128,6 +128,7 @@ def user_login(handler, username, password):
     """Looks for a user with the specified username and checks the specified password against the found user's password. Creates a token if the login is successful. """
 
     datastore_handler = handler.datastore_handler
+    token = None
     body = None
     if '@' in username: 
         yield ldap_login(handler)
