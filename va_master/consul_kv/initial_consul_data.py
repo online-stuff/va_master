@@ -50,7 +50,7 @@ initial_consul_data = {
             {'name' : 'stop', 'type' : 'action'}
         ],
     },
-    "managed_actions/provider/century_link" : {
+    "managed_actions/provider/century_link_driver" : {
         "actions" : [
             {'name' : 'reboot', 'type' : 'confirm'}, 
             {'name' : 'delete', 'type' : 'confirm'}, 
