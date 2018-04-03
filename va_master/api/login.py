@@ -29,21 +29,18 @@ def get_paths():
 
 @tornado.gen.coroutine
 def get_or_create_token(datastore_handler, username, user_type = 'admin'):
-    found = False
-    try:
-        token_doc = yield datastore_handler.get_object('by_username', user_type = user_type, username = username)
-        found = True
-    except KeyNotFound:
-        doc = {
-            'token': uuid.uuid4().hex,
-            'username': username
+    token_doc = yield datastore_handler.get_object('by_username', user_type = user_type, username = username)
+
+    if not token_doc: 
+        token_doc = {
+                'token': uuid.uuid4().hex,
+                'username': username
         }
-        yield datastore_handler.insert_object('by_username', data = doc, user_type = user_type, username = username)
-        yield datastore_handler.insert_object('by_token', data = doc, user_type = user_type, token = doc['token'])
-        raise tornado.gen.Return(doc['token'])
-    finally:
-        if found:
-            raise tornado.gen.Return(token_doc['token'])
+
+        yield datastore_handler.insert_object('by_username', data = token_doc, user_type = user_type, username = username)
+        yield datastore_handler.insert_object('by_token', data = token_doc, user_type = user_type, token = token_doc['token'])
+
+    raise tornado.gen.Return(token_doc['token'])
 
 @tornado.gen.coroutine
 def get_current_user(handler):
