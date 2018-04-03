@@ -18,7 +18,7 @@ import cli_environment
 import unittest
 consul_conf_path = '/etc/consul.json'
 run_sync = tornado.ioloop.IOLoop.instance().run_sync
-
+folder_pwd = os.path.join(os.path.dirname(os.path.realpath(__file__)), '')
 
 def is_cli():
     # TODO: Find a way to separate a CLI entrypoint execution versus
@@ -110,6 +110,7 @@ def handle_configurations(fqdn = None):
             cli_environment.write_supervisor_conf()
             cli_success('Configured Supervisor.')
         except:
+            import traceback
             cli_error('Failed configuring Supervisor: ')
             traceback.print_exc()
             result = False # We failed with step #1
