@@ -265,7 +265,7 @@ def get_provider_info(handler, dash_user, get_billing = True, get_servers = True
     standalone_servers = standalone_provider['servers']
     for v in standalone_default_values: 
         [x.update({v : x.get(v, standalone_default_values[v])}) for x in standalone_servers]
-    print ('Standalone_servers are : ', standalone_servers)
+
     standalone_locations = set([x.get('location', 'va-master') for x in standalone_servers])
     standalone_providers = [
         {
