@@ -13,10 +13,10 @@ module.exports = {
         }
         $.ajax(opts).done(function(data){
             if(data.success){
-                //if(data.data && !$.isEmptyObject(data.data))
+                if(data.message)
+                    dfd.resolve(data.message);
+                else
                     dfd.resolve(data.data);
-                //else
-                //    dfd.reject("No data returned " + data.message);
             }else{
                 dfd.reject(data.message);
             }
@@ -42,7 +42,10 @@ module.exports = {
         }
         $.ajax(opts).done(function(data){
             if(data.success){
-                dfd.resolve(data.data);
+                if(data.message)
+                    dfd.resolve(data.message);
+                else
+                    dfd.resolve(data.data);
             }else{
                 dfd.reject(data.message);
             }

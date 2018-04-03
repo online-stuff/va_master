@@ -1,108 +1,114 @@
-var React = require('react');
-var Router = require('react-router');
+import React, { Component } from 'react';
+import {Router, Link, IndexLink, hashHistory} from 'react-router';
 var Bootstrap = require('react-bootstrap');
-var connect = require('react-redux').connect;
+import {connect} from 'react-redux';
 
 var Network = require('../network');
 
-var NavLink = React.createClass({
-    render: function () {
-        var isActive = window.location.hash.indexOf(this.props.to) !== -1;
-        var className = isActive ? 'active' : '';
-        if(isActive){
-            var activeKey = -1;
-            if('activeKey' in this.props){ //this.props.to.indexOf('panel') > -1
-                activeKey = this.props.activeKey;
-            }
-            window.localStorage.setItem('activeKey', activeKey);
+const NavLink = (props) => {
+    var isActive = window.location.hash.indexOf(props.to) !== -1;
+    var className = isActive ? 'active' : '';
+    if(isActive){
+        var activeKey = -1;
+        if('activeKey' in props){ //this.props.to.indexOf('panel') > -1
+            activeKey = props.activeKey;
         }
-        if('tabs' in this.props){
-            return (
-                <Router.Link to={this.props.to} className={className} activeClassName='active' onClick={this.props.show_tabs.bind(null, this.props.tabs)}>
-                    {this.props.children}
-                </Router.Link>
-            );
-        }
-        if('tab' in this.props){
-            return (
-                <Router.Link to={this.props.to} className={className} activeClassName='active'>
-                    {this.props.children}
-                </Router.Link>
-            );
-        }
-
+        window.localStorage.setItem('activeKey', activeKey);
+    }
+    if('tabs' in props){
         return (
-            <Router.Link to={this.props.to} className={className} activeClassName='active' onClick={this.props.reset_tabs}>
-                {this.props.children}
-            </Router.Link>
+            <Link to={props.to} className={className} activeClassName='active' onClick={props.show_tabs.bind(null, props.tabs)}>
+                {props.children}
+            </Link>
         );
     }
-});
+    if('tab' in props){
+        return (
+            <Link to={props.to} className={className} activeClassName='active'>
+                {props.children}
+            </Link>
+        );
+    }
 
-var Home = React.createClass({
-    getInitialState: function() {
+    return (
+        <Link to={props.to} className={className} activeClassName='active' onClick={props.reset_tabs}>
+            {props.children}
+        </Link>
+    );
+}
+
+class Home extends Component {
+    constructor (props) {
+        super(props);
         var activeKey = window.localStorage.getItem('activeKey');
         if(activeKey){
             activeKey = parseInt(activeKey);
         }else{
             activeKey = -1;
         }
-        return {
+        this.state = {
             'data': [],
             'collapse': false,
             'activeKey': activeKey
         };
-    },
-    show_tabs: function(key){
+        this.show_tabs = this.show_tabs.bind(this);
+        this.reset_tabs = this.reset_tabs.bind(this);
+        this.getPanels = this.getPanels.bind(this);
+        this.navbar_click = this.navbar_click.bind(this);
+        this.handleAlertDismiss = this.handleAlertDismiss.bind(this);
+        this.collapse = this.collapse.bind(this);
+    }
+    show_tabs(key){
         this.props.dispatch({type: 'SHOW_TABS', key: key});
-    },
-    reset_tabs: function(){
+    }
+    reset_tabs(){
         this.props.menu.showTabs && this.props.dispatch({type: 'RESET_TABS'});
-    },
-    getPanels: function() {
+    }
+    getPanels() {
         var me = this;
         Network.get('/api/panels', this.props.auth.token).done(function (data) {
             me.setState({data: data});
         }).fail(function (msg) {
             me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
         });
-    },
-    componentDidMount: function() {
+    }
+    componentDidMount() {
         if(!this.props.auth.token){
-            Router.hashHistory.push('/login');
+            hashHistory.push('/login');
         }else{
             this.getPanels();
         }
-    },
-    componentWillReceiveProps: function(props) {
+    }
+    componentWillReceiveProps(props) {
         if(!props.auth.token) {
-            Router.hashHistory.push('/login');
+            hashHistory.push('/login');
         }
         var activeKey = window.localStorage.getItem('activeKey') || -1;
         if(this.state.activeKey != activeKey){
             this.setState({activeKey: parseInt(activeKey)});
         }
-    },
-    navbar_click: function (key, event) {
+    }
+    navbar_click(key, event) {
         if(key === 'logout')
             this.props.dispatch({type: 'LOGOUT'});
         else if(key === 'users'){
             this.reset_tabs();
             this.props.dispatch({type: 'SHOW_TABS', key: 'users'});
-            Router.hashHistory.push('/users_users');
+            hashHistory.push('/users_users');
         }
-    },
-    collapse: function () {
+    }
+    collapse() {
         this.setState({collapse: !this.state.collapse});
         var me = this;
         setTimeout(function(){
             me.props.dispatch({type: 'COLLAPSE'});
         }, 300);
-    },
+    }
     handleAlertDismiss() {
         this.props.dispatch({type: 'HIDE_ALERT'});
-    },
-    render: function () {
+    }
+    render() {
+        var me = this;
         var panels = this.state.data.filter(function(panel) {
             if(panel.servers.length > 0){
                 return true;
@@ -112,10 +118,10 @@ var Home = React.createClass({
             var header = (
                 <span><i className={'fa ' + panel.icon} /> {panel.name} <i className='fa fa-angle-down pull-right' /></span>
             )
-            var servers = panel.servers.map(function(server) {
-                var subpanels = panel.panels.map(function(panel) {
+            var servers = panel.servers.map((server) => {
+                var subpanels = panel.panels.map((panel) => {
                     return (
-                        <li key={panel.key}><NavLink to={'panel/' + panel.key + '/' + server} activeKey={i} reset_tabs={this.reset_tabs}>
+                        <li key={panel.key}><NavLink to={'panel/' + panel.key + '/' + server} activeKey={i} reset_tabs={me.reset_tabs}>
                             <span>{panel.name}</span>
                         </NavLink></li>
                     );
@@ -146,78 +152,77 @@ var Home = React.createClass({
         ];*/
 
         return (
-        <div>
-            <Bootstrap.Navbar bsStyle='inverse'>
-                <Bootstrap.Navbar.Header>
-                    <Bootstrap.Glyphicon glyph='menu-hamburger' onClick={this.collapse} />
-                    <img src='/static/logo.png' className='top-logo'/>
-                </Bootstrap.Navbar.Header>
-                <Bootstrap.Navbar.Collapse>
-                    <Bootstrap.Nav>
-                        {tabs}
-                    </Bootstrap.Nav>
-                    <Bootstrap.Nav pullRight>
-                        <Bootstrap.NavDropdown title={this.props.auth.username} onSelect={this.navbar_click} id="nav-dropdown" pullRight>
-                                <Bootstrap.MenuItem eventKey='users'>Users</Bootstrap.MenuItem>
-                                <Bootstrap.MenuItem eventKey='logout'>Logout</Bootstrap.MenuItem>
-                        </Bootstrap.NavDropdown>
-                    </Bootstrap.Nav>
-                </Bootstrap.Navbar.Collapse>
-            </Bootstrap.Navbar>
-            <div className='main-content'>
-                <div className='sidebar' style={this.state.collapse?{left: '-15.4vw'}:{left: 0}}>
-                    <ul className='left-menu'>
-                        <li>
-                        <Router.IndexLink to='' activeClassName='active' onClick={this.reset_tabs}>
-                            <Bootstrap.Glyphicon glyph='home' /> Overview</Router.IndexLink>
-                        </li>
-                        <li>
-                        <NavLink to='providers' reset_tabs={this.reset_tabs}>
-                            <Bootstrap.Glyphicon glyph='hdd' /> Providers</NavLink>
-                        </li>
-                        <NavLink to='servers' reset_tabs={this.reset_tabs}>
-                            <span><i className='fa fa-server' /> Servers</span>
-                        </NavLink>
-                        <li>
-                        <NavLink to='store' reset_tabs={this.reset_tabs}>
-                            <Bootstrap.Glyphicon glyph='th' /> Apps</NavLink>
-                        </li>
-                        <li>
-                        <NavLink to='services' reset_tabs={this.reset_tabs}>
-                            <Bootstrap.Glyphicon glyph='cloud' /> Services</NavLink>
-                        </li>
-                        <li>
-                        <NavLink to='vpn_status' tabs='vpn' show_tabs={this.show_tabs}>
-                            <span><i className='fa fa-lock' /> VPN</span>
-                        </NavLink>
-                        <NavLink to='log' reset_tabs={this.reset_tabs}>
-                            <span><i className='fa fa-bar-chart' /> Log</span>
-                        </NavLink>
-                        <NavLink to='billing' reset_tabs={this.reset_tabs}>
-                            <span><i className='fa fa-credit-card' /> Billing</span>
-                        </NavLink>
-                        </li>
-                        <li role="separator" className="divider-vertical"></li>
-                        <li className="panels-title">Admin panels</li>
-                        <li>
-                            <Bootstrap.Accordion key={this.state.activeKey} defaultActiveKey={this.state.activeKey}>
-                                {panels}
-                            </Bootstrap.Accordion>
-                        </li>
-                    </ul>
+            <div>
+                <Bootstrap.Navbar bsStyle='inverse'>
+                    <Bootstrap.Navbar.Header>
+                        <Bootstrap.Glyphicon glyph='menu-hamburger' onClick={this.collapse} />
+                        <img src='/static/logo.png' className='top-logo'/>
+                    </Bootstrap.Navbar.Header>
+                    <Bootstrap.Navbar.Collapse>
+                        <Bootstrap.Nav>
+                            {tabs}
+                        </Bootstrap.Nav>
+                        <Bootstrap.Nav pullRight>
+                            <Bootstrap.NavDropdown title={this.props.auth.username} onSelect={this.navbar_click} id="nav-dropdown" pullRight>
+                                    <Bootstrap.MenuItem eventKey='users'>Users</Bootstrap.MenuItem>
+                                    <Bootstrap.MenuItem eventKey='logout'>Logout</Bootstrap.MenuItem>
+                            </Bootstrap.NavDropdown>
+                        </Bootstrap.Nav>
+                    </Bootstrap.Navbar.Collapse>
+                </Bootstrap.Navbar>
+                <div className='main-content'>
+                    <div className='sidebar' style={this.state.collapse?{left: '-15.4vw'}:{left: 0}}>
+                        <ul className='left-menu'>
+                            <li>
+                            <IndexLink to='' activeClassName='active' onClick={this.reset_tabs}>
+                                <Bootstrap.Glyphicon glyph='home' /> Overview</IndexLink>
+                            </li>
+                            <li>
+                            <NavLink to='providers' reset_tabs={this.reset_tabs}>
+                                <Bootstrap.Glyphicon glyph='hdd' /> Providers</NavLink>
+                            </li>
+                            <NavLink to='servers' reset_tabs={this.reset_tabs}>
+                                <span><i className='fa fa-server' /> Servers</span>
+                            </NavLink>
+                            <li>
+                            <NavLink to='store' reset_tabs={this.reset_tabs}>
+                                <Bootstrap.Glyphicon glyph='th' /> Apps</NavLink>
+                            </li>
+                            <li>
+                            <NavLink to='services' reset_tabs={this.reset_tabs}>
+                                <Bootstrap.Glyphicon glyph='cloud' /> Services</NavLink>
+                            </li>
+                            <li>
+                            <NavLink to='vpn_status' tabs='vpn' show_tabs={this.show_tabs}>
+                                <span><i className='fa fa-lock' /> VPN</span>
+                            </NavLink>
+                            <NavLink to='log' reset_tabs={this.reset_tabs}>
+                                <span><i className='fa fa-bar-chart' /> Log</span>
+                            </NavLink>
+                            <NavLink to='billing' reset_tabs={this.reset_tabs}>
+                                <span><i className='fa fa-credit-card' /> Billing</span>
+                            </NavLink>
+                            </li>
+                            <li role="separator" className="divider-vertical"></li>
+                            <li className="panels-title">Admin panels</li>
+                            <li>
+                                <Bootstrap.Accordion key={this.state.activeKey} defaultActiveKey={this.state.activeKey}>
+                                    {panels}
+                                </Bootstrap.Accordion>
+                            </li>
+                        </ul>
+                    </div>
+                    <div className="page-content" style={this.state.collapse?{'left': '0', 'width': '96.4vw'}:{'left': '15.4vw', 'width': '81vw'}}>
+                        {this.props.children}
+                    </div>
+                    {this.props.alert.show && React.createElement(Bootstrap.Alert, {bsStyle: this.props.alert.className, onDismiss: this.handleAlertDismiss, className: "messages"}, this.props.alert.msg) }
                 </div>
-                <div className="page-content" style={this.state.collapse?{'left': '0', 'width': '97.4vw'}:{'left': '15.4vw', 'width': '82vw'}}>
-                    {this.props.children}
-                </div>
-                {this.props.alert.show && React.createElement(Bootstrap.Alert, {bsStyle: 'danger', onDismiss: this.handleAlertDismiss, className: "messages"}, this.props.alert.msg) }
             </div>
-        </div>
         );
     }
-});
+}
 
-Home = connect(function(state) {
+module.exports = connect(function(state) {
     return {auth: state.auth, alert: state.alert, menu: state.menu}
 })(Home);
 
-module.exports = Home;

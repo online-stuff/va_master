@@ -2,16 +2,18 @@ from .login import auth_only
 import tornado.gen
 from tornado.gen import Return
 import json
-import panels
+import panels, apps
 
 
 
 def get_paths():
     paths = {
         'get' : {
-            'drivers' : {'function' : list_drivers, 'args' : ['deploy_handler']},
+            'drivers' : {'function' : list_drivers, 'args' : ['drivers_handler']},
             'providers/get_trigger_functions': {'function' : get_providers_triggers, 'args' : ['provider_name']},
             'providers/get_provider_billing' : {'function' : get_provider_billing, 'args' : ['provider_name']},
+            'providers/billing' : {'function' : get_providers_billing, 'args' : ['handler']},
+
             'providers' : {'function' : list_providers, 'args' : ['handler']},
 
         },
@@ -30,7 +32,8 @@ def get_paths():
 @tornado.gen.coroutine
 def get_provider_and_driver(handler, provider_name = 'va_standalone_servers'):
     provider = yield handler.datastore_handler.get_provider(provider_name = provider_name)
-    driver = yield handler.deploy_handler.get_driver_by_id(provider['driver_name'])
+    print ('Provider: ', provider)
+    driver = yield handler.drivers_handler.get_driver_by_id(provider['driver_name'])
 
     raise tornado.gen.Return((provider, driver))
 
@@ -71,13 +74,13 @@ def get_providers_triggers(handler, provider_name):
 def list_providers(handler):
     """Gets a list of providers from the datastore. Adds the driver name to the list, and gets the status. Gets a list of servers for each provider and, if there are any hidden servers, they are removed from the list. """
     datastore_handler = handler.datastore_handler
-    deploy_handler = handler.deploy_handler
+    drivers_handler = handler.drivers_handler
 
     providers = yield datastore_handler.list_providers()
     hidden_servers = yield datastore_handler.get_hidden_servers()
 
     for provider in providers: 
-        driver = yield deploy_handler.get_driver_by_id(provider['driver_name'])
+        driver = yield drivers_handler.get_driver_by_id(provider['driver_name'])
         provider['servers'] = yield driver.get_servers(provider)
         
         provider_status = yield driver.get_provider_status(provider)
@@ -97,9 +100,9 @@ def delete_provider(datastore_handler, provider_name):
     yield datastore_handler.delete_provider(provider_name)
 
 @tornado.gen.coroutine
-def list_drivers(deploy_handler):
+def list_drivers(drivers_handler):
     """Gets a list of drivers. """
-    drivers = yield deploy_handler.get_drivers()
+    drivers = yield drivers_handler.get_drivers()
     out = {'drivers': []}
     for driver in drivers:
         driver_id = yield driver.driver_id()
@@ -115,9 +118,9 @@ def validate_new_provider_fields(handler, driver_id, field_values, step_index):
     """Used when adding new providers. Makes sure all the fields are entered properly, and proceeds differently based on what driver is being used. """
 
     step_index = int(step_index)
-    deploy_handler = handler.deploy_handler
+    drivers_handler = handler.drivers_handler
     datastore_handler = handler.datastore_handler
-    found_driver = yield deploy_handler.get_driver_by_id(driver_id)
+    found_driver = yield drivers_handler.get_driver_by_id(driver_id)
 
     driver_steps = yield found_driver.get_steps()
     if step_index >= len(driver_steps) or step_index < -1:
@@ -137,6 +140,78 @@ def validate_new_provider_fields(handler, driver_id, field_values, step_index):
     raise tornado.gen.Return(result)
 
 
+@tornado.gen.coroutine
+def get_providers_billing_data(handler):
+    drivers_handler = handler.drivers_handler
+    datastore_handler = handler.datastore_handler
+
+    providers = yield datastore_handler.list_providers()
+
+    provider_drivers = yield [drivers_handler.get_driver_by_id(x['driver_name']) for x in providers]
+    providers_data = [x[0].get_provider_billing(provider = x[1]) for x in zip(provider_drivers, providers)]
+
+    result = yield providers_data
+    result = [x for x in result if x]
+
+    raise tornado.gen.Return(result)
+
+
+@tornado.gen.coroutine
+def get_providers_billing(handler):
+    providers_billing_data = yield get_providers_billing_data(handler)
+    providers = []
+    for provider in providers_billing_data: 
+        p = {
+                'provider': provider['provider']['provider_name'], 
+                'subRows': [{
+                    'server': server['hostname'], 
+                    'cpu': server['used_cpu'], 
+                    'memory': server['used_ram'], 
+                    'hdd': server['used_disk'], 
+                    'cost': server['cost'], 
+                    'e_cost': server['estimated_cost']
+                } for server in provider['servers']]
+
+        }
+        for attr in ['cpu', 'memory', 'hdd', 'cost', 'e_cost']: 
+            if provider['provider'].get(attr): 
+                p[attr] = provider['provider'][attr]
+        providers.append(p)
+
+    result = { 
+        'dataSource': providers, 
+        'rows': [
+        {
+            'key': 'provider', 
+            'label': 'Provider'
+        }, {
+            'key': 'server', 
+            'label': 'Server' 
+        }], 
+        'data': [ 
+        {
+            'key': 'cpu', 
+            'label': 'CPU',
+            'type' : 'number', 
+        }, {
+            'key': 'memory', 
+            'label': 'Memory',
+            'type' : 'number',
+        }, {
+            'key': 'hdd', 
+            'label': 'HDD',
+            'type' : 'number',
+        }, {
+            'key': 'cost', 
+            'label': 'Cost',
+            'type' : 'number',
+        }, {
+            'key': 'e_cost', 
+            'label': 'Estimated cost',
+            'type' : 'number',
+        }] 
+    }
+    raise tornado.gen.Return(result)
 
 @tornado.gen.coroutine
 def get_provider_info(handler, dash_user, get_billing = True, get_servers = True, required_providers = [], sort_by_location = False):
@@ -146,7 +221,7 @@ def get_provider_info(handler, dash_user, get_billing = True, get_servers = True
     If required_providers is set, the providers are filtered to only show the providers with a provider_name in that list. 
     If sort_by_location is true, then this sorts providers in a dictionary object where the keys are the locations of the providers. 
     """
-    deploy_handler = handler.deploy_handler
+    drivers_handler = handler.drivers_handler
     datastore_handler = handler.datastore_handler
 
     hidden_servers = yield datastore_handler.get_hidden_servers()
@@ -155,23 +230,32 @@ def get_provider_info(handler, dash_user, get_billing = True, get_servers = True
     if required_providers: 
         providers = [provider for provider in providers if provider['provider_name'] in required_providers]
 
-    provider_drivers = yield [deploy_handler.get_driver_by_id(x['driver_name']) for x in providers]
+    provider_drivers = yield [drivers_handler.get_driver_by_id(x['driver_name']) for x in providers]
     providers_data = [x[0].get_provider_data(provider = x[1], get_servers = get_servers, get_billing = get_billing) for x in zip(provider_drivers, providers)]
     providers_info = yield providers_data
     
     states = yield panels.get_panels(handler, dash_user)
 
-    for provider in providers_info:
+    for p_info in zip(providers_info, providers):
+        provider = p_info[0]
+        provider_kv = p_info[1]
+
+        provider['provider_name'] = provider_kv['provider_name']
+        provider['location'] = provider_kv['location']
+
         if hidden_servers: 
             provider['servers'] = [x for x in provider['servers'] if x['hostname'] not in hidden_servers]
 
         for server in provider['servers']:
             server_panel = [x for x in states if server.get('hostname', '') in x['servers']] or [{'icon' : 'fa-server'}]
             server['icon'] = server_panel[0]['icon']
-
-    for info in zip(providers_info, providers): 
-        info[0]['provider_name'] = info[1]['provider_name']
-        info[0]['location'] = info[1]['location']
+            datastore_server = yield datastore_handler.get_object(object_type = 'server', server_name = server.get('hostname', ''))
+            if not datastore_server: 
+                print ('Did not find server', server.get('hostname'), 'in kv, inserting now. ')
+                datastore_server = yield apps.manage_server_type(datastore_handler, server_name = server.get('hostname'), new_type = 'provider', driver_name = provider_kv['driver_name'])
+            server.update(datastore_server)
+            server['managed_by'] = server.get('managed_by', ['unmanaged'])
+            server['available_actions'] = server.get('available_actions', {})
 
     providers_info = [x for x in providers_info if x['provider_name']]
 

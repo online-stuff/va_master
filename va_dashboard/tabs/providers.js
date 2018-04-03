@@ -1,168 +1,170 @@
-var React = require('react');
+import React, { Component } from 'react';
 var Bootstrap = require('react-bootstrap');
 var Network = require('../network');
-var connect = require('react-redux').connect;
-var Reactable = require('reactable');
+import { connect } from 'react-redux';
+import { Table, Tr, Td } from 'reactable';
+import { ConfirmPopup } from './shared_components';
+import { getTableRowWithAction, getSpinner } from './util';
 
-var Providers = React.createClass({
-    getInitialState: function () {
-        return {providers: [], loading: true, popupShow: false, popupData: {}};
-    },
-    getCurrentProviders: function () {
-        var me = this;
-        Network.post('/api/providers', this.props.auth.token, {}).done(function (data) {
-            me.setState({providers: data.providers, loading: false});
-        }).fail(function (msg) {
-            me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
+const tblCols = ['Provider name', 'IP', 'Instances', 'Driver', 'Status'];
+
+class Providers extends Component {
+    constructor (props) {
+        super(props);
+        this.state = {
+            providers: [], 
+            loading: true, 
+            popupShow: false, 
+            popupData: {}
+        };
+        this.getCurrentProviders = this.getCurrentProviders.bind(this);
+        this.confirm_action = this.confirm_action.bind(this);
+        this.deleteProvider = this.deleteProvider.bind(this);
+        this.addProvider = this.addProvider.bind(this);
+        this.popupClose = this.popupClose.bind(this);
+    }
+    getCurrentProviders () {
+        Network.post('/api/providers', this.props.auth.token, {}).done(data => {
+            this.setState({ providers: data.providers, loading: false });
+        }).fail(msg => {
+            this.props.dispatch({ type: 'SHOW_ALERT', msg });
         });
-    },
-    componentDidMount: function () {
+    }
+    componentDidMount() {
         this.getCurrentProviders();
-    },
-    confirm_action: function(e){
-        var data = {"provider_name": e.target.value};
-        this.setState({popupShow: true, popupData: data});
-    },
-    deleteProvider: function (data){
-        var me = this;
-        /*Network.post('/api/providers/delete', this.props.auth.token, data).done(function(data) {
-            me.getCurrentProviders();
-        }).fail(function (msg) {
-            me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
-        });*/
-    },
-    addProvider: function () {
-        this.props.dispatch({type: 'OPEN_MODAL'});
-    },
-    popupClose: function() {
-        this.setState({popupShow: false});
-    },
-    render: function() {
-        var provider_rows = this.state.providers.map(function(provider) {
-            var status = "", className = "";
-            if(provider.status.success){
+    }
+    confirm_action(e){
+        var data = { "provider_name": e.target.value };
+        this.setState({ popupShow: true, popupData: data });
+    }
+    deleteProvider (data){
+        Network.post('/api/providers/delete', this.props.auth.token, data).done(data => {
+            this.getCurrentProviders();
+        }).fail(msg => {
+            this.props.dispatch({ type: 'SHOW_ALERT', msg });
+        });
+    }
+    addProvider () {
+        this.props.dispatch({ type: 'OPEN_MODAL' });
+    }
+    popupClose() {
+        this.setState({ popupShow: false });
+    }
+    render() {
+        const { providers, loading, popupData, popupShow } = this.state;
+        var provider_rows = providers.map(provider => {
+            let { provider_name, provider_ip, servers, driver_name, status } = provider, className;
+            if(status.success){
                 status = "Online";
                 className = "row-provider-Online";
             }else{
-                popover = (
+                let popover = (
                     <Bootstrap.Popover title="Error">
-                        {provider.status.message}
+                        {status.message}
                     </Bootstrap.Popover>
                 );
                 status = (<Bootstrap.OverlayTrigger overlay={popover}><a>Offline</a></Bootstrap.OverlayTrigger>);
                 className = "danger row-provider-Offline";
             }
             return (
-                <Reactable.Tr key={provider.provider_name} className={className}>
-                    <Reactable.Td column="Provider name">{provider.provider_name}</Reactable.Td>
-                    <Reactable.Td column="IP">{provider.provider_ip}</Reactable.Td>
-                    <Reactable.Td column="Instances">{provider.servers.length}</Reactable.Td>
-                    <Reactable.Td column="Driver">{provider.driver_name}</Reactable.Td>
-                    <Reactable.Td column="Status">{status}</Reactable.Td>
-                    <Reactable.Td column="Actions"><Bootstrap.Button type="button" bsStyle='primary' onClick={this.confirm_action} value={provider.provider_name}>
-                        Delete
-                    </Bootstrap.Button></Reactable.Td>
-                </Reactable.Tr>
+                <Tr key={provider.provider_name} className={className}>
+                    {getTableRowWithAction(tblCols, [provider_name, provider_ip, servers.length, driver_name, status], 'Delete', provider_name, this.confirm_action)}
+                </Tr>
             );
-        }.bind(this));
-        var NewProviderFormRedux = connect(function(state){
-            return {auth: state.auth, alert: state.alert, modal: state.modal};
-        })(NewProviderForm);
-        var loading = this.state.loading;
+        });
         const spinnerStyle = {
-            display: loading ? "block": "none",
+            display: loading ? "block": "none"
         };
         const blockStyle = {
-            visibility: loading ? "hidden": "visible",
+            visibility: loading ? "hidden": "visible"
         };
-        var sf_cols = ['Provider name', 'IP', 'Instances', 'Driver', 'Status'];
         return (<div className="app-containter">
             <NewProviderFormRedux changeProviders = {this.getCurrentProviders} />
-            <span className="spinner" style={spinnerStyle} ><i className="fa fa-spinner fa-spin fa-3x" aria-hidden="true"></i></span>
-            <div style={blockStyle}>
-                <Bootstrap.PageHeader>Current providers</Bootstrap.PageHeader>
-                <Reactable.Table className="table striped" columns={['Provider name', 'IP', 'Instances', 'Driver', 'Status', 'Actions']} itemsPerPage={10} pageButtonLimit={10} noDataText="No matching records found." sortable={sf_cols} filterable={sf_cols} btnName="Add provider" btnClick={this.addProvider}>
-                    {provider_rows}
-                </Reactable.Table>
+            {getSpinner(spinnerStyle)}
+            <div style={blockStyle} className="card">
+                <div className="card-body">
+                    <Table className="table striped" columns={[...tblCols, 'Actions']} itemsPerPage={10} pageButtonLimit={10} noDataText="No matching records found." sortable={tblCols} filterable={tblCols} btnName="Add provider" btnClick={this.addProvider} title="Current providers" filterClassName="form-control" filterPlaceholder="Filter">
+                        {provider_rows}
+                    </Table>
+                </div>
             </div>
-            <ConfirmPopup show={this.state.popupShow} data={this.state.popupData} close={this.popupClose} action={this.deleteProvider} />
+            <ConfirmPopup body={"Please confirm action: delete provider " + popupData.provider_name} show={popupShow} data={[popupData]} close={this.popupClose} action={this.deleteProvider} />
         </div>);
     }
-});
+}
 
-var ProviderStep = React.createClass({
-    render: function () {
-        var fields = [];
-        for(var i = 0; i < this.props.fields.length; i++) {
-            var field = this.props.fields[i];
-            var formControl = null;
-            var notAField = false;
-            if(field.type === 'str') {
-                formControl = <Bootstrap.FormControl type='text' key={field.id} id={field.id} value={this.props.fieldValues[field.id]} onChange={this.onChange} />;
-            } else if(field.type === 'options') {
-                formControl = (
-                    <Bootstrap.FormControl componentClass='select' key={field.id} id={field.id} onChange={this.onChange}>
-                        <option key={-1} value=''>Choose</option>
-                        {this.props.optionChoices[field.id].map(function(option, i) {
-                            return <option key={i} value={option}>{option}</option>
-                        })}
-                    </Bootstrap.FormControl>
-                );
-            } else if(field.type === 'description'){
-                notAField = true;
-                formControl = (
-                    <Bootstrap.FormGroup key={field.id}>
-                        <br/>
-                        <Bootstrap.Well>
-                            <h4>
-                            {field.name} &nbsp;
-                            <Bootstrap.Label bsStyle='info'> Info</Bootstrap.Label>
-                            </h4>
-                            <p>{this.props.optionChoices[field.id]}</p>
-                        </Bootstrap.Well>
-                    </Bootstrap.FormGroup>
-                );
-            }
-            else if(field.type === 'file'){
-                formControl = <Bootstrap.FormControl type='file' key={field.id} id={field.id} value={this.props.fieldValues[field.id]} onChange={this.onChange} />;
-            }
-            if(notAField) {
-                fields.push(formControl);
-            } else {
-                fields.push(
-                    <Bootstrap.FormGroup key={field.id}>
-                        <Bootstrap.ControlLabel >{field.name}</Bootstrap.ControlLabel>
-                        {formControl}
-                    </Bootstrap.FormGroup>
-                );
-            }
+const ProviderStep = (props) => {
+    var fields = [];
+    for(var i = 0; i < props.fields.length; i++) {
+        var field = props.fields[i];
+        var formControl = null;
+        var notAField = false;
+        if(field.type === 'str') {
+            formControl = <Bootstrap.FormControl type='text' key={field.id} id={field.id} value={props.fieldValues[field.id]} onChange={props.onFieldChange} />;
+        } else if(field.type === 'options') {
+            formControl = (
+                <Bootstrap.FormControl componentClass='select' key={field.id} id={field.id} onChange={props.onFieldChange}>
+                    <option key={-1} value=''>Choose</option>
+                    {props.optionChoices[field.id].map(function(option, i) {
+                        return <option key={i} value={option}>{option}</option>
+                    })}
+                </Bootstrap.FormControl>
+            );
+        } else if(field.type === 'description'){
+            notAField = true;
+            formControl = (
+                <Bootstrap.FormGroup key={field.id}>
+                    <br/>
+                    <Bootstrap.Well>
+                        <h4>
+                        {field.name} &nbsp;
+                        <Bootstrap.Label bsStyle='info'> Info</Bootstrap.Label>
+                        </h4>
+                        <p>{props.optionChoices[field.id]}</p>
+                    </Bootstrap.Well>
+                </Bootstrap.FormGroup>
+            );
         }
-        return (
-            <form>
-                {fields}
-            </form>
-        )
-    },
-    onChange: function(e) {
-        this.props.onFieldChange(e.target.id, e.target.value);
+        else if(field.type === 'file'){
+            formControl = <Bootstrap.FormControl type='file' key={field.id} id={field.id} value={props.fieldValues[field.id]} onChange={props.onFieldChange} />;
+        }
+        if(notAField) {
+            fields.push(formControl);
+        } else {
+            fields.push(
+                <Bootstrap.FormGroup key={field.id}>
+                    <Bootstrap.ControlLabel >{field.name}</Bootstrap.ControlLabel>
+                    {formControl}
+                </Bootstrap.FormGroup>
+            );
+        }
     }
-});
+    return (
+        <form>
+            {fields}
+        </form>
+    )
+}
 
-var NewProviderForm = React.createClass({
-    getInitialState: function () {
-        return {currentDriver: null, drivers: [], stepIndex: -1, optionChoices: {},
+class NewProviderForm extends Component {
+    constructor (props) {
+        super(props);
+        this.state = {currentDriver: null, drivers: [], stepIndex: -1, optionChoices: {},
             errors: [], fieldValues: {}, isLoading: false};
-    },
-    componentDidMount: function () {
-        var me = this;
-        Network.get('/api/drivers', this.props.auth.token).done(function(data) {
-            var newState = {drivers: data.drivers};
-            me.setState(newState);
-        }).fail(function (msg) {
-            me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
+        this.onDriverSelect = this.onDriverSelect.bind(this);
+        this.onFieldChange = this.onFieldChange.bind(this);
+        this.close = this.close.bind(this);
+        this.nextStep = this.nextStep.bind(this);
+        this.onSubmit = this.onSubmit.bind(this);
+    }
+    componentDidMount () {
+        Network.get('/api/drivers', this.props.auth.token).done(data => {
+            this.setState({ drivers: data.drivers });
+        }).fail(msg => {
+            this.props.dispatch({type: 'SHOW_ALERT', msg});
         });
-    },
-    onDriverSelect: function (e) {
+    }
+    onDriverSelect (e) {
         var driverId = e.target.value;
         for(var i = 0; i < this.state.drivers.length; i++){
             var driver = this.state.drivers[i];
@@ -186,19 +188,21 @@ var NewProviderForm = React.createClass({
         }
         this.setState({currentDriver: null, stepIndex: -1, optionChoices: {},
             errors: [], fieldValues: {}});
-    },
-    onFieldChange: function(id, value){
-        var newFieldValues = Object.assign({}, this.state.fieldValues);
+    }
+    onFieldChange(e){
+        let id = e.target.id;
+        let value = e.target.value;
+        let newFieldValues = Object.assign({}, this.state.fieldValues);
         newFieldValues[id] = value;
         this.setState({fieldValues: newFieldValues});
-    },
-    close: function() {
+    }
+    close() {
         this.props.dispatch({type: 'CLOSE_MODAL'});
-    },
-    render: function () {
+    }
+    render() {
         var steps = [];
         var driverOptions = [<option key="-1" value=''>Select driver</option>];
-        for(var i = 0; i < this.state.drivers.length; i++) {
+        for(let i = 0; i < this.state.drivers.length; i++) {
             var driver = this.state.drivers[i];
             driverOptions.push(
                 <option value={driver.id} key={driver.id}>{driver.friendly_name}</option>
@@ -225,7 +229,7 @@ var NewProviderForm = React.createClass({
         }
 
         var errors = [];
-        for(var i = 0; i < this.state.errors.length; i++){
+        for(let i = 0; i < this.state.errors.length; i++){
             var err = this.state.errors[i];
             errors.push(
                 <Bootstrap.Alert key={i} bsStyle='danger'>{err}</Bootstrap.Alert>
@@ -266,42 +270,40 @@ var NewProviderForm = React.createClass({
                     </Bootstrap.ButtonGroup>
                 </Bootstrap.Modal.Footer>
             </Bootstrap.Modal>);
-    },
-    nextStep: function () {
+    }
+    nextStep() {
         if(this.state.currentDriver === null) return;
         if(this.state.stepIndex === -1){
-            var me = this;
-            var data = {driver_id: this.state.currentDriver.id, step_index: -1, field_values: {}};
-            Network.post('/api/providers/new/validate_fields', this.props.auth.token, data).done(function(d) {
-                me.setState({stepIndex: d.new_step_index, optionChoices: d.option_choices});
-            }).fail(function (msg) {
-                me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
+            let data = {driver_id: this.state.currentDriver.id, step_index: -1, field_values: {}};
+            Network.post('/api/providers/new/validate_fields', this.props.auth.token, data).done(d => {
+                this.setState({stepIndex: d.new_step_index, optionChoices: d.option_choices});
+            }).fail(msg => {
+                this.props.dispatch({type: 'SHOW_ALERT', msg: msg});
             });
         } else {
-            var me = this;
-            me.setState({isLoading: true});
-            var data = {driver_id: this.state.currentDriver.id, step_index: this.state.stepIndex,
+            this.setState({isLoading: true});
+            let data = {driver_id: this.state.currentDriver.id, step_index: this.state.stepIndex,
                 field_values: this.state.fieldValues};
-            Network.post('/api/providers/new/validate_fields', this.props.auth.token, data).done(function(d) {
-                var mergeChoices = Object.assign({}, me.state.optionChoices);
+            Network.post('/api/providers/new/validate_fields', this.props.auth.token, data).done(d => {
+                var mergeChoices = Object.assign({}, this.state.optionChoices);
                 for(var id in d.option_choices){
                     mergeChoices[id] = d.option_choices[id];
                 }
                 if(d.new_step_index == -1 && d.errors.length == 0){
-                    setTimeout(function(){
-                         me.props.changeProviders();
+                    setTimeout(() => {
+                         this.props.changeProviders();
                     }, 2000);
                 }else{
-                    me.setState({stepIndex: d.new_step_index, optionChoices: mergeChoices, errors: d.errors, isLoading: false});
+                    this.setState({stepIndex: d.new_step_index, optionChoices: mergeChoices, errors: d.errors, isLoading: false});
                 }
-            }).fail(function (msg) {
-                me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
+            }).fail(msg => {
+                this.props.dispatch({type: 'SHOW_ALERT', msg: msg});
             });
             //var data = {driver_id: this.state.currentDriver.id, current_index: this.state.stepIndex,
             //}
         }
-    },
-    onSubmit: function(e) {
+    }
+    onSubmit(e) {
         e.preventDefault();
         var data = {name: this.refs.provider_name.value, driver: this.state.currentDriver};
         var me = this;
@@ -311,31 +313,13 @@ var NewProviderForm = React.createClass({
             me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
         });
     }
-});
+}
 
-var ConfirmPopup = React.createClass({
-    render: function () {
-        return (
-            <Bootstrap.Modal show={this.props.show} onHide={this.props.close}>
-                <Bootstrap.Modal.Header closeButton>
-                  <Bootstrap.Modal.Title>Confirm action</Bootstrap.Modal.Title>
-                </Bootstrap.Modal.Header>
+const NewProviderFormRedux = connect(function(state){
+	return {auth: state.auth, alert: state.alert, modal: state.modal};
+})(NewProviderForm);
 
-                <Bootstrap.Modal.Body>
-                    <p>Please confirm action: delete provider {this.props.data.provider_name}</p>
-                </Bootstrap.Modal.Body>
-
-                <Bootstrap.Modal.Footer>
-                    <Bootstrap.Button onClick={this.props.close}>Cancel</Bootstrap.Button>
-                    <Bootstrap.Button onClick={this.props.action.bind(null, this.props.data)} bsStyle = "primary">Confirm</Bootstrap.Button>
-                </Bootstrap.Modal.Footer>
-            </Bootstrap.Modal>
-        );
-    }
-});
-
-Providers = connect(function(state){
+module.exports = connect(function(state){
     return {auth: state.auth, alert: state.alert};
 })(Providers);
 
-module.exports = Providers;

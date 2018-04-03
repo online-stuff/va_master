@@ -1,22 +1,31 @@
-var React = require('react');
+import React, { Component } from 'react';
 var Bootstrap = require('react-bootstrap');
-var Network = require('../network');
+import { callPanelAction, download } from './util';
 
-var Filter = React.createClass({
+class Filter extends Component {
 
-    filter: function(e){
+    componentDidMount(){
+		var elem = this.refs[this.props.name], pos = elem.value.length;
+		elem.focus();
+		elem.setSelectionRange(pos, pos);
+    }
+
+    filter(e) {
         this.props.dispatch({type: 'FILTER', filterBy: e.target.value});
-    },
+    }
 
-    render: function () {
+    render () {
+        let { name, filter } = this.props;
         return (
             <Bootstrap.InputGroup>
-                <Bootstrap.FormControl
+                <input
+                    id={name}
                     type="text"
+                    className="form-control"
                     placeholder="Filter"
-                    value={this.props.filter.filterBy}
-                    onChange={this.filter}
-                    autoFocus
+                    value={filter.filterBy}
+                    onChange={(e) => this.filter(e)}
+                    ref={name}
                 />
                 <Bootstrap.InputGroup.Addon>
                   <Bootstrap.Glyphicon glyph="search" />
@@ -24,29 +33,44 @@ var Filter = React.createClass({
             </Bootstrap.InputGroup>
         );
     }
-});
+}
 
-var Button = React.createClass({
+class Button extends Component {
 
-    openModal: function() {
+    openModal () {
         var modal = this.props.modalTemplate;
         this.props.dispatch({type: 'OPEN_MODAL', template: modal});
-    },
+    }
 
-    showTarget: function(target) {
-        console.log(target);
+    showTarget (target) {
         this.props.dispatch({type: 'TOGGLE'});
-    },
+    }
 
-    btn_action: function(action) {
-        console.log(action);
-    },
+    btn_action (action) {
+        if("tblName" in this.props){
+            var panel = this.props.panel, export_type = this.props.export_type;
+            var filterVal = document.getElementById('reactableFilter').value;
+            var data = {server_name: panel.server, panel: panel.panel, args: panel.args, table_name: this.props.tblName, filter_field: filterVal, export_type: export_type};
+            download('/api/panels/export_table', this.props.auth.token, data, `${panel.panel}.${export_type}`, (msg) => {
+                this.props.dispatch({type: 'SHOW_ALERT', msg: msg});
+            });
+        }else if('action' in this.props){
+			//let data = { action: this.props.action };
+            //if('data' in this.props) data = Object.assign(data, this.props.data);
+            let data = 'data' in this.props ? this.props.data : {};
+            callPanelAction(this.props.auth.token, data, (msg) => {
+                this.props.dispatch({type: 'SHOW_ALERT', msg});
+            }, (msg) => {
+                this.props.dispatch({type: 'SHOW_ALERT', msg});
+            });
+        }
+    }
 
-    render: function () {
+    render () {
         var onclick = null, glyph;
         switch (this.props.action) {
             case "modal":
-                onclick = this.openModal;
+                onclick = this.openModal.bind(this);
                 break;
             case "show":
                 onclick = this.showTarget.bind(this, this.props.target);
@@ -55,7 +79,7 @@ var Button = React.createClass({
                 onclick = this.btn_action.bind(this, this.props.action);
         }
         if(this.props.hasOwnProperty('glyph')){
-            glyph = <Bootstrap.Glyphicon glyph='plus' />;
+            glyph = <Bootstrap.Glyphicon glyph={this.props.glyph} />;
         }
         return (
             <Bootstrap.Button onClick={onclick}>
@@ -64,38 +88,29 @@ var Button = React.createClass({
             </Bootstrap.Button>
         );
     }
-});
+}
 
-var Heading = React.createClass({
+const Heading = (props) => {
+    return (
+        <h3>
+            {props.name}
+        </h3>
+    );
+}
 
-    render: function () {
-        return (
-            <h3>
-                {this.props.name}
-            </h3>
-        );
-    }
-});
+const Paragraph = (props) => {
+    return (
+        <div>
+            {props.name}
+        </div>
+    );
+}
 
-var Paragraph = React.createClass({
-
-    render: function () {
-        return (
-            <div>
-                {this.props.name}
-            </div>
-        );
-    }
-});
-
-var Frame = React.createClass({
-
-    render: function () {
-        return (
-            <iframe key={this.props.name} src={this.props.src} className="iframe"></iframe>
-        );
-    }
-});
+const Frame = (props) => {
+    return (
+        <iframe key={props.name} src={props.src} className="iframe"></iframe>
+    );
+}
 
 
 module.exports = {

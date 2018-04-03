@@ -1,11 +1,21 @@
-var React = require('react');
+import React, { Component } from 'react';
 var Bootstrap = require('react-bootstrap');
-var Router = require('react-router');
-var connect = require('react-redux').connect;
+import { hashHistory } from 'react-router';
+import { connect } from 'react-redux';
 var Network = require('./network');
 
-var Login = React.createClass({
-    onSubmit: function(e) {
+class Login extends Component {
+    constructor(props){
+        super(props);
+        this.state = {
+            username: '', 
+            password: ''
+        };
+        this.onSubmit = this.onSubmit.bind(this);
+        this.onInput = this.onInput.bind(this);
+    }
+
+    onSubmit(e) {
         e.preventDefault();
         var data = {
             username: this.state.username,
@@ -24,22 +34,19 @@ var Login = React.createClass({
                 me.props.dispatch({type: 'LOGIN_ERROR'});
             }, 300);
         });
-    },
-    componentWillReceiveProps: function(props) {
+    }
+    componentWillReceiveProps(props) {
         if(props.auth.token){
-            Router.hashHistory.push('/');
+            hashHistory.push('/');
         }
-    },
-    componentDidMount: function () {
+    }
+    componentDidMount() {
         document.body.className = 'login';
-    },
-    componentWillUnmount: function () {
+    }
+    componentWillUnmount() {
         document.body.className = '';
-    },
-    getInitialState: function () {
-        return {username: '', password: ''};
-    },
-    render: function() {
+    }
+    render() {
         let status = null;
         if(this.props.auth.inProgress) {
             status = (<Bootstrap.Alert bsStyle='info'>Logging in...</Bootstrap.Alert>);
@@ -49,37 +56,42 @@ var Login = React.createClass({
         }
 
         return (
-            <div className='splash-login'>
-            <form className='login-form form-horizontal' onSubmit={this.onSubmit}>
-                <img src='/static/logo-splash.png' alt='VapourApps' className='splash-logo'/>
-                <Bootstrap.FormGroup controlId='username'>
-                    <Bootstrap.ControlLabel>Username</Bootstrap.ControlLabel>
-                    <Bootstrap.FormControl type='text' placeholder='Enter username...'
-                      name='username' onChange={this.onInput} value={this.state.username}/>
-                </Bootstrap.FormGroup>
+            <div id='splash-login'>
+                <form onSubmit={this.onSubmit}>
+                    <img src='/static/logo-splash.png' alt='VapourApps' className='splash-logo'/>
+                    <Bootstrap.FormGroup controlId='username'>
+                        <Bootstrap.ControlLabel>Username</Bootstrap.ControlLabel>
+                        <Bootstrap.InputGroup>
+                            <Bootstrap.InputGroup.Addon><Bootstrap.Glyphicon glyph="user" /></Bootstrap.InputGroup.Addon>
+                            <Bootstrap.FormControl type='text' placeholder='Enter username...'
+                          name='username' onChange={this.onInput} value={this.state.username} />
+                        </Bootstrap.InputGroup>
+                    </Bootstrap.FormGroup>
 
-                <Bootstrap.FormGroup controlId='username'>
-                    <Bootstrap.ControlLabel>Password</Bootstrap.ControlLabel>
-                    <Bootstrap.FormControl placeholder='Enter password...' type='password'
-                      name='password' onChange={this.onInput} value={this.state.password} />
-                </Bootstrap.FormGroup>
-
-                <Bootstrap.FormGroup>
-                    <Bootstrap.Button bsStyle='primary' type='submit'>Log in</Bootstrap.Button>
-                </Bootstrap.FormGroup>
-            </form>
-            {status}
+                    <Bootstrap.FormGroup controlId='password'>
+                        <Bootstrap.ControlLabel>Password</Bootstrap.ControlLabel>
+                        <Bootstrap.InputGroup>
+                            <Bootstrap.InputGroup.Addon><Bootstrap.Glyphicon glyph="lock" /></Bootstrap.InputGroup.Addon>
+                            <Bootstrap.FormControl placeholder='Enter password...' type='password'
+                          name='password' onChange={this.onInput} value={this.state.password} />
+                        </Bootstrap.InputGroup>
+                    </Bootstrap.FormGroup>
+                    <Bootstrap.FormGroup>
+                    <Bootstrap.Button bsStyle='primary' type='submit' block>Log in</Bootstrap.Button>
+                    </Bootstrap.FormGroup>
+                </form>
+                {status}
             </div>
         );
-    },
-    onInput: function (e) {
+    }
+    onInput(e) {
         if(e.target.name === 'username') {
             this.setState({username: e.target.value});
         } else {
             this.setState({password: e.target.value});
         }
     }
-});
+}
 
 module.exports = connect(function(state) {
     return {auth: state.auth};

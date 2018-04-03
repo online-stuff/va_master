@@ -1,21 +1,24 @@
-var React = require('react');
+import React, { Component } from 'react';
 var Bootstrap = require('react-bootstrap');
-var connect = require('react-redux').connect;
+import {connect} from 'react-redux';
 var Network = require('../network');
-var ReactDOM = require('react-dom');
-var Router = require('react-router');
-var Select = require('react-select-plus');
+import {findDOMNode} from 'react-dom';
+import Select from 'react-select-plus';
+import {Table, Tr, Td} from 'reactable';
 
-var UserGroupPanel = React.createClass({
-    getInitialState: function () {
-        return {
+class UserGroupPanel extends Component {
+    constructor (props) {
+        super(props);
+        this.state = {
             funcs: [],
             groups: [],
-            group_opt: []
-        }
-    },
+            group_opt: [],
+            loading: true,
+        };
+        this.getCurrentFuncs = this.getCurrentFuncs.bind(this);
+    }
 
-    getCurrentFuncs: function () {
+    getCurrentFuncs () {
         var me = this;
         var n1 = Network.get('/api/panels/get_all_functions', this.props.auth.token)
         .fail(function (msg) {
@@ -29,39 +32,55 @@ var UserGroupPanel = React.createClass({
             var groups = resp2.map(function(group) {
                 return {value: group.func_name, label: group.func_name};
             });
-            me.setState({funcs: resp1, groups: resp2, group_opt: groups});
+            me.setState({funcs: resp1, groups: resp2, group_opt: groups, loading: false});
         }); 
-    },
+    }
 
-    componentDidMount: function () {
+    componentDidMount () {
         this.getCurrentFuncs();
-    },
+    }
 
-    render: function () {
+    render () {
         var UserRedux = connect(function(state){
             return {auth: state.auth, alert: state.alert};
         })(Users);
 
+        var loading = this.state.loading;
+        const spinnerStyle = {
+            display: loading ? "block": "none",
+        };
+        const blockStyle = {
+            visibility: loading ? "hidden": "visible",
+        };
+
         return (
-            <div>
-                <UserRedux funcs = {this.state.funcs} groups = {this.state.group_opt} />
+            <div className="app-containter">
+                <span className="spinner" style={spinnerStyle} ><i className="fa fa-spinner fa-spin fa-3x" aria-hidden="true"></i></span>
+                <UserRedux funcs = {this.state.funcs} groups = {this.state.group_opt} style={blockStyle} />
             </div>
         )
     }
-});
+}
 
 
-var Users = React.createClass({
-    getInitialState: function () {
-        return {
+class Users extends Component {
+    constructor (props) {
+        super(props);
+        this.state = {
             users: [],
             modal_open: false,
             update: false,
             selected_user: {}
-        }
-    },
+        };
+        this.getCurrentUsers = this.getCurrentUsers.bind(this);
+        this.openModal = this.openModal.bind(this);
+        this.addUser = this.addUser.bind(this);
+        this.updateUser = this.updateUser.bind(this);
+        this.closeModal = this.closeModal.bind(this);
+        this.btn_clicked = this.btn_clicked.bind(this);
+    }
 
-    getCurrentUsers: function () {
+    getCurrentUsers () {
         var me = this;
         Network.get('/api/panels/users', this.props.auth.token)
         .done(function (data){
@@ -70,26 +89,26 @@ var Users = React.createClass({
         .fail(function (msg) {
             me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
         });
-    },
+    }
 
-    componentDidMount: function () {
+    componentDidMount () {
         this.getCurrentUsers();
-    },
+    }
 
-    openModal: function() {
-        this.setState({modal_open: true});
-    },
+    openModal() {
+        this.setState({modal_open: true, update: false});
+    }
 
-    addUser: function(data) {
+    addUser(data) {
         var users = Object.assign([], this.state.users);
         data.functions = data.functions.map(function(f){
             return f.value;
         });
         users.push(data);
         this.setState({modal_open: false, users: users});
-    },
+    }
 
-    updateUser: function(index, data) {
+    updateUser(index, data) {
         var users = Object.assign([], this.state.users);
         if(data.functions.length > 0 && typeof data.functions[0] === 'object'){
             data.functions = data.functions.map(function(f){
@@ -98,13 +117,13 @@ var Users = React.createClass({
         }
         users[index] = data;
         this.setState({modal_open: false, users: users});
-    },
+    }
 
-    closeModal: function() {
+    closeModal() {
         this.setState({modal_open: false});
-    },
+    }
 
-    btn_clicked: function(index, evtKey){
+    btn_clicked(index, evtKey){
         var users = Object.assign([], this.state.users);
         var user = users[index];
         if(evtKey === "remove"){
@@ -118,24 +137,24 @@ var Users = React.createClass({
         }else{
             this.setState({modal_open: true, update: index, selected_user: user});
         }
-    },
+    }
 
-    render: function () {
+    render() {
         var user_rows = this.state.users.map(function(user, index) {
             var groups = user.groups.join(', ');
             var funcs = user.functions.join(', ');
             return (
-                <Reactable.Tr key={user.user}>
-                    <Reactable.Td column="Username">{user.user}</Reactable.Td>
-                    <Reactable.Td column="Groups">{groups}</Reactable.Td>
-                    <Reactable.Td column="Functions">{funcs}</Reactable.Td>
-                    <Reactable.Td column="Actions">
+                <Tr key={user.user}>
+                    <Td column="Username">{user.user}</Td>
+                    <Td column="Groups">{groups}</Td>
+                    <Td column="Functions">{funcs}</Td>
+                    <Td column="Actions">
                         <Bootstrap.DropdownButton bsStyle='primary' title="Choose" onSelect = {this.btn_clicked.bind(null, index)}>
                             <Bootstrap.MenuItem eventKey="remove">Remove</Bootstrap.MenuItem>
                             <Bootstrap.MenuItem eventKey="update">Update</Bootstrap.MenuItem>
                         </Bootstrap.DropdownButton>
-                    </Reactable.Td>
-                </Reactable.Tr>
+                    </Td>
+                </Tr>
             );
         }, this);
 
@@ -151,26 +170,33 @@ var Users = React.createClass({
         }
 
         return ( 
-            <div>
-                <Bootstrap.PageHeader>Dashboard Users</Bootstrap.PageHeader>
+            <div style={this.props.style} className="card">
                 {modal}
-                <Reactable.Table className="table striped" columns={['Username', 'Groups', 'Functions', 'Actions']} itemsPerPage={10} pageButtonLimit={10} noDataText="No matching records found." sortable={true} filterable={['Username', 'Groups', 'Functions', 'Actions']} btnName="Add user" btnClick={this.openModal}>
-                    {user_rows}
-                </Reactable.Table> 
+                <div className="card-body">
+                    <Table className="table striped" columns={['Username', 'Groups', 'Functions', 'Actions']} itemsPerPage={10} pageButtonLimit={10} noDataText="No matching records found." sortable={true} filterable={['Username', 'Groups', 'Functions', 'Actions']} btnName="Add user" btnClick={this.openModal} title="Dashboard Users" filterClassName="form-control" filterPlaceholder="Filter">
+                        {user_rows}
+                    </Table>
+                </div>
             </div> 
         );
     }
-});
+}
 
-var Groups = React.createClass({
-    getInitialState: function () {
-        return {
+class Groups extends Component {
+    constructor (props) {
+        super(props);
+        this.state = {
             groups: Object.assign([], this.props.groups),
             modal_open: false,
             update: false,
             selected_group: {}
-        }
-    },
+        };
+        this.openModal = this.openModal.bind(this);
+        this.addGroup = this.addGroup.bind(this);
+        this.updateGroup = this.updateGroup.bind(this);
+        this.closeModal = this.closeModal.bind(this);
+        this.btn_clicked = this.btn_clicked.bind(this);
+    }
 
     /*getCurrentGroups: function () {
         var me = this;
@@ -183,20 +209,20 @@ var Groups = React.createClass({
         });
     },*/
 
-    openModal: function() {
-        this.setState({modal_open: true});
-    },
+    openModal() {
+        this.setState({modal_open: true, update: false});
+    }
 
-    addGroup: function(data) {
+    addGroup(data) {
         var groups = Object.assign([], this.state.group);
         data.groups = data.groups.map(function(g){
             return g.value;
         });
         groups.push(data);
         this.setState({modal_open: false, groups: groups});
-    },
+    }
 
-    updateGroup: function(index, data) {
+    updateGroup(index, data) {
         var groups = Object.assign([], this.state.groups);
         if(data.functions.length > 0 && typeof data.functions[0] === 'object'){
             data.functions = data.functions.map(function(f){
@@ -205,13 +231,13 @@ var Groups = React.createClass({
         }
         groups[index] = data;
         this.setState({modal_open: false, groups: groups});
-    },
+    }
 
-    closeModal: function() {
+    closeModal() {
         this.setState({modal_open: false});
-    },
+    }
 
-    btn_clicked: function(index, evtKey){
+    btn_clicked(index, evtKey){
         var groups = Object.assign([], this.state.groups);
         var group = groups[index];
         if(evtKey === "remove"){
@@ -225,22 +251,22 @@ var Groups = React.createClass({
         }else{
             this.setState({modal_open: true, update: index, selected_group: group});
         }
-    },
+    }
 
-    render: function () {
+    render () {
         var group_rows = this.state.groups.map(function(group, index) {
             var funcs = group.functions.join(', ');
             return (
-                <Reactable.Tr key={group.func_name}>
-                    <Reactable.Td column="Group name">{group.func_name}</Reactable.Td>
-                    <Reactable.Td column="Functions">{funcs}</Reactable.Td>
-                    <Reactable.Td column="Actions">
+                <Tr key={group.func_name}>
+                    <Td column="Group name">{group.func_name}</Td>
+                    <Td column="Functions">{funcs}</Td>
+                    <Td column="Actions">
                         <Bootstrap.DropdownButton bsStyle='primary' title="Choose" onSelect = {this.btn_clicked.bind(null, index)}>
                             <Bootstrap.MenuItem eventKey="remove">Remove</Bootstrap.MenuItem>
                             <Bootstrap.MenuItem eventKey="update">Update</Bootstrap.MenuItem>
                         </Bootstrap.DropdownButton>
-                    </Reactable.Td>
-                </Reactable.Tr>
+                    </Td>
+                </Tr>
             );
         }, this);
 
@@ -256,20 +282,22 @@ var Groups = React.createClass({
         }
 
         return (
-            <div style={{position: 'relative'}}>
-                <Bootstrap.PageHeader>Dashboard Groups</Bootstrap.PageHeader>
+            <div style={this.props.style} className="card">
                 {modal}
-                <Reactable.Table className="table striped" columns={['Group name', 'Functions', 'Actions']} itemsPerPage={10} pageButtonLimit={10} noDataText="No matching records found." sortable={true} filterable={['Group name', 'Functions', 'Actions']} btnName="Add group" btnClick={this.openModal}>
-                    {group_rows}
-                </Reactable.Table>
+                <div className="card-body">
+                    <Table className="table striped" columns={['Group name', 'Functions', 'Actions']} itemsPerPage={10} pageButtonLimit={10} noDataText="No matching records found." sortable={true} filterable={['Group name', 'Functions', 'Actions']} btnName="Add group" btnClick={this.openModal} title="Dashboard Groups" filterClassName="form-control" filterPlaceholder="Filter">
+                        {group_rows}
+                    </Table>
+                </div>
             </div>
         );
     }
-});
+}
 
 
-var Modal = React.createClass({
-    getInitialState: function () {
+class Modal extends Component {
+    constructor (props) {
+        super(props);
         var data = {
             type: -1,
             value: null,
@@ -286,11 +314,15 @@ var Modal = React.createClass({
             data.value = group.functions;
             data.group = group.func_name;
         }
-        return data;
-    },
+        this.state = data;
+        this.action = this.action.bind(this);
+        this.typeChange = this.typeChange.bind(this);
+        this.onChange = this.onChange.bind(this);
+        this.onChangeGroup = this.onChangeGroup.bind(this);
+    }
 
-    action: function(e) {
-        var elements = ReactDOM.findDOMNode(this.refs.forma).elements;
+    action(e) {
+        var elements = findDOMNode(this.refs.forma).elements;
         var data = {};
         for(i=0; i<elements.length; i++){
             data[elements[i].name] = elements[i].value;
@@ -332,21 +364,21 @@ var Modal = React.createClass({
         }).fail(function (msg) {
             me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
         });
-    },
+    }
 
-    typeChange: function (evt) {
+    typeChange (evt) {
         this.setState({type: evt.target.value});
-    },
+    }
 
     onChange(value) {
         this.setState({ value: value });
-    },
+    }
 
     onChangeGroup(value) {
         this.setState({ group: value });
-    },
+    }
 
-    render: function () {
+    render () {
         var type = this.props.type;
         if(type === -1)
             return <div></div>;
@@ -423,7 +455,7 @@ var Modal = React.createClass({
         </Bootstrap.Modal>
         );
     }
-});
+}
 
 UserGroupPanel = connect(function(state){
     return {auth: state.auth, alert: state.alert};

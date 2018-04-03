@@ -5,12 +5,13 @@ except:
     import base
     from base import Step, StepResult
 
+from base import bytes_to_int, int_to_bytes
+
 from tornado.httpclient import AsyncHTTPClient, HTTPRequest
 import tornado.gen
-import json
-import subprocess
-import os
+import json, datetime, subprocess, os
 
+import novaclient
 from novaclient import client
 
 from keystoneauth1 import loading
@@ -38,13 +39,16 @@ PROVIDER_TEMPLATE = '''VAR_PROVIDER_NAME:
   compute_region: VAR_REGION
 '''
 
+
 PROFILE_TEMPLATE = '''VAR_PROFILE_NAME:
     provider: VAR_PROVIDER_NAME
     image: VAR_IMAGE
     size: VAR_SIZE
     securitygroups: VAR_SEC_GROUP
-    ssh_username: VAR_IMAGE_USERNAME
+    ssh_username: VAR_USERNAME
+
     minion:
+        master: VAR_THIS_IP
         grains:
             role: VAR_ROLE
     networks:
@@ -53,7 +57,7 @@ PROFILE_TEMPLATE = '''VAR_PROFILE_NAME:
 '''
 
 class OpenStackDriver(base.DriverBase):
-    def __init__(self, provider_name = 'openstack_provider', profile_name = 'openstack_profile', host_ip = '192.168.80.39', key_name = 'va_master_key', key_path = '/root/va_master_key', datastore = None):
+    def __init__(self, provider_name = 'openstack_provider', profile_name = 'openstack_profile', host_ip = '192.168.80.39', key_name = 'va_master_key', key_path = '/root/va_master_key', datastore_handler = None):
         """ The standard issue init method. Borrows most of the functionality from the BaseDriver init method, but adds a self.regions attribute, specific for OpenStack hosts. """
 
         kwargs = {
@@ -65,7 +69,7 @@ class OpenStackDriver(base.DriverBase):
             'host_ip' : host_ip,
             'key_name' : key_name,
             'key_path' : key_path, 
-            'datastore' : datastore
+            'datastore_handler' : datastore_handler
             }
         self.regions = ['RegionOne', ]
         self.keypair_name = ''
@@ -134,8 +138,9 @@ class OpenStackDriver(base.DriverBase):
             resp = yield self.client.fetch(req)
         except:
             import traceback
+            print ('Error getting token with %s. ' % (url))
             traceback.print_exc()
-            raise tornado.gen.Return((None, None))
+            raise Exception('Error getting openstack token on %s. ' % (url))
         body = json.loads(resp.body)
         token = body['access']['token']['id']
         services = {}
@@ -167,8 +172,10 @@ class OpenStackDriver(base.DriverBase):
         try:
             resp = yield self.client.fetch(req)
         except:
-#            import traceback; traceback.print_exc()
-            raise tornado.gen.Return([])
+            import traceback;
+            print ('Error getting openstack value for url %s and endpoint %s. ' % (url, url_endpoint))
+            traceback.print_exc()
+            raise Exception('Error getting openstack value for endpoint %s. ' % (url_endpoint))
 
         result = json.loads(resp.body)
         raise tornado.gen.Return(result)
@@ -188,10 +195,11 @@ class OpenStackDriver(base.DriverBase):
             key = f.read()
         try:
             keypair = nova_cl.keypairs.create(name = self.keypair_name, public_key = key)
-        except: 
+        except Exception as e:
             import traceback
+            print ('Error creating keypair with name %s and key %s. ' % (self.keypair_name, key))
             traceback.print_exc()
-        
+            raise Exception('Error creating a nova keypair with name %s. Message was: %s. ' % (self.keypair_name, e.message))
 
 
     @tornado.gen.coroutine
@@ -223,6 +231,7 @@ class OpenStackDriver(base.DriverBase):
     def get_images(self):
         """ Gets the images using the get_openstack_value() method. """
         images = yield self.get_openstack_value(self.token_data, 'image', 'v2.0/images')
+        print ('Images are : ', images)
         images = [x['name'] for x in images['images']]
         raise tornado.gen.Return(images)
 
@@ -256,8 +265,9 @@ class OpenStackDriver(base.DriverBase):
              
 
             tenant_id = tenant['id']
-            tenant_usage = yield self.get_openstack_value(self.token_data, 'compute', 'os-simple-tenant-usage/' + tenant_id)
+            tenant_usage = yield self.get_openstack_value(self.token_data, 'compute', 'os-simple-tenant-usage/' + tenant_id)# + '?start=2017-02-02T09:49:58')
             tenant_usage = tenant_usage['tenant_usage']
+#            print ('Usage is : ', tenant_usage)
             servers = [
                 {
                     'hostname' : x['name'], 
@@ -268,6 +278,8 @@ class OpenStackDriver(base.DriverBase):
                     'used_ram' : y['memory_mb'], 
                     'used_cpu' : y['vcpus'],
                     'status' : x['status'], 
+                    'cost' : 0,  #TODO find way to calculate costs
+                    'estimated_cost' : 0,
                     'provider' : provider['provider_name'], 
                 } for x in nova_servers for y in tenant_usage['server_usages'] for f in flavors if y['name'] == x['name'] and f['id'] == x['flavor']['id']
             ]
@@ -289,6 +301,45 @@ class OpenStackDriver(base.DriverBase):
             raise tornado.gen.Return({'success' : False, 'message' : 'Error connecting to libvirt provider. ' + e.message})
 
         raise tornado.gen.Return({'success' : True, 'message' : ''})
+
+
+    @tornado.gen.coroutine
+    def get_provider_billing(self, provider):
+        #TODO provide should have some sort of costing mechanism, and we multiply used stuff by some price. 
+
+        total_cost = 0
+        servers = yield self.get_servers(provider)
+
+        servers.append({
+            'hostname' : 'Other Costs',
+            'ip' : '',
+            'size' : '',
+            'used_disk' : 0,
+            'used_ram' : 0,
+            'used_cpu' : 0,
+            'status' : '',
+            'cost' : total_cost,
+            'estimated_cost' : 0, 
+            'provider' : provider['provider_name'],
+        })
+
+        total_memory = sum([x['used_ram'] for x in servers]) * 2**20
+        total_memory = int_to_bytes(total_memory)
+        provider['memory'] = total_memory
+
+
+        for server in servers: 
+            server['used_ram'] = int_to_bytes(server['used_ram'] * (2 ** 20))
+
+        billing_data = {
+            'provider' : provider, 
+            'servers' : servers,
+            'total_cost' : total_cost
+        }
+        raise tornado.gen.Return(billing_data)
+
+
+
 
     @tornado.gen.coroutine
     def get_provider_data(self, provider, get_servers = True, get_billing = True):
@@ -360,8 +411,8 @@ class OpenStackDriver(base.DriverBase):
     def server_action(self, provider, server_name, action):
         """ Performs server actions using a nova client. """
         try:
+            message = "Action %s performed on %s successfuly. " % (action, server_name)
             provider_url = 'http://' + provider['provider_ip'] + '/v2.0'
-            print ('Creating novaclient with username : ', provider['username'], 'password : ', provider['password'], 'url : ', provider_url)
             auth = identity.Password(auth_url=provider_url,
                    username=provider['username'],
                    password=provider['password'],
@@ -374,13 +425,18 @@ class OpenStackDriver(base.DriverBase):
         except Exception as e:
             import traceback
             traceback.print_exc()
-            raise tornado.gen.Return({'success' : False, 'message' : 'Could not get server. ' + e.message})
+
+            raise Exception('Could not get server' + server_name + '. ' + e.message)
         try:
             success = getattr(server, action)()
         except Exception as e:
-            raise tornado.gen.Return({'success' : False, 'message' : 'Action was not performed. ' + e.message})
+            import traceback
+            traceback.print_exc()
 
-        raise tornado.gen.Return({'success' : True, 'message' : ''})
+            raise Exception('Action ' + action + ' was not performed on ' + server_name + '. Reason: ' + e.message)
+
+        print ('All is well!')
+        raise tornado.gen.Return({'success' : True, 'message' : message, 'data' : {}})
 
 
 

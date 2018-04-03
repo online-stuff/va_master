@@ -4,6 +4,24 @@ import tornado.gen
 from tornado.httpclient import AsyncHTTPClient, HTTPRequest
 import time
 
+prefixes = {'KiB' : 10, 'MiB' : 20, 'GiB' : 30, 'TiB' : 40}
+
+def bytes_to_int(b):
+    b = b.split(' ')
+    i = float(b[0]) * (2 ** prefixes[b[1]])
+
+    return i
+
+def int_to_bytes(i):
+    prefix = 'GiB'
+    b = float(i) / (2 ** prefixes[prefix])
+    b = str(b) + ' ' + prefix
+
+    return b
+
+
+from va_master.handlers.datastore_handler import DatastoreHandler
+
 class Step(object):
     def __init__(self, name):
         self.name = name
@@ -57,7 +75,7 @@ class DriverBase(object):
     __metaclass__ = abc.ABCMeta
 
     @abc.abstractmethod
-    def  __init__(self, driver_name,  provider_template, profile_template, provider_name, profile_name, host_ip, key_name, key_path, datastore):
+    def  __init__(self, driver_name,  provider_template, profile_template, provider_name, profile_name, host_ip, key_name, key_path, datastore_handler):
         """
             Initialize method for the base driver. Subclassing drivers should be overwriting this and calling it with custom arguments if they are needed. 
             Takes care of the salt key, writing salt provider and profile configurations and so on. 
@@ -89,14 +107,14 @@ class DriverBase(object):
             }
           
         self.app_fields = {} 
-        self.datastore = datastore
+        self.datastore_handler = datastore_handler
         self.host_ip = host_ip
 
         self.key_path = key_path + ('/' * (not key_path[-1] == '/')) + key_name
         self.key_name = key_name
 
         self.provider_vars = {'VAR_THIS_IP' : host_ip, 'VAR_PROVIDER_NAME' : provider_name, 'VAR_SSH_NAME' : key_name, 'VAR_SSH_FILE' : self.key_path + '.pem'}
-        self.profile_vars = {'VAR_PROVIDER_NAME' : provider_name, 'VAR_PROFILE_NAME' : profile_name}
+        self.profile_vars = {'VAR_PROVIDER_NAME' : provider_name, 'VAR_PROFILE_NAME' : profile_name, 'VAR_THIS_IP' : host_ip}
 
         self.provider_template = provider_template
         self.profile_template = profile_template
@@ -224,11 +242,17 @@ class DriverBase(object):
         """ 
             Gets a list of all the images used to create servers. This _needs_ to be overwritten. 
         """
-        cl = salt.cloud.CloudClient(path = '/etc/salt/cloud')
-        provider_name = self.provider_vars['VAR_PROVIDER_NAME']
-        images = cl.list_images(provider = provider_name)[provider_name]
-        images = images[images.keys()[0]]
-        images = [images[x]['name'] for x in images]
+        try:
+            cl = salt.cloud.CloudClient(path = '/etc/salt/cloud')
+            provider_name = self.provider_vars['VAR_PROVIDER_NAME']
+            images = cl.list_images(provider = provider_name)[provider_name]
+            images = images[images.keys()[0]]
+            images = [images[x]['name'] for x in images]
+        except: 
+            import traceback
+            print ('There was an error in get_images() in the base driver for %s. ' % (provider_name))
+            traceback.print_exc()
+            raise Exception('There was an error getting images for %s' % (provider_name))
         raise tornado.gen.Return(images)
 
     @tornado.gen.coroutine
@@ -236,11 +260,17 @@ class DriverBase(object):
         """     
             Gets a list of all sizes (flavors) used to create servers. This _needs_ to be overwritten. 
         """
-        cl = salt.cloud.CloudClient(path = '/etc/salt/cloud')
-        provider_name = self.provider_vars['VAR_PROVIDER_NAME']
-        sizes = cl.list_sizes(provider = provider_name)[provider_name]
-        sizes = sizes[sizes.keys()[0]]
-        sizes = [x['name'] for x in sizes]
+        try:
+            cl = salt.cloud.CloudClient(path = '/etc/salt/cloud')
+            provider_name = self.provider_vars['VAR_PROVIDER_NAME']
+            sizes = cl.list_sizes(provider = provider_name)[provider_name]
+            sizes = sizes[sizes.keys()[0]]
+            sizes = [x['name'] for x in sizes]
+        except: 
+            import traceback
+            print ('There was an error in get_sizes() in the base driver for %s. ' % (provider_name))
+            traceback.print_exc()
+            raise Exception('There was an error getting sizes for %s' % (provider_name))
         raise tornado.gen.Return(sizes)
 
     @tornado.gen.coroutine
@@ -353,15 +383,10 @@ class DriverBase(object):
             yield self.get_salt_configs(skip_profile = True)
             yield self.write_configs(skip_profile = True)	
 
-    	    self.field_values['networks'] = yield self.get_networks()
+            self.field_values['networks'] = yield self.get_networks()
             self.field_values['sec_groups'] = yield self.get_sec_groups()
-            self.field_values['images'] = yield self.get_images()
-            self.field_values['sizes']= yield self.get_sizes()
 
             self.field_values['location'] = field_values.get('location', 'va_master')                
-
-
-
             options.update({
                     'network': self.field_values['networks'],
                     'sec_group': self.field_values['sec_groups'],
@@ -378,6 +403,10 @@ class DriverBase(object):
 
             self.field_values['defaults']['network'] = field_values['network']
             self.field_values['defaults']['sec_group'] = field_values['sec_group']
+
+            self.field_values['images'] = yield self.get_images()
+            self.field_values['sizes']= yield self.get_sizes()
+
             options.update({
                     'image': self.field_values['images'],
                     'size': self.field_values['sizes'],
@@ -433,24 +462,24 @@ class DriverBase(object):
         new_profile = data['server_name'] + '-profile'
         self.profile_vars['VAR_PROFILE_NAME'] = new_profile
         self.profile_vars['VAR_SEC_GROUP'] = 'default'
-        self.profile_vars['VAR_IMAGE_USERNAME'] = data.get('username', 'admin')
-#        self.profile_template = profile_template
+        self.profile_vars['VAR_USERNAME'] = data.get('username', 'admin')
 
         if self.profile_template:
             yield self.get_salt_configs(skip_provider = True)
             yield self.write_configs(skip_provider = True)
 
-        #probably use salt.cloud somehow, but the documentation is terrible. 
+        #probably use salt.cloud somehow
         new_minion_cmd = ['salt-cloud', '-p', new_profile, data['server_name']]
         minion_apply_state = ['salt', data['server_name'], 'state.highstate']
 
-#        print ('Using sleep to simulate app start. Using time.sleep on purpose to test blocking calls. ')
-#        time.sleep(120)
-#        print ('Sleep time is done!')
-        new_minion_values = subprocess.call(new_minion_cmd)
-        new_minion_state_values = subprocess.call(minion_apply_state)
+        try:
+            new_minion = subprocess.call(new_minion_cmd)
+            new_minion_state = subprocess.check_output(minion_apply_state)
+        except Exception as e: 
+            import traceback
+            traceback.print_exc()
 
-
+            raise Exception('Error creating minion. ' + e.message)
 
         raise tornado.gen.Return(True)
 
@@ -466,8 +495,7 @@ class DriverBase(object):
         self.app_fields.update(fields)
     
         if fields.get('role'): 
-            states = yield self.datastore.get('init_vals')
-            states = states['states']
+            states = yield self.datastore_handler.get_states()
             state = [x for x in states if x['name'] == fields.get('role')][0]
             self.app_fields['state'] = state
             state_fields = [x['name'] for x in state.get('fields', [])]
@@ -475,10 +503,11 @@ class DriverBase(object):
             state_fields = []
         # steps_fields is a list of lists such that the index of an element is the required fields for that step. We check if the app_fields contain all of those. 
         if not steps_fields: 
-            steps_fields = [['role', 'server_name'], state_fields, ['sec_group', 'image', 'size', 'network', 'location']]
+            steps_fields = [['role', 'server_name'], state_fields, ['sec_group', 'image', 'size', 'network']]
         if not all([x in self.app_fields.keys() for x in steps_fields[step]]):
+            error_msg = 'Expected fields: %s, but only have data for: %s. ' % (steps_fields[step], self.app_fields.keys())
             print ('Fields expected are : ', steps_fields[step], ' but have : ', self.app_fields.keys())
             print ('Entire fields data : ', fields)
-            raise tornado.gen.Return(False) 
+            raise Exception(error_msg)
     
         raise tornado.gen.Return(self.app_fields)

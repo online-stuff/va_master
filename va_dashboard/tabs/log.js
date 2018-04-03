@@ -1,214 +1,243 @@
-var React = require('react');
+import React, { Component } from 'react';
 var Bootstrap = require('react-bootstrap');
-var connect = require('react-redux').connect;
+import {connect} from 'react-redux';
 var Network = require('../network');
-var ReactDOM = require('react-dom');
-var Router = require('react-router');
-var DatePicker = require('react-datepicker').default;
+import {DateRangePicker} from 'react-dates';
 var moment = require('moment');
-var Reactable = require('reactable');
+import {Table, Tr, Td} from 'reactable';
+import Select from 'react-select-plus';
 
-var Log = React.createClass({
-    getInitialState: function () {
-        var checked = ["emerg", "alert", "crit", "err", "warning", "notice", "info", "debug"];
-        return {
+var SEV = ["emerg", "alert", "crit", "err", "warning", "notice", "info", "debug"];
+var COLORS = ["#de4040", "#de4040", "#de4040", "#de4040", "#ffa726", "#777777", "#777777", "#777777"];
+
+class Log extends Component {
+    constructor (props) {
+        super(props);
+        this.state = {
             logs: [],
+            newLogs: 0,
             value: "",
-            checked: checked
-        }
-    },
-    initLog: function () {
+            checked: Object.assign([], SEV),
+            status: 1,
+            statuses: ['start', 'stop'],
+            hosts: [],
+            selected_hosts: []
+        };
+        this.initLog = this.initLog.bind(this);
+        this.close_socket = this.close_socket.bind(this);
+        this.filter = this.filter.bind(this);
+        this.updateLogs = this.updateLogs.bind(this);
+        this.changeObservableStatus = this.changeObservableStatus.bind(this);
+        this.changeTable = this.changeTable.bind(this);
+        this.changeStatus = this.changeStatus.bind(this);
+        this.onChangeHost = this.onChangeHost.bind(this);
+    }
+    initLog() {
         var host = window.location.host;
         if(host.indexOf(":") == 0){
             host += ":80";
         }
         var protocol =  window.location.protocol === "https:" ? "wss" : "ws";
-        this.ws = new WebSocket(protocol  +"://"+ host +"/log");
-        var me = this;
-        this.ws.onmessage = function (evt) {
+        this.ws = new WebSocket(`${protocol}://${host}/log`);
+        this.ws.onmessage = evt => {
             var data = JSON.parse(evt.data);
-            var logs = [];
-            if(data.type === "update")
-                logs = me.state.logs.concat([data.message]);
-            else if(data.type === "init")
-                logs = data.logs;
-            me.setState({logs: logs});
+            var logs = [], hosts = [];
+            if(data.type === "update"){
+                let newLog = data.message, host = newLog.host; 
+                hosts = this.state.hosts;
+                logs = this.state.logs.concat([newLog]);
+                let h = hosts.map((host) => host.value);
+                if(h.indexOf(host) === -1)
+                    hosts.push({value: host, label: host});
+                this.setState({logs, hosts, selected_hosts: hosts, newLogs: this.state.newLogs+1});
+            }
+            else if(data.type === "init"){
+                logs = data.logs, hosts = data.hosts;
+                this.setState({logs, hosts, selected_hosts: hosts});
+            }
         };
-        this.ws.onerror = function(evt){
-            me.ws.close();
-            me.props.dispatch({type: 'SHOW_ALERT', msg: "Socket error."});
+        this.ws.onerror = evt => {
+            this.ws.close();
+            this.props.dispatch({type: 'SHOW_ALERT', msg: "Socket error."});
         };
-    },
-    componentDidMount: function () {
+    }
+    componentDidMount() {
         if(!this.props.alert.show)
             this.initLog();
-    },
-    close_socket: function () {
+    }
+    close_socket() {
         this.ws.close();
-    },
-    filter: function (evt) {
+    }
+    filter(evt) {
         this.setState({value: evt.target.value});
-    },
-    updateLogs: function(startDate, endDate){
+    }
+    updateLogs(startDate, endDate){
         var msg = {
+            type: "get_messages",
             from_date: startDate,
             to_date: endDate
         };
         this.ws.send(JSON.stringify(msg));
-    },
-    changeTable: function(checked){
+    }
+    changeObservableStatus(value){
+        var msg = {
+            type: "observer_status",
+            status: value
+        };
+        this.ws.send(JSON.stringify(msg));
+    }
+    changeTable(checked){
         this.setState({checked: checked});
-    },
-    render: function () {
-        var TableRedux = connect(function(state){
-            return {auth: state.auth, alert: state.alert};
-        })(Table);
-        var DateRangeRedux = connect(function(state){
-            return {auth: state.auth, alert: state.alert};
-        })(DateRange);
-        var me = this;
-        var logs = this.state.logs.filter(function(l){
-            if(me.state.checked.indexOf(l.severity) > -1) return true;
+    }
+    changeStatus (e){
+        var value = e.target.value;
+        this.setState({status: 1 - value});
+        this.changeObservableStatus(this.state.statuses[value]);
+    }
+    onChangeHost(value) {
+        this.setState({ selected_hosts: value });
+    }
+    render () {
+        var counters = {};
+        for(var i=0; i<SEV.length; i++)
+            counters[SEV[i]] = 0;
+        var hosts = this.state.selected_hosts.map(function(h){
+            return h.value;
+        });
+        var logs = this.state.logs.filter(l => {
+            if(SEV.indexOf(l.severity) > -1)
+                counters[l.severity]++;
+            if(this.state.checked.indexOf(l.severity) > -1 && hosts.indexOf(l.host) > -1)
+                return true;
             return false;
         });
+        logs.reverse();
+        var status = this.state.status;
         return (
             <div id="log-page">
-            	<div>
-                    <DateRange updateLogs={this.updateLogs} />
-                    <input type='text' placeholder='Search...' value={this.state.value} onChange={this.filter}/>
-	    		</div>
-                <FilterBtns changeTable={this.changeTable} />
-            	<TableRedux logs={logs} filterBy={this.state.value} checked={this.state.checked}/>
+                <div>
+                    <Bootstrap.Button onClick={this.changeStatus} value={status} style={{marginRight: '20px', textTransform: 'capitalize'}}>{this.state.statuses[status]} Live</Bootstrap.Button>
+                    <DateRange updateLogs={this.updateLogs} state={status} />
+                    <Select name="hosts" options={this.state.hosts} multi={true} placeholder="Filter hosts" value={this.state.selected_hosts} onChange={this.onChangeHost} style={{marginLeft: '20px', width: '500px'}} />
+                </div>
+                <div id='filter-log'>
+                    <FilterBtns changeTable={this.changeTable} counters={counters} />
+                    <input type='text' placeholder='Filter' value={this.state.value} onChange={this.filter} className='form-control'/>
+                </div>
+                <LogTable logs={logs} filterBy={this.state.value} newLogsNum={this.state.newLogs} />
             </div>
 	);
     }
-});
+}
 
-var DateRange = React.createClass({
-    getInitialState: function () {
-        return {
+class DateRange extends Component {
+    constructor (props) {
+        super(props);
+        this.state = {
             startDate: moment().subtract(1, 'days'),
-            endDate: moment()
+            endDate: moment(),
+            focusedInput: null
         }
-    },
-    handleChangeStart: function(date) {
-        this.setState({
-            startDate: date
-        });
-    },
+        this.handleChange = this.handleChange.bind(this);
+        this.focusChange = this.focusChange.bind(this);
+    }
 
-    handleChangeEnd: function(date) {
-        this.setState({
-            endDate: date
-        });
-    },
-    btnClick: function(){
-        this.props.updateLogs(this.state.startDate.format('YYYY-MM-DD'), this.state.endDate.format('YYYY-MM-DD'));
-    },
-    render: function () {
+    handleChange(obj) {
+        let { startDate, endDate } = obj;
+        this.setState({startDate, endDate});
+        this.props.updateLogs(startDate.format('YYYY-MM-DD'), endDate.format('YYYY-MM-DD'));
+    }
+
+    focusChange(focusedInput){
+        this.setState({focusedInput: focusedInput});
+    }
+
+    render () {
+        var state = this.props.state;
         return (
-            <div className="date-range">
-                From: 
-                <DatePicker
-                    className="datepicker"
-                    dateFormat="DD/MM/YYYY"
-                    selected={this.state.startDate}
-                    selectsStart
-                    startDate={this.state.startDate}
-                    endDate={this.state.endDate}
-                    onChange={this.handleChangeStart}
-                />
-                To: 
-                <DatePicker
-                    className="datepicker"
-                    dateFormat="DD/MM/YYYY"
-                    selected={this.state.endDate}
-                    selectsEnd
-                    startDate={this.state.startDate}
-                    endDate={this.state.endDate}
-                    onChange={this.handleChangeEnd}
-                />
-                <Bootstrap.Button onClick={this.btnClick}>Update logs</Bootstrap.Button>
-	   </div>
+            <DateRangePicker
+                displayFormat="DD/MM/YYYY"
+                startDate={this.state.startDate}
+                endDate={this.state.endDate}
+                onDatesChange={this.handleChange}
+                focusedInput={this.state.focusedInput}
+                onFocusChange={this.focusChange}
+                isOutsideRange={function(){return false}}
+                disabled={!!state}
+            />
         );
     }
-});
+}
 
-var FilterBtns = React.createClass({
-    getInitialState: function () {
-        return {
-            severities: ["emerg", "alert", "crit", "err", "warning", "notice", "info", "debug"],
-            btnStatus: Array.apply(null, Array(8)).map(function(){return true})
-        }
-    },
-
-	btnClick: function (key) {
-        var btnStatus = this.state.btnStatus.slice(0);
-        btnStatus[key] = !btnStatus[key];
-        this.setState({btnStatus: btnStatus});
-        var checked = [], s = this.state.severities;
-        for(var i=0; i<btnStatus.length; i++){
-            if(btnStatus[i]) checked.push(s[i]);
+class FilterBtns extends Component {
+    constructor (props) {
+        super(props);
+        this.state = {
+            values: Object.assign([], SEV)
         };
-        this.props.changeTable(checked);
-	},
+        this.onChange = this.onChange.bind(this);
+    }
 
-    render: function () {
-        var btnStyle = {
-			display: 'inline',
-			marginRight: '10px',
-            backgroundColor: '#fff'
-		};
-        var btnStatus = this.state.btnStatus, me = this;
-		var btns = this.state.severities.map(function(val, key){
-            var style = Object.assign({}, btnStyle);
-            if(btnStatus[key]) style['backgroundColor'] = '#eee';
-			return <Bootstrap.Button key={key} onClick={me.btnClick.bind(me, key)} style={style}>{val}</Bootstrap.Button>;
+	onChange(values) {
+        this.setState({values: values});
+        this.props.changeTable(values);
+	}
+
+    render () {
+        var me = this;
+		var btns = SEV.map(function(val, i){
+			return <Bootstrap.ToggleButton key={val} value={val}>{val} <span className="badge" style={{backgroundColor: COLORS[i]}}>{me.props.counters[val]}</span></Bootstrap.ToggleButton>;
 		});
 		return (
-			<div id="log-btns">Severity: {btns}</div>
+            <Bootstrap.ToggleButtonGroup type="checkbox" value={this.state.values} onChange={this.onChange}>
+                {btns}
+            </Bootstrap.ToggleButtonGroup>
 		);
     }
-});
+}
 
-var Table = React.createClass({
-    getInitialState: function () {
-        return {
+class LogTable extends Component {
+    constructor (props) {
+        super(props);
+        this.state = {
             selected_log: {}
-        }
-    },
+        };
+        this.rowSelected = this.rowSelected.bind(this);
+    }
 
-    rowSelected: function(evt) {
+    rowSelected(evt) {
         var selected_row = this.props.logs.find(function(log){
             return log.timestamp === evt.currentTarget.id;
         });
-        var selected_row = Object.assign({}, selected_row);
+        selected_row = Object.assign({}, selected_row);
         var msg = JSON.parse(selected_row['message']);
         selected_row['message'] = msg;
         selected_row['message']['method'] = msg['data']['method'];
         delete selected_row['message']['data'];
         this.setState({selected_log: selected_row});
-    },
+    }
 
-    render: function () {
+    render() {
         var logs = this.props.logs.map(function(log, index) {
-            var msg;
-            try{
-                msg = JSON.parse(log.message), className = "";
+            var msg = log.message, className = "row-log-" + log.severity;
+            if(index < this.props.newLogsNum)
+                className += ' new-log';
+            /*try{
+                var log_json = JSON.parse(msg);
+                msg = msg.function;
             }catch (e){
                 console.log("JSON error ", index.toString());
                 console.log(log.message);
-            }
-            if(this.state.selected_log.timestamp === log.timestamp)
-                className = "info";
+            }*/
+            //if(this.state.selected_log.timestamp === log.timestamp)
+            //    className = "info";
             return (
-                <Reactable.Tr key={log.timestamp} id={log.timestamp} className={className} onClick={this.rowSelected}>
-                    <Reactable.Td column="Timestamp">{log.timestamp.substring(0,19)}</Reactable.Td>
-                    <Reactable.Td column="Message">{msg.function}</Reactable.Td>
-                    <Reactable.Td column="Severity">{log.severity}</Reactable.Td>
-                    <Reactable.Td column="Host">{log.host}</Reactable.Td>
-                    <Reactable.Td column="Facility">{log.facility}</Reactable.Td>
-                </Reactable.Tr>
+                <Tr key={log.timestamp} id={log.timestamp} className={className} onClick={this.rowSelected}>
+                    <Td column="Timestamp" style={{minWidth: '100px'}}>{log.timestamp.substring(0,19).split('T').join(' ')}</Td>
+                    <Td column="Host">{log.host}</Td>
+                    <Td column="Severity">{log.severity}</Td>
+                    <Td column="Message" className="ellipsized-text2">{msg}</Td>
+                </Tr>
             );
         }.bind(this));
         var selected_log = [];
@@ -220,22 +249,17 @@ var Table = React.createClass({
                 selected_log.push(div);
             }
         }
-        var columns = ["Timestamp", "Message", "Severity", "Host", "Facility"];
+        var columns = ["Timestamp", "Host", "Severity", "Message"];
         return ( <div>
-            <Reactable.Table className="table striped tbl-select" columns={columns} itemsPerPage={10} pageButtonLimit={10} noDataText="No matching records found." sortable={true} filterable={columns} filterBy={this.props.filterBy} hideFilterInput>
+            <Table className="table striped card" columns={columns} itemsPerPage={10} pageButtonLimit={10} noDataText="No matching records found." sortable={true} filterable={columns} filterBy={this.props.filterBy} hideFilterInput>
                 {logs}
-            </Reactable.Table>
-            <div className="selected-block">
-                <label>Log Details</label>
-                {selected_log}
-            </div>
+            </Table>
         </div> );
     }
-});
+}
 
 
-Log = connect(function(state){
+module.exports = connect(function(state){
     return {auth: state.auth, alert: state.alert};
 })(Log);
 
-module.exports = Log;

@@ -6,6 +6,9 @@ import functools
 import salt
 from pbkdf2 import crypt
 
+
+from va_master.consul_kv.datastore import KeyNotFound, StoreError
+
 # TODO: Check if the implementation of the `pbkdf2` lib is credible,
 # and if the library is maintained and audited. May switch to bcrypt.
 
@@ -14,7 +17,7 @@ def get_paths():
         'get' : {
         },
         'post' : {
-            'login' : {'function' : user_login, 'args' : ['datastore_handler', 'username', 'password']},
+            'login' : {'function' : user_login, 'args' : ['handler', 'username', 'password']},
             'new_user' : {'function' : create_user_api, 'args' : ['user', 'password', 'user_type']}
         }
     }
@@ -25,18 +28,18 @@ def get_paths():
 
 
 @tornado.gen.coroutine
-def get_or_create_token(datastore, username, user_type = 'admin'):
+def get_or_create_token(datastore_handler, username, user_type = 'admin'):
     found = False
     try:
-        token_doc = yield datastore.get('tokens/%s/by_username/%s' % (user_type, username))
+        token_doc = yield datastore_handler.get_object('by_username', user_type = user_type, username = username)
         found = True
-    except datastore.KeyNotFound:
+    except KeyNotFound:
         doc = {
             'token': uuid.uuid4().hex,
             'username': username
         }
-        yield datastore.insert('tokens/%s/by_username/%s' % (user_type, username), doc)
-        yield datastore.insert('tokens/%s/by_token/%s' % (user_type, doc['token']), doc)
+        yield datastore_handler.insert_object('by_username', data = doc, user_type = user_type, username = username)
+        yield datastore_handler.insert_object('by_token', data = doc, user_type = user_type, token = doc['token'])
         raise tornado.gen.Return(doc['token'])
     finally:
         if found:
@@ -44,14 +47,15 @@ def get_or_create_token(datastore, username, user_type = 'admin'):
 
 @tornado.gen.coroutine
 def get_current_user(handler):
+    datastore_handler = handler.datastore_handler
     token = handler.request.headers.get('Authorization', '')
 
     token = token.replace('Token ', '')    
  
     for t in ['user', 'admin']: # add other types as necessary, maybe from datastore. 
-        token_valid = yield is_token_valid(handler.datastore, token, t)
+        token_valid = yield is_token_valid(handler.datastore_handler, token, t)
         if token_valid: 
-            user = yield handler.datastore.get('tokens/%s/by_token/%s' % (t, token))
+            user = yield datastore_handler.get_object('by_token', user_type = t, token = token)
             raise tornado.gen.Return({'username' : user['username'], 'type' : t})
     raise tornado.gen.Return(None)
 
@@ -64,17 +68,12 @@ def get_user_type(handler):
     raise tornado.gen.Return(None)
 
 @tornado.gen.coroutine
-def is_token_valid(datastore, token, user_type = 'admin'):
+def is_token_valid(datastore_handler, token, user_type = 'admin'):
     valid = True
-    try:
-        user_handle = 'tokens/%s/by_token/%s' % (user_type, token)
-        res = yield datastore.get(user_handle)
-    except datastore.KeyNotFound:
+    user = yield datastore_handler.get_object('by_token', user_type = user_type, token = token)
+    if not user: 
         raise tornado.gen.Return(False)
-    except Exception as e: 
-        import traceback
-        traceback.print_exc()
-    valid = (res['username'] != '__invalid__')
+    valid = (user['username'] != '__invalid__')
     raise tornado.gen.Return(valid)
 
 #So far, one kwarg is used: user_allowed. 
@@ -115,7 +114,7 @@ def create_user(datastore_handler, username, password, user_type = 'user'):
         'timestamp_created': long(time.time())
     }
     yield datastore_handler.create_user(user, user_type)
-    token = yield get_or_create_token(datastore_handler.datastore, username, user_type = user_type)
+    token = yield get_or_create_token(datastore_handler, username, user_type = user_type)
 
     raise tornado.gen.Return(token)
 
@@ -128,38 +127,34 @@ def create_user_api(handler, user, password, user_type = 'user'):
 
 
 @tornado.gen.coroutine
-def user_login(datastore_handler, username, password):
+def user_login(handler, username, password):
     """Looks for a user with the specified username and checks the specified password against the found user's password. Creates a token if the login is successful. """
 
+    datastore_handler = handler.datastore_handler
     body = None
-    try: 
-        if '@' in username: 
-            yield ldap_login(handler)
-            raise tornado.gen.Return()
+    if '@' in username: 
+        yield ldap_login(handler)
+        raise tornado.gen.Return()
 
 
-        account_info = yield datastore_handler.find_user(username)
+    account_info = yield datastore_handler.find_user(username)
 
-        invalid_acc_hash = crypt('__invalidpassword__')
+    invalid_acc_hash = crypt('__invalidpassword__')
 
-        if not account_info:
-            # Prevent timing attacks
-            account_info = {
-                'password_hash': invalid_acc_hash,
-                'username': '__invalid__',
-                'timestamp_created': 0
-            }
-        pw_hash = account_info['password_hash']
-        if crypt(password, pw_hash) == pw_hash:
-            token = yield get_or_create_token(datastore_handler.datastore, username, user_type = account_info['user_type'])
-            raise tornado.gen.Return({'token': token})
-        raise Exception ("Invalid password: " + password) 
+    if not account_info:
+        # Prevent timing attacks
+        account_info = {
+            'password_hash': invalid_acc_hash,
+            'username': '__invalid__',
+            'timestamp_created': 0
+        }
+    pw_hash = account_info['password_hash']
+    if crypt(password, pw_hash) == pw_hash:
+        token = yield get_or_create_token(datastore_handler, username, user_type = account_info['user_type'])
+        raise tornado.gen.Return({'token': token})
+    handler.status = 401
+    raise Exception ("Invalid password: " + password) 
 
-    except tornado.gen.Return:
-        raise
-    except: 
-        import traceback
-        traceback.print_exc()
 
 
 @tornado.gen.coroutine

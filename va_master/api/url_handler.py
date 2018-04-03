@@ -1,6 +1,12 @@
 import tornado.ioloop
 
 from . import *
+try:
+    from custom_modules import *
+except: 
+    print ("Couldn't import custom modules. ")
+    import traceback
+    traceback.print_exc()
 import sys
 import types
 

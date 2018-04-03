@@ -1,13 +1,13 @@
-var React = require('react');
+import React, { Component } from 'react';
 var Bootstrap = require('react-bootstrap');
-var connect = require('react-redux').connect;
+import {connect} from 'react-redux';
 var Network = require('../network');
-var ReactDOM = require('react-dom');
 var widgets = require('./main_components');
 
-var Subpanel = React.createClass({
-    getInitialState: function () {
-        return {
+class Subpanel extends Component {
+    constructor (props) {
+        super(props);
+        this.state = {
             template: {
                 "title": "",
                 "help_url": "",
@@ -16,40 +16,39 @@ var Subpanel = React.createClass({
             },
             args: ""
         };
-    },
+        this.getPanel = this.getPanel.bind(this);
+    }
 
-    getPanel: function (id, server, args) {
-        var me = this, args = args.split(",");
+    getPanel (id, server, args) {
+        args = args.indexOf(',') > -1 ? args.split(",") : args;
         var data = {'panel': id, 'server_name': server, 'args': args};
-        console.log(data);
         this.props.dispatch({type: 'CHANGE_PANEL', panel: id, server: server, args: args});
-        Network.post('/api/panels/get_panel', this.props.auth.token, data).done(function (data) {
-            console.log(data.tbl_source);
-            me.props.dispatch({type: 'ADD_DATA', tables: data.tbl_source});
+        Network.post('/api/panels/get_panel', this.props.auth.token, data).done(data => {
+            this.props.dispatch({type: 'ADD_DATA', tables: data.tbl_source});
             if(typeof data.form_source !== 'undefined'){
-                me.props.dispatch({type: 'ADD_DROPDOWN', dropdowns: data.form_source});
+                this.props.dispatch({type: 'ADD_DROPDOWN', dropdowns: data.form_source});
             }
-            me.setState({template: data, args: args});
-        }).fail(function (msg) {
-            me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
+            this.setState({template: data, args: args});
+        }).fail(msg => {
+            this.props.dispatch({type: 'SHOW_ALERT', msg: msg});
         });
-    },
+    }
 
-    componentDidMount: function () {
+    componentDidMount () {
         this.getPanel(this.props.params.id, this.props.params.server, this.props.params.args);
-    },
+    }
 
-    componentWillReceiveProps: function (nextProps) {
+    componentWillReceiveProps (nextProps) {
         if (nextProps.params.id !== this.props.params.id || nextProps.params.server !== this.props.params.server || nextProps.params.args !== this.props.params.args) {
             this.getPanel(nextProps.params.id, nextProps.params.server, nextProps.params.args);
         }
-    },
+    }
 
-    componentWillUnmount: function () {
+    componentWillUnmount () {
         this.props.dispatch({type: 'RESET_FILTER'});
-    },
+    }
 
-    render: function () {
+    render () {
         var redux = {};
         var ModalRedux = connect(function(state){
             return {auth: state.auth, modal: state.modal, panel: state.panel, alert: state.alert};
@@ -83,10 +82,9 @@ var Subpanel = React.createClass({
         );
     }
 
-});
+}
 
-Subpanel = connect(function(state){
+module.exports = connect(function(state){
     return {auth: state.auth, panel: state.panel, alert: state.alert, table: state.table};
 })(Subpanel);
 
-module.exports = Subpanel;
