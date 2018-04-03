@@ -47,6 +47,7 @@ class Services extends Component {
         this.onLinkClick = this.onLinkClick.bind(this);
         this.doAction = this.doAction.bind(this);
         this.editTable = this.editTable.bind(this);
+        this.onBackClick = this.onBackClick.bind(this);
     }
 
 	getCurrentServices () {
@@ -102,6 +103,10 @@ class Services extends Component {
 		this.setState({ checksTableVisible: true, selectedServiceName: serviceName, checks: this.state.services[index].check});
     }
 
+    onBackClick(){
+        this.setState({ checksTableVisible: false });
+    }
+
     doAction(serviceName, index, evtKey) {
         if(evtKey === "Edit"){
             this.editService(serviceName, index);
@@ -139,7 +144,7 @@ class Services extends Component {
 						</Table>
 					</div>
                 </div>
-				{ checksTableVisible && <Checks service={selectedServiceName} checks={checks} /> }
+				{ checksTableVisible && <Checks service={selectedServiceName} checks={checks} backAction={this.onBackClick} /> }
                 <ModalRedux presetsOptions={this.state.presets} getCurrentServices={this.getCurrentServices} />
 				<ConfirmPopup body={"Please confirm action: delete service " + popupData.name} show={popupShow} data={[popupData]} close={this.popupClose} action={this.deleteService} />
             </div> 
@@ -160,7 +165,7 @@ const Checks = (props) => {
     return (
 		<div className="card">
 			<div className="card-body">
-				<Table className="table striped" columns={tblCols2} itemsPerPage={10} pageButtonLimit={10} noDataText="No matching records found." sortable={tblCols2} filterable={tblCols2} title={`Current checks for ${service}`} filterClassName="form-control" filterPlaceholder="Filter">
+                <Table className="table striped" columns={tblCols2} itemsPerPage={10} pageButtonLimit={10} noDataText="No matching records found." sortable={tblCols2} filterable={tblCols2} title='Current checks for ' link={service} linkAction={props.backAction} filterClassName="form-control" filterPlaceholder="Filter">
 					{tblRows}
 				</Table>
 			</div>
