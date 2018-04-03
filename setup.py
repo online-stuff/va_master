@@ -1,6 +1,7 @@
 import setuptools
 
 setuptools.setup(
+<<<<<<< HEAD
   name='vapourapps',
   packages=setuptools.find_packages(),
   version='0.0.11',
@@ -29,4 +30,33 @@ setuptools.setup(
         'vapourapps-test = va_master.tests:run_tests'
     ]
   }
+=======
+    name='vapourapps',
+    packages=setuptools.find_packages(),
+    version='1.0.1',
+    description='This package contains the master server of VapourApps, a \
+DevOps tool for corporate apps.',
+    keywords=['vapourapps'],
+    author='VapourApps',
+    install_requires=[
+        'pyopenssl',
+        'netifaces',
+        'six',
+        'appdirs',
+        'salt',
+        'pbkdf2',
+        'watchdog',
+        'OpenSSL',
+        'clc-sdk',
+        'vapour_linux_amd64;platform_system=="Linux"',
+        'vapour_windows_amd64;platform_system=="Windows"',
+        'cerberus'
+    ],
+    include_package_data=True,
+    entry_points={
+        'console_scripts': [
+            'vapourapps = va_master.cli:entry',
+        ]
+    }
+>>>>>>> cd6de5a8cd757921a2839d3b71fd58e56eccf7dd
 )
