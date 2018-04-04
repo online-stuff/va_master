@@ -347,12 +347,12 @@ class DatastoreHandler(object):
                 try:
                     old_panel = yield self.get_panel(name = state['name'])
                 except: 
-                    old_panel = {'servers' : []}
+                    old_panel = {}
 
                 panel = {
                     'name' : state['name'], 
                     'icon' : state['icon'], 
-                    'servers' : old_panel['servers'],
+                    'servers' : old_panel.get('servers', []),
                     'panels' : state.get('panels', empty_panel)[user_type]
                 }
                 yield self.store_panel(panel, user_type)
