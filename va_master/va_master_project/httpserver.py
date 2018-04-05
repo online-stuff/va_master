@@ -1,4 +1,5 @@
 from va_master.handlers.api_handler import ApiHandler, LogMessagingSocket
+from va_master.handlers.proxy_handler import ProxyHandler
 import tornado.ioloop
 import tornado.web
 import tornado.gen
@@ -38,8 +39,9 @@ def get_app(config):
         (r"/", IndexHandler, path_settings),
         (r"/api/(.*)", ApiHandler, {'config': config}),
         (r"/static/(.*)", StaticHandler, path_settings),
+        (r"/proxy/(.*)", ProxyHandler, {'config' : config}),
         (r"/log", LogMessagingSocket, {'config' : config})
-    ])
+    ], settings = {'debug' : True})
     # TODO: If config.release, disable debug mode for static assets
     # Note: running the debug mode is not dangerous in production, but it's slower.
     return app
