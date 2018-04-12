@@ -16,12 +16,14 @@ class ProxyHandler():
     @tornado.gen.coroutine
     def fetch_server_data(self, proxy_url, data = '', method = 'GET', headers = {}):
         result = None
+        if type(data) == set: 
+            data = list(data)
         try:
             kwargs = {'method' : method}
             kwargs['headers'] = headers or self.request.headers
             if 'Content-Length' in kwargs['headers']: 
                 kwargs['headers'].pop('Content-Length')
-            if 'Content-Type' in kwargs['headers']: 
+            if type(data) in [dict, list]: 
                 data = json.dumps(data)
 
             if method == 'GET' :
@@ -83,7 +85,7 @@ class ProxyHandler():
 #        print ('Content length is : ', api_handler._headers['Content-Length'], ' and len is : ', len(result.body))
         api_handler.write(result.body)
         for k, v in result.headers.get_all():
-            if k in ['Content-Type']: 
+            if k in ['Content-Type', 'X-Content-Type-Options', 'X-Consumed-Content-Encoding']: 
                 api_handler.add_header(k, v)
 
             print ('Header ', k, ' in result is : ', v, ' in request is : ', api_handler._headers.get(k))
