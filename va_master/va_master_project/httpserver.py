@@ -38,7 +38,7 @@ def get_app(config):
         (r"/", IndexHandler, path_settings),
         (r"/api/(.*)", ApiHandler, {'config': config}),
         (r"/static/(.*)", StaticHandler, path_settings),
-#        (r"/(.*)", ApiHandler, {'config' : config}),
+        (r"/(.*)", ApiHandler, {'config' : config}),
         (r"/log", LogMessagingSocket, {'config' : config})
     ], settings = {'debug' : True})
     # TODO: If config.release, disable debug mode for static assets

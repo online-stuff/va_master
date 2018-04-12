@@ -3,7 +3,7 @@ import tornado.gen
 
 from tornado.httpclient import AsyncHTTPClient, HTTPRequest
 from tornado.concurrent import run_on_executor, Future
-
+from tornado.httputil import url_concat
 import json, datetime, syslog, pytz
 
 class ProxyHandler():
@@ -23,17 +23,22 @@ class ProxyHandler():
                 kwargs['headers'].pop('Content-Length')
             if 'Content-Type' in kwargs['headers']: 
                 data = json.dumps(data)
-            if not method == 'GET': 
+
+            if method == 'GET' :
+                if type(data) == dict:
+                    proxy_url = url_concat(proxy_url, data).replace(' ', '%20')
+            else: 
                 kwargs['body'] = data
+
             print ('Headers are : ', kwargs['headers'].keys())
             print ('Using url : ', proxy_url, ' with kwargs', kwargs)
 
             fetch_request = HTTPRequest(proxy_url, **kwargs)
             if fetch_request.body:
                 fetch_request.headers['Content-Length'] = str(len(fetch_request.body))
-            print ('Fetch request is : ', fetch_request.body)
+
             result = yield AsyncHTTPClient().fetch(fetch_request)
-            print ('Have result: ', result.body)
+            print ('Result len is : ', len(result.body))
         except: 
             import traceback
             traceback.print_exc()
@@ -75,12 +80,15 @@ class ProxyHandler():
         path = yield self.get_url_from_path(server, path)
         result = yield self.fetch_server_data(path, data, method = method, headers = api_handler.request.headers)
 
-        api_handler.set_header('Content-Length', str(len(result.body)))
-        print ('Content length is : ', api_handler._headers['Content-Length'], ' and len is : ', len(result.body))
-        print ('Writing to handler: ', result.body)
+#        print ('Content length is : ', api_handler._headers['Content-Length'], ' and len is : ', len(result.body))
         api_handler.write(result.body)
-#        for k, v in result.headers.get_all():
-#            api_handler.set_header(k, v)
+        for k, v in result.headers.get_all():
+            if k in ['Content-Type']: 
+                api_handler.add_header(k, v)
+
+            print ('Header ', k, ' in result is : ', v, ' in request is : ', api_handler._headers.get(k))
+        api_handler.set_header('Content-Length', str(len(result.body)))
+
         api_handler.flush()
 
 
