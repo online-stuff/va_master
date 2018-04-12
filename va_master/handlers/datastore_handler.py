@@ -59,6 +59,7 @@ class DatastoreHandler(object):
         object_spec = self.spec[object_type]
         object_handle = object_spec['consul_handle'].format(**handle_data)
         try:
+            print ('Trying to get : ', object_handle)
             result = yield self.datastore.get(object_handle)
         except KeyNotFound: 
 #            import traceback

@@ -11,6 +11,8 @@ from concurrent.futures import ThreadPoolExecutor   # `pip install futures` for 
 from va_master.api import url_handler
 from va_master.api.login import get_current_user, user_login
 from va_master.handlers.drivers_handler import DriversHandler
+from proxy_handler import ProxyHandler
+
 import json, datetime, syslog, pytz
 import dateutil.relativedelta
 import dateutil.parser
@@ -33,6 +35,8 @@ class ApiHandler(tornado.web.RequestHandler):
             self.paths = url_handler.gather_paths()
             self.datastore_handler = config.datastore_handler 
             self.drivers_handler = config.drivers_handler     
+
+            self.proxy_handler = ProxyHandler(config = config)
 
         except: 
             import traceback
@@ -86,6 +90,12 @@ class ApiHandler(tornado.web.RequestHandler):
 #            print ('Error with testing formatted result - probably is ok. ')
             return False
 
+    @tornado.gen.coroutine
+    def get_proxy_server(self):
+        host = self.request.headers['host'].split(':')[0]
+        server = yield self.datastore_handler.get_object(object_type = 'server', server_name = host)
+        if server: 
+            raise tornado.gen.Return(host)
 
     def fetch_func(self, method, path, data):
         try:
@@ -194,6 +204,12 @@ class ApiHandler(tornado.web.RequestHandler):
     @tornado.gen.coroutine
     def exec_method(self, method, path, data):
         try:
+            proxy_server = yield self.get_proxy_server()
+            print ('Proxy server is : ', proxy_server)
+            if proxy_server:
+                result = yield self.proxy_handler.handle_request(self, proxy_server, method, path, data)
+                raise tornado.gen.Return()
+
             self.data = data
             self.data.update({
                 'method' :  method,
