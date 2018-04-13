@@ -10,18 +10,6 @@ from pbkdf2 import crypt
 from va_master.consul_kv.datastore import KeyNotFound, StoreError
 from va_master.consul_kv.initial_consul_data import initial_consul_data
 
-#def compare_dicts(d1, d2):
-#    for key in d1:
-#        if key not in d2 or type(d1.get(key)) != type(d2.get(key)):
-#            return False
-#
-#        if type(d1[key]) == dict:
-#            if not compare_dicts(d1[key], d2[key]):
-#                return False
-#        elif type(d1[key] == list):
-#            if all([type(x) == dict for x in d1[key]): 
-#                if not all([compare_dicts(
-
 class DatastoreHandler(object):
 
     def __init__(self, datastore, datastore_spec_path = '/va_master/consul_kv/consul_spec.json'):
@@ -59,7 +47,6 @@ class DatastoreHandler(object):
         object_spec = self.spec[object_type]
         object_handle = object_spec['consul_handle'].format(**handle_data)
         try:
-            print ('Trying to get : ', object_handle)
             result = yield self.datastore.get(object_handle)
         except KeyNotFound: 
 #            import traceback
