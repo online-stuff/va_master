@@ -17,6 +17,10 @@ setuptools.setup(
     'pyVmomi', #for vmware
     'libvirt-python', #for, well, libvirt
     'boto3', #for aws
+    'python-digitalocean',
+    'lxc-dev', 
+    'lxc-python2',
+    'pylxd',
     'gitpython',
     'watchdog', 
     'clc-sdk',

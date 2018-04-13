@@ -11,13 +11,15 @@ from tornado.httpclient import AsyncHTTPClient, HTTPRequest
 import tornado.gen
 import json, datetime, subprocess, os
 
+from pylxd import Client
+
+#TODO need to see how to actually write the provider conf
 PROVIDER_TEMPLATE = '''VAR_PROVIDER_NAME:
   minion:
     master: VAR_THIS_IP
     master_type: str
   # The name of the configuration profile to use on said minion
-  driver: digitalocean 
-  personal_access_token: VAR_ACCESS_TOKEN
+  driver: lxc 
   ssh_key_names: VAR_KEYPAIR_NAME
   ssh_key_file: VAR_SSH_FILE
   ssh_interface: private_ips
@@ -30,9 +32,11 @@ PROVIDER_TEMPLATE = '''VAR_PROVIDER_NAME:
 
 PROFILE_TEMPLATE = '''VAR_PROFILE_NAME:
     provider: VAR_PROVIDER_NAME
-    image: VAR_IMAGE
+    template: VAR_TEMPLATE
+    backing: lvm
+    vgname: vg1
+    lvname: lxclv
     size: VAR_SIZE
-    userdata_file: VAR_USERDATA_FILE
 
     minion:
         master: VAR_THIS_IP
@@ -44,7 +48,7 @@ PROFILE_TEMPLATE = '''VAR_PROFILE_NAME:
 '''
 
 class LXCDriver(base.DriverBase):
-    def __init__(self, provider_name = 'digital_ocean_provider', profile_name = 'digital_ocean_profile', host_ip = '', key_name = 'va_master_key', key_path = '/root/va_master_key', datastore_handler = None):
+    def __init__(self, flavours, provider_name = 'digital_ocean_provider', profile_name = 'digital_ocean_profile', host_ip = '', key_name = 'va_master_key', key_path = '/root/va_master_key', datastore_handler = None):
         """ The standard issue init method. Borrows most of the functionality from the BaseDriver init method, but adds a self.regions attribute, specific for OpenStack hosts. """
 
         kwargs = {
@@ -58,17 +62,24 @@ class LXCDriver(base.DriverBase):
             'key_path' : key_path, 
             'datastore_handler' : datastore_handler
             }
+
+        self.flavours = flavours
         super(LXCDriver, self).__init__(**kwargs)
+
+    def get_client(self, provider):
+        self.cl = Client(provider['provider_ip'], verify = False)
+        self.cl.authenticate(provider['password'])
+        return self.cl
 
     @tornado.gen.coroutine
     def driver_id(self):
         """ Pretty simple. """
-        raise tornado.gen.Return('digital_ocean')
+        raise tornado.gen.Return('lxc')
 
     @tornado.gen.coroutine
     def friendly_name(self):
         """ Pretty simple """
-        raise tornado.gen.Return('Digital Ocean')
+        raise tornado.gen.Return('LXC')
 
     @tornado.gen.coroutine
     def get_steps(self):
@@ -76,7 +87,7 @@ class LXCDriver(base.DriverBase):
 
         steps = yield super(LXCDriver, self).get_steps()
         steps[0].add_fields([
-            ('access_token', 'Personal access token', 'str'),
+            ('provider_ip', 'IP of the lxc host.', 'str'),
         ])
         self.steps = steps
         raise tornado.gen.Return(steps)
@@ -84,8 +95,7 @@ class LXCDriver(base.DriverBase):
     @tornado.gen.coroutine
     def get_networks(self):
         """ Gets the networks the salt-cloud method, at least for the moment. """
-        networks = yield super(LXCDriver, self).get_networks()
-        networks = ['test']
+        networks = [x.name for x in self.cl.networks.all()]
         raise tornado.gen.Return(networks)
 
     @tornado.gen.coroutine
@@ -97,15 +107,13 @@ class LXCDriver(base.DriverBase):
     @tornado.gen.coroutine
     def get_images(self):
         """ Gets the images using salt-cloud. """
-        images = yield super(LXCDriver, self).get_images()
-        image = ['test']
+        images = [x.properties['description'] for x in self.cl.images.all()]
         raise tornado.gen.Return(images)
 
     @tornado.gen.coroutine
     def get_sizes(self):
         """ Gets the sizes using salt-cloud.  """
-        sizes = yield super(LXCDriver, self).get_sizes()
-        sizes = ['test']
+        sizes = self.flavours.keys()
         raise tornado.gen.Return(sizes)
 
 
@@ -241,9 +249,8 @@ class LXCDriver(base.DriverBase):
     def validate_field_values(self, step_index, field_values):
         """ Uses the base driver method, but adds the region tenant and identity_url variables, used in the configurations. """
         if step_index == 0:
-            pass
-#            self.access_token = field_values['access_token']
-#            self.provider_vars['VAR_ACCESS_TOKEN'] = field_values['access_token']
+            self.field_values['provider_ip'] = field_values['provider_ip']
+            cl = self.get_client(field_values)
         try:
             step_result = yield super(LXCDriver, self).validate_field_values(step_index, field_values)
         except:
