@@ -13,6 +13,8 @@ def bytes_to_int(b):
     return i
 
 def int_to_bytes(i):
+    if type(i) == str:
+        return i
     prefix = 'GiB'
     b = float(i) / (2 ** prefixes[prefix])
     b = str(b) + ' ' + prefix

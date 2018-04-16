@@ -51,6 +51,15 @@ initial_consul_data = {
             {'name' : 'stop', 'type' : 'action'}
         ],
     },
+    "managed_actions/provider/lxc" : {
+        "actions" : [
+            {'name' : 'reboot', 'type' : 'confirm'}, 
+            {'name' : 'delete', 'type' : 'confirm'}, 
+            {'name' : 'start', 'type' : 'action'}, 
+            {'name' : 'stop', 'type' : 'action'}
+        ],
+    },
+
     "managed_actions/provider/libvirt" : {
         "actions" : [
             {'name' : 'reboot', 'type' : 'confirm'}, 

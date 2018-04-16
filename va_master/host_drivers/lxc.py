@@ -71,6 +71,18 @@ class LXCDriver(base.DriverBase):
         self.cl.authenticate(provider['password'])
         return self.cl
 
+    def get_server_addresses(self, s):
+        if not s['state'].get('network'): 
+            return ['']
+        return [i.get('address') for i in s['state'].get('network', {}).get('eth0', {}).get('addresses', [{}]) if i.get('family', '') == 'inet'] or ['']
+
+
+    def get_server_usage(self, server, key):
+        if not server['state'].get(key):
+            return 'n/a'
+        return server['state'][key].get('usage', 0)
+
+
     @tornado.gen.coroutine
     def driver_id(self):
         """ Pretty simple. """
@@ -120,22 +132,35 @@ class LXCDriver(base.DriverBase):
     @tornado.gen.coroutine
     def get_servers(self, provider):
         """ TODO  """
+        cl = self.get_client(provider)
+        servers = cl.containers.all()
+        print ('Original servers : ', servers)
+        servers = [{'server' : x, 'state' : x.state().__dict__} for x in servers]
 
-        servers = []
+        for x in servers:
+            if x['state'].get('network'):
+                print ('Network is : ', x['state']['network'], ' and keys are : ', x['state']['network'].get('eth0', {}).keys())
+            else: 
+                print (x['server'].name, ' has no network!', x['state'].get('network'))
+            print ('Trying : ', x['server'].name, x['state'].get('network', {}))
+
+
+
         servers = [
             {
-                'hostname' : x['name'], 
-                'ip' : x['addresses'][x['addresses'].keys()[0]][0].get('addr', 'n/a'),
-                'size' : x['name'],
-                'used_disk' : x['local_gb'], 
-                'used_ram' : x['memory_mb'], 
-                'used_cpu' : x['vcpus'],
-                'status' : x['status'], 
+                'hostname' : x['server'].name,
+                'ip' : self.get_server_addresses(x)[0],
+                'size' : x['server'].name,
+                'used_disk' : int_to_bytes(self.get_server_usage(x, 'disk')),
+                'used_ram' : int_to_bytes(self.get_server_usage(x, 'memory')),
+                'used_cpu' : self.get_server_usage(x, 'cpu'), #TODO calculate CPU usage - current value is CPU time in seconds, we need to find total uptime and divide by it. 
+                'status' : x['server'].status, 
                 'cost' : 0,  #TODO find way to calculate costs
                 'estimated_cost' : 0,
                 'provider' : provider['provider_name'], 
             } for x in servers
         ]
+        print ('Servers finally are : ', servers)
         raise tornado.gen.Return(servers)
 
 
@@ -189,21 +214,23 @@ class LXCDriver(base.DriverBase):
     def get_provider_data(self, provider, get_servers = True, get_billing = True):
         """ TODO """
 
-        servers = yield self.get_servers()
+        servers = yield self.get_servers(provider)
+
+        get_sum = lambda x: sum([s[x] for s in servers if not type(s[x]) == str])
 
         provider_usage = {
-            'max_cpus' : 'maxTotalCores',
-            'used_cpus' : 'totalCoresUsed', 
-            'free_cpus' : 'maxTotalCores', 
-            'max_ram' : 'maxTotalRAMSize', 
-            'used_ram' : 'totalRAMUsed',
-            'free_ram' : 'maxTotalRAMSize', 
-            'max_disk' : 'maxTotalVolumeGigabytes', 
-            'used_disk' : 'totalGigabytesUsed', 
-            'free_disk' : 'maxTotalVolumeGigabytes',
-            'max_servers' : 'maxTotalInstances', 
-            'used_servers' : 'totalInstancesUsed', 
-            'free_servers' : 'maxTotalInstances'
+            'max_cpus' : 'n/a',
+            'used_cpus' : get_sum('used_cpu'), 
+            'free_cpus' : 'n/a', 
+            'max_ram' : 'n/a', 
+            'used_ram' : get_sum('used_ram'),
+            'free_ram' : 'n/a', 
+            'max_disk' : 'n/a', 
+            'used_disk' : get_sum('used_disk'), 
+            'free_disk' : 'n/a',
+            'max_servers' : 'n/a', 
+            'used_servers' : len(servers), 
+            'free_servers' : 'n/a'
         }
 
         provider_data = {

@@ -181,7 +181,7 @@ class DigitalOceanDriver(base.DriverBase):
     def get_provider_data(self, provider, get_servers = True, get_billing = True):
         """ TODO """
 
-        servers = yield self.get_servers()
+        servers = yield self.get_servers(provider)
 
         provider_usage = {
             'max_cpus' : 'maxTotalCores',
