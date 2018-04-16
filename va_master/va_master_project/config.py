@@ -7,8 +7,9 @@ from va_master.consul_kv import datastore
 from va_master.host_drivers import openstack
 
 from va_master.handlers import datastore_handler, drivers_handler
-folder_pwd = os.path.join(os.path.dirname(os.path.realpath(__file__)), '')
+#folder_pwd = os.path.join(os.path.dirname(os.path.realpath(__file__)), '')
 
+folder_pwd = os.getcwd()
 def get_server_static():
     # get the server assets static path
     return pkg_resources.resource_filename('va_dashboard', 'static')
@@ -31,11 +32,11 @@ class Config(object):
         self.https_port = 443
         self.server_static_path = get_server_static()
         self.deploy_pool_count = 3
-        self.ssh_key_path = '~/.ssh/'
+        self.ssh_key_path = os.path.expanduser('~/.ssh/')
         self.ssh_key_name = 'va-master' 
 
-        self.https_crt = folder_pwd + '../../ssl/cert.crt'
-        self.https_key = folder_pwd + '../../ssl/server.key'
+        self.https_crt = folder_pwd + '/ssl/cert.crt'
+        self.https_key = folder_pwd + '/ssl/server.key'
 
         self.datastore_handler = datastore_handler.DatastoreHandler(datastore = self.datastore)
         self.drivers_handler = drivers_handler.DriversHandler(self.datastore_handler, ssh_key_path = self.ssh_key_path, ssh_key_name = self.ssh_key_name)
