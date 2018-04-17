@@ -48,7 +48,6 @@ def get_current_user(handler):
     token = handler.request.headers.get('Authorization', '')
 
     token = token.replace('Token ', '')    
-    print ('Token is : ', token) 
     for t in ['user', 'admin']: # add other types as necessary, maybe from datastore. 
         token_valid = yield is_token_valid(handler.datastore_handler, token, t)
         if token_valid: 

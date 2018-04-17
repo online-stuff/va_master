@@ -19,7 +19,11 @@ class VAUsersTests(VATestClass):
 
     def test_add_user(self):
         user_functions = ['apps/action', 'panels', 'apps/get_panel']
-        new_user = {'user' : 'test_user', 'password' : 'test_password', 'user_type' : 'user', 'functions' : user_functions}
+        group = {'name' : 'providers', 'functions' : [{'func_path' : 'providers'}]}
+        new_user = {'user' : 'test_user', 'password' : 'test_password', 'user_type' : 'user', 'functions' : user_functions, 'groups' : [group['name']]}
+
+        new_group = self.api.api_call('/panels/create_user_group', method = 'post', data = {'group_name' : group['name'], 'functions' : group['functions']})
+        self.assertTrue(new_group['success'])
 
         new_user_api = self.api.api_call('/panels/create_user_with_group', method = 'post', data = new_user)
         self.assertTrue(new_user_api['success'])
@@ -36,13 +40,18 @@ class VAUsersTests(VATestClass):
         panels = self.api.api_call('/panels', method = 'get', data = {}, token = token)
         self.assertTrue(panels['success'])
 
-        #This should fail because the user does not have access to this function. 
         providers = self.api.api_call('/providers', method = 'post', data = {}, token = token)
-        self.assertFalse(providers['success'])
+        self.assertTrue(providers['success'])
+
+        #This should fail because the user does not have access to this function. 
+        providers_info = self.api.api_call('/providers/info', method = 'post', data = {}, token = token)
+        self.assertFalse(providers_info['success'])
 
         delete = self.api.api_call('/panels/delete_user', method = 'post', data = {'user' : new_user['user']})
         self.assertTrue(delete['success'])
 
+        delete_group = self.api.api_call('/panels/delete_group', method = 'post', data = {'group_name' : group['name']})
+        self.assertTrue(delete_group['success'])
 
 if __name__ == '__main__':
     suite = unittest.TestLoader().loadTestsFromTestCase(VAUsersTests)

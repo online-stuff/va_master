@@ -215,9 +215,16 @@ class DatastoreHandler(object):
     @tornado.gen.coroutine
     def set_user_functions(self, user, functions):
         edited_user = yield self.get_object('user', username = user)
+        all_functions = []
+        for f in functions: 
+            if f.get('func_type', '') == 'function_group' : 
+                all_functions += f['functions']
+            elif f.get('value'): 
+                all_functions.append({'func_path' : f['value']})
+            else: 
+                all_functions.append(f)
 
-        functions = [{"func_path" : x.get('value')} if x.get('value') else x for x in functions]
-        edited_user['functions'] = functions 
+        edited_user['functions'] = all_functions 
         yield self.insert_object('user', data = edited_user, username = user) 
 
 
