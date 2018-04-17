@@ -79,7 +79,7 @@ class LXCDriver(base.DriverBase):
 
     def get_server_usage(self, server, key):
         if not server['state'].get(key):
-            return 'n/a'
+            return 0 
         return server['state'][key].get('usage', 0)
 
 
@@ -134,16 +134,7 @@ class LXCDriver(base.DriverBase):
         """ TODO  """
         cl = self.get_client(provider)
         servers = cl.containers.all()
-        print ('Original servers : ', servers)
         servers = [{'server' : x, 'state' : x.state().__dict__} for x in servers]
-
-        for x in servers:
-            if x['state'].get('network'):
-                print ('Network is : ', x['state']['network'], ' and keys are : ', x['state']['network'].get('eth0', {}).keys())
-            else: 
-                print (x['server'].name, ' has no network!', x['state'].get('network'))
-            print ('Trying : ', x['server'].name, x['state'].get('network', {}))
-
 
 
         servers = [
@@ -151,8 +142,8 @@ class LXCDriver(base.DriverBase):
                 'hostname' : x['server'].name,
                 'ip' : self.get_server_addresses(x)[0],
                 'size' : x['server'].name,
-                'used_disk' : int_to_bytes(self.get_server_usage(x, 'disk')),
-                'used_ram' : int_to_bytes(self.get_server_usage(x, 'memory')),
+                'used_disk' : self.get_server_usage(x, 'disk') / float(2**20),
+                'used_ram' : self.get_server_usage(x, 'memory') / float(2**20),
                 'used_cpu' : self.get_server_usage(x, 'cpu'), #TODO calculate CPU usage - current value is CPU time in seconds, we need to find total uptime and divide by it. 
                 'status' : x['server'].status, 
                 'cost' : 0,  #TODO find way to calculate costs
@@ -160,7 +151,6 @@ class LXCDriver(base.DriverBase):
                 'provider' : provider['provider_name'], 
             } for x in servers
         ]
-        print ('Servers finally are : ', servers)
         raise tornado.gen.Return(servers)
 
 
@@ -192,7 +182,7 @@ class LXCDriver(base.DriverBase):
             'provider' : provider['provider_name'],
         })
 
-        total_memory = sum([x['used_ram'] for x in servers]) * 2**20
+        total_memory = sum([x['used_ram'] for x in servers if not type('used_ram') == str])
         total_memory = int_to_bytes(total_memory)
         provider['memory'] = total_memory
 

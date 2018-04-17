@@ -116,6 +116,7 @@ class ApiHandler(tornado.web.RequestHandler):
         auth_successful = True
         try: 
             user = yield get_current_user(self)
+            print ('Authing user ', user)
             if not user: 
                 self.json({'success' : False, 'message' : 'User not authenticated properly. ', 'data' : {}})
                 auth_successful = False
@@ -124,6 +125,7 @@ class ApiHandler(tornado.web.RequestHandler):
                 user_functions = [x.get('func_path', '') for x in user_functions]
 
                 user_functions += self.paths.get('user_allowed', [])
+                print ('Path is : ', path, ' and functions are : ', user_functions)
                 if path not in user_functions: 
                     self.json({'success' : False, 'message' : 'User ' + user['username'] + ' tried to access ' + path + ' but it is not in their allowed functions : ' + str(user_functions)})
                     auth_successful = False
@@ -229,8 +231,9 @@ class ApiHandler(tornado.web.RequestHandler):
             api_func = self.fetch_func(method, path, data)
 
             if api_func['function'] not in [user_login]:
-
+                print ('Handling auth')
                 auth_successful = yield self.handle_user_auth(path)
+                print ('Auth is : ', auth_successful)
                 if not auth_successful: 
                     raise tornado.gen.Return({"success" : False, "message" : "Authentication not successful for " + api_func['function'].func_name, "data" : {}})
 
@@ -238,6 +241,8 @@ class ApiHandler(tornado.web.RequestHandler):
             status = self.status or 200
             yield self.log_message(path = path, data = data, func = api_func['function'], result = {})#log_result)
             self.json(result, status)
+        except tornado.gen.Return: 
+            raise
         except: 
             import traceback
             traceback.print_exc()

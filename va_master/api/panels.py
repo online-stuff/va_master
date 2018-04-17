@@ -331,6 +331,15 @@ def update_user(datastore_handler, user, functions = [], groups = [], password =
 @tornado.gen.coroutine
 def add_user_functions(datastore_handler, user, functions):
     """Adds the list of functions to the list of functions already in the datastore. """
+    for i in range(len(functions)): 
+        f = functions[i]
+        if not type(f) == dict: 
+            print (f, ' is not dict')
+            functions[i] = {'func_path' : f}
+        else: 
+            print (f, ' is a dict')
+
+    print ('Functions are now : ', functions)
     yield datastore_handler.add_user_functions(user, functions)
     
 @tornado.gen.coroutine
@@ -347,6 +356,7 @@ def create_user_with_group(handler, user, password, user_type, functions = [], g
     for g in groups: 
         required_group = [x for x in all_groups if x.get('func_name', '') == g]
         functions += required_group
+
     yield add_user_functions(datastore_handler, user, functions)
 
 @tornado.gen.coroutine
