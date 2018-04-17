@@ -4,6 +4,8 @@ try:
 except: 
     import base
     from base import Step, StepResult
+
+from base import int_to_bytes
 from tornado.httpclient import AsyncHTTPClient, HTTPRequest
 import tornado.gen
 import json, yaml
@@ -385,6 +387,45 @@ class LibVirtDriver(base.DriverBase):
 
 
         raise tornado.gen.Return(provider_info)
+
+
+    @tornado.gen.coroutine
+    def get_provider_billing(self, provider):
+        #TODO provide should have some sort of costing mechanism, and we multiply used stuff by some price. 
+
+        total_cost = 0
+        servers = yield self.get_servers(provider)
+        for s in servers: 
+            s['cost'] = 0
+            s['estimated_cost'] = 0
+
+#        servers.append({
+#            'hostname' : 'Other Costs',
+#            'ip' : '',
+#            'size' : '',
+#            'used_disk' : 0,
+#            'used_ram' : 0,
+#            'used_cpu' : 0,
+#            'status' : '',
+#            'cost' : total_cost,
+#            'estimated_cost' : 0, 
+#            'provider' : provider['provider_name'],
+#        })
+
+        total_memory = sum([x['used_ram'] for x in servers]) * 2**20
+        total_memory = int_to_bytes(total_memory)
+        provider['memory'] = total_memory
+
+
+        for server in servers: 
+            server['used_ram'] = int_to_bytes(server['used_ram'] * (2 ** 20))
+
+        billing_data = {
+            'provider' : provider, 
+            'servers' : servers,
+            'total_cost' : total_cost
+        }
+        raise tornado.gen.Return(billing_data)
 
 
     @tornado.gen.coroutine
