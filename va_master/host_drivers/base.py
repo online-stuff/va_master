@@ -2,24 +2,8 @@ import salt.cloud
 import abc, subprocess
 import tornado.gen
 from tornado.httpclient import AsyncHTTPClient, HTTPRequest
+from va_master.utils.va_utils import bytes_to_int, int_to_bytes
 import time
-
-prefixes = {'KiB' : 10, 'MiB' : 20, 'GiB' : 30, 'TiB' : 40}
-
-def bytes_to_int(b):
-    b = b.split(' ')
-    i = float(b[0]) * (2 ** prefixes[b[1]])
-
-    return i
-
-def int_to_bytes(i):
-    if type(i) == str:
-        return i
-    prefix = 'GiB'
-    b = float(i) / (2 ** prefixes[prefix])
-    b = str(b) + ' ' + prefix
-
-    return b
 
 class Step(object):
     def __init__(self, name):

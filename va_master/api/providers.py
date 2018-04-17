@@ -1,6 +1,7 @@
 from .login import auth_only
 import tornado.gen
 from tornado.gen import Return
+from va_master.utils.va_utils import int_to_bytes
 import json
 import panels, apps
 
@@ -166,8 +167,8 @@ def get_providers_billing(handler):
                 'subRows': [{
                     'server': server['hostname'], 
                     'cpu': server['used_cpu'], 
-                    'memory': server['used_ram'], 
-                    'hdd': server['used_disk'], 
+                    'memory': int_to_bytes(server['used_ram']), 
+                    'hdd': int_to_bytes(server['used_disk']), 
                     'cost': server['cost'], 
                     'e_cost': server['estimated_cost']
                 } for server in provider['servers']]
