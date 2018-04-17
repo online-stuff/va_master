@@ -204,7 +204,10 @@ class DatastoreHandler(object):
 
     @tornado.gen.coroutine
     def get_users(self, user_type = 'users'):
-        users = yield self.datastore.get_recurse(user_type + '/')
+        try:
+            users = yield self.datastore.get_recurse(user_type + '/')
+        except Exception: 
+            users = []
         users = [x['username'] for x in users]
         raise tornado.gen.Return(users)
 
