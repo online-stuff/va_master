@@ -92,6 +92,12 @@ def list_providers(handler):
 
     providers = [x for x in providers if x['provider_name']]
 
+    for p in providers: 
+        driver = yield handler.drivers_handler.get_driver_by_id(p['driver_name'])
+        steps = yield driver.get_steps()
+        steps = [x.serialize() for x in steps]
+        p['steps'] = steps
+
     raise tornado.gen.Return({'providers': providers})
 
 
