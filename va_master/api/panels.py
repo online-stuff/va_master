@@ -310,8 +310,9 @@ def get_all_functions(handler):
 def get_all_function_groups(datastore_handler):
     """Returns all user function groups from the datastore. """
     groups = yield datastore_handler.get_user_groups()
+    print ('Groups are : ', groups)
     for g in groups:
-        g['functions'] = [x.get('func_path') for x in g['functions']]
+        g['functions'] = [x.get('value') for x in g['functions']]
     raise tornado.gen.Return(groups)
 
 @tornado.gen.coroutine
@@ -345,8 +346,9 @@ def create_user_with_group(handler, user, password, user_type, functions = [], g
     yield create_user_api(handler, user, password, user_type)
     all_groups = yield datastore_handler.get_user_groups()
     for g in groups: 
-        required_group = [x for x in all_groups if x.get('func_name', '') == g]
-        functions += required_group
+        if g: 
+            required_group = [x for x in all_groups if x.get('func_name', '') == g]
+            functions += required_group
     yield add_user_functions(datastore_handler, user, functions)
 
 @tornado.gen.coroutine

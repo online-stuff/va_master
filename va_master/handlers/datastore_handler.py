@@ -289,6 +289,7 @@ class DatastoreHandler(object):
         user_panel = yield self.get_panel(role, 'user')
         admin_panel = yield self.get_panel(role, 'admin')
 
+        print ('User panel is : ', user_panel, ' admin is : ', admin_panel)
         user_panel['servers'].append(panel_name)
         admin_panel['servers'].append(panel_name)
 
@@ -342,12 +343,12 @@ class DatastoreHandler(object):
                 try:
                     old_panel = yield self.get_panel(name = state['name'])
                 except: 
-                    old_panel = {'servers' : []}
+                    old_panel = {}
 
                 panel = {
                     'name' : state['name'], 
                     'icon' : state['icon'], 
-                    'servers' : old_panel['servers'],
+                    'servers' : old_panel.get('servers', []),
                     'panels' : state.get('panels', empty_panel)[user_type]
                 }
                 yield self.store_panel(panel, user_type)

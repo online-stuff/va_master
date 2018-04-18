@@ -29,11 +29,8 @@ def get_paths():
 
 @tornado.gen.coroutine
 def get_or_create_token(datastore_handler, username, user_type = 'admin'):
-    found = False
-    try:
-        token_doc = yield datastore_handler.get_object('by_username', user_type = user_type, username = username)
-        found = True
-    except KeyNotFound:
+    token_doc = yield datastore_handler.get_object('by_username', user_type = user_type, username = username)
+    if not token_doc: 
         doc = {
             'token': uuid.uuid4().hex,
             'username': username
@@ -41,9 +38,9 @@ def get_or_create_token(datastore_handler, username, user_type = 'admin'):
         yield datastore_handler.insert_object('by_username', data = doc, user_type = user_type, username = username)
         yield datastore_handler.insert_object('by_token', data = doc, user_type = user_type, token = doc['token'])
         raise tornado.gen.Return(doc['token'])
-    finally:
-        if found:
-            raise tornado.gen.Return(token_doc['token'])
+    if token_doc:
+        print ('Found : ', token_doc)
+        raise tornado.gen.Return(token_doc['token'])
 
 @tornado.gen.coroutine
 def get_current_user(handler):
@@ -151,6 +148,7 @@ def user_login(handler, username, password):
     pw_hash = account_info['password_hash']
     if crypt(password, pw_hash) == pw_hash:
         token = yield get_or_create_token(datastore_handler, username, user_type = account_info['user_type'])
+        print ('SHould be fine. Token is : ', token)
         raise tornado.gen.Return({'token': token})
     handler.status = 401
     raise Exception ("Invalid password: " + password) 
