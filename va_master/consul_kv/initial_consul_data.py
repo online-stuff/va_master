@@ -1,4 +1,5 @@
 initial_consul_data = {
+    "providers/va_standalone_servers" : {"username": "admin", "servers": [], "sec_groups": [], "images": [], "password": "admin", "ip_address": "127.0.0.1", "networks": [], "sizes": [], "driver_name": "generic_driver", "location": "", "defaults": {}, "provider_name": "va_standalone_servers"},
     "va_flavours" : {"va-small": {"num_cpus": 1, "max_memory": 1048576, "vol_capacity": 5, "memory": 1048576}, "debian": {"num_cpus": 1, "max_memory": 1048576, "vol_capacity": 5, "memory": 1048576}},
     "managed_actions/ssh/root" : {
         "actions" : [
@@ -50,7 +51,24 @@ initial_consul_data = {
             {'name' : 'stop', 'type' : 'action'}
         ],
     },
-    "managed_actions/provider/century_link" : {
+    "managed_actions/provider/lxc" : {
+        "actions" : [
+            {'name' : 'reboot', 'type' : 'confirm'}, 
+            {'name' : 'delete', 'type' : 'confirm'}, 
+            {'name' : 'start', 'type' : 'action'}, 
+            {'name' : 'stop', 'type' : 'action'}
+        ],
+    },
+
+    "managed_actions/provider/libvirt" : {
+        "actions" : [
+            {'name' : 'reboot', 'type' : 'confirm'}, 
+            {'name' : 'delete', 'type' : 'confirm'}, 
+            {'name' : 'start', 'type' : 'action'}, 
+            {'name' : 'stop', 'type' : 'action'}
+        ],
+    },
+    "managed_actions/provider/century_link_driver" : {
         "actions" : [
             {'name' : 'reboot', 'type' : 'confirm'}, 
             {'name' : 'delete', 'type' : 'confirm'}, 

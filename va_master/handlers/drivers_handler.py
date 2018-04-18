@@ -5,7 +5,7 @@ import traceback
 import functools
 import tornado
 import tornado.gen
-from va_master.host_drivers import openstack, aws, vcloud, libvirt_driver, generic_driver, century_link, gce, vmware
+from va_master.host_drivers import openstack, aws, vcloud, libvirt_driver, generic_driver, century_link, gce, vmware, digitalocean, lxc
 
 from Crypto.PublicKey import RSA
 from concurrent.futures import ProcessPoolExecutor
@@ -40,6 +40,7 @@ class DriversHandler(object):
                 gce.GCEDriver,
                 generic_driver.GenericDriver,
                 aws.AWSDriver,
+                digitalocean.DigitalOceanDriver,
             ]]
             kwargs['flavours'] = va_flavours
 
@@ -47,7 +48,8 @@ class DriversHandler(object):
             self.drivers += [x(**kwargs) for x in (
                 century_link.CenturyLinkDriver, 
                 libvirt_driver.LibVirtDriver,
-                vmware.VMWareDriver
+                vmware.VMWareDriver,
+                lxc.LXCDriver,
             )]
 
         raise tornado.gen.Return(self.drivers)

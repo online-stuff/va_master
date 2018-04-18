@@ -30,17 +30,17 @@ def get_paths():
 @tornado.gen.coroutine
 def get_or_create_token(datastore_handler, username, user_type = 'admin'):
     token_doc = yield datastore_handler.get_object('by_username', user_type = user_type, username = username)
+
     if not token_doc: 
-        doc = {
-            'token': uuid.uuid4().hex,
-            'username': username
+        token_doc = {
+                'token': uuid.uuid4().hex,
+                'username': username
         }
-        yield datastore_handler.insert_object('by_username', data = doc, user_type = user_type, username = username)
-        yield datastore_handler.insert_object('by_token', data = doc, user_type = user_type, token = doc['token'])
-        raise tornado.gen.Return(doc['token'])
-    if token_doc:
-        print ('Found : ', token_doc)
-        raise tornado.gen.Return(token_doc['token'])
+
+        yield datastore_handler.insert_object('by_username', data = token_doc, user_type = user_type, username = username)
+        yield datastore_handler.insert_object('by_token', data = token_doc, user_type = user_type, token = token_doc['token'])
+
+    raise tornado.gen.Return(token_doc['token'])
 
 @tornado.gen.coroutine
 def get_current_user(handler):
@@ -48,7 +48,6 @@ def get_current_user(handler):
     token = handler.request.headers.get('Authorization', '')
 
     token = token.replace('Token ', '')    
- 
     for t in ['user', 'admin']: # add other types as necessary, maybe from datastore. 
         token_valid = yield is_token_valid(handler.datastore_handler, token, t)
         if token_valid: 
@@ -128,6 +127,7 @@ def user_login(handler, username, password):
     """Looks for a user with the specified username and checks the specified password against the found user's password. Creates a token if the login is successful. """
 
     datastore_handler = handler.datastore_handler
+    token = None
     body = None
     if '@' in username: 
         yield ldap_login(handler)

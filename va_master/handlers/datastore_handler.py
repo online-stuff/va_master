@@ -1,4 +1,4 @@
-import json, glob, yaml, datetime
+import json, glob, yaml, datetime, os
 import requests
 import subprocess
 import traceback
@@ -10,21 +10,13 @@ from pbkdf2 import crypt
 from va_master.consul_kv.datastore import KeyNotFound, StoreError
 from va_master.consul_kv.initial_consul_data import initial_consul_data
 
-#def compare_dicts(d1, d2):
-#    for key in d1:
-#        if key not in d2 or type(d1.get(key)) != type(d2.get(key)):
-#            return False
-#
-#        if type(d1[key]) == dict:
-#            if not compare_dicts(d1[key], d2[key]):
-#                return False
-#        elif type(d1[key] == list):
-#            if all([type(x) == dict for x in d1[key]): 
-#                if not all([compare_dicts(
-
 class DatastoreHandler(object):
 
-    def __init__(self, datastore, datastore_spec_path):
+    def __init__(self, datastore, datastore_spec_path = '/va_master/consul_kv/consul_spec.json'):
+        master_path = os.getcwd() 
+
+        datastore_spec_path = master_path + datastore_spec_path
+
         self.datastore = datastore
 
         with open(datastore_spec_path) as f: 
@@ -200,7 +192,10 @@ class DatastoreHandler(object):
 
     @tornado.gen.coroutine
     def get_users(self, user_type = 'users'):
-        users = yield self.datastore.get_recurse(user_type + '/')
+        try:
+            users = yield self.datastore.get_recurse(user_type + '/')
+        except Exception: 
+            users = []
         users = [x['username'] for x in users]
         raise tornado.gen.Return(users)
 
@@ -220,9 +215,16 @@ class DatastoreHandler(object):
     @tornado.gen.coroutine
     def set_user_functions(self, user, functions):
         edited_user = yield self.get_object('user', username = user)
+        all_functions = []
+        for f in functions: 
+            if f.get('func_type', '') == 'function_group' : 
+                all_functions += f['functions']
+            elif f.get('value'): 
+                all_functions.append({'func_path' : f['value']})
+            else: 
+                all_functions.append(f)
 
-        functions = [{"func_path" : x.get('value')} if x.get('value') else x for x in functions]
-        edited_user['functions'] = functions 
+        edited_user['functions'] = all_functions 
         yield self.insert_object('user', data = edited_user, username = user) 
 
 
@@ -334,6 +336,7 @@ class DatastoreHandler(object):
 
     @tornado.gen.coroutine
     def import_states_from_states_data(self, states = []):
+        empty_panel = {'admin' : [], 'user' : []}
         states_data = yield self.get_states_data(states)
 
         empty_panel = {'admin' : [], 'user' : []}

@@ -2,25 +2,8 @@ import salt.cloud
 import abc, subprocess
 import tornado.gen
 from tornado.httpclient import AsyncHTTPClient, HTTPRequest
+from va_master.utils.va_utils import bytes_to_int, int_to_bytes
 import time
-
-prefixes = {'KiB' : 10, 'MiB' : 20, 'GiB' : 30, 'TiB' : 40}
-
-def bytes_to_int(b):
-    b = b.split(' ')
-    i = float(b[0]) * (2 ** prefixes[b[1]])
-
-    return i
-
-def int_to_bytes(i):
-    prefix = 'GiB'
-    b = float(i) / (2 ** prefixes[prefix])
-    b = str(b) + ' ' + prefix
-
-    return b
-
-
-from va_master.handlers.datastore_handler import DatastoreHandler
 
 class Step(object):
     def __init__(self, name):
@@ -252,7 +235,7 @@ class DriverBase(object):
             import traceback
             print ('There was an error in get_images() in the base driver for %s. ' % (provider_name))
             traceback.print_exc()
-            raise Exception('There was an error getting images for %s' % (provider_name))
+            images = ['No images']
         raise tornado.gen.Return(images)
 
     @tornado.gen.coroutine
@@ -270,7 +253,7 @@ class DriverBase(object):
             import traceback
             print ('There was an error in get_sizes() in the base driver for %s. ' % (provider_name))
             traceback.print_exc()
-            raise Exception('There was an error getting sizes for %s' % (provider_name))
+            sizes = ['No sizes']
         raise tornado.gen.Return(sizes)
 
     @tornado.gen.coroutine

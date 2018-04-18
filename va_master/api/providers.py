@@ -1,6 +1,7 @@
 from .login import auth_only
 import tornado.gen
 from tornado.gen import Return
+from va_master.utils.va_utils import int_to_bytes
 import json
 import panels, apps
 
@@ -91,6 +92,12 @@ def list_providers(handler):
 
     providers = [x for x in providers if x['provider_name']]
 
+    for p in providers: 
+        driver = yield handler.drivers_handler.get_driver_by_id(p['driver_name'])
+        steps = yield driver.get_steps()
+        steps = [x.serialize() for x in steps]
+        p['steps'] = steps
+
     raise tornado.gen.Return({'providers': providers})
 
 
@@ -166,8 +173,8 @@ def get_providers_billing(handler):
                 'subRows': [{
                     'server': server['hostname'], 
                     'cpu': server['used_cpu'], 
-                    'memory': server['used_ram'], 
-                    'hdd': server['used_disk'], 
+                    'memory': int_to_bytes(server['used_ram']), 
+                    'hdd': int_to_bytes(server['used_disk']), 
                     'cost': server['cost'], 
                     'e_cost': server['estimated_cost']
                 } for server in provider['servers']]
@@ -265,7 +272,7 @@ def get_provider_info(handler, dash_user, get_billing = True, get_servers = True
     standalone_servers = standalone_provider['servers']
     for v in standalone_default_values: 
         [x.update({v : x.get(v, standalone_default_values[v])}) for x in standalone_servers]
-    print ('Standalone_servers are : ', standalone_servers)
+
     standalone_locations = set([x.get('location', 'va-master') for x in standalone_servers])
     standalone_providers = [
         {

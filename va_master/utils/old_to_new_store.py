@@ -1,5 +1,6 @@
 import requests, json, functools
 import base64
+import os
 path = 'http://127.0.0.1:8500'
 
 from va_master.handlers.datastore_handler import DatastoreHandler
@@ -7,8 +8,9 @@ from va_master.consul_kv.datastore import ConsulStore
 
 import tornado.ioloop
 
+folder_pwd = os.path.join(os.path.dirname(os.path.realpath(__file__)), '')
 datastore = ConsulStore()
-datastore_handler = DatastoreHandler(datastore, '/opt/va_master/va_master/consul_kv/consul_spec.json')
+datastore_handler = DatastoreHandler(datastore)
 
 run_sync = tornado.ioloop.IOLoop.instance().run_sync
 

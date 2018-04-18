@@ -164,13 +164,13 @@ class CenturyLinkDriver(base.DriverBase):
 
         servers = self.get_servers_list(provider)
         servers = [x.data for x in servers if 'details' in x.data.keys()]
-
+        print ('Servers are : ', servers)
         servers =  [{
                 'hostname' : x['name'],
                 'ip' : None if not x['details']['ipAddresses'] else x['details']['ipAddresses'][0]['internal'],
                 'size' : 'va-small',
                 'status' : x['status'],
-                'provider' : provider['hostname'],
+                'provider' : provider['provider_name'],
                 'used_ram' : x['details']['memoryGB'],
                 'used_cpu': x['details']['cpu'],
                 'used_disk' : x['details']['storageGB'],

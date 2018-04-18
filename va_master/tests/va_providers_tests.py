@@ -34,7 +34,7 @@ class VAProvidersTests(unittest.TestCase):
 
 
 
-    @unittest.skip('Skipping temporarily. ')
+#    @unittest.skip('Skipping temporarily. ')
     def test_add_provider(self):
         providers =  self.api.api_call('/providers/info', method='post', data={})
 
@@ -42,6 +42,7 @@ class VAProvidersTests(unittest.TestCase):
         self.assertFalse(init_step['data']['errors'])
 
         info_step = self.api.api_call('/providers/new/validate_fields', method='post', data={"driver_id" : "openstack", "field_values" : {"provider_name" : "va-os", "username" : "admin", "tenant" : "admin", "provider_ip" : "192.168.80.16:5000", "region" : "RegionOne", "password" : "zilxii4g2j", "location" : "Skopje"}, "step_index" : 0})
+
         self.assertFalse(info_step['data']['errors'])
 
         network_step = self.api.api_call('/providers/new/validate_fields', method='post', data={"driver_id" : "openstack", "field_values" : {"sec_group" : "default|26811978-5201-41e5-8860-f71607928114", "network" : "public|9bd9a1c4-c46d-4976-b5a8-41c6c670bef2"}, "step_index" : 1})
@@ -55,7 +56,7 @@ class VAProvidersTests(unittest.TestCase):
         diff_providers = [x for x in new_providers if x not in providers]
         self.assertNotEqual(len(providers['data']), len(new_providers['data']))
 
-    @unittest.skip('Skipping temporarily. ')
+#    @unittest.skip('Skipping temporarily. ')
     def test_delete_provider(self):
         providers = self.api.api_call('/providers/info', method='post', data={})
         result = self.api.api_call('/providers/delete', method='post', data={"provider_name": "va-os"})

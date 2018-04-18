@@ -23,6 +23,8 @@ def get_paths():
             'panels/delete_user' : {'function' : delete_user, 'args' : ['datastore_handler', 'user']}, 
             'panels/update_user' : {'function' : update_user, 'args' : ['datastore_handler', 'user', 'functions', 'groups', 'password']}, 
 
+            'panels/delete_group' : {'function' : delete_user_group, 'args' : ['datastore_handler', 'group_name']},
+
             'panels/get_panel' : {'function' : get_panel_for_user, 'args' : ['server_name', 'panel', 'provider', 'handler', 'args', 'dash_user']},
             'panels/new_panel' : {'function' : new_panel, 'args' : ['datastore_handler', 'server_name', 'role']},
             'panels/action' : {'function' : panel_action, 'args' : ['handler', 'server_name', 'action', 'args', 'kwargs', 'module', 'dash_user']}, #must have server_name and action in data, 'args' : []}, ex: panels/action server_name=nino_dir action=list_users
@@ -332,12 +334,21 @@ def update_user(datastore_handler, user, functions = [], groups = [], password =
 @tornado.gen.coroutine
 def add_user_functions(datastore_handler, user, functions):
     """Adds the list of functions to the list of functions already in the datastore. """
+    for i in range(len(functions)): 
+        f = functions[i]
+        if not type(f) == dict: 
+            functions[i] = {'func_path' : f}
+
     yield datastore_handler.add_user_functions(user, functions)
     
 @tornado.gen.coroutine
 def create_user_group(datastore_handler, group_name, functions):
     """Creates a new user group with the specified group_name and list of functions. """
     yield datastore_handler.create_user_group(group_name, functions)
+
+@tornado.gen.coroutine
+def delete_user_group(datastore_handler, group_name):
+    yield datastore_handler.delete_object('user_group', group_name = group_name)
 
 @tornado.gen.coroutine
 def create_user_with_group(handler, user, password, user_type, functions = [], groups = []):
@@ -349,6 +360,9 @@ def create_user_with_group(handler, user, password, user_type, functions = [], g
         if g: 
             required_group = [x for x in all_groups if x.get('func_name', '') == g]
             functions += required_group
+        required_group = [x for x in all_groups if x.get('func_name', '') == g]
+        functions += required_group
+
     yield add_user_functions(datastore_handler, user, functions)
 
 @tornado.gen.coroutine

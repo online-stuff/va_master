@@ -11,6 +11,8 @@ from concurrent.futures import ThreadPoolExecutor   # `pip install futures` for 
 from va_master.api import url_handler
 from va_master.api.login import get_current_user, user_login
 from va_master.handlers.drivers_handler import DriversHandler
+from proxy_handler import ProxyHandler
+
 import json, datetime, syslog, pytz
 import dateutil.relativedelta
 import dateutil.parser
@@ -33,6 +35,8 @@ class ApiHandler(tornado.web.RequestHandler):
             self.paths = url_handler.gather_paths()
             self.datastore_handler = config.datastore_handler 
             self.drivers_handler = config.drivers_handler     
+
+            self.proxy_handler = ProxyHandler(config = config)
 
         except: 
             import traceback
@@ -86,6 +90,12 @@ class ApiHandler(tornado.web.RequestHandler):
 #            print ('Error with testing formatted result - probably is ok. ')
             return False
 
+    @tornado.gen.coroutine
+    def get_proxy_server(self):
+        host = self.request.headers['host'].split(':')[0]
+        server = yield self.datastore_handler.get_object(object_type = 'server', server_name = host)
+        if server: 
+            raise tornado.gen.Return(host)
 
     def fetch_func(self, method, path, data):
         try:
@@ -195,6 +205,11 @@ class ApiHandler(tornado.web.RequestHandler):
     @tornado.gen.coroutine
     def exec_method(self, method, path, data):
         try:
+            proxy_server = yield self.get_proxy_server()
+            if proxy_server:
+                result = yield self.proxy_handler.handle_request(self, proxy_server, method, path, data)
+                raise tornado.gen.Return()
+
             self.data = data
             self.data.update({
                 'method' :  method,
@@ -214,15 +229,16 @@ class ApiHandler(tornado.web.RequestHandler):
             api_func = self.fetch_func(method, path, data)
 
             if api_func['function'] not in [user_login]:
-
                 auth_successful = yield self.handle_user_auth(path)
                 if not auth_successful: 
-                    raise tornado.gen.Return()
+                    raise tornado.gen.Return({"success" : False, "message" : "Authentication not successful for " + api_func['function'].func_name, "data" : {}})
 
             result = yield self.handle_func(api_func, data)
             status = self.status or 200
             yield self.log_message(path = path, data = data, func = api_func['function'], result = {})#log_result)
             self.json(result, status)
+        except tornado.gen.Return: 
+            raise
         except: 
             import traceback
             traceback.print_exc()
