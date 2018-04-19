@@ -11,6 +11,7 @@ def get_paths():
     paths = {
         'get' : {
             'drivers' : {'function' : list_drivers, 'args' : ['drivers_handler']},
+            'drivers/get_steps' : {'function' : get_driver_steps, 'args' : ['drivers_handler', 'driver_name']},
             'providers/get_trigger_functions': {'function' : get_providers_triggers, 'args' : ['provider_name']},
             'providers/get_provider_billing' : {'function' : get_provider_billing, 'args' : ['provider_name']},
             'providers/billing' : {'function' : get_providers_billing, 'args' : ['handler']},
@@ -25,7 +26,11 @@ def get_paths():
             'providers/delete' : {'function' : delete_provider, 'args' : ['datastore_handler', 'provider_name']},
             'providers/add_provider' : {'function' : add_provider, 'args' : ['datastore_handler', 'field_values', 'driver_name']},
             'providers/generic_add_server' : {'function' : add_generic_server, 'args' : ['datastore_handler', 'provider_name', 'server']},
-        }
+        },
+        'put' : {
+            'providers/new/validate_fields' : {'function' : validate_new_provider_fields, 'args' : ['handler', 'driver_id', 'field_values', 'step_index']},
+        },
+
     }
     return paths
 
@@ -96,6 +101,9 @@ def list_providers(handler):
         driver = yield handler.drivers_handler.get_driver_by_id(p['driver_name'])
         steps = yield driver.get_steps()
         steps = [x.serialize() for x in steps]
+        for step in steps: 
+            for field in step['fields']: 
+                field['value'] = p.get(field['id'], '')
         p['steps'] = steps
 
     raise tornado.gen.Return({'providers': providers})
@@ -107,6 +115,13 @@ def delete_provider(datastore_handler, provider_name):
     yield datastore_handler.delete_provider(provider_name)
 
 @tornado.gen.coroutine
+def get_driver_steps(drivers_handler, driver_name):
+    driver = yield drivers_handler.get_driver_by_id(driver_name)
+    steps = yield driver.get_steps()
+    steps = [x.serialize() for x in steps]
+    raise tornado.gen.Return(steps)
+
+@tornado.gen.coroutine
 def list_drivers(drivers_handler):
     """Gets a list of drivers. """
     drivers = yield drivers_handler.get_drivers()
@@ -116,8 +131,7 @@ def list_drivers(drivers_handler):
         name = yield driver.friendly_name()
         steps = yield driver.get_steps()
         steps = [x.serialize() for x in steps]
-        out['drivers'].append({'id': driver_id,
-            'friendly_name': name, 'steps': steps})
+        out['drivers'].append({'id': driver_id, 'friendly_name': name, 'steps': steps})
     raise tornado.gen.Return(out)
 
 @tornado.gen.coroutine
