@@ -32,6 +32,7 @@ def get_paths():
             'state/add' : {'function' : create_new_state,'args' : ['file', 'body', 'filename']},
             'apps/new/validate_fields' : {'function' : validate_app_fields, 'args' : ['handler']},
             'apps' : {'function' : launch_app, 'args' : ['handler']},
+            'apps/add_minion' : {'function' : add_minion_to_server, 'args' : ['handler', 'server_name', 'ip_address']},
             'apps/action' : {'function' : perform_server_action, 'args' : ['handler', 'provider_name', 'action', 'server_name', 'action_type', 'kwargs']},
             'apps/add_vpn_user': {'function' : add_openvpn_user, 'args' : ['username']},
             'apps/revoke_vpn_user': {'function' : revoke_openvpn_user, 'args' : ['username']},
@@ -305,6 +306,12 @@ def write_pillar(data):
             pillar_str += '%s: %s\n' % (field, data['extra_fields'][field])
         f.write(pillar_str)
     salt_manage_pillar.add_server(data.get('server_name'), data.get('role', ''))
+
+
+#TODO
+@tornado.gen.coroutine
+def add_minion_to_server(handler, server_name, ip_address):
+    pass
 
         
 ##@auth_only

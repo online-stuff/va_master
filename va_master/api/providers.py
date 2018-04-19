@@ -137,13 +137,19 @@ def validate_new_provider_fields(handler, driver_id, field_values, step_index):
         result = yield found_driver.validate_field_values(step_index, field_values)
         if result.new_step_index == -1:
             datastore_handler.create_provider(found_driver.field_values)
-        raise tornado.gen.Return(result.serialize())
+        result = result.serialize()
     else:
         result = {
             'errors': ['Some fields are not filled.'],
             'new_step_index': step_index,
             'option_choices': None
         }
+
+    if provider_name: 
+        provider = yield handler.datastore_handler.get_provider(provider_name)
+        for field in result['fields']: 
+            field['value'] = provider.get(field['id'], '')
+
     raise tornado.gen.Return(result)
 
 
