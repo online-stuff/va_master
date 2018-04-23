@@ -23,7 +23,7 @@ class APIManager():
             raise Exception('Cannot start va api: either the token or the va_user and va_pass should be set up properly. ')
 
 
-    def api_call(self, url, data, method = 'get', token = ''):
+    def api_call(self, url, data = {}, method = 'get', token = ''):
         if self.mock: return self.mock_api_call(url, data, method)
 
         token = token or self.token

@@ -45,6 +45,17 @@ def get_paths():
     return paths
 
 
+def call_master_cmd(fun, arg = [], kwarg = {}):
+    cl = LocalClient()
+    result = cl.cmd('G@role:va-master', fun = fun, tgt_type = 'compound', arg = arg, kwarg = kwarg)
+
+    if len(result) == 0: 
+        raise Exception('Tried to run ' + str(fun) + ' on va-master, but there was no response. arg was ' + str(arg) + ' and kwarg was ' + str(kwarg))
+
+    result = result[result.keys()[0]]
+    return result
+
+
 def bytes_to_readable(num, suffix='B'):
     """Converts bytes integer to human readable"""
 
@@ -67,7 +78,7 @@ def get_openvpn_users():
     """Gets openvpn users and current status. Then merges users to find currently active ones and their usage data. """
 
     cl = LocalClient()
-    openvpn_users = cl.cmd('va-master', 'openvpn.list_users')
+    openvpn_users = call_master_cmd('openvpn.list_users')
 
     if type(openvpn_users) == str: 
         print ('Openvpn users result : ', openvpn_users)
@@ -98,16 +109,14 @@ def get_openvpn_users():
 def get_openvpn_status():
     """Just gets the openvpn status information, which lists the current clients. """
 
-    cl = LocalClient()
-    status = cl.cmd('va-master', 'openvpn.get_status')
+    status = call_master_cmd('openvpn.get_status')
     raise tornado.gen.Return(status)
 
 @tornado.gen.coroutine
 def add_openvpn_user(username):
     """Creates a new openvpn user. """
 
-    cl = Caller()
-    success = cl.cmd('openvpn.add_user', username = username)
+    success = call_master_cmd('openvpn.add_user', kwarg = {'username' : username})
     if success:
         print ('Adding user returned : ', success)
         raise Exception('Adding an openvpn user returned with an error. ')
@@ -117,9 +126,8 @@ def add_openvpn_user(username):
 def revoke_openvpn_user(username):
     "Revokes an existing vpn user"""
 
-    cl = Caller()
-    success = cl.cmd('openvpn.revoke_user', username = username)
-
+    success = call_master_cmd('openvpn.revoke_user', kwarg = {'username' : username})
+ 
     if success:
         print ('Revoking user returned : ', success)
         raise Exception('Revoking %s returned with an error. ' % (username))
@@ -131,8 +139,7 @@ def revoke_openvpn_user(username):
 def list_user_logins(username): 
     """Provides a list of previous openvpn logins. """
 
-    cl = Caller()
-    success = cl.cmd('openvpn.list_user_logins', user = username)
+    success = call_master_cmd('openvpn.list_user_logins', kwarg = {'username' : username})
     if type(success) == str:
         print ('User logins returned', success)
         raise Exception('Listing user logins returned with an error. ')
@@ -141,9 +148,7 @@ def list_user_logins(username):
 @tornado.gen.coroutine
 def download_vpn_cert(username, handler):
     """Downloads the vpn certificate for the required user. Works by copying the file to /tmp/{username}_vpn.cert and then serving it through Tornado. """
-
-    cl = Caller()
-    cert = cl.cmd('openvpn.get_config', username = username)
+    success = call_master_cmd('openvpn.get_config', kwarg = {'username' : username})
 
     cert_has_error = yield handler.has_error(cert)
     if cert_has_error:
@@ -283,8 +288,7 @@ def validate_app_fields(handler):
 def get_app_info(server_name):
     """Gets mine inventory for the provided instance. """
 
-    cl = Caller()
-    server_info = cl.cmd('mine.get', server_name, 'inventory') 
+    success = call_master_cmd('mine.get', arg = [server_name, 'inventory'])
     server_info = server_info.get(server_name)
     if not server_info: 
         raise Exception('Attempted to get app info for %s but mine.get returned empty. ' % (server_name))
