@@ -25,7 +25,7 @@ def invalid_url(path, method):
 
 class ApiHandler(tornado.web.RequestHandler):
     executor = ThreadPoolExecutor(max_workers= 4)
-    status = 200
+    status = None 
 
     def initialize(self, config, include_version=False):
         try:
@@ -197,6 +197,7 @@ class ApiHandler(tornado.web.RequestHandler):
             import traceback
             traceback.print_exc()
             result = {'success' : False, 'message' : 'There was an error performing a request : ' + str(e.message), 'data' : {}}
+
         if not result['success'] and not self.status: 
             self.status = 400
         raise tornado.gen.Return(result)
