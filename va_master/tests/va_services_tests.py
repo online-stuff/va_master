@@ -12,7 +12,7 @@ class VAServicesTests(VATestClass):
     
     def test_presets(self):
         presets = self.api.api_call('/services/get_service_presets')
-        new_service = {'presets' : ['ping_preset'], 'server' : 'va-master', 'name' : 'test_preset', 'address' : '127.0.0.1', 'port' : '443', 'tags' : 'test'}
+        new_service = {'presets' : ['ping_preset'], 'server' : 'va-master', 'name' : 'test_preset', 'address' : '127.0.0.1', 'port' : '443', 'tags' : 'web'}
 
         result = self.api.api_call('/services/add_service_with_presets', data = new_service, method = 'post')
         print 'adding ', result
@@ -30,7 +30,7 @@ class VAServicesTests(VATestClass):
 
         self.assertTrue(all_checks['success'])
         services = all_checks['data'].keys()
-        self.assertNotIn(new_services['name'], services)
+        self.assertNotIn(new_service['name'], services)
 
 
         

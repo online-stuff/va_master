@@ -104,10 +104,10 @@ def get_version(handler):
 
 #These two functions are for inside use in the API. 
 def reload_systemctl():
-    subprocess.check_output(['systemctl', 'daemon-reload'])
+    subprocess.call(['systemctl', 'daemon-reload'])
 
 def restart_consul():
-    subprocess.check_output(['consul', 'reload'])
+    subprocess.call(['consul', 'reload'])
 
 @tornado.gen.coroutine
 def get_services_and_monitoring():
@@ -263,10 +263,10 @@ def add_service_with_presets(datastore_handler, presets, server, name = '', addr
     for preset in presets:
         preset = yield datastore_handler.get_object('service_preset', name = preset)
 
-        check = yield generate_check_from_preset(preset, server, address = address, tags = tags, port = port)
+        check = yield generate_check_from_preset(preset, server, address = address, tags = tags, port = int(port))
         checks.append(check)
 
-    service = {"service": {"name": name, "tags": tags, "address": address, "port": port, "checks" : [preset]}}
+    service = {"service": {"name": name, "tags": tags, "address": address, "port": int(port), "checks" : [preset]}}
     yield add_service_with_definition(service, name)
 
 

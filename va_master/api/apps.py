@@ -48,12 +48,11 @@ def get_paths():
 def call_master_cmd(fun, arg = [], kwarg = {}):
     cl = LocalClient()
     result = cl.cmd('G@role:va-master', fun = fun, tgt_type = 'compound', arg = arg, kwarg = kwarg)
-
-    if len(result) == 0: 
-        raise Exception('Tried to run ' + str(fun) + ' on va-master, but there was no response. arg was ' + str(arg) + ' and kwarg was ' + str(kwarg))
-
-    result = result[result.keys()[0]]
-    return result
+    print ('Executing  :', fun, arg, kwarg)
+    result = [result[i] for i in result if result[i]]
+    if not result: 
+         raise Exception('Tried to run ' + str(fun) + ' on va-master, but there was no response. arg was ' + str(arg) + ' and kwarg was ' + str(kwarg))
+    return result[0]
 
 
 def bytes_to_readable(num, suffix='B'):
@@ -288,8 +287,8 @@ def validate_app_fields(handler):
 def get_app_info(server_name):
     """Gets mine inventory for the provided instance. """
 
-    success = call_master_cmd('mine.get', arg = [server_name, 'inventory'])
-    server_info = server_info.get(server_name)
+    server_info = call_master_cmd('mine.get', arg = [server_name, 'inventory'])
+    print ('result is : ', server_info)
     if not server_info: 
         raise Exception('Attempted to get app info for %s but mine.get returned empty. ' % (server_name))
     raise tornado.gen.Return(server_info)
