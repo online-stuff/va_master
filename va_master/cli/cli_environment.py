@@ -48,37 +48,37 @@ def run_vpn():
     salt_client.cmd('state.highstate')    
         
 
-def write_supervisor_conf():
-    """Writes configuration file for Supervisor daemon."""
-    paths = {
-        'salt_master_path': distutils.spawn.find_executable('salt-master'),
-        'python_path': sys.executable
-    }
-    supervisor_conf = SUPERVISOR_TEMPLATE % paths
-    with tempfile.NamedTemporaryFile(delete=False) as f:
-        f.write(supervisor_conf)
-    subprocess.check_call(['mv', f.name, SUPERVISOR_CONF_PATH])
-
-def write_consul_conf(ip):
-    """Writes configuration file for Consul server.
-    Parameters:
-      ip - The IP that Consul is going to advertise
-    """
-    json_conf = {
-        'datacenter': 'dc1',
-        'data_dir': '/usr/share/consul',
-#        'advertise_addr': ip,
-        'advertise_addr': '127.0.0.1',
-        'bootstrap_expect': 1,
-        'server': True
-    }
-    with tempfile.NamedTemporaryFile(delete=False) as f:
-        json.dump(json_conf, f)
-    subprocess.check_call(['mv', f.name, CONSUL_CONF_PATH])
-
-def reload_daemon():
-    try:
-        subprocess.check_call(['supervisorctl', 'reload'])
-        return True
-    except:
-        return False
+#def write_supervisor_conf():
+#    """Writes configuration file for Supervisor daemon."""
+#    paths = {
+#        'salt_master_path': distutils.spawn.find_executable('salt-master'),
+#        'python_path': sys.executable
+#    }
+#    supervisor_conf = SUPERVISOR_TEMPLATE % paths
+#    with tempfile.NamedTemporaryFile(delete=False) as f:
+#        f.write(supervisor_conf)
+#    subprocess.check_call(['mv', f.name, SUPERVISOR_CONF_PATH])
+#
+#def write_consul_conf(ip):
+#    """Writes configuration file for Consul server.
+#    Parameters:
+#      ip - The IP that Consul is going to advertise
+#    """
+#    json_conf = {
+#        'datacenter': 'dc1',
+#        'data_dir': '/usr/share/consul',
+##        'advertise_addr': ip,
+#        'advertise_addr': '127.0.0.1',
+#        'bootstrap_expect': 1,
+#        'server': True
+#    }
+#    with tempfile.NamedTemporaryFile(delete=False) as f:
+#        json.dump(json_conf, f)
+#    subprocess.check_call(['mv', f.name, CONSUL_CONF_PATH])
+#
+#def reload_daemon():
+#    try:
+#        subprocess.check_call(['supervisorctl', 'reload'])
+#        return True
+#    except:
+#        return False

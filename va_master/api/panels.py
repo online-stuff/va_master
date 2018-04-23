@@ -2,7 +2,7 @@ import json
 
 import salt.client
 import tornado.gen
-import login, apps
+import login, apps, services
 
 from login import auth_only, create_user_api
 from salt.client import LocalClient 
@@ -11,6 +11,7 @@ def get_paths():
     paths = {
         'get' : {
             'panels' : {'function' : get_panels, 'args' : ['handler', 'dash_user']}, 
+            'panels/stats' : {'function' : get_panels_stats, 'args' : ['handler', 'dash_user']},
             'panels/get_panel' : {'function' : get_panel_for_user, 'args' : ['handler', 'server_name', 'panel', 'provider', 'handler', 'args', 'dash_user']},
             'panels/users' : {'function' : get_users, 'args' : ['handler', 'users_type']},
             'panels/get_all_functions' : {'function' : get_all_functions, 'args' : ['handler']},
@@ -199,10 +200,25 @@ def panel_action(handler, actions_list = [], server_name = '', action = '', args
 
 
 @tornado.gen.coroutine
+def get_panels_stats(handler, dash_user):
+    datastore_handler = handler.datastore_handler
+    providers = yield datastore_handler.list_providers()
+    servers = yield datastore_handler.datastore.get_recurse('server/')
+    serv = yield services.list_services()
+#    vpn = yield apps.get_openvpn_users()
+    vpn = {'users' : []}
+    states = yield apps.get_states(handler, dash_user)
+    
+    result = {'providers' : len(providers), 'servers' : len(servers), 'services' : len(serv), 'vpn' : len(vpn['users']), 'apps' : len(states)}
+    raise tornado.gen.Return(result)
+
+
+@tornado.gen.coroutine
 def get_panels(handler, dash_user):
     """Returns all panels for the logged in user. """
     datastore_handler = handler.datastore_handler
     panels = yield list_panels(datastore_handler, dash_user)
+
     raise tornado.gen.Return(panels)
 
 @tornado.gen.coroutine

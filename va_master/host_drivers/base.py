@@ -10,17 +10,20 @@ class Step(object):
         self.name = name
         self.fields = []
 
-    def add_field(self, id_, name, type, blank = False): 
-        self.fields.append({'type': type, 'id': id_, 'name': name, 'blank' : blank})
+    def add_field(self, id_, name, type, blank = False, option_choices = []): 
+        new_field = {'type': type, 'id': id_, 'name': name, 'blank' : blank}
+        if option_choices: 
+            new_field['option_choices'] = option_choices
+        self.fields.append(new_field)
 
     def add_fields(self, list_of_fields):
         for field in list_of_fields: 
-            self.add_field(field[0], field[1], field[2])
+            self.add_field(*field)
 
     def add_str_field(self, id_, name):
         self.fields.append({'type': 'str', 'id': id_, 'name': name})
 
-    def add_options_field(self, id_, name):
+    def add_options_field(self, id_, name, choices = []):
         self.fields.append({'type': 'options', 'id': id_, 'name': name})
 
     def add_description_field(self, id_, name):
