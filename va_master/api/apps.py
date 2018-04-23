@@ -2,9 +2,8 @@ from .login import auth_only
 import tornado.gen
 import json
 import subprocess
-import requests
+import requests, paramiko
 import zipfile, tarfile
-
 from tornado.concurrent import run_on_executor, Future
 
 import salt_manage_pillar
@@ -32,7 +31,7 @@ def get_paths():
             'state/add' : {'function' : create_new_state,'args' : ['file', 'body', 'filename']},
             'apps/new/validate_fields' : {'function' : validate_app_fields, 'args' : ['handler']},
             'apps' : {'function' : launch_app, 'args' : ['handler']},
-            'apps/add_minion' : {'function' : add_minion_to_server, 'args' : ['handler', 'server_name', 'ip_address']},
+            'apps/add_minion' : {'function' : add_minion_to_server, 'args' : ['handler', 'server_name', 'ip_address', 'username', 'password', 'key_filename', 'role']},
             'apps/action' : {'function' : perform_server_action, 'args' : ['handler', 'provider_name', 'action', 'server_name', 'action_type', 'kwargs']},
             'apps/add_vpn_user': {'function' : add_openvpn_user, 'args' : ['username']},
             'apps/revoke_vpn_user': {'function' : revoke_openvpn_user, 'args' : ['username']},
@@ -44,6 +43,16 @@ def get_paths():
     }
     return paths
 
+
+def get_master_ip():
+    result = call_master_cmd('network.default_route')
+    gateway = [x['gateway'] for x in result if x.get('gateway', '') != '::']
+    gateway = gateway[0]
+    result = call_master_cmd('network.get_route', arg = ['10.120.155.1'])
+    ip = result['source']
+    print ('Ip is : ', ip)
+
+    return ip
 
 def call_master_cmd(fun, arg = [], kwarg = {}):
     cl = LocalClient()
@@ -313,8 +322,71 @@ def write_pillar(data):
 
 #TODO
 @tornado.gen.coroutine
-def add_minion_to_server(handler, server_name, ip_address):
-    pass
+def add_minion_to_server(handler, server_name, ip_address, role, username = '', password = '', key_filename = ''):
+
+    ssh = paramiko.SSHClient()
+    ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+
+    #local_key is where the minion keys will sit in salt
+    #init_key is where they are initially created    
+    local_key_dir = '/etc/salt/pki/master/minions/%s' % (server_name)
+    init_key_dir = '/tmp/%s' % (server_name)
+
+    #bootstrap_script is where the bootstrap script resides on the va_master
+    #server_script is where it will reside on the targeted server
+    bootstrap_script = '/opt/va_master/minion-preseed.sh'
+    server_script = '/root/minion-preseed.sh'
+#    server_script = '/root/bootstrap-salt.sh'
+
+    connect_kwargs = {'username' : username}
+    if password: 
+        connect_kwargs['password'] = password
+    elif key_filename: 
+        connect_kwargs['key_filename'] = key_filename
+    else: 
+        raise Exception('When adding minion to server, I expected either password or key_filename, but both values are empty. ')
+
+    ssh.connect(ip_address, **connect_kwargs)
+    sftp = ssh.open_sftp()
+
+    #We generate keys in /tmp, and then copy the public key  to the salt dir
+    create_key_cmd = ['salt-key', '--gen-keys=%s' % (server_name), '--gen-keys-dir=/tmp/']
+    copy_key_to_salt_cmd = ['cp', init_key_dir + '.pub', local_key_dir]
+
+    print ('Performing ', subprocess.list2cmdline(create_key_cmd))
+    subprocess.check_output(create_key_cmd)
+    print ('Performing ', subprocess.list2cmdline(copy_key_to_salt_cmd))
+    subprocess.check_output(copy_key_to_salt_cmd)
+
+    #We create the pki dir and copy the initial keys there
+    print ('Creating dir on minion')
+    stdin, stdout, stderr = ssh.exec_command('mkdir -p /etc/salt/pki/minion/')
+#    if stderr: 
+#        raise Exception('There was an error creating minion dir. ' + str(stderr.read()) + str(stdout.read()))
+
+    print ('Putting minion keys from ', init_key_dir, ' to /etc/salt/pki/minion/minion ')
+    sftp.put(init_key_dir + '.pem', '/etc/salt/pki/minion/minion.pem')
+    sftp.put(init_key_dir + '.pub', '/etc/salt/pki/minion/minion.pub')
+
+    #Finally, we download the bootstrap script on the remote server and run it
+    #This should install salt-minion, which along with the minion keys should make it readily available. 
+    print ('Starting wget!')
+    sftp.put(bootstrap_script, server_script)
+#    stdin, stdout, stderr = ssh.exec_command('wget -O %s https://bootstrap.saltstack.com' % (server_script))
+    print ('Wget is done. ')
+#    if stderr: 
+#        raise Exception('There was an error getting bootstrap script. ' + str(stderr.read()))
+
+#    master_line = 'master: ' + str(get_master_ip())
+    stdin, stdout, stderr = ssh.exec_command('chmod +x ' + server_script)
+    stdin, stdout, stderr = ssh.exec_command("bash -c '%s %s %s'" % (server_script, role, get_master_ip()))
+    stdin, stdout, stderr = ssh.exec_command('echo fqdn > /etc/salt/minion_id')
+#    print ('stdout is : ', stdout.read())
+#    print ('Err is : ', stderr.read())
+
+#    stdin, stdout, stderr = ssh.exec_command('echo %s >> /etc/salt/minion' % (master_line))
+#    if stderr: 
+#        raise Exception('There was an error executing server script. ' + str(stderr.read()))
 
         
 ##@auth_only
