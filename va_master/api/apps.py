@@ -66,8 +66,8 @@ def add_app(provider, server_name):
 def get_openvpn_users():
     """Gets openvpn users and current status. Then merges users to find currently active ones and their usage data. """
 
-    salt_caller = Caller()
-    openvpn_users = salt_caller.cmd('openvpn.list_users')
+    cl = LocalClient()
+    openvpn_users = cl.cmd('va-master', 'openvpn.list_users')
 
     if type(openvpn_users) == str: 
         print ('Openvpn users result : ', openvpn_users)
@@ -98,8 +98,8 @@ def get_openvpn_users():
 def get_openvpn_status():
     """Just gets the openvpn status information, which lists the current clients. """
 
-    cl = Caller()
-    status = cl.cmd('openvpn.get_status')
+    cl = LocalClient()
+    status = cl.cmd('va-master', 'openvpn.get_status')
     raise tornado.gen.Return(status)
 
 @tornado.gen.coroutine
