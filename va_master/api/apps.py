@@ -378,9 +378,11 @@ def add_minion_to_server(handler, server_name, ip_address, role, username = '', 
 #        raise Exception('There was an error getting bootstrap script. ' + str(stderr.read()))
 
 #    master_line = 'master: ' + str(get_master_ip())
-    stdin, stdout, stderr = ssh.exec_command('chmod +x ' + server_script)
-    stdin, stdout, stderr = ssh.exec_command("bash -c '%s %s %s'" % (server_script, role, get_master_ip()))
-    stdin, stdout, stderr = ssh.exec_command('echo fqdn > /etc/salt/minion_id')
+
+#    stdin, stdout, stderr = ssh.exec_command('chmod +x ' + server_script)
+#    stdin, stdout, stderr = ssh.exec_command("bash -c '%s %s %s'" % (server_script, role, get_master_ip()))
+#    stdin, stdout, stderr = ssh.exec_command('echo fqdn > /etc/salt/minion_id')
+
 #    print ('stdout is : ', stdout.read())
 #    print ('Err is : ', stderr.read())
 

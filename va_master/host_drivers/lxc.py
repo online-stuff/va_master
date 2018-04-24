@@ -131,7 +131,6 @@ class LXCDriver(base.DriverBase):
 
     @tornado.gen.coroutine
     def get_servers(self, provider):
-        """ TODO  """
         cl = self.get_client(provider)
         servers = cl.containers.all()
         servers = [{'server' : x, 'state' : x.state().__dict__} for x in servers]
@@ -158,8 +157,11 @@ class LXCDriver(base.DriverBase):
     @tornado.gen.coroutine
     def get_provider_status(self, provider):
         """ TODO """
-
-        raise tornado.gen.Return({'success' : True, 'message' : ''})
+        try:
+            cl = self.get_client(provider)
+            raise tornado.gen.Return({'success' : True, 'message' : ''})
+        except Exception as e: 
+            raise tornado.gen.Return({'success' : False, 'message' : e.message})
 
 
     @tornado.gen.coroutine
@@ -277,14 +279,28 @@ class LXCDriver(base.DriverBase):
 
 
     @tornado.gen.coroutine
-    def create_server(self, host, data):
-        """ Works properly with the base driver method, but overwritten for bug tracking. """
+    def create_server(self, provider, data):
         try:
-            yield super(LXCDriver, self).create_minion(host, data)
+            lxc_config = {'name' : data['server_name'], 'source' : {'image' : data['image'], 'network' : data['network'], 'size' : data['size']}}
+            cl = self.get_client(provider)
 
-            #Once a server is created, we revert the templates to the originals for creating future servers. 
-            self.profile_template = PROFILE_TEMPLATE
-            self.provider_template = PROVIDER_TEMPLATE
+            #NOTE this is almost definitely not the right way to do this. We should be using aliases or something. 
+            image = [x for x in cl.images.all() if x.properties.get('description', '') == data['image']][0]
+
+            network = cl.networks.get(data['network'])
+
+            lxc_config = {
+                'name' : data['server_name'], 
+                'source' : {
+                    'image.os' : image.properties['os'], 
+                    'image.architecture' : image.properties['architecture'], 
+                    'image.release' : image.properties['release'], 
+                    'image.description' : image.properties.get('description', '')
+                }
+            }
+
+            new_container = cl.containers.create(lxc_config, wait = True)
+            raise tornado.gen.Return(new_container)
         except:
             import traceback
             traceback.print_exc()
