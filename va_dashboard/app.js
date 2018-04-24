@@ -300,7 +300,7 @@ class App extends Component {
   render() {
     return (
         <Router history={hashHistory}>
-            <Route path='/' component={Home}>
+            <Route path='/' component={Home} onChange={() => store.dispatch({type: 'HIDE_ALERT'})}>
                 <IndexRoute component={Overview} />
                 <Route path='/providers' component={Providers} />
                 <Route path='/servers' component={Servers} />

@@ -148,6 +148,7 @@ def user_login(handler, username, password):
     pw_hash = account_info['password_hash']
     if crypt(password, pw_hash) == pw_hash:
         token = yield get_or_create_token(datastore_handler, username, user_type = account_info['user_type'])
+        print ('SHould be fine. Token is : ', token)
         raise tornado.gen.Return({'token': token})
     handler.status = 401
     raise Exception ("Invalid password: " + password) 

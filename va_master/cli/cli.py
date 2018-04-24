@@ -293,7 +293,7 @@ def handle_new_user(args):
    
 def handle_test_api(args):
     from va_master import tests
-    from va_master.tests import va_panels_tests, va_providers_tests, va_states_tests, va_test_base, va_testcase, va_users_tests, va_vpn_tests
+    from va_master.tests import va_panels_tests, va_providers_tests, va_states_tests, va_test_base, va_testcase, va_users_tests, va_vpn_tests, va_services_tests
 
     tests = args.get('tests')
 
@@ -304,6 +304,7 @@ def handle_test_api(args):
             va_states_tests.VAStatesTests,
             va_users_tests.VAUsersTests,
             va_vpn_tests.VAVPNTests,
+            va_services_tests.VAServicesTests,
     ]
 
     if tests: 

@@ -104,10 +104,10 @@ def get_version(handler):
 
 #These two functions are for inside use in the API. 
 def reload_systemctl():
-    subprocess.check_output(['systemctl', 'daemon-reload'])
+    subprocess.call(['systemctl', 'daemon-reload'])
 
 def restart_consul():
-    subprocess.check_output(['consul', 'reload'])
+    subprocess.call(['consul', 'reload'])
 
 @tornado.gen.coroutine
 def get_services_and_monitoring():
@@ -195,6 +195,7 @@ def create_service_from_state(state_name, service_name, service_address, service
 def add_service_with_definition(service_definition, service_name):
     """Adds a service with a definition. The definition has the standard consul service format. """
     service_text = json.dumps(service_definition)
+    print ('Dumping : ', service_text)
     service_conf = consul_dir + '/%s.json' % service_name
 
     with open(service_conf, 'w') as f:
@@ -262,10 +263,10 @@ def add_service_with_presets(datastore_handler, presets, server, name = '', addr
     for preset in presets:
         preset = yield datastore_handler.get_object('service_preset', name = preset)
 
-        check = yield generate_check_from_preset(preset, server, address = address, tags = tags, port = port)
+        check = yield generate_check_from_preset(preset, server, address = address, tags = tags, port = int(port))
         checks.append(check)
 
-    service = {"service": {"name": name, "tags": tags, "address": address, "port": port, "checks" : [preset]}}
+    service = {"service": {"name": name, "tags": tags, "address": address, "port": int(port), "checks" : [preset]}}
     yield add_service_with_definition(service, name)
 
 

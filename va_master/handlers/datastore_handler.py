@@ -291,6 +291,7 @@ class DatastoreHandler(object):
         user_panel = yield self.get_panel(role, 'user')
         admin_panel = yield self.get_panel(role, 'admin')
 
+        print ('User panel is : ', user_panel, ' admin is : ', admin_panel)
         user_panel['servers'].append(panel_name)
         admin_panel['servers'].append(panel_name)
 
