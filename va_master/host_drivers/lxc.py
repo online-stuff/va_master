@@ -243,9 +243,12 @@ class LXCDriver(base.DriverBase):
     @tornado.gen.coroutine
     def server_action(self, provider, server_name, action):
         """ Performs server actions using a nova client. """
+        message = ''
         try:
-            servers = yield self.get_servers() 
-            server = [x for x in servers if x.name == server_name][0]
+            cl = self.get_client(provider)
+
+            server = cl.containers.get(server_name)
+            getattr(server, action)()
         except Exception as e:
             import traceback
             traceback.print_exc()
@@ -285,19 +288,27 @@ class LXCDriver(base.DriverBase):
             cl = self.get_client(provider)
 
             #NOTE this is almost definitely not the right way to do this. We should be using aliases or something. 
-            image = [x for x in cl.images.all() if x.properties.get('description', '') == data['image']][0]
+            image = [x for x in cl.images.all() if x.properties.get('description', '') == data['image']]
+            #NOTE temporary until we figure out how to look up images
+            image = cl.images.all()[0]
 
             network = cl.networks.get(data['network'])
 
             lxc_config = {
                 'name' : data['server_name'], 
                 'source' : {
-                    'image.os' : image.properties['os'], 
-                    'image.architecture' : image.properties['architecture'], 
-                    'image.release' : image.properties['release'], 
-                    'image.description' : image.properties.get('description', '')
+                    'type' : 'image', 
+                    'properties' : {
+                        'os' : image.properties['os'], 
+                        'architecture' : image.properties['architecture'], 
+                        'release' : image.properties['release'], 
+                        'description' : image.properties.get('description', '')
+                    }
                 }
             }
+
+            print ('My conf is : ', lxc_config)
+#            lxc_config = {'name' : data['server_name'], 'source' : {'type' : 'image', 'alias' : 'ubuntu/16.04'}}
 
             new_container = cl.containers.create(lxc_config, wait = True)
             raise tornado.gen.Return(new_container)
