@@ -4,6 +4,8 @@ import json
 import subprocess
 import requests, paramiko
 import zipfile, tarfile
+
+from va_master.utils.paramiko_utils import ssh_call
 from tornado.concurrent import run_on_executor, Future
 
 import salt_manage_pillar
@@ -360,9 +362,7 @@ def add_minion_to_server(handler, server_name, ip_address, role, username = '', 
 
     #We create the pki dir and copy the initial keys there
     print ('Creating dir on minion')
-    stdin, stdout, stderr = ssh.exec_command('mkdir -p /etc/salt/pki/minion/')
-#    if stderr: 
-#        raise Exception('There was an error creating minion dir. ' + str(stderr.read()) + str(stdout.read()))
+    ssh_call(ssh, 'mkdir -p /etc/salt/pki/minion/')
 
     print ('Putting minion keys from ', init_key_dir, ' to /etc/salt/pki/minion/minion ')
     sftp.put(init_key_dir + '.pem', '/etc/salt/pki/minion/minion.pem')
@@ -372,21 +372,21 @@ def add_minion_to_server(handler, server_name, ip_address, role, username = '', 
     #This should install salt-minion, which along with the minion keys should make it readily available. 
     print ('Starting wget!')
     sftp.put(bootstrap_script, server_script)
-#    stdin, stdout, stderr = ssh.exec_command('wget -O %s https://bootstrap.saltstack.com' % (server_script))
+#    ssh_call(ssh, 'wget -O %s https://bootstrap.saltstack.com' % (server_script))
     print ('Wget is done. ')
 #    if stderr: 
 #        raise Exception('There was an error getting bootstrap script. ' + str(stderr.read()))
 
 #    master_line = 'master: ' + str(get_master_ip())
 
-#    stdin, stdout, stderr = ssh.exec_command('chmod +x ' + server_script)
-#    stdin, stdout, stderr = ssh.exec_command("bash -c '%s %s %s'" % (server_script, role, get_master_ip()))
-#    stdin, stdout, stderr = ssh.exec_command('echo fqdn > /etc/salt/minion_id')
+    ssh_call(ssh, 'chmod +x ' + server_script)
+    ssh_call(ssh, "bash -c '%s %s %s'" % (server_script, role, get_master_ip()))
+    ssh_call(ssh, 'echo fqdn > /etc/salt/minion_id')
 
 #    print ('stdout is : ', stdout.read())
 #    print ('Err is : ', stderr.read())
 
-#    stdin, stdout, stderr = ssh.exec_command('echo %s >> /etc/salt/minion' % (master_line))
+#    ssh_call(ssh, 'echo %s >> /etc/salt/minion' % (master_line))
 #    if stderr: 
 #        raise Exception('There was an error executing server script. ' + str(stderr.read()))
 
