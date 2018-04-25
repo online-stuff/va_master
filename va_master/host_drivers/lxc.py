@@ -317,8 +317,19 @@ class LXCDriver(base.DriverBase):
 #            lxc_config = {'name' : data['server_name'], 'source' : {'type' : 'image', 'alias' : 'ubuntu/16.04'}}
 
             new_container = cl.containers.create(lxc_config, wait = True)
-#            if data.get('role'): 
-#                yield apps.add_minion_to_server(data['server_name'], get_server_addresses(s)[0], data['role'], key_filename = '/root/.ssh/va-master.pem')
+            ssh_path = '/root/.ssh'
+            keys_path = ssh_path + '/authorized_keys'
+
+            with open(self.key_path + '.pub', 'r') as f:
+                key = f.read()
+
+            if data.get('role'): 
+                new_container.start(wait = True)
+                new_container.execute(['mkdir', '-p', ssh_path])
+                fm = new_container.FilesManager(cl, new_container)
+                fm.put(keys_path, key)
+
+                yield apps.add_minion_to_server(data['server_name'], self.get_server_addresses(s)[0], data['role'], key_filename = '/root/.ssh/va-master.pem')
             new_container = self.container_to_dict(provider['provider_name'])
             raise tornado.gen.Return(new_container)
         except:
