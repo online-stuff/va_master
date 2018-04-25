@@ -4,7 +4,7 @@ var Network = require('../network');
 import { connect } from 'react-redux';
 import { Table, Tr, Td } from 'reactable';
 import { ConfirmPopup } from './shared_components';
-import { getTableRowWithAction, getSpinner } from './util';
+import { getModalHeader, getModalFooter, getFormFields, getTableRowWithActions, getSpinner, findObjInArr } from './util';
 
 const tblCols = ['Provider name', 'IP', 'Instances', 'Driver', 'Status'];
 
@@ -15,44 +15,94 @@ class Providers extends Component {
             providers: [], 
             loading: true, 
             popupShow: false, 
-            popupData: {}
+            popupData: {},
+            selectedProvider: {},
+            drivers: [],
+            currentDriver: null,
+            fieldValues: {},
+            stepIndex: -1
         };
         this.getCurrentProviders = this.getCurrentProviders.bind(this);
         this.confirm_action = this.confirm_action.bind(this);
         this.deleteProvider = this.deleteProvider.bind(this);
         this.addProvider = this.addProvider.bind(this);
+        this.editProvider = this.editProvider.bind(this);
         this.popupClose = this.popupClose.bind(this);
+        this.doAction = this.doAction.bind(this);
+        this.getDrivers = this.getDrivers.bind(this);
+        this.getSteps = this.getSteps.bind(this);
+        this.reloadProviders = this.reloadProviders.bind(this);
     }
     getCurrentProviders () {
-        Network.post('/api/providers', this.props.auth.token, {}).done(data => {
-            this.setState({ providers: data.providers, loading: false });
-        }).fail(msg => {
+        return Network.post('/api/providers', this.props.auth.token, {}).fail(msg => {
             this.props.dispatch({ type: 'SHOW_ALERT', msg });
         });
     }
-    componentDidMount() {
-        this.getCurrentProviders();
+    reloadProviders () {
+        this.getCurrentProviders().done(data => this.setState({ providers: data.providers }));
     }
-    confirm_action(e){
-        var data = { "provider_name": e.target.value };
-        this.setState({ popupShow: true, popupData: data });
+    getDrivers () {
+		return Network.get('/api/drivers', this.props.auth.token).fail(msg => {
+			this.props.dispatch({type: 'SHOW_ALERT', msg});
+		});
+    }
+    getSteps(param, selectedProvider) {
+        Network.get('/api/providers/get_provider_fields', this.props.auth.token, param).done(data => {
+            //this.setState({ currentDriver: {id: this.props.provider.driver_name, steps: data}, fieldValues: this.props.provider, stepIndex: 0 });
+			let fieldValues = {};
+			for (var j = 0; j < data.steps.length; j++) {
+				var step = data.steps[j];
+				for (var k = 0; k < step.fields.length; k++) {
+					var field = step.fields[k];
+					fieldValues[field.id] = field.value;
+				}
+			}
+            this.setState({selectedProvider, currentDriver: data, fieldValues, stepIndex: 0});
+        }).fail(msg => {
+            this.props.dispatch({type: 'SHOW_ALERT', msg});
+        });
+    }
+    componentDidMount() {
+        let n1 = this.getCurrentProviders();
+        let n2 = this.getDrivers();
+        $.when( n1, n2 ).done((resp1, resp2) => {
+            this.setState({ providers: resp1.providers, drivers: resp2.drivers, loading: false });
+        });
+    }
+    confirm_action(provider_name){
+        this.setState({ popupShow: true, popupData: {provider_name} });
     }
     deleteProvider (data){
         Network.post('/api/providers/delete', this.props.auth.token, data).done(data => {
-            this.getCurrentProviders();
+            this.reloadProviders();
         }).fail(msg => {
             this.props.dispatch({ type: 'SHOW_ALERT', msg });
         });
     }
     addProvider () {
-        this.props.dispatch({ type: 'OPEN_MODAL' });
+        this.setState({currentDriver: null, stepIndex: -1, fieldValues: {}});
+        this.props.dispatch({ type: 'OPEN_MODAL', modalType: 'add' });
     }
     popupClose() {
         this.setState({ popupShow: false });
     }
+    editProvider(index) {
+        let selectedProvider = this.state.providers[index];
+        //let currentDriver = findObjInArr(this.state.drivers, 'id', selectedProvider.driver_name);
+        //this.setState({selectedProvider: this.state.providers[index], currentDriver});
+        this.getSteps({provider_name: selectedProvider.provider_name}, selectedProvider);
+        this.props.dispatch({ type: 'OPEN_MODAL', modalType: 'edit' });
+    }
+    doAction(providerName, index, evtKey) {
+        if(evtKey === "Edit"){
+            this.editProvider(index);
+        }else {
+            this.confirm_action(providerName);
+        }
+    }
     render() {
         const { providers, loading, popupData, popupShow } = this.state;
-        var provider_rows = providers.map(provider => {
+        var provider_rows = providers.map((provider, i) => {
             let { provider_name, provider_ip, servers, driver_name, status } = provider, className;
             if(status.success){
                 status = "Online";
@@ -68,19 +118,16 @@ class Providers extends Component {
             }
             return (
                 <Tr key={provider.provider_name} className={className}>
-                    {getTableRowWithAction(tblCols, [provider_name, provider_ip, servers.length, driver_name, status], 'Delete', provider_name, this.confirm_action)}
+                    {getTableRowWithActions(tblCols, [provider_name, provider_ip, servers.length, driver_name, status], ['Delete', 'Edit'], this.doAction, provider_name, null, i)}
                 </Tr>
             );
         });
-        const spinnerStyle = {
-            display: loading ? "block": "none"
-        };
         const blockStyle = {
             visibility: loading ? "hidden": "visible"
         };
         return (<div className="app-containter">
-            <NewProviderFormRedux changeProviders = {this.getCurrentProviders} />
-            {getSpinner(spinnerStyle)}
+            <NewProviderFormRedux reload = {this.reloadProviders} drivers={this.state.drivers} fieldValues = {this.state.fieldValues} currentDriver={this.state.currentDriver} stepIndex={this.state.stepIndex} />
+            {loading && getSpinner()}
             <div style={blockStyle} className="card">
                 <div className="card-body">
                     <Table className="table striped" columns={[...tblCols, 'Actions']} itemsPerPage={10} pageButtonLimit={10} noDataText="No matching records found." sortable={tblCols} filterable={tblCols} btnName="Add provider" btnClick={this.addProvider} title="Current providers" filterClassName="form-control" filterPlaceholder="Filter">
@@ -103,7 +150,7 @@ const ProviderStep = (props) => {
             formControl = <Bootstrap.FormControl type='text' key={field.id} id={field.id} value={props.fieldValues[field.id]} onChange={props.onFieldChange} />;
         } else if(field.type === 'options') {
             formControl = (
-                <Bootstrap.FormControl componentClass='select' key={field.id} id={field.id} onChange={props.onFieldChange}>
+                <Bootstrap.FormControl componentClass='select' key={field.id} id={field.id} onChange={props.onFieldChange} value={props.fieldValues[field.id]}>
                     <option key={-1} value=''>Choose</option>
                     {props.optionChoices[field.id].map(function(option, i) {
                         return <option key={i} value={option}>{option}</option>
@@ -149,7 +196,7 @@ const ProviderStep = (props) => {
 class NewProviderForm extends Component {
     constructor (props) {
         super(props);
-        this.state = {currentDriver: null, drivers: [], stepIndex: -1, optionChoices: {},
+        this.state = {currentDriver: null, stepIndex: props.stepIndex, optionChoices: {},
             errors: [], fieldValues: {}, isLoading: false};
         this.onDriverSelect = this.onDriverSelect.bind(this);
         this.onFieldChange = this.onFieldChange.bind(this);
@@ -157,37 +204,38 @@ class NewProviderForm extends Component {
         this.nextStep = this.nextStep.bind(this);
         this.onSubmit = this.onSubmit.bind(this);
     }
-    componentDidMount () {
-        Network.get('/api/drivers', this.props.auth.token).done(data => {
-            this.setState({ drivers: data.drivers });
-        }).fail(msg => {
-            this.props.dispatch({type: 'SHOW_ALERT', msg});
-        });
+    componentWillReceiveProps(nextProps){
+        if(nextProps.currentDriver)
+            this.setState({currentDriver: nextProps.currentDriver, optionChoices: nextProps.currentDriver.optionChoices, fieldValues: nextProps.fieldValues, stepIndex: nextProps.stepIndex});
+        else
+            this.setState({ fieldValues: nextProps.fieldValues, stepIndex: nextProps.stepIndex });
+    }
+    getDriverOptions(){
+        var driverOptions = [<option key="-1" value=''>Select driver</option>];
+        for(let i = 0; i < this.props.drivers.length; i++) {
+            var driver = this.props.drivers[i];
+            driverOptions.push(
+                <option value={driver.id} key={driver.id}>{driver.friendly_name}</option>
+            );
+        }
+		return driverOptions;
     }
     onDriverSelect (e) {
-        var driverId = e.target.value;
-        for(var i = 0; i < this.state.drivers.length; i++){
-            var driver = this.state.drivers[i];
-            if(driver.id === driverId) {
-                var fieldVals = {};
-                var optionChoices = {};
-                for(var j = 0; j < driver.steps.length; j++){
-                    var step = driver.steps[j];
-                    for(var k = 0; k < step.fields.length; k++){
-                        var field = step.fields[k];
-                        fieldVals[field.id] = '';
-                        if(field.type == 'options' || field.type == 'description') {
-                            optionChoices[field.id] = [];
-                        }
+        let fieldValues = {}, optionChoices = {};
+        let currentDriver = findObjInArr(this.props.drivers, 'id', e.target.value); 
+        if(currentDriver) {
+            for(var j = 0; j < currentDriver.steps.length; j++){
+                var step = currentDriver.steps[j];
+                for(var k = 0; k < step.fields.length; k++){
+                    var field = step.fields[k];
+                    fieldValues[field.id] = '';
+                    if(field.type == 'options' || field.type == 'description') {
+                        optionChoices[field.id] = [];
                     }
                 }
-                this.setState({currentDriver: driver, stepIndex: -1, optionChoices: optionChoices,
-                    errors: [], fieldValues: fieldVals});
-                return;
             }
         }
-        this.setState({currentDriver: null, stepIndex: -1, optionChoices: {},
-            errors: [], fieldValues: {}});
+        this.setState({ currentDriver, stepIndex: -1, optionChoices, errors: [], fieldValues });
     }
     onFieldChange(e){
         let id = e.target.id;
@@ -201,18 +249,13 @@ class NewProviderForm extends Component {
     }
     render() {
         var steps = [];
-        var driverOptions = [<option key="-1" value=''>Select driver</option>];
-        for(let i = 0; i < this.state.drivers.length; i++) {
-            var driver = this.state.drivers[i];
-            driverOptions.push(
-                <option value={driver.id} key={driver.id}>{driver.friendly_name}</option>
-            );
-        }
+        let typeCheck = this.props.modal.modalType === 'edit';
+        let stepIndex = this.state.stepIndex;
         if(this.state.currentDriver !== null) {
-            console.log(this.state.currentDriver);
-            for(var j = 0; j < this.state.currentDriver.steps.length; j++){
-                var step = this.state.currentDriver.steps[j];
-                if(j !== this.state.stepIndex){
+            let currentDriver = this.state.currentDriver;
+            for(var j = 0; j < currentDriver.steps.length; j++){
+                var step = currentDriver.steps[j];
+                if(j !== stepIndex){
                     steps.push(
                         <Bootstrap.Tab title={step.name} eventKey={j} key={j} />
                     );
@@ -243,21 +286,19 @@ class NewProviderForm extends Component {
 
         return (
             <Bootstrap.Modal show={this.props.modal.isOpen} onHide={this.close}>
-                <Bootstrap.Modal.Header closeButton>
-                  <Bootstrap.Modal.Title>Add provider</Bootstrap.Modal.Title>
-                </Bootstrap.Modal.Header>
+                {getModalHeader(typeCheck ? 'Edit provider' : 'Add provider')}
 
                 <Bootstrap.Modal.Body>
                     {progressBar}
-                    <Bootstrap.Tabs id="add-provider" activeKey={this.state.stepIndex}>
-                        <Bootstrap.Tab title='Choose provider' eventKey={-1}>
+                    <Bootstrap.Tabs id="tabs" activeKey={stepIndex}>
+                        { !typeCheck && <Bootstrap.Tab title='Choose provider' eventKey={-1}>
                             <Bootstrap.FormGroup controlId="formControlsSelect">
                                 <Bootstrap.ControlLabel>Select provider type</Bootstrap.ControlLabel>
                                 <Bootstrap.FormControl componentClass="select" onChange={this.onDriverSelect} placeholder="select">
-                                    {driverOptions}
+                                    {this.getDriverOptions()}
                                 </Bootstrap.FormControl>
                             </Bootstrap.FormGroup>
-                        </Bootstrap.Tab>
+                        </Bootstrap.Tab> }
                         {errors}
                         {steps}
                     </Bootstrap.Tabs>
@@ -284,14 +325,16 @@ class NewProviderForm extends Component {
             this.setState({isLoading: true});
             let data = {driver_id: this.state.currentDriver.id, step_index: this.state.stepIndex,
                 field_values: this.state.fieldValues};
-            Network.post('/api/providers/new/validate_fields', this.props.auth.token, data).done(d => {
+            let typeCheck = this.props.modal.modalType === 'edit';
+            let requestFunc = typeCheck ? Network.put : Network.post;
+            requestFunc('/api/providers/new/validate_fields', this.props.auth.token, data).done(d => {
                 var mergeChoices = Object.assign({}, this.state.optionChoices);
                 for(var id in d.option_choices){
                     mergeChoices[id] = d.option_choices[id];
                 }
                 if(d.new_step_index == -1 && d.errors.length == 0){
                     setTimeout(() => {
-                         this.props.changeProviders();
+                         this.props.reload();
                     }, 2000);
                 }else{
                     this.setState({stepIndex: d.new_step_index, optionChoices: mergeChoices, errors: d.errors, isLoading: false});
@@ -299,8 +342,6 @@ class NewProviderForm extends Component {
             }).fail(msg => {
                 this.props.dispatch({type: 'SHOW_ALERT', msg: msg});
             });
-            //var data = {driver_id: this.state.currentDriver.id, current_index: this.state.stepIndex,
-            //}
         }
     }
     onSubmit(e) {
@@ -308,7 +349,8 @@ class NewProviderForm extends Component {
         var data = {name: this.refs.provider_name.value, driver: this.state.currentDriver};
         var me = this;
         Network.post('/api/providers', this.props.auth.token, data).done(function(data) {
-            me.props.changeProviders();
+            me.props.reload();
+            this.close();
         }).fail(function (msg) {
             me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
         });

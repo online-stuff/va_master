@@ -21,12 +21,9 @@ class Billing extends Component{
 
     render() {
         let loaded = 'dataSource' in this.state.config;
-        const spinnerStyle = {
-            display: loaded ? "none" : "block"
-        };
         return (
             <div>
-                {getSpinner(spinnerStyle)}
+                {!loaded && getSpinner()}
                 {loaded && <div className="card">
                     <div className="card-body">
                         <h4>Billing</h4>

@@ -5,7 +5,7 @@ var Bootstrap = require('react-bootstrap');
 import { findDOMNode } from 'react-dom';
 import { Table, Tr, Td } from 'reactable';
 import { ConfirmPopup, TextPopup } from './shared_components';
-import { getModalHeader, getModalFooter, getFormFields } from './util';
+import { getModalHeader, getModalFooter, getFormFields, getSpinner } from './util';
 
 
 const SERVER_TYPES = ['unmanaged', 'ssh', 'provider', 'winexe', 'app'];
@@ -216,9 +216,6 @@ class Servers extends Component {
         })(ServerForm);
 
         var loaded = this.state.loaded;
-        const spinnerStyle = {
-            display: loaded ? "none": "block"
-        };
         const blockStyle = {
             visibility: loaded ? "visible": "hidden"
         };
@@ -231,7 +228,7 @@ class Servers extends Component {
 
         return (
             <div className="app-containter">
-                <span className="spinner" style={spinnerStyle} ><i className="fa fa-spinner fa-spin fa-3x"></i></span>
+                {!loaded && getSpinner()}
                 <div style={blockStyle}>
                     <ServerFormRedux loaded={loaded} providers = {this.state.providers} states = {this.state.states} provider_name = {this.state.hostname} role = {this.state.role} defaults = {this.state.defaults} options = {this.state.options} provider_usage = {this.state.provider_usage} getData = {this.getData} onChange = {this.onChange} onChangeRole = {this.onChangeRole} />
                     <div style={blockStyle} className="card">

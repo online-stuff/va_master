@@ -5,6 +5,7 @@ var Network = require('../network');
 import {findDOMNode} from 'react-dom';
 import {hashHistory} from 'react-router';
 import {Table, Tr, Td} from 'reactable';
+import { getSpinner } from './util';
 
 class VpnUsers extends Component {
     constructor (props) {
@@ -124,16 +125,13 @@ class VpnUsers extends Component {
         var sf_cols = ['Name', 'Connected'];
 
         var loading = this.state.loading;
-        const spinnerStyle = {
-            display: loading ? "block": "none",
-        };
         const blockStyle = {
             visibility: loading ? "hidden": "visible",
         };
 
         return (
             <div className="app-containter">
-                <span className="spinner" style={spinnerStyle} ><i className="fa fa-spinner fa-spin fa-3x" aria-hidden="true"></i></span>
+                {loading && getSpinner()}
                 <ModalRedux addVpn = {this.addVpn} />
                 <div style={blockStyle} className="container-block">
                     <div className="block card">

@@ -49,7 +49,8 @@ class Home extends Component {
         this.state = {
             'data': [],
             'collapse': false,
-            'activeKey': activeKey
+            'activeKey': activeKey,
+            'stats': {}
         };
         this.show_tabs = this.show_tabs.bind(this);
         this.reset_tabs = this.reset_tabs.bind(this);
@@ -72,11 +73,20 @@ class Home extends Component {
             me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
         });
     }
+    getStats() {
+        var me = this;
+        Network.get('/api/panels/stats', this.props.auth.token).done(function (data) {
+            me.setState({stats: data});
+        }).fail(function (msg) {
+            me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
+        });
+    }
     componentDidMount() {
         if(!this.props.auth.token){
             hashHistory.push('/login');
         }else{
             this.getPanels();
+            this.getStats();
         }
     }
     componentWillReceiveProps(props) {
@@ -152,26 +162,28 @@ class Home extends Component {
         ];*/
 
         return (
-            <div>
+            <div id="app-content">
                 <Bootstrap.Navbar bsStyle='inverse'>
                     <Bootstrap.Navbar.Header>
                         <Bootstrap.Glyphicon glyph='menu-hamburger' onClick={this.collapse} />
                         <img src='/static/logo.png' className='top-logo'/>
+                        <Bootstrap.Navbar.Toggle />
                     </Bootstrap.Navbar.Header>
                     <Bootstrap.Navbar.Collapse>
-                        <Bootstrap.Nav>
+                        {tabs.length > 0 && <Bootstrap.Nav>
                             {tabs}
-                        </Bootstrap.Nav>
+                        </Bootstrap.Nav>}
                         <Bootstrap.Nav pullRight>
                             <Bootstrap.NavDropdown title={this.props.auth.username} onSelect={this.navbar_click} id="nav-dropdown" pullRight>
                                     <Bootstrap.MenuItem eventKey='users'>Users</Bootstrap.MenuItem>
+                                    <li role="presentation"><a role="menuitem" href="https://github.com/VapourApps/va_master/tree/master/docs" target="_blank">Help</a></li>
                                     <Bootstrap.MenuItem eventKey='logout'>Logout</Bootstrap.MenuItem>
                             </Bootstrap.NavDropdown>
                         </Bootstrap.Nav>
                     </Bootstrap.Navbar.Collapse>
                 </Bootstrap.Navbar>
                 <div className='main-content'>
-                    <div className='sidebar' style={this.state.collapse?{left: '-15.4vw'}:{left: 0}}>
+                    <div className='sidebar' style={this.state.collapse?{display: 'none'}:{display: 'flex'}}>
                         <ul className='left-menu'>
                             <li>
                             <IndexLink to='' activeClassName='active' onClick={this.reset_tabs}>
@@ -179,22 +191,22 @@ class Home extends Component {
                             </li>
                             <li>
                             <NavLink to='providers' reset_tabs={this.reset_tabs}>
-                                <Bootstrap.Glyphicon glyph='hdd' /> Providers</NavLink>
+                                <Bootstrap.Glyphicon glyph='hdd' /> Providers <span className="badge">{this.state.stats.providers}</span></NavLink>
                             </li>
                             <NavLink to='servers' reset_tabs={this.reset_tabs}>
-                                <span><i className='fa fa-server' /> Servers</span>
+                                <span><i className='fa fa-server' /> Servers <span className="badge">{this.state.stats.servers}</span></span>
                             </NavLink>
                             <li>
                             <NavLink to='store' reset_tabs={this.reset_tabs}>
-                                <Bootstrap.Glyphicon glyph='th' /> Apps</NavLink>
+                                <Bootstrap.Glyphicon glyph='th' /> Apps <span className="badge">{this.state.stats.apps}</span></NavLink>
                             </li>
                             <li>
                             <NavLink to='services' reset_tabs={this.reset_tabs}>
-                                <Bootstrap.Glyphicon glyph='cloud' /> Services</NavLink>
+                                <Bootstrap.Glyphicon glyph='cloud' /> Services <span className="badge">{this.state.stats.services}</span></NavLink>
                             </li>
                             <li>
                             <NavLink to='vpn_status' tabs='vpn' show_tabs={this.show_tabs}>
-                                <span><i className='fa fa-lock' /> VPN</span>
+                                <span><i className='fa fa-lock' /> VPN <span className="badge">{this.state.stats.vpn}</span></span>
                             </NavLink>
                             <NavLink to='log' reset_tabs={this.reset_tabs}>
                                 <span><i className='fa fa-bar-chart' /> Log</span>
@@ -212,11 +224,14 @@ class Home extends Component {
                             </li>
                         </ul>
                     </div>
-                    <div className="page-content" style={this.state.collapse?{'left': '0', 'width': '96.4vw'}:{'left': '15.4vw', 'width': '81vw'}}>
+                    <div className="page-content">
                         {this.props.children}
                     </div>
                     {this.props.alert.show && React.createElement(Bootstrap.Alert, {bsStyle: this.props.alert.className, onDismiss: this.handleAlertDismiss, className: "messages"}, this.props.alert.msg) }
                 </div>
+				<div className="footer">
+					Powered by <a href="//vapour-apps.com" target="_blank">VapourApps</a> | <a href="mailto:support@vapour-apps.com">support@vapour-apps.com</a>
+				</div>
             </div>
         );
     }
