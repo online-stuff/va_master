@@ -11,7 +11,8 @@ import {
         initializeFields, 
         initializeFieldsWithValues, 
         reduceArr, 
-        objArr2str 
+        objArr2str,
+        getSpinner
     } from './util';
 import { ConfirmPopup } from './shared_components';
 import Select from 'react-select-plus';
@@ -125,9 +126,6 @@ class Services extends Component {
                 </Tr>
             );
         });
-        const spinnerStyle = {
-            display: loading ? "block": "none"
-        };
         let blockStyle = {
             display: loading ? "none": "block"
         };
@@ -136,7 +134,7 @@ class Services extends Component {
         }
         return ( 
             <div className="app-containter">
-                <span className="spinner" style={spinnerStyle} ><i className="fa fa-spinner fa-spin fa-3x" aria-hidden="true"></i></span>
+                {loading && getSpinner()}
                 <div style={blockStyle} className="card">
 					<div className="card-body">
 						<Table className="table striped" columns={[...tblCols, 'Actions']} itemsPerPage={10} pageButtonLimit={10} noDataText="No matching records found." sortable={tblCols} filterable={tblCols} btnName="Add service" btnClick={this.addService} title="Current services" filterClassName="form-control" filterPlaceholder="Filter">

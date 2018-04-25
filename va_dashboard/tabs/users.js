@@ -5,6 +5,7 @@ var Network = require('../network');
 import {findDOMNode} from 'react-dom';
 import Select from 'react-select-plus';
 import {Table, Tr, Td} from 'reactable';
+import { getSpinner } from './util';
 
 class UserGroupPanel extends Component {
     constructor (props) {
@@ -13,7 +14,7 @@ class UserGroupPanel extends Component {
             funcs: [],
             groups: [],
             group_opt: [],
-            loading: true,
+            loading: true
         };
         this.getCurrentFuncs = this.getCurrentFuncs.bind(this);
     }
@@ -46,16 +47,13 @@ class UserGroupPanel extends Component {
         })(Users);
 
         var loading = this.state.loading;
-        const spinnerStyle = {
-            display: loading ? "block": "none",
-        };
         const blockStyle = {
-            visibility: loading ? "hidden": "visible",
+            visibility: loading ? "hidden": "visible"
         };
 
         return (
             <div className="app-containter">
-                <span className="spinner" style={spinnerStyle} ><i className="fa fa-spinner fa-spin fa-3x" aria-hidden="true"></i></span>
+                {loading && getSpinner()}
                 <UserRedux funcs = {this.state.funcs} groups = {this.state.group_opt} style={blockStyle} />
             </div>
         )
@@ -324,17 +322,17 @@ class Modal extends Component {
     action(e) {
         var elements = findDOMNode(this.refs.forma).elements;
         var data = {};
-        for(i=0; i<elements.length; i++){
+        for(let i=0; i<elements.length; i++){
             data[elements[i].name] = elements[i].value;
         }
         console.log(data);
         var me = this, url = "/api/panels/create_user_group", type = this.props.type;
         delete data[""]
+        let funcs = Object.assign([], this.state.value);
         if(type == 1 || type == 3){
             url =(type == 1) ? "/api/panels/create_user_with_group" : "/api/panels/update_user";
-            var funcs = Object.assign([], this.state.value);
             if(funcs.length > 0 && typeof funcs[0] === 'object'){
-                for(var i=0; i<funcs.length; i++){
+                for(let i=0; i<funcs.length; i++){
                     funcs[i].group = funcs[i].group.label;
                 }
             }
@@ -342,7 +340,7 @@ class Modal extends Component {
             var groups = Object.assign([], this.state.group), g_arr = [];
             if(groups.length > 0){
                 if(typeof groups[0] === 'object'){
-                    for(var i=0; i<groups.length; i++){
+                    for(let i=0; i<groups.length; i++){
                         g_arr.push(groups[i].value);
                     }
                 }else{
@@ -351,9 +349,8 @@ class Modal extends Component {
             }
             data["groups"] = g_arr;
         }else{
-            var funcs = Object.assign([], this.state.value);
             if(funcs.length > 0 && typeof funcs[0] === 'object'){
-                for(var i=0; i<funcs.length; i++){
+                for(let i=0; i<funcs.length; i++){
                     funcs[i].group = funcs[i].group.label;
                 }
             }
@@ -382,9 +379,12 @@ class Modal extends Component {
         var type = this.props.type;
         if(type === -1)
             return <div></div>;
-        var title = "", form, btn_text = "", help_text = "";
+        var title, form, help_text, btn_text;
         if(type === 1){
-            var selectGroup = null, selectFunc = null, title="Add user", btn_text = "Add user", help_text = "Fill the form to add new user";
+            let selectGroup = null, selectFunc = null;
+            title="Add user";
+            btn_text = "Add user";
+            help_text = "Fill the form to add new user";
             if(this.state.type === "user"){
                 selectGroup = <Select name="groups" options={this.props.groups} multi={true} placeholder="Select groups" value={this.state.group} onChange={this.onChangeGroup} />
                 selectFunc = <Select name="functions" options={this.props.funcs} multi={true} placeholder="Select functions" value={this.state.value} onChange={this.onChange} />
@@ -403,7 +403,7 @@ class Modal extends Component {
                 </div>
             );
         }else if(type === 2){
-            var title="Add group", btn_text = "Add group", help_text = "Fill the form to add new group";
+            let title="Add group", btn_text = "Add group", help_text = "Fill the form to add new group";
             form = (
                 <div>
                     <Bootstrap.FormControl type='text' name="group_name" placeholder="Group name" />
@@ -411,7 +411,9 @@ class Modal extends Component {
                 </div>
             );
         }else if(type === 3){
-            var title="Update user", btn_text = "Update user", help_text = "Fill the form to update the user";
+            title="Update user";
+            btn_text = "Update user";
+            help_text = "Fill the form to update the user";
             form = (
                 <div>
                     <Bootstrap.FormControl type='text' name="user" value={this.state.user} disabled={true} />
@@ -421,7 +423,9 @@ class Modal extends Component {
                 </div>
             );
         }else{
-            var title="Update group", btn_text = "Update group", help_text = "Fill the form to update the group";
+            title="Update group";
+            btn_text = "Update group";
+            help_text = "Fill the form to update the group";
             form = (
                 <div>
                     <Bootstrap.FormControl type='text' name="group_name" value={this.state.group} />
@@ -457,16 +461,12 @@ class Modal extends Component {
     }
 }
 
-UserGroupPanel = connect(function(state){
-    return {auth: state.auth, alert: state.alert};
-})(UserGroupPanel);
-
-var GroupRedux = connect(function(state){
-    return {auth: state.auth, alert: state.alert};
-})(Groups);
-
 
 module.exports = {
-    Panel: UserGroupPanel,
-    Group: GroupRedux
+    Panel: connect(state => {
+      return {auth: state.auth, alert: state.alert};
+    })(UserGroupPanel),
+    Group: connect(state => {
+      return {auth: state.auth, alert: state.alert};
+    })(Groups)
 };

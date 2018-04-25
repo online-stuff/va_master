@@ -1,15 +1,28 @@
 @import url('react-select-plus.css');
 @import url('_datepicker.css');
-html,
-body,
-.main-content {
-    height: 100%;
+
+html, body, .main-content {
+	width: 100%;
+	height: 100%;
+	margin: 0;
+    padding: 0px;
+}
+
+#app-content {
+    display: flex;
+    flex-direction: column;
     background-color: #eee;
+}
+
+.main-content {
     box-sizing: border-box;
+    background-color: #eee;
+    display: flex;
+    position: relative;
+    min-height: calc(100vh - 107px);
 }
 
 body {
-    margin: 0;
     font-family: Ubuntu, sans-serif;
 }
 
@@ -101,7 +114,6 @@ ul.left-menu a.active {
     padding: 0;
     margin: 0;
     width: 100%;
-    height: 50px;
     line-height: 50px;
 }
 
@@ -122,12 +134,18 @@ ul.left-menu a.active {
 }
 
 .navbar .active {
-    background-color: white !important;
-    color: #007ebb !important;
+    background: #007ebb !important;
 }
 
+.container>.navbar-header {
+    margin-right: 0;
+    margin-left: 0;
+}
+
+@media (min-width: 1241px){
 .navbar-header {
     width: 15.4vw;
+}
 }
 
 .page-header h1 {
@@ -135,32 +153,17 @@ ul.left-menu a.active {
 }
 
 .sidebar {
-    position: absolute;
-    margin-right: -100%;
-    z-index: 1000;
     display: flex;
     background-color: #f5f5f5;
     border-right: 1px solid #dddddd;
-    min-height: calc(100vh - 50px);
-    height: 100%;
     width: 15.4vw;
-    left: 0px;
-    transition: left 350ms ease-in-out;
-}
-
-.main-content {
-    width: 100%;
-    margin: 0px;
-    padding: 0px;
-    position: relative;
 }
 
 .page-content {
     position: relative;
     display: block;
-    margin-left: 1.3vw;
-    margin-right: 1.3vw;
-    transition: left 350ms ease-in-out, width 350ms ease-in-out;
+    margin: 0px 20px;
+    flex: 1;
 }
 
 .page-content>div {
@@ -339,7 +342,7 @@ ul.left-menu div {
 .messages {
     position: fixed;
     z-index: 9999;
-    top: 20px;
+    top: 58px;
     right: 20px;
     width: 300px;
     overflow: hidden;
@@ -358,15 +361,31 @@ ul.left-menu div {
     margin-bottom: 0px !important;
 }
 
-.app-containter {
-    min-height: 1px;
-}
-
 .spinner {
     position: absolute;
     z-index: 1000;
-    top: 200px;
+    top: 40vh;
     left: 45%;
+}
+
+@keyframes spinner {
+	to {transform: rotate(360deg);}
+}
+ 
+.spinner:before {
+	content: '';
+	box-sizing: border-box;
+	position: absolute;
+	top: 50%;
+	left: 50%;
+	width: 40px;
+	height: 40px;
+	margin-top: -10px;
+	margin-left: -10px;
+	border-radius: 50%;
+	border: 4px solid #ccc;
+	border-top-color: #006eab;
+	animation: spinner .6s linear infinite;
 }
 
 .text-warning {
@@ -855,10 +874,21 @@ table tr.row-provider-Offline {
 
 /* OVERRIDES FOR BOOTSTRAP */
 
+.navbar-inverse .navbar-collapse, .navbar-inverse .navbar-form {
+    border-color: #006eab;
+}
+
+.navbar-inverse .navbar-toggle {
+    border-color: #007ebb;
+}
+
+.navbar-inverse .navbar-toggle:focus, .navbar-inverse .navbar-toggle:hover {
+    background-color: #007ebb;
+}
+
 div ul.dropdown-menu {
     right: 0;
     left: auto;
-    margin: 2px -2px 0;
     min-width: 60px;
 }
 
@@ -944,3 +974,38 @@ label {
     overflow-y: scroll;
 }
 
+.navbar-nav>li>a {
+    background: #006eab !important;
+}
+
+.navbar-nav>li>a:hover {
+    background: #007ebb !important;
+}
+
+.badge {
+    display: inline-block;
+    float: right;
+    margin-right: 10px;
+}
+
+.dropdown-header {
+    font-weight: bold;
+    color: #006eab;
+}
+
+/*.badge {
+    background-color: #007ebb;
+}*/
+
+.footer {
+    margin-top: 10px;
+    width: 100%;
+    height: 47px !important;
+    text-align: center;
+    padding: 10px 0px;
+    font-size: 14px;
+}
+
+#nav-dropdown{
+    padding: 15px 17px;
+}

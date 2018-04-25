@@ -3,6 +3,7 @@ var Bootstrap = require('react-bootstrap');
 import {connect} from 'react-redux';
 var Network = require('../network');
 import {Table, Tr, Td} from 'reactable';
+import { getSpinner } from './util';
 
 class VpnStatus extends Component {
     constructor (props) {
@@ -44,16 +45,13 @@ class VpnStatus extends Component {
             );
         });
         var loading = this.state.loading;
-        const spinnerStyle = {
-            display: loading ? "block": "none",
-        };
         const blockStyle = {
             visibility: loading ? "hidden": "visible",
         };
 
         return (
             <div className="app-containter">
-                <span className="spinner" style={spinnerStyle} ><i className="fa fa-spinner fa-spin fa-3x" aria-hidden="true"></i></span>
+                {loading && getSpinner()}
                 <div style={blockStyle} className="card">
                     <div className="card-body">
                         <Table className="table table-striped" columns={['Name', 'Connected since', 'Virtual IP', 'Bytes in', 'Bytes out']} itemsPerPage={10} pageButtonLimit={10} noDataText="No matching records found." sortable={true} filterable={['Name', 'Connected since', 'Virtual IP', 'Bytes in', 'Bytes out']} title="VPN status" filterClassName="form-control" filterPlaceholder="Filter">

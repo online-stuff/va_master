@@ -3,6 +3,7 @@ var Bootstrap = require('react-bootstrap');
 import {connect} from 'react-redux';
 var Network = require('../network');
 var Groups = require('./users').Group;
+import { getSpinner } from './util';
 
 class GroupPanel extends Component {
     constructor (props) {
@@ -11,7 +12,7 @@ class GroupPanel extends Component {
             funcs: [],
             groups: [],
             group_opt: [],
-            loading: true,
+            loading: true
         };
         this.getCurrentFuncs = this.getCurrentFuncs.bind(this);
     }
@@ -44,9 +45,6 @@ class GroupPanel extends Component {
         })(Groups);
 
         var loading = this.state.loading;
-        const spinnerStyle = {
-            display: loading ? "block": "none",
-        };
         const blockStyle = {
             visibility: loading ? "hidden": "visible",
             position: 'relative'
@@ -54,7 +52,7 @@ class GroupPanel extends Component {
 
         return (
             <div className="app-containter">
-                <span className="spinner" style={spinnerStyle} ><i className="fa fa-spinner fa-spin fa-3x" aria-hidden="true"></i></span>
+                {loading && getSpinner()}
                 <GroupRedux funcs = {this.state.funcs} groups = {this.state.groups} style={blockStyle} />
             </div>
         )
@@ -62,9 +60,6 @@ class GroupPanel extends Component {
 }
 
 
-
-GroupPanel = connect(function(state){
-    return {auth: state.auth, alert: state.alert};
+module.exports = connect(state => {
+	return {auth: state.auth, alert: state.alert};
 })(GroupPanel);
-
-module.exports = GroupPanel;
