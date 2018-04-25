@@ -183,8 +183,8 @@ class GenericDriver(base.DriverBase):
                 'username' : field_values['username'], 
                 'password' : field_values['password'],
                 'ip_address' : field_values['ip_address'],
+                'images' : [], 
             })
-
             raise tornado.gen.Return(StepResult(
                 errors = [], new_step_index = -1, option_choices = {}
             ))

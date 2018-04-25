@@ -3,7 +3,7 @@ import {connect} from 'react-redux';
 import {Chart, Doughnut, Bar, defaults} from "react-chartjs-2";
 import Graph from'react-graph-vis';
 var Network = require('../network');
-import {getRandomColors, getSpinner} from './util'; 
+import {getRandomColors, getSpinner, getTimestamp} from './util'; 
 
 Chart.defaults.global.defaultFontFamily = 'Ubuntu';
 Chart.pluginService.register({
@@ -78,9 +78,12 @@ class Overview extends Component {
         }
         var protocol =  window.location.protocol === "https:" ? "wss" : "ws";
         this.ws = new WebSocket(protocol +"://"+ provider +"/log");
+        let today = new Date();
         var me = this;
         this.ws.onmessage = function (evt) {
             var data = JSON.parse(evt.data);
+            if(data.type === "connected")
+                me.ws.send(JSON.stringify({type: "get_messages", from_date: getTimestamp(today, 3600), to_date: today.getTime()}));
             if(data.type === "update")
                 me.props.dispatch({type: 'UDDATE_LOGS', logs: data.message});
             else if(data.type === "init")
@@ -132,10 +135,6 @@ class Overview extends Component {
                     provider_rows.push({name: pp.provider_name, servers: pp.servers, provider_usage: pp.provider_usage});
             }
         }
-        const spinnerStyle = {
-            top: '30%',
-            display: this.state.loading ? "block": "none"
-        };
         var provider_redux = null;
         if(provider_rows.length > 0){
             provider_redux = <ProviderRows providers={provider_rows} />;
@@ -144,7 +143,7 @@ class Overview extends Component {
             <div>
                 <DiagramRedux providers={diagram} />
                 <div className="graph-block">
-                    {getSpinner(spinnerStyle)}
+                    {this.state.loading && getSpinner({top: '30%'})}
                     {provider_redux}
                 </div>
                 <LogRedux />

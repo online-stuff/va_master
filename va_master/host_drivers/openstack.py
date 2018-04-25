@@ -103,7 +103,7 @@ class OpenStackDriver(base.DriverBase):
         steps[0].add_fields([
             ('provider_ip', 'Keystone provider_ip:port (xx.xx.xxx.xx:35357)', 'str'),
             ('tenant', 'Tenant', 'str'),
-            ('region', 'Region', 'options'),
+            ('region', 'Region', 'options', False, {'region' : self.regions}),
         ])
         self.steps = steps
         raise tornado.gen.Return(steps)
@@ -459,7 +459,10 @@ class OpenStackDriver(base.DriverBase):
 
             self.keypair_name = field_values['provider_name'] + '_key'
             self.provider_vars['VAR_KEYPAIR_NAME'] = self.keypair_name
-            yield self.create_keypair(field_values['username'], field_values['password'], field_values['tenant'], field_values['provider_ip'])
+            try:
+                yield self.create_keypair(field_values['username'], field_values['password'], field_values['tenant'], field_values['provider_ip'])
+            except: 
+                print ('Tried to create keypair for ', field_values['provider_ip'], ' but it exists. ')
 
         elif step_index == 1:
             for field in ['network', 'sec_group']:

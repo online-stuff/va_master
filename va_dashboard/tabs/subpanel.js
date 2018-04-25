@@ -19,8 +19,8 @@ class Subpanel extends Component {
         this.getPanel = this.getPanel.bind(this);
     }
 
-    getPanel (id, server, args) {
-        args = args.indexOf(',') > -1 ? args.split(",") : args;
+    getPanel (id, server, params) {
+        let args = params.indexOf(',') > -1 ? params.split(",") : params;
         var data = {'panel': id, 'server_name': server, 'args': args};
         this.props.dispatch({type: 'CHANGE_PANEL', panel: id, server: server, args: args});
         Network.post('/api/panels/get_panel', this.props.auth.token, data).done(data => {

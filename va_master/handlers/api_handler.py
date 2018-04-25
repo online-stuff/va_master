@@ -25,7 +25,7 @@ def invalid_url(path, method):
 
 class ApiHandler(tornado.web.RequestHandler):
     executor = ThreadPoolExecutor(max_workers= 4)
-    status = 200
+    status = None 
 
     def initialize(self, config, include_version=False):
         try:
@@ -46,7 +46,7 @@ class ApiHandler(tornado.web.RequestHandler):
     def set_default_headers(self):
         self.set_header("Access-Control-Allow-Origin", "*")
         self.set_header("Access-Control-Allow-Headers", "x-requested-with, Authorization, Content-Type")
-        self.set_header('Access-Control-Allow-Methods', 'POST, GET, DELETE, OPTIONS')
+        self.set_header('Access-Control-Allow-Methods', 'POST, GET, DELETE, OPTIONS, PUT')
 
 
     def json(self, obj, status=200):
@@ -197,6 +197,7 @@ class ApiHandler(tornado.web.RequestHandler):
             import traceback
             traceback.print_exc()
             result = {'success' : False, 'message' : 'There was an error performing a request : ' + str(e.message), 'data' : {}}
+
         if not result['success'] and not self.status: 
             self.status = 400
         raise tornado.gen.Return(result)
@@ -283,6 +284,9 @@ class ApiHandler(tornado.web.RequestHandler):
         except: 
             import traceback
             traceback.print_exc()
+    
+    put = post
+
 
     @tornado.gen.coroutine
     def options(self, path):

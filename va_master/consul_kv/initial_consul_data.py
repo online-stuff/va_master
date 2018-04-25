@@ -1,6 +1,9 @@
 initial_consul_data = {
     "providers/va_standalone_servers" : {"username": "admin", "servers": [], "sec_groups": [], "images": [], "password": "admin", "ip_address": "127.0.0.1", "networks": [], "sizes": [], "driver_name": "generic_driver", "location": "", "defaults": {}, "provider_name": "va_standalone_servers"},
     "va_flavours" : {"va-small": {"num_cpus": 1, "max_memory": 1048576, "vol_capacity": 5, "memory": 1048576}, "debian": {"num_cpus": 1, "max_memory": 1048576, "vol_capacity": 5, "memory": 1048576}},
+    "service_presets/highstate_preset":{"name": "highstate", "script": "salt {server} state.highstate test=True | perl -lne 's\/^Failed:\\s+\/\/ or next; s\/\\s.*\/\/; print'"},
+    "service_presets/ping_preset":{"name": "ping_preset", "script" : "ping -c1 {address} > /dev/null", "interval": "30s", "timeout": "10s"},
+    "service_presets/tcp_preset":{"name": "TCP", "tcp": "{address}", "interval": "30s", "timeout": "10s"},
     "managed_actions/ssh/root" : {
         "actions" : [
             {'name' : 'reboot', 'type' : 'confirm'},

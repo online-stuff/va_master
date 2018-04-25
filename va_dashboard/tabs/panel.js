@@ -3,6 +3,7 @@ var Bootstrap = require('react-bootstrap');
 import {connect} from 'react-redux';
 var Network = require('../network');
 var widgets = require('./main_components');
+import { getSpinner } from './util';
 
 class Panel extends Component {
     constructor (props) {
@@ -83,15 +84,12 @@ class Panel extends Component {
             return React.createElement(Redux, element);
         });
         var loading = this.state.loading;
-        const spinnerStyle = {
-            display: loading ? "block": "none"
-        };
         const blockStyle = {
             visibility: loading ? "hidden": "visible"
         };
         return (
             <div>
-                <span className="spinner" style={spinnerStyle} ><i className="fa fa-spinner fa-spin fa-3x" aria-hidden="true"></i></span>
+                {loading && getSpinner()}
                 <div key={this.props.params.id} style={blockStyle}>
                     <Bootstrap.PageHeader>{this.state.template.title} <small>{this.props.params.server}</small></Bootstrap.PageHeader>
                     {elements}

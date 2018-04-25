@@ -7,6 +7,9 @@ except:
 
 from base import bytes_to_int, int_to_bytes
 
+
+from va_master.api import apps
+
 from tornado.httpclient import AsyncHTTPClient, HTTPRequest
 import tornado.gen
 import json, datetime, subprocess, os
@@ -129,28 +132,30 @@ class LXCDriver(base.DriverBase):
         raise tornado.gen.Return(sizes)
 
 
+    def container_to_dict(self, container, provider_name):
+        server = {
+            'hostname' : container['server'].name,
+            'ip' : self.get_server_addresses(container)[0],
+            'size' : container['server'].name,
+            'used_disk' : self.get_server_usage(container, 'disk') / float(2**20),
+            'used_ram' : self.get_server_usage(container, 'memory') / float(2**20),
+            'used_cpu' : self.get_server_usage(container, 'cpu'), #TODO calculate CPU usage - current value is CPU time in seconds, we need to find total uptime and divide by it. 
+            'status' : container['server'].status, 
+            'cost' : 0,  #TODO find way to calculate costs
+            'estimated_cost' : 0,
+            'provider' : provider_name, 
+        }
+        return server
+
     @tornado.gen.coroutine
     def get_servers(self, provider):
-        """ TODO  """
         cl = self.get_client(provider)
         servers = cl.containers.all()
         servers = [{'server' : x, 'state' : x.state().__dict__} for x in servers]
 
 
-        servers = [
-            {
-                'hostname' : x['server'].name,
-                'ip' : self.get_server_addresses(x)[0],
-                'size' : x['server'].name,
-                'used_disk' : self.get_server_usage(x, 'disk') / float(2**20),
-                'used_ram' : self.get_server_usage(x, 'memory') / float(2**20),
-                'used_cpu' : self.get_server_usage(x, 'cpu'), #TODO calculate CPU usage - current value is CPU time in seconds, we need to find total uptime and divide by it. 
-                'status' : x['server'].status, 
-                'cost' : 0,  #TODO find way to calculate costs
-                'estimated_cost' : 0,
-                'provider' : provider['provider_name'], 
-            } for x in servers
-        ]
+        servers = [self.container_to_dict(x, provider['provider_name']) for x in servers]
+
         raise tornado.gen.Return(servers)
 
 
@@ -158,8 +163,11 @@ class LXCDriver(base.DriverBase):
     @tornado.gen.coroutine
     def get_provider_status(self, provider):
         """ TODO """
-
-        raise tornado.gen.Return({'success' : True, 'message' : ''})
+        try:
+            cl = self.get_client(provider)
+            raise tornado.gen.Return({'success' : True, 'message' : ''})
+        except Exception as e: 
+            raise tornado.gen.Return({'success' : False, 'message' : e.message})
 
 
     @tornado.gen.coroutine
@@ -241,9 +249,12 @@ class LXCDriver(base.DriverBase):
     @tornado.gen.coroutine
     def server_action(self, provider, server_name, action):
         """ Performs server actions using a nova client. """
+        message = ''
         try:
-            servers = yield self.get_servers() 
-            server = [x for x in servers if x.name == server_name][0]
+            cl = self.get_client(provider)
+
+            server = cl.containers.get(server_name)
+            getattr(server, action)()
         except Exception as e:
             import traceback
             traceback.print_exc()
@@ -277,14 +288,39 @@ class LXCDriver(base.DriverBase):
 
 
     @tornado.gen.coroutine
-    def create_server(self, host, data):
-        """ Works properly with the base driver method, but overwritten for bug tracking. """
+    def create_server(self, provider, data):
         try:
-            yield super(LXCDriver, self).create_minion(host, data)
+            lxc_config = {'name' : data['server_name'], 'source' : {'image' : data['image'], 'network' : data['network'], 'size' : data['size']}}
+            cl = self.get_client(provider)
 
-            #Once a server is created, we revert the templates to the originals for creating future servers. 
-            self.profile_template = PROFILE_TEMPLATE
-            self.provider_template = PROVIDER_TEMPLATE
+            #NOTE this is almost definitely not the right way to do this. We should be using aliases or something. 
+            image = [x for x in cl.images.all() if x.properties.get('description', '') == data['image']]
+            #NOTE temporary until we figure out how to look up images
+            image = cl.images.all()[0]
+
+            network = cl.networks.get(data['network'])
+
+            lxc_config = {
+                'name' : data['server_name'], 
+                'source' : {
+                    'type' : 'image', 
+                    'properties' : {
+                        'os' : image.properties['os'], 
+                        'architecture' : image.properties['architecture'], 
+                        'release' : image.properties['release'], 
+                        'description' : image.properties.get('description', '')
+                    }
+                }
+            }
+
+            print ('My conf is : ', lxc_config)
+#            lxc_config = {'name' : data['server_name'], 'source' : {'type' : 'image', 'alias' : 'ubuntu/16.04'}}
+
+            new_container = cl.containers.create(lxc_config, wait = True)
+#            if data.get('role'): 
+#                yield apps.add_minion_to_server(data['server_name'], get_server_addresses(s)[0], data['role'], key_filename = '/root/.ssh/va-master.pem')
+            new_container = self.container_to_dict(provider['provider_name'])
+            raise tornado.gen.Return(new_container)
         except:
             import traceback
             traceback.print_exc()
