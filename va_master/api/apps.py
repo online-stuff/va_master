@@ -414,7 +414,7 @@ def launch_app(handler):
         import traceback
         traceback.print_exc()
 
-    yield add_server_to_datastore(handler.datastore_handler, server_name = data['server_name'], hostname = data['server_name'], manage_type = 'provider', driver_name = provider['driver_name'])
+    yield add_server_to_datastore(handler.datastore_handler, server_name = data['server_name'], hostname = data['server_name'], manage_type = 'provider', driver_name = provider['driver_name'], ip_address = data.get('ip'))
 
     if data.get('role', True):
 
@@ -551,12 +551,11 @@ def manage_server_type(datastore_handler, server_name, new_type, ip_address = No
     if not new_subtype: 
         raise Exception("Tried to change " + str(server_name) + " type to " + str(new_type) + " but could not get subtype. If managing with provider, make sure to set `driver_name`, if managing with SSH or winexe, set `ip_address` and `username`. ")
 
-    print ('Looking for type : ', new_type, ' and subtype ', new_subtype)
+    print ('New type is : ', new_type, ' subtype : ', new_subtype)
     type_actions = yield datastore_handler.get_object(object_type = 'managed_actions', manage_type = new_type, manage_subtype = new_subtype)
     server['type'] = 'managed'
     server['managed_by'] = list(set(server.get('managed_by', []) + [new_type]))
     server['available_actions'] = server.get('available_actions', {})
-    print ('Type actions are : ', type_actions)
     server['available_actions'][new_type] = type_actions['actions']
     server.update(kwargs)
 

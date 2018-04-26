@@ -105,6 +105,24 @@ class GenericDriver(base.DriverBase):
     def get_servers(self, provider):
         servers = yield self.datastore_handler.get_provider(provider['provider_name'])
         servers = servers['servers']
+        print ('Generic servers are : ', servers)
+        servers = [
+            {
+                'hostname' : x['hostname'], 
+                'ip' : x['ip_address'],
+                'size' : 'n/a',
+                'used_disk' : 'n/a', 
+                'used_ram' : 'n/a', 
+                'used_cpu' : 'n/a',
+                'status' : 'n/a', 
+                'cost' : 0,  #TODO find way to calculate costs
+                'estimated_cost' : 0,
+                'managed_by' : x.get('managed_by', []), 
+                'provider' : provider['provider_name'], 
+            } for x in servers
+        ]
+
+
 
         if provider['provider_name'] == 'va_standalone_servers' : 
             provider['provider_name'] = ''
@@ -200,7 +218,7 @@ class GenericDriver(base.DriverBase):
     @tornado.gen.coroutine
     def create_server(self, provider, data):
         #TODO Connect to ssh://data.get('ip') -p data.get('port')[ -u data.get('user') -pass data.get('pass') || -key data.get('key')
-        print ('In create server. ')
+        print ('In create server. ', data)
         cl = SSHClient()
         cl.load_system_host_keys()
         cl.set_missing_host_key_policy(AutoAddPolicy())
@@ -222,7 +240,9 @@ class GenericDriver(base.DriverBase):
         # distro = ssh_session.cmd(['get', 'distro', 'cmd'])
         # instal = ssh_session.cmd(['install', 'salt', 'stuff'])
         # services are added on the api side.
-        server = {"hostname" : data["server_name"], "ip" : data.get("ip"), "local_gb" : 0, "memory_mb" : 0, "status" : "n/a" }
+        server = {"hostname" : data["server_name"], "ip_address" : data.get("ip"), "local_gb" : 0, "memory_mb" : 0, "status" : "n/a" , "managed_by" : ['ssh']}
+        if provider['provider_name'] != 'va_standalone_servers' : 
+            server['managed_by'].append('provider')
         yield self.datastore_handler.add_generic_server(provider, server)
 
         raise tornado.gen.Return(True)  

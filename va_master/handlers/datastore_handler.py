@@ -108,6 +108,7 @@ class DatastoreHandler(object):
     @tornado.gen.coroutine
     def get_provider(self, provider_name):
         try:
+            print ('Getting provider: ', provider_name)
             provider = yield self.get_object('provider', provider_name = provider_name)
         except: 
             if provider_name == 'va_standalone_servers' : 
@@ -164,8 +165,11 @@ class DatastoreHandler(object):
         yield self.insert_object('provider', data = provider, provider_name = provider['provider_name'])
 
     @tornado.gen.coroutine
-    def add_generic_server(self, provider_name, server):
-        generic_provider = yield self.get_provider(provider_name)
+    def add_generic_server(self, provider, server):
+        if type(provider) == str:
+            generic_provider = yield self.get_provider(provider)
+        else: 
+            generic_provider = provider
         generic_provider['servers'].append(server)
         yield self.edit_provider(generic_provider)
 

@@ -452,16 +452,15 @@ class LogMessagingSocket(tornado.websocket.WebSocketHandler):
 
             self.messages = json_msgs 
             self.config.logger.info('Got %s messages. ' % (len(self.messages, )))
-
-            yesterday = datetime.datetime.now() + dateutil.relativedelta.relativedelta(days = -1)
-
-            init_messages = self.get_messages(yesterday, datetime.datetime.now())
-
-            hosts = list(set([x.get('host') for x in init_messages if x.get('host')]))
-            hosts = [{'value': x, 'label': x} for x in hosts]
-            msg = {"type" : "init", "logs" : init_messages, 'hosts' : hosts}
-            print ('Writing message : ', {'type' : msg['type'], 'logs' : '...', 'hosts' : msg['hosts']})
-            self.write_message(json.dumps(msg))
+#            yesterday = datetime.datetime.now() + dateutil.relativedelta.relativedelta(hours = -1)
+#
+#            init_messages = self.get_messages(yesterday, datetime.datetime.now())
+#
+#            hosts = list(set([x.get('host') for x in init_messages if x.get('host')]))
+#            hosts = [{'value': x, 'label': x} for x in hosts]
+#            msg = {"type" : "init", "logs" : init_messages, 'hosts' : hosts}
+#            print ('Writing message : ', {'type' : msg['type'], 'logs' : '...', 'hosts' : msg['hosts']})
+#            self.write_message(json.dumps(msg))
 
             self.log_handler = LogHandler(self)
             self.log_handler.stopped = False
@@ -469,6 +468,7 @@ class LogMessagingSocket(tornado.websocket.WebSocketHandler):
             observer.schedule(self.log_handler, path = log_path)
             observer.start()
             self.config.logger.info('Socket started log handler and observer. ')
+            self.write_message(json.dumps({'type' : 'connected'}))
 
         except: 
             import traceback
@@ -488,6 +488,7 @@ class LogMessagingSocket(tornado.websocket.WebSocketHandler):
 
     @tornado.gen.coroutine
     def on_message(self, message): 
+        print ('I am in on_message!')
         self.config.logger.info('Received websocket message : %s' % (str(message)))
         try:
             message = json.loads(message)
@@ -507,7 +508,14 @@ class LogMessagingSocket(tornado.websocket.WebSocketHandler):
 
             response = yield message_handlers[msg_type](message)
             if response: 
-                self.write(json.loads(response))
+#                print ('Response is : ', response)
+#                for message in response['logs']: 
+#                    try:
+#                        json.loads(message)
+#                    except: 
+#                        print ('Could not load: ', message)
+                response = json.dumps(response)
+                self.write_message(response)
         except: 
             import traceback
             traceback.print_exc()
@@ -536,7 +544,9 @@ class LogMessagingSocket(tornado.websocket.WebSocketHandler):
  
         messages = self.get_messages(from_date, to_date)
         messages = {'type' : 'init', 'logs' : messages}
-        hosts = list(set([{'value': x.get('host'), 'label': x.get('host')} for x in messages['logs'] if x.get('host')]))
+        hosts = list(set([x.get('host') for x in messages['logs'] if x.get('host')]))
+        print ('Before set: ', hosts)
+        hosts = [{'value' : x, 'label' : x} for x in hosts]
         messages['hosts'] = hosts
         print ('Messages hosts are : ', messages['hosts'])
 

@@ -88,8 +88,10 @@ def list_providers(handler):
     hidden_servers = yield datastore_handler.get_hidden_servers()
 
     for provider in providers: 
+        print ('Finding ', provider['provider_name'])
         driver = yield drivers_handler.get_driver_by_id(provider['driver_name'])
         provider['servers'] = yield driver.get_servers(provider)
+        print ('Has servers : ', provider['servers'])
         
         provider_status = yield driver.get_provider_status(provider)
         provider['status'] = provider_status

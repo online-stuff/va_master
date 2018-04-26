@@ -203,6 +203,7 @@ def panel_action(handler, actions_list = [], server_name = '', action = '', args
 def get_panels_stats(handler, dash_user):
     datastore_handler = handler.datastore_handler
     providers = yield datastore_handler.list_providers()
+    providers = [x for x in providers if x['provider_name'] != 'va_standalone_servers']
     servers = yield datastore_handler.datastore.get_recurse('server/')
     serv = yield services.list_services()
 #    vpn = yield apps.get_openvpn_users()
