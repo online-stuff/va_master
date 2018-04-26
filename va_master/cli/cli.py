@@ -128,9 +128,11 @@ def handle_configurations(fqdn = None):
             sys.exit(1)
     else:
         try:
-            cli_environment.reload_daemon()
-            cli_success('Started daemon.')
+            pass
+#            cli_environment.reload_daemon()
+#            cli_success('Started daemon.')
         except:
+            import traceback
             cli_error('Failed reloading the daemon, check supervisor logs.' + \
             '\nYou may try `service supervisor restart` or ' + \
             '/var/log/supervisor/supervisord.log')
