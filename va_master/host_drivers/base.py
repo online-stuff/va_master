@@ -20,6 +20,14 @@ class Step(object):
         for field in list_of_fields: 
             self.add_field(*field)
 
+    def remove_fields(self, list_of_fields):
+        for field in list_of_fields: 
+            remove_field_index = [i for i in range(len(self.fields)) if self.fields[i]['id'] == field]
+            if not remove_field_index: 
+                print ('Tried to remove field ', field, ' but step does not contain it. Ignoring. ')
+            remove_field_index = remove_field_index[0]
+            self.fields.pop(remove_field_index)
+
     def add_str_field(self, id_, name):
         self.fields.append({'type': 'str', 'id': id_, 'name': name})
 

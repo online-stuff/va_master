@@ -33,7 +33,7 @@ def get_paths():
             'state/add' : {'function' : create_new_state,'args' : ['file', 'body', 'filename']},
             'apps/new/validate_fields' : {'function' : validate_app_fields, 'args' : ['handler']},
             'apps' : {'function' : launch_app, 'args' : ['handler']},
-            'apps/add_minion' : {'function' : add_minion_to_server, 'args' : ['handler', 'server_name', 'ip_address', 'username', 'password', 'key_filename', 'role']},
+            'apps/add_minion' : {'function' : add_minion_to_server, 'args' : ['server_name', 'ip_address', 'username', 'password', 'key_filename', 'role']},
             'apps/action' : {'function' : perform_server_action, 'args' : ['handler', 'provider_name', 'action', 'server_name', 'action_type', 'kwargs']},
             'apps/add_vpn_user': {'function' : add_openvpn_user, 'args' : ['username']},
             'apps/revoke_vpn_user': {'function' : revoke_openvpn_user, 'args' : ['username']},
@@ -324,7 +324,7 @@ def write_pillar(data):
 
 #TODO
 @tornado.gen.coroutine
-def add_minion_to_server(handler, server_name, ip_address, role, username = '', password = '', key_filename = ''):
+def add_minion_to_server(server_name, ip_address, role, username = '', password = '', key_filename = ''):
 
     ssh = paramiko.SSHClient()
     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
@@ -336,8 +336,8 @@ def add_minion_to_server(handler, server_name, ip_address, role, username = '', 
 
     #bootstrap_script is where the bootstrap script resides on the va_master
     #server_script is where it will reside on the targeted server
-    bootstrap_script = '/opt/va_master/minion-preseed.sh'
-    server_script = '/root/minion-preseed.sh'
+    bootstrap_script = '/opt/va_master/minion.sh'
+    server_script = '/root/minion.sh'
 #    server_script = '/root/bootstrap-salt.sh'
 
     connect_kwargs = {'username' : username}
@@ -348,6 +348,7 @@ def add_minion_to_server(handler, server_name, ip_address, role, username = '', 
     else: 
         raise Exception('When adding minion to server, I expected either password or key_filename, but both values are empty. ')
 
+    print ('ssh with ', ip_address, connect_kwargs)
     ssh.connect(ip_address, **connect_kwargs)
     sftp = ssh.open_sftp()
 
@@ -365,6 +366,7 @@ def add_minion_to_server(handler, server_name, ip_address, role, username = '', 
     ssh_call(ssh, 'mkdir -p /etc/salt/pki/minion/')
 
     print ('Putting minion keys from ', init_key_dir, ' to /etc/salt/pki/minion/minion ')
+    print ('Pub key is : ', open(init_key_dir + '.pub').read())
     sftp.put(init_key_dir + '.pem', '/etc/salt/pki/minion/minion.pem')
     sftp.put(init_key_dir + '.pub', '/etc/salt/pki/minion/minion.pub')
 
@@ -380,7 +382,7 @@ def add_minion_to_server(handler, server_name, ip_address, role, username = '', 
 #    master_line = 'master: ' + str(get_master_ip())
 
     ssh_call(ssh, 'chmod +x ' + server_script)
-    ssh_call(ssh, "bash -c '%s %s %s'" % (server_script, role, get_master_ip()))
+    ssh_call(ssh, "%s %s %s" % (server_script, role, get_master_ip()))
     ssh_call(ssh, 'echo fqdn > /etc/salt/minion_id')
 
 #    print ('stdout is : ', stdout.read())

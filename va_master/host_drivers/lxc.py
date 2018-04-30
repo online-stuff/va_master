@@ -329,7 +329,17 @@ class LXCDriver(base.DriverBase):
                 fm = new_container.FilesManager(cl, new_container)
                 fm.put(keys_path, key)
 
-                yield apps.add_minion_to_server(data['server_name'], self.get_server_addresses(s)[0], data['role'], key_filename = '/root/.ssh/va-master.pem')
+                ip = []
+                while not ip: 
+                    addresses = new_container.state().network['eth0']['addresses']
+                    ip = [x['address'] for x in addresses if x.get('family', '') == 'inet']
+                    print ('Network is : ', new_container.state().network)
+ 
+                new_container.execute(['apt-get', '-y', 'install', 'openssh-server'])
+  
+                ip = ip[0]
+                print ('IP is : ', ip)
+                yield apps.add_minion_to_server(data['server_name'], ip, data['role'], key_filename = '/root/.ssh/va-master.pem', username = 'root')
             new_container = self.container_to_dict(provider['provider_name'])
             raise tornado.gen.Return(new_container)
         except:
