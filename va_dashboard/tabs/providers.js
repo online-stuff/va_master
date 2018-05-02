@@ -349,8 +349,8 @@ class NewProviderForm extends Component {
         var data = {name: this.refs.provider_name.value, driver: this.state.currentDriver};
         var me = this;
         Network.post('/api/providers', this.props.auth.token, data).done(function(data) {
-            me.props.reload();
             this.close();
+            me.props.reload();
         }).fail(function (msg) {
             me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
         });
