@@ -18,9 +18,10 @@ PROVIDER_TEMPLATE = '''VAR_PROVIDER_NAME:
     master: VAR_THIS_IP
     master_type: str
   # The name of the configuration profile to use on said minion
+
   driver: digitalocean 
-  personal_access_token: VAR_ACCESS_TOKEN
-  ssh_key_names: VAR_KEYPAIR_NAME
+  personal_access_token: VAR_TOKEN
+  ssh_key_names: VAR_SSH_NAME
   ssh_key_file: VAR_SSH_FILE
   ssh_interface: private_ips
   location: VAR_LOCATION
@@ -29,20 +30,17 @@ PROVIDER_TEMPLATE = '''VAR_PROVIDER_NAME:
   create_dns_record: True
 '''
 
+#    userdata_file: VAR_USERDATA_FILE
 
 PROFILE_TEMPLATE = '''VAR_PROFILE_NAME:
     provider: VAR_PROVIDER_NAME
     image: VAR_IMAGE
     size: VAR_SIZE
-    userdata_file: VAR_USERDATA_FILE
 
     minion:
         master: VAR_THIS_IP
         grains:
             role: VAR_ROLE
-    networks:
-      - fixed:
-          - VAR_NETWORK_ID 
 '''
 
 class DigitalOceanDriver(base.DriverBase):
@@ -60,6 +58,10 @@ class DigitalOceanDriver(base.DriverBase):
             'key_path' : key_path, 
             'datastore_handler' : datastore_handler
             }
+        #TODO get from api
+        #[x.name for x in m.get_all_regions()]
+        self.locations = [u'New York 1', u'Singapore 1', u'London 1', u'New York 3', u'Amsterdam 3', u'Frankfurt 1', u'Toronto 1', u'San Francisco 2', u'Bangalore 1']
+
         super(DigitalOceanDriver, self).__init__(**kwargs)
 
     def get_manager(self, provider):
@@ -254,6 +256,9 @@ class DigitalOceanDriver(base.DriverBase):
         """ Uses the base driver method, but adds the region tenant and identity_url variables, used in the configurations. """
 
         options = {}
+
+        if step_index == -1: 
+            options = {'location' : self.locations}
         
         if step_index == 0:
             self.token = field_values['token']

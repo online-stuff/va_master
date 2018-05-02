@@ -380,7 +380,8 @@ class DriverBase(object):
             self.field_values['networks'] = yield self.get_networks()
             self.field_values['sec_groups'] = yield self.get_sec_groups()
 
-            self.field_values['location'] = field_values.get('location', 'va_master')                
+            self.field_values['location'] = field_values.get('location', 'va_master')
+            self.provider_vars['VAR_LOCATION'] = field_values.get('location', '')
             options.update({
                     'network': self.field_values['networks'],
                     'sec_group': self.field_values['sec_groups'],
