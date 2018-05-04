@@ -85,10 +85,11 @@ class DigitalOceanDriver(base.DriverBase):
         """ Digital Ocean requires an access token in order to generate the provider conf.  """
 
         steps = yield super(DigitalOceanDriver, self).get_steps()
+        steps[0].remove_fields(['username', 'password', 'location'])
         steps[0].add_fields([
             ('token', 'Access token', 'str'),
+            ('location', 'Location', 'options'),
         ])
-        steps[0].remove_fields(['username', 'password'])
 
         steps.pop(1)
         self.steps = steps
@@ -134,7 +135,7 @@ class DigitalOceanDriver(base.DriverBase):
                 'hostname' : x.name, 
                 'ip' : x.ip_address,
                 'size' : x.size['slug'],
-                'used_disk' : x.size['disk'] + 'GB', 
+                'used_disk' : str(x.size['disk']) + 'GB', 
                 'used_ram' : x.memory, 
                 'used_cpu' : x.vcpus,
                 'status' : x.status, 
@@ -150,7 +151,10 @@ class DigitalOceanDriver(base.DriverBase):
     @tornado.gen.coroutine
     def get_provider_status(self, provider):
         """ TODO """
-
+        try:
+            self.get_manager(provider)
+        except Exception as e: 
+            raise tornado.gen.Return({'success' : False, 'message' : e.message})
         raise tornado.gen.Return({'success' : True, 'message' : ''})
 
 
@@ -232,7 +236,9 @@ class DigitalOceanDriver(base.DriverBase):
     def server_action(self, provider, server_name, action):
         """ Performs server actions using a nova client. """
         try:
-            servers = yield self.get_servers() 
+            message = 'Success!'
+            manager = self.get_manager(provider)
+            servers = manager.get_all_droplets()
             server = [x for x in servers if x.name == server_name][0]
         except Exception as e:
             import traceback
@@ -240,8 +246,15 @@ class DigitalOceanDriver(base.DriverBase):
 
             raise Exception('Could not get server' + server_name + '. ' + e.message)
         try:
-            pass
-            #TODO perform action
+            server_action = {
+                'delete' : server.destroy,
+                'reboot' : server.power_off,
+                'start' : server.power_on,
+                'stop' : server.shutdown, 
+#                'suspend' : server.suspend,
+#                'resume' : server.resume,
+            }
+            server_action[action]()
         except Exception as e:
             import traceback
             traceback.print_exc()
