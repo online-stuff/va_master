@@ -41,6 +41,7 @@ def get_paths():
 
 def get_minion_role(minion_name):
     cl = LocalClient()
+    print ('Looking for role of : ', minion_name)
     role = cl.cmd(minion_name, 'grains.get', arg = ['role'])[minion_name]
     return role
 
@@ -206,11 +207,12 @@ def get_panels_stats(handler, dash_user):
     providers = [x for x in providers if x['provider_name'] != 'va_standalone_servers']
     servers = yield datastore_handler.datastore.get_recurse('server/')
     serv = yield services.list_services()
+    serv = len(serv) - 1 #One service is the default consul one, which we don't want to be counted
 #    vpn = yield apps.get_openvpn_users()
     vpn = {'users' : []}
     states = yield apps.get_states(handler, dash_user)
     
-    result = {'providers' : len(providers), 'servers' : len(servers), 'services' : len(serv), 'vpn' : len(vpn['users']), 'apps' : len(states)}
+    result = {'providers' : len(providers), 'servers' : len(servers), 'services' : serv, 'vpn' : len(vpn['users']), 'apps' : len(states)}
     raise tornado.gen.Return(result)
 
 
@@ -235,8 +237,9 @@ def get_panel_for_user(handler, panel, server_name, dash_user, args = [], provid
     if not kwargs: 
         kwargs = {x : handler.data[x] for x in handler.data if x not in ignored_kwargs}
 
+    print ('Looking for state ', state)
     state = yield datastore_handler.get_state(name = state)
-
+    print ('Staet is : ', state)
     action = 'get_panel'
     if type(args) != list and args: 
         args = [args]

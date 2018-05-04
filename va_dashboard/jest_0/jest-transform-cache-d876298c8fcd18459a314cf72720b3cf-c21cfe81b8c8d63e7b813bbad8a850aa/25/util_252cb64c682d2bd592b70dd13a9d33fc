@@ -1,0 +1,9 @@
+c76e7d4159f0bc3f4875dfd0e3a89a9b
+'use strict';
+
+var util = require('../tabs/util');
+
+test('empty object', function () {
+    expect(util.isEmpty({})).toBe(true);
+});
+//# sourceMappingURL=data:application/json;charset=utf-8;base64,eyJ2ZXJzaW9uIjozLCJzb3VyY2VzIjpbInV0aWwuanMiXSwibmFtZXMiOlsidXRpbCIsInJlcXVpcmUiLCJ0ZXN0IiwiZXhwZWN0IiwiaXNFbXB0eSIsInRvQmUiXSwibWFwcGluZ3MiOiI7O0FBQUEsSUFBTUEsT0FBT0MsUUFBUSxjQUFSLENBQWI7O0FBRUFDLEtBQUssY0FBTCxFQUFxQixZQUFNO0FBQ3ZCQyxXQUFPSCxLQUFLSSxPQUFMLENBQWEsRUFBYixDQUFQLEVBQXlCQyxJQUF6QixDQUE4QixJQUE5QjtBQUNILENBRkQiLCJmaWxlIjoidXRpbC5qcyIsInNvdXJjZXNDb250ZW50IjpbImNvbnN0IHV0aWwgPSByZXF1aXJlKCcuLi90YWJzL3V0aWwnKTtcblxudGVzdCgnZW1wdHkgb2JqZWN0JywgKCkgPT4ge1xuICAgIGV4cGVjdCh1dGlsLmlzRW1wdHkoe30pKS50b0JlKHRydWUpO1xufSk7XG5cbiJdfQ==
