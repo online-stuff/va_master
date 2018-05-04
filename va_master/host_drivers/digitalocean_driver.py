@@ -23,11 +23,11 @@ PROVIDER_TEMPLATE = '''VAR_PROVIDER_NAME:
   personal_access_token: VAR_TOKEN
   ssh_key_names: VAR_SSH_NAME
   ssh_key_file: VAR_SSH_FILE
-  ssh_interface: private_ips
+  ssh_interface: private
+  private_networking: True
   location: VAR_LOCATION
   backups_enabled: True
   ipv6: True
-  create_dns_record: True
 '''
 
 #    userdata_file: VAR_USERDATA_FILE
@@ -127,16 +127,17 @@ class DigitalOceanDriver(base.DriverBase):
     def get_servers(self, provider):
         """ TODO  """
 
-        servers = []
+        manager = self.get_manager(provider)
+        servers = manager.get_all_droplets()
         servers = [
             {
-                'hostname' : x['name'], 
-                'ip' : x['addresses'][x['addresses'].keys()[0]][0].get('addr', 'n/a'),
-                'size' : x['name'],
-                'used_disk' : x['local_gb'], 
-                'used_ram' : x['memory_mb'], 
-                'used_cpu' : x['vcpus'],
-                'status' : x['status'], 
+                'hostname' : x.name, 
+                'ip' : x.ip_address,
+                'size' : x.size['slug'],
+                'used_disk' : x.size['disk'] + 'GB', 
+                'used_ram' : x.memory, 
+                'used_cpu' : x.vcpus,
+                'status' : x.status, 
                 'cost' : 0,  #TODO find way to calculate costs
                 'estimated_cost' : 0,
                 'provider' : provider['provider_name'], 
