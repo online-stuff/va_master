@@ -93,7 +93,6 @@ class DigitalOceanDriver(base.DriverBase):
 
         steps.pop(1)
         self.steps = steps
-        print ('Steps are : ', [x.fields for x in steps])
         raise tornado.gen.Return(steps)
 
     @tornado.gen.coroutine

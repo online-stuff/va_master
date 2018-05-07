@@ -40,7 +40,6 @@ def get_paths():
 @tornado.gen.coroutine
 def get_provider_and_driver(handler, provider_name = 'va_standalone_servers'):
     provider = yield handler.datastore_handler.get_provider(provider_name = provider_name)
-    print ('Provider: ', provider)
     driver = yield handler.drivers_handler.get_driver_by_id(provider['driver_name'])
 
     raise tornado.gen.Return((provider, driver))
@@ -88,10 +87,8 @@ def list_providers(handler):
     hidden_servers = yield datastore_handler.get_hidden_servers()
 
     for provider in providers: 
-        print ('Finding ', provider['provider_name'])
         driver = yield drivers_handler.get_driver_by_id(provider['driver_name'])
         provider['servers'] = yield driver.get_servers(provider)
-        print ('Has servers : ', provider['servers'])
         
         provider_status = yield driver.get_provider_status(provider)
         provider['status'] = provider_status
@@ -195,7 +192,6 @@ def validate_new_provider_fields(handler, driver_id, field_values, step_index, p
         for field in result['fields']: 
             field['value'] = provider.get(field['id'], '')
 
-        print ('Fields are : ', result['fields'])
 
     raise tornado.gen.Return(result)
 
@@ -309,7 +305,7 @@ def get_provider_info(handler, dash_user, get_billing = True, get_servers = True
         for server in provider['servers']:
             server_panel = [x for x in states if server.get('hostname', '') in x['servers']] or [{'icon' : 'fa-server'}]
             server['icon'] = server_panel[0]['icon']
-            datastore_server = yield datastore_handler.get_object(object_type = 'server', server_name = server.get('hostname', ''))
+            datastore_server = yield datastore_handler.get_object(object_type = 'server', server_name = server.get('server_name', server.get('hostname', '')))
             if not datastore_server: 
                 print ('Did not find server', server.get('hostname'), 'in kv, inserting now. ')
                 datastore_server = yield apps.manage_server_type(datastore_handler, server_name = server.get('hostname'), new_type = 'provider', driver_name = provider_kv['driver_name'])

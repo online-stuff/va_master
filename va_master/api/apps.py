@@ -52,7 +52,6 @@ def get_master_ip():
     gateway = gateway[0]
     result = call_master_cmd('network.get_route', arg = ['10.120.155.1'])
     ip = result['source']
-    print ('Ip is : ', ip)
 
     return ip
 
@@ -91,7 +90,6 @@ def get_openvpn_users():
     openvpn_users = call_master_cmd('openvpn.list_users')
 
     if type(openvpn_users) == str: 
-        print ('Openvpn users result : ', openvpn_users)
         raise Exception("Could not get openvpn users list. Contact your administrator for more information. ")
 
     #openvpn_users returns {"revoked" : [list, of, revoked, users], "active" : [list, of, active, users], "status" : {"client_list" : [], "routing_table" : []}}
@@ -128,7 +126,6 @@ def add_openvpn_user(username):
 
     success = call_master_cmd('openvpn.add_user', kwarg = {'username' : username})
     if success:
-        print ('Adding user returned : ', success)
         raise Exception('Adding an openvpn user returned with an error. ')
     raise tornado.gen.Return({'success' : True, 'data' : None, 'message' : 'User added successfuly. '})
 
@@ -139,7 +136,6 @@ def revoke_openvpn_user(username):
     success = call_master_cmd('openvpn.revoke_user', kwarg = {'username' : username})
  
     if success:
-        print ('Revoking user returned : ', success)
         raise Exception('Revoking %s returned with an error. ' % (username))
     raise tornado.gen.Return({'success' : True, 'data' : None, 'message' : 'User revoked successfuly. '})
 
@@ -151,7 +147,6 @@ def list_user_logins(username):
 
     success = call_master_cmd('openvpn.list_user_logins', kwarg = {'username' : username})
     if type(success) == str:
-        print ('User logins returned', success)
         raise Exception('Listing user logins returned with an error. ')
     raise tornado.gen.Return(success)
 
@@ -162,7 +157,6 @@ def download_vpn_cert(username, handler):
 
     cert_has_error = yield handler.has_error(cert)
     if cert_has_error:
-        print ('Cert has an error: ', cert)
         raise Exception('Getting certificate for %s returned with an error. ' % (username))
 
     vpn_cert_path = '/tmp/' + username + '_vpn.cert'
@@ -200,7 +194,6 @@ def perform_server_action(handler, action, server_name, provider_name = '', acti
         result = {'success' : True, 'message' : '', 'data' : result}
 
 #    result['message'] = 'Action %s completed successfuly. ' % action
-    print ('Result is : ', result)
     raise tornado.gen.Return(result)
 
 
@@ -486,10 +479,12 @@ def add_server_to_datastore(datastore_handler, server_name, ip_address = None, h
 
     server['available_actions'] = {}
 
-    yield datastore_handler.insert_object(object_type = 'server', server_name = server_name, data = server)
+    server = yield datastore_handler.get_object(object_type = 'server', server_name = server_name)
+    if not server:
+
+        yield datastore_handler.insert_object(object_type = 'server', server_name = server_name, data = server)
 
     if manage_type: 
-        print ('Calling with ', datastore_handler, server_name, manage_type, username, driver_name, kwargs)
         server = yield manage_server_type(datastore_handler, server_name, manage_type, username = username, driver_name = driver_name, kwargs = kwargs)
 
     raise tornado.gen.Return(server)
@@ -511,28 +506,6 @@ def handle_app(datastore_handler, server_name, role):
 
     raise tornado.gen.Return(server)
 
-
-def test_ssh(username, ip_address, password = None, port = None):
-    cl = SSHClient()
-    cl.load_system_host_keys()
-    cl.set_missing_host_key_policy(AutoAddPolicy())
-    connect_kwargs = {
-        'username' : username, 
-    }
-    key_path = "TODO"
-
-    if data.get('port'): 
-        connect_kwargs['port'] = int(port)
-
-    if data.get('password'): 
-        connect_kwargs['password'] = password
-    else: 
-        connect_kwargs['key_filename'] = key_path + '.pem'
-
-    print ('Attempting connect with : ', connect_kwargs)
-    cl.connect(data.get('ip'), **connect_kwargs)
-
-
 @tornado.gen.coroutine
 def manage_server_type(datastore_handler, server_name, new_type, ip_address = None, username = None, driver_name = None, role = None, kwargs = {}):
     user_type = 'root' if username == 'root' else 'user'
@@ -553,7 +526,6 @@ def manage_server_type(datastore_handler, server_name, new_type, ip_address = No
     if not new_subtype: 
         raise Exception("Tried to change " + str(server_name) + " type to " + str(new_type) + " but could not get subtype. If managing with provider, make sure to set `driver_name`, if managing with SSH or winexe, set `ip_address` and `username`. ")
 
-    print ('New type is : ', new_type, ' subtype : ', new_subtype)
     type_actions = yield datastore_handler.get_object(object_type = 'managed_actions', manage_type = new_type, manage_subtype = new_subtype)
     server['type'] = 'managed'
     server['managed_by'] = list(set(server.get('managed_by', []) + [new_type]))
