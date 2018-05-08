@@ -45,7 +45,7 @@ PROFILE_TEMPLATE = '''VAR_PROFILE_NAME:
 
 class DigitalOceanDriver(base.DriverBase):
     def __init__(self, provider_name = 'digital_ocean_provider', profile_name = 'digital_ocean_profile', host_ip = '', key_name = 'va_master_key', key_path = '/root/va_master_key', datastore_handler = None):
-        """ The standard issue init method. Borrows most of the functionality from the BaseDriver init method, but adds a self.regions attribute, specific for OpenStack hosts. """
+        """ The standard issue init method. Borrows most of the functionality from the BaseDriver init method. """
 
         kwargs = {
             'driver_name' : 'digital_ocean',

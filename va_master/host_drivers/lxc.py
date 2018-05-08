@@ -307,9 +307,6 @@ class LXCDriver(base.DriverBase):
                 }
             }
 
-            print ('My conf is : ', lxc_config)
-#            lxc_config = {'name' : data['server_name'], 'source' : {'type' : 'image', 'alias' : 'ubuntu/16.04'}}
-
             new_container = cl.containers.create(lxc_config, wait = True)
             raise tornado.gen.Return(new_container)
         except:
