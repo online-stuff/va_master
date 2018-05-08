@@ -103,6 +103,7 @@ def get_values_from_args(args):
     values = {k: v for k, v in values.items() if v}
     return values
 
+#We used to try and work with this to setup consul. Atm seems like we're doing it manually. 
 def handle_configurations(fqdn = None):
     result = True
     if fqdn:
@@ -214,7 +215,7 @@ def handle_init(args):
 
     result = True # If `result` is True, all actions completed successfully
 
-    handle_configurations(values.get('fqdn'))
+#    handle_configurations(values.get('fqdn'))
 
     cli_config = config.Config(init_vals = values)
 

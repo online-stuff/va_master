@@ -18,7 +18,6 @@ setuptools.setup(
     'libvirt-python', #for, well, libvirt
     'boto3', #for aws
     'python-digitalocean',
-    'lxc-python2',
     'pylxd',
     'gitpython',
     'watchdog', 

@@ -4,6 +4,8 @@ import json
 import subprocess
 import requests, paramiko
 import zipfile, tarfile
+
+from va_master.utils.paramiko_utils import ssh_call
 from tornado.concurrent import run_on_executor, Future
 
 import salt_manage_pillar
@@ -31,7 +33,7 @@ def get_paths():
             'state/add' : {'function' : create_new_state,'args' : ['file', 'body', 'filename']},
             'apps/new/validate_fields' : {'function' : validate_app_fields, 'args' : ['handler']},
             'apps' : {'function' : launch_app, 'args' : ['handler']},
-            'apps/add_minion' : {'function' : add_minion_to_server, 'args' : ['handler', 'server_name', 'ip_address', 'username', 'password', 'key_filename', 'role']},
+            'apps/add_minion' : {'function' : add_minion_to_server, 'args' : ['server_name', 'ip_address', 'username', 'password', 'key_filename', 'role']},
             'apps/action' : {'function' : perform_server_action, 'args' : ['handler', 'provider_name', 'action', 'server_name', 'action_type', 'kwargs']},
             'apps/add_vpn_user': {'function' : add_openvpn_user, 'args' : ['username']},
             'apps/revoke_vpn_user': {'function' : revoke_openvpn_user, 'args' : ['username']},
@@ -50,7 +52,6 @@ def get_master_ip():
     gateway = gateway[0]
     result = call_master_cmd('network.get_route', arg = ['10.120.155.1'])
     ip = result['source']
-    print ('Ip is : ', ip)
 
     return ip
 
@@ -89,7 +90,6 @@ def get_openvpn_users():
     openvpn_users = call_master_cmd('openvpn.list_users')
 
     if type(openvpn_users) == str: 
-        print ('Openvpn users result : ', openvpn_users)
         raise Exception("Could not get openvpn users list. Contact your administrator for more information. ")
 
     #openvpn_users returns {"revoked" : [list, of, revoked, users], "active" : [list, of, active, users], "status" : {"client_list" : [], "routing_table" : []}}
@@ -126,7 +126,6 @@ def add_openvpn_user(username):
 
     success = call_master_cmd('openvpn.add_user', kwarg = {'username' : username})
     if success:
-        print ('Adding user returned : ', success)
         raise Exception('Adding an openvpn user returned with an error. ')
     raise tornado.gen.Return({'success' : True, 'data' : None, 'message' : 'User added successfuly. '})
 
@@ -137,7 +136,6 @@ def revoke_openvpn_user(username):
     success = call_master_cmd('openvpn.revoke_user', kwarg = {'username' : username})
  
     if success:
-        print ('Revoking user returned : ', success)
         raise Exception('Revoking %s returned with an error. ' % (username))
     raise tornado.gen.Return({'success' : True, 'data' : None, 'message' : 'User revoked successfuly. '})
 
@@ -149,7 +147,6 @@ def list_user_logins(username):
 
     success = call_master_cmd('openvpn.list_user_logins', kwarg = {'username' : username})
     if type(success) == str:
-        print ('User logins returned', success)
         raise Exception('Listing user logins returned with an error. ')
     raise tornado.gen.Return(success)
 
@@ -160,7 +157,6 @@ def download_vpn_cert(username, handler):
 
     cert_has_error = yield handler.has_error(cert)
     if cert_has_error:
-        print ('Cert has an error: ', cert)
         raise Exception('Getting certificate for %s returned with an error. ' % (username))
 
     vpn_cert_path = '/tmp/' + username + '_vpn.cert'
@@ -198,7 +194,6 @@ def perform_server_action(handler, action, server_name, provider_name = '', acti
         result = {'success' : True, 'message' : '', 'data' : result}
 
 #    result['message'] = 'Action %s completed successfuly. ' % action
-    print ('Result is : ', result)
     raise tornado.gen.Return(result)
 
 
@@ -322,7 +317,7 @@ def write_pillar(data):
 
 #TODO
 @tornado.gen.coroutine
-def add_minion_to_server(handler, server_name, ip_address, role, username = '', password = '', key_filename = ''):
+def add_minion_to_server(server_name, ip_address, role, username = '', password = '', key_filename = ''):
 
     ssh = paramiko.SSHClient()
     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
@@ -334,8 +329,8 @@ def add_minion_to_server(handler, server_name, ip_address, role, username = '', 
 
     #bootstrap_script is where the bootstrap script resides on the va_master
     #server_script is where it will reside on the targeted server
-    bootstrap_script = '/opt/va_master/minion-preseed.sh'
-    server_script = '/root/minion-preseed.sh'
+    bootstrap_script = '/opt/va_master/minion.sh'
+    server_script = '/root/minion.sh'
 #    server_script = '/root/bootstrap-salt.sh'
 
     connect_kwargs = {'username' : username}
@@ -346,6 +341,7 @@ def add_minion_to_server(handler, server_name, ip_address, role, username = '', 
     else: 
         raise Exception('When adding minion to server, I expected either password or key_filename, but both values are empty. ')
 
+    print ('ssh with ', ip_address, connect_kwargs)
     ssh.connect(ip_address, **connect_kwargs)
     sftp = ssh.open_sftp()
 
@@ -360,11 +356,10 @@ def add_minion_to_server(handler, server_name, ip_address, role, username = '', 
 
     #We create the pki dir and copy the initial keys there
     print ('Creating dir on minion')
-    stdin, stdout, stderr = ssh.exec_command('mkdir -p /etc/salt/pki/minion/')
-#    if stderr: 
-#        raise Exception('There was an error creating minion dir. ' + str(stderr.read()) + str(stdout.read()))
+    ssh_call(ssh, 'mkdir -p /etc/salt/pki/minion/')
 
     print ('Putting minion keys from ', init_key_dir, ' to /etc/salt/pki/minion/minion ')
+    print ('Pub key is : ', open(init_key_dir + '.pub').read())
     sftp.put(init_key_dir + '.pem', '/etc/salt/pki/minion/minion.pem')
     sftp.put(init_key_dir + '.pub', '/etc/salt/pki/minion/minion.pub')
 
@@ -372,21 +367,21 @@ def add_minion_to_server(handler, server_name, ip_address, role, username = '', 
     #This should install salt-minion, which along with the minion keys should make it readily available. 
     print ('Starting wget!')
     sftp.put(bootstrap_script, server_script)
-#    stdin, stdout, stderr = ssh.exec_command('wget -O %s https://bootstrap.saltstack.com' % (server_script))
+#    ssh_call(ssh, 'wget -O %s https://bootstrap.saltstack.com' % (server_script))
     print ('Wget is done. ')
 #    if stderr: 
 #        raise Exception('There was an error getting bootstrap script. ' + str(stderr.read()))
 
 #    master_line = 'master: ' + str(get_master_ip())
 
-#    stdin, stdout, stderr = ssh.exec_command('chmod +x ' + server_script)
-#    stdin, stdout, stderr = ssh.exec_command("bash -c '%s %s %s'" % (server_script, role, get_master_ip()))
-#    stdin, stdout, stderr = ssh.exec_command('echo fqdn > /etc/salt/minion_id')
+    ssh_call(ssh, 'chmod +x ' + server_script)
+    ssh_call(ssh, "%s %s %s" % (server_script, role, get_master_ip()))
+    ssh_call(ssh, 'echo fqdn > /etc/salt/minion_id')
 
 #    print ('stdout is : ', stdout.read())
 #    print ('Err is : ', stderr.read())
 
-#    stdin, stdout, stderr = ssh.exec_command('echo %s >> /etc/salt/minion' % (master_line))
+#    ssh_call(ssh, 'echo %s >> /etc/salt/minion' % (master_line))
 #    if stderr: 
 #        raise Exception('There was an error executing server script. ' + str(stderr.read()))
 
@@ -484,10 +479,12 @@ def add_server_to_datastore(datastore_handler, server_name, ip_address = None, h
 
     server['available_actions'] = {}
 
-    yield datastore_handler.insert_object(object_type = 'server', server_name = server_name, data = server)
+    server = yield datastore_handler.get_object(object_type = 'server', server_name = server_name)
+    if not server:
+
+        yield datastore_handler.insert_object(object_type = 'server', server_name = server_name, data = server)
 
     if manage_type: 
-        print ('Calling with ', datastore_handler, server_name, manage_type, username, driver_name, kwargs)
         server = yield manage_server_type(datastore_handler, server_name, manage_type, username = username, driver_name = driver_name, kwargs = kwargs)
 
     raise tornado.gen.Return(server)
@@ -509,28 +506,6 @@ def handle_app(datastore_handler, server_name, role):
 
     raise tornado.gen.Return(server)
 
-
-def test_ssh(username, ip_address, password = None, port = None):
-    cl = SSHClient()
-    cl.load_system_host_keys()
-    cl.set_missing_host_key_policy(AutoAddPolicy())
-    connect_kwargs = {
-        'username' : username, 
-    }
-    key_path = "TODO"
-
-    if data.get('port'): 
-        connect_kwargs['port'] = int(port)
-
-    if data.get('password'): 
-        connect_kwargs['password'] = password
-    else: 
-        connect_kwargs['key_filename'] = key_path + '.pem'
-
-    print ('Attempting connect with : ', connect_kwargs)
-    cl.connect(data.get('ip'), **connect_kwargs)
-
-
 @tornado.gen.coroutine
 def manage_server_type(datastore_handler, server_name, new_type, ip_address = None, username = None, driver_name = None, role = None, kwargs = {}):
     user_type = 'root' if username == 'root' else 'user'
@@ -551,7 +526,6 @@ def manage_server_type(datastore_handler, server_name, new_type, ip_address = No
     if not new_subtype: 
         raise Exception("Tried to change " + str(server_name) + " type to " + str(new_type) + " but could not get subtype. If managing with provider, make sure to set `driver_name`, if managing with SSH or winexe, set `ip_address` and `username`. ")
 
-    print ('New type is : ', new_type, ' subtype : ', new_subtype)
     type_actions = yield datastore_handler.get_object(object_type = 'managed_actions', manage_type = new_type, manage_subtype = new_subtype)
     server['type'] = 'managed'
     server['managed_by'] = list(set(server.get('managed_by', []) + [new_type]))

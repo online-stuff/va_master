@@ -39,7 +39,6 @@ class DatastoreHandler(object):
         #TODO check data to be as designed in the spec
         new_object = data
 
-#        print ('Inserting : ', new_object, ' at : ', new_object_handle)
         yield self.datastore.insert(new_object_handle, new_object)
 
     @tornado.gen.coroutine
@@ -48,6 +47,7 @@ class DatastoreHandler(object):
         object_handle = object_spec['consul_handle'].format(**handle_data)
         try:
             result = yield self.datastore.get(object_handle)
+            result.update(handle_data)
         except KeyNotFound: 
 #            import traceback
 #            traceback.print_exc()
@@ -108,7 +108,6 @@ class DatastoreHandler(object):
     @tornado.gen.coroutine
     def get_provider(self, provider_name):
         try:
-            print ('Getting provider: ', provider_name)
             provider = yield self.get_object('provider', provider_name = provider_name)
         except: 
             if provider_name == 'va_standalone_servers' : 
@@ -171,6 +170,7 @@ class DatastoreHandler(object):
         else: 
             generic_provider = provider
         generic_provider['servers'].append(server)
+#        yield self.insert_object('server', data = server, server_name = server['server_name'])
         yield self.edit_provider(generic_provider)
 
     @tornado.gen.coroutine

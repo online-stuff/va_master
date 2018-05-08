@@ -7,6 +7,9 @@ except:
 
 from base import bytes_to_int, int_to_bytes
 
+
+from va_master.api import apps
+
 from tornado.httpclient import AsyncHTTPClient, HTTPRequest
 import tornado.gen
 import json, datetime, subprocess, os
@@ -129,6 +132,21 @@ class LXCDriver(base.DriverBase):
         raise tornado.gen.Return(sizes)
 
 
+    def container_to_dict(self, container, provider_name):
+        server = {
+            'hostname' : container['server'].name,
+            'ip' : self.get_server_addresses(container)[0],
+            'size' : container['server'].name,
+            'used_disk' : self.get_server_usage(container, 'disk') / float(2**20),
+            'used_ram' : self.get_server_usage(container, 'memory') / float(2**20),
+            'used_cpu' : self.get_server_usage(container, 'cpu'), #TODO calculate CPU usage - current value is CPU time in seconds, we need to find total uptime and divide by it. 
+            'status' : container['server'].status, 
+            'cost' : 0,  #TODO find way to calculate costs
+            'estimated_cost' : 0,
+            'provider' : provider_name, 
+        }
+        return server
+
     @tornado.gen.coroutine
     def get_servers(self, provider):
         cl = self.get_client(provider)
@@ -136,20 +154,8 @@ class LXCDriver(base.DriverBase):
         servers = [{'server' : x, 'state' : x.state().__dict__} for x in servers]
 
 
-        servers = [
-            {
-                'hostname' : x['server'].name,
-                'ip' : self.get_server_addresses(x)[0],
-                'size' : x['server'].name,
-                'used_disk' : self.get_server_usage(x, 'disk') / float(2**20),
-                'used_ram' : self.get_server_usage(x, 'memory') / float(2**20),
-                'used_cpu' : self.get_server_usage(x, 'cpu'), #TODO calculate CPU usage - current value is CPU time in seconds, we need to find total uptime and divide by it. 
-                'status' : x['server'].status, 
-                'cost' : 0,  #TODO find way to calculate costs
-                'estimated_cost' : 0,
-                'provider' : provider['provider_name'], 
-            } for x in servers
-        ]
+        servers = [self.container_to_dict(x, provider['provider_name']) for x in servers]
+
         raise tornado.gen.Return(servers)
 
 
@@ -308,6 +314,30 @@ class LXCDriver(base.DriverBase):
             }
 
             new_container = cl.containers.create(lxc_config, wait = True)
+            ssh_path = '/root/.ssh'
+            keys_path = ssh_path + '/authorized_keys'
+
+            with open(self.key_path + '.pub', 'r') as f:
+                key = f.read()
+
+            if data.get('role'): 
+                new_container.start(wait = True)
+                new_container.execute(['mkdir', '-p', ssh_path])
+                fm = new_container.FilesManager(cl, new_container)
+                fm.put(keys_path, key)
+
+                ip = []
+                while not ip: 
+                    addresses = new_container.state().network['eth0']['addresses']
+                    ip = [x['address'] for x in addresses if x.get('family', '') == 'inet']
+                    print ('Network is : ', new_container.state().network)
+ 
+                new_container.execute(['apt-get', '-y', 'install', 'openssh-server'])
+  
+                ip = ip[0]
+                print ('IP is : ', ip)
+                yield apps.add_minion_to_server(data['server_name'], ip, data['role'], key_filename = '/root/.ssh/va-master.pem', username = 'root')
+            new_container = self.container_to_dict(provider['provider_name'])
             raise tornado.gen.Return(new_container)
         except:
             import traceback
