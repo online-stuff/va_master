@@ -10,12 +10,12 @@ import distutils
 import traceback
 import functools
 import imp
-
 from va_master.handlers.datastore_handler import DatastoreHandler
 from va_master.api import login
 from va_master.va_master_project import config
 import cli_environment
 import unittest
+
 consul_conf_path = '/etc/consul.json'
 run_sync = tornado.ioloop.IOLoop.instance().run_sync
 folder_pwd = os.path.join(os.path.dirname(os.path.realpath(__file__)), '')
@@ -209,7 +209,7 @@ def create_ssh_keys(cli_config, store_config):
         traceback.print_exc()
 
 def handle_init(args):
-    """Handles cli `start` command. Should write proper conf and start daemon."""
+    """Handles cli `init` command. Should write proper conf and start daemon."""
 
     values = get_values_from_args(args)
 
@@ -233,6 +233,12 @@ def handle_init(args):
     cli_success('Created first account. Setup is finished.')
 #    cli_config.init_handler(init_vals = values)
 
+def handle_manage(args):
+    """Handles cli `manage` command. Should write proper conf and start daemon."""
+    cli_config = config.Config()
+    store = cli_config.datastore
+    datastore_handler = DatastoreHandler(store)
+    states_data = run_sync(functools.partial(datastore_handler.import_states_from_states_data, delete_panels = args['clear_panels']))
 
 def handle_jsbuild(args):
     try:
@@ -320,6 +326,7 @@ def handle_test_api(args):
 
 
 def entry():
+    print ('In entry')
     parser = argparse.ArgumentParser(description='A VapourApps client interface')
     subparsers = parser.add_subparsers(help='action')
 
@@ -338,6 +345,11 @@ def entry():
 
     # args.sub will equal 'start' if this subparser is used
     init_sub.set_defaults(sub='init')
+
+    manage_sub = subparsers.add_parser('manage', help = 'Helps with managing some va_master properties. ')
+    manage_sub.add_argument('--reset-states', help = 'Reads all appinfo.json files from /srv/salt/* and updates the states. ', action = 'store_true')
+    manage_sub.add_argument('--clear-panels', help = 'Reads all appinfo.json files from /srv/salt/* and clears all the panels. ', action = 'store_true')
+    manage_sub.set_defaults(sub = 'manage')
 
     jsbuild_sub = subparsers.add_parser('jsbuild', help='Compiles and' + \
     ' minifies JavaScript')
@@ -364,14 +376,17 @@ def entry():
 
     args = parser.parse_args()
     # Define handlers for each subparser
+    print ('Have args. ')
     handlers = {
         'init': handle_init,
+        'manage' : handle_manage, 
         'jsbuild': handle_jsbuild,
         'add_module' : handle_add_module,
         'new_user' : handle_new_user,
         'test_api' : handle_test_api,
         'stop': lambda x: None
     }
+    print ('Doing ', handlers[args.sub](vars(args)))
     # Call the proper handler based on the subparser argument
     handlers[args.sub](vars(args))
 

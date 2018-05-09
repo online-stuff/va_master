@@ -340,7 +340,7 @@ class DatastoreHandler(object):
 
 
     @tornado.gen.coroutine
-    def import_states_from_states_data(self, states = []):
+    def import_states_from_states_data(self, states = [], delete_panels = False):
         empty_panel = {'admin' : [], 'user' : []}
         states_data = yield self.get_states_data(states)
 
@@ -353,10 +353,13 @@ class DatastoreHandler(object):
                 except: 
                     old_panel = {}
 
+                servers = old_panel.get('servers', [])
+                if delete_panels:
+                    servers = []
                 panel = {
                     'name' : state['name'], 
                     'icon' : state['icon'], 
-                    'servers' : old_panel.get('servers', []),
+                    'servers' : servers,
                     'panels' : state.get('panels', empty_panel)[user_type]
                 }
                 yield self.store_panel(panel, user_type)

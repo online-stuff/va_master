@@ -4,8 +4,6 @@ import pkg_resources
 import logging
 import os
 from va_master.consul_kv import datastore
-from va_master.host_drivers import openstack
-
 from va_master.handlers import datastore_handler, drivers_handler
 #folder_pwd = os.path.join(os.path.dirname(os.path.realpath(__file__)), '')
 
@@ -43,7 +41,6 @@ class Config(object):
 
         # Now dynamically inject any kwargs
         for kw in kwargs:
-            print ('Initiating ', kw, ' to ', kwargs[kw])
             setattr(self, kw, kwargs[kw])
 
     def pretty_version(self):

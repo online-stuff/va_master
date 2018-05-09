@@ -236,7 +236,13 @@ class GenericDriver(base.DriverBase):
 
 
         print ('Attempting connect with : ', connect_kwargs)
-        cl.connect(data.get('ip'), **connect_kwargs)
+        try:
+            cl.connect(data.get('ip'), **connect_kwargs)
+        except: 
+            print ('Failed to connect with ssh to ', data.get('ip'))
+            import traceback
+            traceback.print_exc()
+            raise
 
         server = {"server_name" : data["server_name"], "hostname" : data["server_name"], "ip_address" : data["ip"], "local_gb" : 0, "memory_mb" : 0, "status" : "n/a" , "managed_by" : ['ssh']}
 
