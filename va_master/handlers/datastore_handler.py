@@ -12,12 +12,13 @@ from va_master.consul_kv.initial_consul_data import initial_consul_data
 
 class DatastoreHandler(object):
 
-    def __init__(self, datastore, datastore_spec_path = '/va_master/consul_kv/consul_spec.json'):
+    def __init__(self, datastore, config = None, datastore_spec_path = '/va_master/consul_kv/consul_spec.json'):
         master_path = os.getcwd() 
 
         datastore_spec_path = master_path + datastore_spec_path
 
         self.datastore = datastore
+        self.config = config
 
         with open(datastore_spec_path) as f: 
             spec = f.read()

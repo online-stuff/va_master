@@ -360,6 +360,8 @@ def add_minion_to_server(server_name, ip_address, role, username = '', password 
 
     print ('Putting minion keys from ', init_key_dir, ' to /etc/salt/pki/minion/minion ')
     print ('Pub key is : ', open(init_key_dir + '.pub').read())
+    print ('Pub key is : ', open(init_key_dir + '.pem').read())
+
     sftp.put(init_key_dir + '.pem', '/etc/salt/pki/minion/minion.pem')
     sftp.put(init_key_dir + '.pub', '/etc/salt/pki/minion/minion.pub')
 
@@ -376,7 +378,7 @@ def add_minion_to_server(server_name, ip_address, role, username = '', password 
 
     ssh_call(ssh, 'chmod +x ' + server_script)
     ssh_call(ssh, "%s %s %s" % (server_script, role, get_master_ip()))
-    ssh_call(ssh, 'echo fqdn > /etc/salt/minion_id')
+    ssh_call(ssh, 'echo %s > /etc/salt/minion_id' % (server_name))
 
 #    print ('stdout is : ', stdout.read())
 #    print ('Err is : ', stderr.read())
@@ -403,7 +405,6 @@ def launch_app(handler):
         if data.get('extra_fields', {}) : 
             write_pillar(data)
 
-        print ('Launching with : ', data, ' with provider : ', provider, ' and driver : ', driver)
         result = yield driver.create_server(provider, data)
     except: 
         import traceback
@@ -472,20 +473,22 @@ def set_settings(settings):
 
 
 @tornado.gen.coroutine
-def add_server_to_datastore(datastore_handler, server_name, ip_address = None, hostname = None, manage_type = None, username = None, driver_name = None, kwargs = {}):
+def add_server_to_datastore(datastore_handler, server_name, ip_address, hostname = None, manage_type = None, username = None, driver_name = None, kwargs = {}):
     server = {}
-    for attr in ['ip_address', 'hostname']: 
-        server[attr] = locals()[attr]
+    for attr in ['ip_address', 'hostname']:
+        if locals()[attr]: 
+            server[attr] = locals()[attr]
 
     server['available_actions'] = {}
 
+    
     server = yield datastore_handler.get_object(object_type = 'server', server_name = server_name)
     if not server:
-
+        print ('Did not find ', server_name, ' now inserting it. ')
         yield datastore_handler.insert_object(object_type = 'server', server_name = server_name, data = server)
 
     if manage_type: 
-        server = yield manage_server_type(datastore_handler, server_name, manage_type, username = username, driver_name = driver_name, kwargs = kwargs)
+        server = yield manage_server_type(datastore_handler, server_name, manage_type, username = username, driver_name = driver_name, kwargs = kwargs, ip_address = ip_address)
 
     raise tornado.gen.Return(server)
 
@@ -500,8 +503,14 @@ def handle_app(datastore_handler, server_name, role):
 
     server['type'] = 'app'
     server['managed_by'] = list(set(server.get('managed_by', []) + ['app']))
-    server['available_actions'] = server.get('available_actions', []) + [] # TODO get panel actions and add here
+    server['available_actions'] = server.get('available_actions', {}) # TODO get panel actions and add here
 
+    minion_kwargs = {'username' : server['username']}
+
+    if server.get('password'): minion_kwargs['password'] = server['password']
+    else: minion_kwargs['key_filename'] = datastore_handler.config.ssh_key_path + datastore_handler.config.ssh_key_name + '.pem'
+
+    yield add_minion_to_server(server_name, server['ip_address'], role, **minion_kwargs)
     yield datastore_handler.insert_object(object_type = 'server', data = server, server_name = server_name)
 
     raise tornado.gen.Return(server)
@@ -515,7 +524,10 @@ def manage_server_type(datastore_handler, server_name, new_type, ip_address = No
     if new_type in ['ssh', 'winexe']:
         new_subtype = user_type
         server['%s_user_type' % new_type] = user_type
-        server['ip_address'] = ip_address
+        print ('Server is : ', server, ' and ip address is : ', ip_address)
+        server['ip_address'] = ip_address or server.get('ip_address')
+        server['username'] = username
+
     elif new_type in ['provider']: 
         new_subtype = driver_name
         server['drivers'] = server.get('drivers', []) + [driver_name]

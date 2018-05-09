@@ -38,7 +38,7 @@ class Config(object):
         self.https_crt = folder_pwd + '/ssl/cert.crt'
         self.https_key = folder_pwd + '/ssl/server.key'
 
-        self.datastore_handler = datastore_handler.DatastoreHandler(datastore = self.datastore)
+        self.datastore_handler = datastore_handler.DatastoreHandler(datastore = self.datastore, config = self)
         self.drivers_handler = drivers_handler.DriversHandler(self.datastore_handler, ssh_key_path = self.ssh_key_path, ssh_key_name = self.ssh_key_name)
 
         # Now dynamically inject any kwargs

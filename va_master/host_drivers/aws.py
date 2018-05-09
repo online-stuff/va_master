@@ -51,7 +51,7 @@ output=json
 
 class AWSDriver(base.DriverBase):
 
-    def __init__(self, provider_name = 'aws_provider', profile_name = 'aws_profile', host_ip = '192.168.80.39', key_name = 'va_master_key', key_path = '/root/va_master_key', datastore_handler = None):
+    def __init__(self, datastore_handler = None, provider_name = 'aws_provider', profile_name = 'aws_profile', host_ip = '192.168.80.39', key_name = 'va_master_key', key_path = '/root/va_master_key'):
         kwargs = {
             'driver_name' : 'aws', 
             'provider_template' : PROVIDER_TEMPLATE, 

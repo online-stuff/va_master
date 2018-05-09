@@ -32,7 +32,7 @@ class DriversHandler(object):
                 'host_ip' : host_ip, 
                 'key_name' : self.ssh_key_name, 
                 'key_path' : self.ssh_key_path, 
-                'datastore_handler' : self.datastore_handler
+                'datastore_handler' : self.datastore_handler,
             }
 
             self.drivers = [x(**kwargs) for x in [
@@ -40,8 +40,9 @@ class DriversHandler(object):
                 gce.GCEDriver,
                 generic_driver.GenericDriver,
                 aws.AWSDriver,
-                digitalocean_driver.DigitalOceanDriver,
             ]]
+            
+
             kwargs['flavours'] = va_flavours
 
 
