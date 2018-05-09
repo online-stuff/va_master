@@ -303,6 +303,7 @@ def get_provider_info(handler, dash_user, get_billing = True, get_servers = True
             provider['servers'] = [x for x in provider['servers'] if x['hostname'] not in hidden_servers]
 
         for server in provider['servers']:
+            print ('Server in info is : ', server)
             server_panel = [x for x in states if server.get('hostname', '') in x['servers']] or [{'icon' : 'fa-server'}]
             server['icon'] = server_panel[0]['icon']
             datastore_server = yield datastore_handler.get_object(object_type = 'server', server_name = server.get('server_name', server.get('hostname', '')))

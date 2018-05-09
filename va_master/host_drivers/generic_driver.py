@@ -123,8 +123,6 @@ class GenericDriver(base.DriverBase):
             } for x in servers
         ]
 
-
-
         if provider['provider_name'] == 'va_standalone_servers' : 
             provider['provider_name'] = ''
 
@@ -238,11 +236,11 @@ class GenericDriver(base.DriverBase):
         print ('Attempting connect with : ', connect_kwargs)
         try:
             cl.connect(data.get('ip'), **connect_kwargs)
-        except: 
+        except Exception as e: 
             print ('Failed to connect with ssh to ', data.get('ip'))
             import traceback
             traceback.print_exc()
-            raise
+            raise Exception('Failed to connect with ssh: ' + e.message)
 
         server = {"server_name" : data["server_name"], "hostname" : data["server_name"], "ip_address" : data["ip"], "local_gb" : 0, "memory_mb" : 0, "status" : "n/a" , "managed_by" : ['ssh']}
 
