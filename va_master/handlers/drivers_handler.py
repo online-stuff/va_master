@@ -5,7 +5,7 @@ import traceback
 import functools
 import tornado
 import tornado.gen
-from va_master.host_drivers import openstack, aws, vcloud, libvirt_driver, generic_driver, century_link, gce, vmware, digitalocean, lxc
+from va_master.host_drivers import openstack, aws, vcloud, libvirt_driver, generic_driver, century_link, gce, vmware, digitalocean
 
 from Crypto.PublicKey import RSA
 from concurrent.futures import ProcessPoolExecutor
