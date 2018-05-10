@@ -154,8 +154,8 @@ function download(url, token, data, fileWithExt, callback){
 	});
 }
 
-function getSpinner(spinnerStyle){
-    return <span className="spinner" style={spinnerStyle} ><i className="fa fa-spinner fa-spin fa-3x" aria-hidden="true"></i></span>;
+function getSpinner(style){
+    return <div className="spinner" style={style}></div>;
 }
 
 function capitalizeFirstLetter(text){
@@ -173,6 +173,18 @@ function getFormFields(fields){
             </FormGroup>
         );
     });
+}
+
+function findObjInArr(arr, param, term){
+    for(var i = 0; i < arr.length; i++){
+        if(arr[i][param] === term)
+            return arr[i];
+    }
+    return null;
+}
+
+function getTimestamp(dateObj, seconds){
+    return new Date(dateObj.getTime() - 1000*seconds).getTime();
 }
 
 module.exports = {
@@ -195,5 +207,7 @@ module.exports = {
     download,
     getSpinner,
     capitalizeFirstLetter,
-    getFormFields
+    getFormFields,
+    findObjInArr,
+    getTimestamp
 }

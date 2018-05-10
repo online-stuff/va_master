@@ -12,16 +12,12 @@ module.exports = {
             opts.data = data;
         }
         $.ajax(opts).done(function(data){
-            if(data.success){
-                if(data.message)
-                    dfd.resolve(data.message);
-                else
-                    dfd.resolve(data.data);
-            }else{
-                dfd.reject(data.message);
-            }
-        }).fail(function(jqXHR, textStatus){
-            dfd.reject("Error " + textStatus);
+            if(data.message)
+                dfd.resolve(data.message);
+            else
+                dfd.resolve(data.data);
+        }).fail(function(jqXHR){
+            dfd.reject(jqXHR.responseJSON.message);
         });
         return dfd.promise();
     },
@@ -41,16 +37,38 @@ module.exports = {
             opts.data = JSON.stringify(data);
         }
         $.ajax(opts).done(function(data){
-            if(data.success){
-                if(data.message)
-                    dfd.resolve(data.message);
-                else
-                    dfd.resolve(data.data);
-            }else{
-                dfd.reject(data.message);
-            }
-        }).fail(function(jqXHR, textStatus){
-            dfd.reject("Error " + textStatus);
+            if(data.message)
+                dfd.resolve(data.message);
+            else
+                dfd.resolve(data.data);
+        }).fail(function(jqXHR){
+            dfd.reject(jqXHR.responseJSON.message);
+        });
+
+        return dfd.promise();
+    },
+    put: function(url, token, data){
+        var dfd = new $.Deferred();
+        var opts = {
+            type: 'PUT',
+            url: url
+        };
+
+        if(typeof token !== 'undefined') {
+            opts.headers = {'Authorization': 'Token ' + token};
+        }
+
+        if(typeof data !== 'undefined') {
+            opts.contentType =  'application/json';
+            opts.data = JSON.stringify(data);
+        }
+        $.ajax(opts).done(function(data){
+            if(data.message)
+                dfd.resolve(data.message);
+            else
+                dfd.resolve(data.data);
+        }).fail(function(jqXHR){
+            dfd.reject(jqXHR.responseJSON.message);
         });
 
         return dfd.promise();
@@ -71,13 +89,9 @@ module.exports = {
             opts.data = JSON.stringify(data);
         }
         $.ajax(opts).done(function(data){
-            if(data.success){
-                dfd.resolve(data.data);
-            }else{
-                dfd.reject(data.message);
-            }
-        }).fail(function(jqXHR, textStatus){
-            dfd.reject("Error " + textStatus);
+            dfd.resolve(data.data);
+        }).fail(function(jqXHR){
+            dfd.reject(jqXHR.responseJSON.message);
         });
 
         return dfd.promise();

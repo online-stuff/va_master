@@ -103,6 +103,7 @@ def get_values_from_args(args):
     values = {k: v for k, v in values.items() if v}
     return values
 
+#We used to try and work with this to setup consul. Atm seems like we're doing it manually. 
 def handle_configurations(fqdn = None):
     result = True
     if fqdn:
@@ -128,9 +129,11 @@ def handle_configurations(fqdn = None):
             sys.exit(1)
     else:
         try:
-            cli_environment.reload_daemon()
-            cli_success('Started daemon.')
+            pass
+#            cli_environment.reload_daemon()
+#            cli_success('Started daemon.')
         except:
+            import traceback
             cli_error('Failed reloading the daemon, check supervisor logs.' + \
             '\nYou may try `service supervisor restart` or ' + \
             '/var/log/supervisor/supervisord.log')
@@ -212,7 +215,7 @@ def handle_init(args):
 
     result = True # If `result` is True, all actions completed successfully
 
-    handle_configurations(values.get('fqdn'))
+#    handle_configurations(values.get('fqdn'))
 
     cli_config = config.Config(init_vals = values)
 
@@ -293,7 +296,7 @@ def handle_new_user(args):
    
 def handle_test_api(args):
     from va_master import tests
-    from va_master.tests import va_panels_tests, va_providers_tests, va_states_tests, va_test_base, va_testcase, va_users_tests, va_vpn_tests
+    from va_master.tests import va_panels_tests, va_providers_tests, va_states_tests, va_test_base, va_testcase, va_users_tests, va_vpn_tests, va_services_tests
 
     tests = args.get('tests')
 
@@ -304,6 +307,7 @@ def handle_test_api(args):
             va_states_tests.VAStatesTests,
             va_users_tests.VAUsersTests,
             va_vpn_tests.VAVPNTests,
+            va_services_tests.VAServicesTests,
     ]
 
     if tests: 

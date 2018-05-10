@@ -8,18 +8,12 @@ module.exports = {
         filename: 'bundle.js'
     },
     module: {
-        loaders: [
+        rules: [
             {
                 test: /\.js$/,
-                loader: 'babel-loader',
-                query: {
-                    presets: ['es2016', 'react']
-                }
+                exclude: /node_modules/,
+                use: ['babel-loader']
             }
         ]
-    },
-    stats: {
-        colors: true
-    },
-    devtool: 'source-map'
+    }
 };

@@ -42,7 +42,9 @@ class Log extends Component {
         this.ws.onmessage = evt => {
             var data = JSON.parse(evt.data);
             var logs = [], hosts = [];
-            if(data.type === "update"){
+            if(data.type === "connected"){
+                this.updateLogs();
+            }else if(data.type === "update"){
                 let newLog = data.message, host = newLog.host; 
                 hosts = this.state.hosts;
                 logs = this.state.logs.concat([newLog]);
@@ -72,11 +74,11 @@ class Log extends Component {
         this.setState({value: evt.target.value});
     }
     updateLogs(startDate, endDate){
-        var msg = {
+        var msg = startDate ? {
             type: "get_messages",
             from_date: startDate,
             to_date: endDate
-        };
+        } : {type: "get_messages"};
         this.ws.send(JSON.stringify(msg));
     }
     changeObservableStatus(value){

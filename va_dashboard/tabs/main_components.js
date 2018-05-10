@@ -214,27 +214,26 @@ class Table extends Component {
             data = {"server_name": this.props.panel.server, "action": evtKey, "args": id};
             Network.post('/api/panels/action', this.props.auth.token, data).done(msg => {
                 if(typeof msg === 'string'){
-                    this.props.dispatch({type: 'SHOW_ALERT', msg});
-                }else{
-                    let { source, panel, name, refreshActions } = this.props;
-                    data.action = source;
-                    data.args = [];
-                    if('args' in panel && panel.args !== ""){
-                        data.args = [panel.args];
-                    }
-					if(refreshActions){
-						data.call_functions = refreshActions;
-					}
-                    Network.post('/api/panels/action', this.props.auth.token, data).done(msg => {
-						if(refreshActions){
-                            this.props.dispatch({type: 'CHANGE_MULTI_DATA', data: msg});
-						}else if(typeof msg !== 'string'){
-                            this.props.dispatch({type: 'CHANGE_DATA', data: msg, name});
-                        }else{
-                            this.props.dispatch({type: 'SHOW_ALERT', msg});
-                        }
-                    });
+                    this.props.dispatch({type: 'SHOW_ALERT', msg, success: true});
                 }
+                let { source, panel, name, refreshActions } = this.props;
+                data.action = source;
+                data.args = [];
+                if('args' in panel && panel.args !== ""){
+                    data.args = [panel.args];
+                }
+                if(refreshActions){
+                    data.call_functions = refreshActions;
+                }
+                Network.post('/api/panels/action', this.props.auth.token, data).done(msg => {
+                    if(refreshActions){
+                        this.props.dispatch({type: 'CHANGE_MULTI_DATA', data: msg});
+                    }else if(typeof msg !== 'string'){
+                        this.props.dispatch({type: 'CHANGE_DATA', data: msg, name});
+                    }else{
+                        this.props.dispatch({type: 'SHOW_ALERT', msg, success: true});
+                    }
+                });
             }).fail(msg => {
                 this.props.dispatch({type: 'SHOW_ALERT', msg});
             });
@@ -444,20 +443,23 @@ class Modal extends Component {
         if('refreshActions' in template){
             data.call_functions = template.refreshActions;
         }
-        Network.post("/api/panels/action", this.props.auth.token, data).done((d) => {
+        Network.post("/api/panels/action", this.props.auth.token, data).done(d => {
             this.props.dispatch({type: 'CLOSE_MODAL'});
             if('refreshAction' in template){
                 let args = [];
                 let { refreshAction, tableName } = template;
                 if(panel.args !== "") args = [panel.args];
                 var data = {"server_name": panel.server, "action": refreshAction, "args": args};
-                Network.post('/api/panels/action', this.props.auth.token, data).done((msg) => {
+                Network.post('/api/panels/action', this.props.auth.token, data).done(msg => {
                     if(typeof msg !== 'string'){
                         this.props.dispatch({type: 'CHANGE_DATA', data: msg, name: tableName});
                     }else{
-                        this.props.dispatch({type: 'SHOW_ALERT', msg: msg});
+                        this.props.dispatch({type: 'SHOW_ALERT', msg: msg, success: true});
                     }
                 });
+            }
+            if(typeof d === 'string'){
+                this.props.dispatch({type: 'SHOW_ALERT', msg: d, success: true});
             }
         }).fail(msg => {
             this.props.dispatch({type: 'SHOW_ALERT', msg: msg});
