@@ -94,7 +94,16 @@ initial_consul_data = {
             {'name' : 'start', 'type' : 'action'}, 
             {'name' : 'stop', 'type' : 'action'}
         ],
+    },
+    "managed_actions/salt/" : {
+        "actions" : [
+            {'name' : 'reboot', 'type' : 'confirm'}, 
+            {'name' : 'delete', 'type' : 'confirm'}, 
+            {'name' : 'start', 'type' : 'action'}, 
+            {'name' : 'stop', 'type' : 'action'}
+        ],
     }
+
 
 }
 
