@@ -50,10 +50,14 @@ def get_master_ip():
     result = call_master_cmd('network.default_route')
     gateway = [x['gateway'] for x in result if x.get('gateway', '') != '::']
     gateway = gateway[0]
-    result = call_master_cmd('network.get_route', arg = ['10.120.155.1'])
+    result = call_master_cmd('network.get_route', arg = ['gateway'])
     ip = result['source']
 
     return ip
+
+def get_route_to_minion(ip_address):
+    result = call_master_cmd('network.get_route', arg = [ip_address])
+    return result['source']
 
 def call_master_cmd(fun, arg = [], kwarg = {}):
     cl = LocalClient()
@@ -361,7 +365,7 @@ def add_minion_to_server(server_name, ip_address, role, username = '', password 
     sftp.put(bootstrap_script, server_script)
 
     ssh_call(ssh, 'chmod +x ' + server_script)
-    ssh_call(ssh, "%s %s %s" % (server_script, role, get_master_ip()))
+    ssh_call(ssh, "%s %s %s" % (server_script, role, get_route_to_minion(ip_address)))
     ssh_call(ssh, 'echo %s > /etc/salt/minion_id' % (server_name))
 
     #If the role is defined, we also add the panel.  
