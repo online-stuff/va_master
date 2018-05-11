@@ -335,7 +335,6 @@ def add_minion_to_server(server_name, ip_address, role, username = '', password 
     #server_script is where it will reside on the targeted server
     bootstrap_script = '/opt/va_master/minion.sh'
     server_script = '/root/minion.sh'
-#    server_script = '/root/bootstrap-salt.sh'
 
     connect_kwargs = {'username' : username}
     if password: 
@@ -345,7 +344,6 @@ def add_minion_to_server(server_name, ip_address, role, username = '', password 
     else: 
         raise Exception('When adding minion to server, I expected either password or key_filename, but both values are empty. ')
 
-    print ('ssh with ', ip_address, connect_kwargs)
     ssh.connect(ip_address, **connect_kwargs)
     sftp = ssh.open_sftp()
 
@@ -353,43 +351,30 @@ def add_minion_to_server(server_name, ip_address, role, username = '', password 
     create_key_cmd = ['salt-key', '--gen-keys=%s' % (server_name), '--gen-keys-dir=/tmp/']
     copy_key_to_salt_cmd = ['cp', init_key_dir + '.pub', local_key_dir]
 
-    print ('Performing ', subprocess.list2cmdline(create_key_cmd))
     subprocess.check_output(create_key_cmd)
-    print ('Performing ', subprocess.list2cmdline(copy_key_to_salt_cmd))
     subprocess.check_output(copy_key_to_salt_cmd)
 
     #We create the pki dir and copy the initial keys there
-    print ('Creating dir on minion')
     ssh_call(ssh, 'mkdir -p /etc/salt/pki/minion/')
 
-    print ('Putting minion keys from ', init_key_dir, ' to /etc/salt/pki/minion/minion ')
-    print ('Pub key is : ', open(init_key_dir + '.pub').read())
     sftp.put(init_key_dir + '.pem', '/etc/salt/pki/minion/minion.pem')
     sftp.put(init_key_dir + '.pub', '/etc/salt/pki/minion/minion.pub')
 
     #Finally, we download the bootstrap script on the remote server and run it
     #This should install salt-minion, which along with the minion keys should make it readily available. 
-    print ('Starting wget!')
     sftp.put(bootstrap_script, server_script)
-#    ssh_call(ssh, 'wget -O %s https://bootstrap.saltstack.com' % (server_script))
-    print ('Wget is done. ')
-#    if stderr: 
-#        raise Exception('There was an error getting bootstrap script. ' + str(stderr.read()))
-
-#    master_line = 'master: ' + str(get_master_ip())
 
     ssh_call(ssh, 'chmod +x ' + server_script)
     ssh_call(ssh, "%s %s %s" % (server_script, role, get_route_to_minion(ip_address)))
-    ssh_call(ssh, 'echo fqdn > /etc/salt/minion_id')
+    ssh_call(ssh, 'echo %s > /etc/salt/minion_id' % (server_name))
 
-#    print ('stdout is : ', stdout.read())
-#    print ('Err is : ', stderr.read())
+    #If the role is defined, we also add the panel.  
+    cl = LocalClient()
+    highstate = cl.cmd(server_name, 'state.highstate')
+    print ('Highstate result is : ', highstate)
 
-#    ssh_call(ssh, 'echo %s >> /etc/salt/minion' % (master_line))
-#    if stderr: 
-#        raise Exception('There was an error executing server script. ' + str(stderr.read()))
 
-        
+
 ##@auth_only
 @tornado.gen.coroutine
 def launch_app(handler):
@@ -406,12 +391,11 @@ def launch_app(handler):
     
         if data.get('extra_fields', {}) : 
             write_pillar(data)
-
-        print ('Launching with : ', data, ' with provider : ', provider, ' and driver : ', driver)
-        result = yield driver.create_server(provider, data)
     except: 
         import traceback
         traceback.print_exc()
+
+    result = yield driver.create_server(provider, data)
 
     yield add_server_to_datastore(handler.datastore_handler, server_name = data['server_name'], hostname = data['server_name'], manage_type = 'provider', driver_name = provider['driver_name'], ip_address = data.get('ip'))
 
@@ -476,20 +460,22 @@ def set_settings(settings):
 
 
 @tornado.gen.coroutine
-def add_server_to_datastore(datastore_handler, server_name, ip_address = None, hostname = None, manage_type = None, username = None, driver_name = None, kwargs = {}):
+def add_server_to_datastore(datastore_handler, server_name, ip_address, hostname = None, manage_type = None, username = None, driver_name = None, kwargs = {}):
     server = {}
-    for attr in ['ip_address', 'hostname']: 
-        server[attr] = locals()[attr]
+    for attr in ['ip_address', 'hostname']:
+        if locals()[attr]: 
+            server[attr] = locals()[attr]
 
     server['available_actions'] = {}
 
+    
     server = yield datastore_handler.get_object(object_type = 'server', server_name = server_name)
     if not server:
-
+        print ('Did not find ', server_name, ' now inserting it. ')
         yield datastore_handler.insert_object(object_type = 'server', server_name = server_name, data = server)
 
     if manage_type: 
-        server = yield manage_server_type(datastore_handler, server_name, manage_type, username = username, driver_name = driver_name, kwargs = kwargs)
+        server = yield manage_server_type(datastore_handler, server_name, manage_type, username = username, driver_name = driver_name, kwargs = kwargs, ip_address = ip_address)
 
     raise tornado.gen.Return(server)
 
@@ -503,10 +489,20 @@ def handle_app(datastore_handler, server_name, role):
     yield panels.new_panel(datastore_handler, server_name = server_name, role = role)
 
     server['type'] = 'app'
-    server['managed_by'] = list(set(server.get('managed_by', []) + ['app']))
-    server['available_actions'] = server.get('available_actions', []) + [] # TODO get panel actions and add here
+    managed_by = list(set(server.get('managed_by', [])))
+    server['managed_by'] = managed_by + ['app']
+    server['available_actions'] = server.get('available_actions', {}) # TODO get panel actions and add here
 
+    minion_kwargs = {'username' : server['username']}
+
+    if server.get('password'): minion_kwargs['password'] = server['password']
+    else: minion_kwargs['key_filename'] = datastore_handler.config.ssh_key_path + datastore_handler.config.ssh_key_name + '.pem'
+
+    yield add_minion_to_server(server_name, server['ip_address'], role, **minion_kwargs)
     yield datastore_handler.insert_object(object_type = 'server', data = server, server_name = server_name)
+
+    if role: 
+        yield panels.new_panel(datastore_handler, server_name = server_name, role = role)
 
     raise tornado.gen.Return(server)
 
@@ -519,7 +515,9 @@ def manage_server_type(datastore_handler, server_name, new_type, ip_address = No
     if new_type in ['ssh', 'winexe']:
         new_subtype = user_type
         server['%s_user_type' % new_type] = user_type
-        server['ip_address'] = ip_address
+        server['ip_address'] = ip_address or server.get('ip_address')
+        server['username'] = username
+
     elif new_type in ['provider']: 
         new_subtype = driver_name
         server['drivers'] = server.get('drivers', []) + [driver_name]

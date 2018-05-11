@@ -123,8 +123,6 @@ class GenericDriver(base.DriverBase):
             } for x in servers
         ]
 
-
-
         if provider['provider_name'] == 'va_standalone_servers' : 
             provider['provider_name'] = ''
 
@@ -236,20 +234,21 @@ class GenericDriver(base.DriverBase):
 
 
         print ('Attempting connect with : ', connect_kwargs)
-        cl.connect(data.get('ip'), **connect_kwargs)
+        try:
+            cl.connect(data.get('ip'), **connect_kwargs)
+        except Exception as e: 
+            print ('Failed to connect with ssh to ', data.get('ip'))
+            import traceback
+            traceback.print_exc()
+            raise Exception('Failed to connect with ssh: ' + e.message)
 
-        # distro = ssh_session.cmd(['get', 'distro', 'cmd'])
-        # instal = ssh_session.cmd(['install', 'salt', 'stuff'])
-        # services are added on the api side.
-        server = {"server_name" : data["server_name"], "hostname" : data["server_name"], "ip_address" : data.get("ip"), "local_gb" : 0, "memory_mb" : 0, "status" : "n/a" , "managed_by" : ['ssh']}
+        server = {"server_name" : data["server_name"], "hostname" : data["server_name"], "ip_address" : data["ip"], "local_gb" : 0, "memory_mb" : 0, "status" : "n/a" , "managed_by" : ['ssh']}
 
-        print ('Adding ', server['server_name'], ' with managed by : ', 'ssh')
-        yield apps.add_server_to_datastore(self.datastore_handler, server_name = server['server_name'], ip_address = server['ip_address'], hostname = server['hostname'], manage_type = 'ssh', username = data.get('username', ''), driver_name = 'generic_driver')
+        print ('Adding server to datastore with : ', self.datastore_handler, server['server_name'], data['ip'])
+        yield apps.add_server_to_datastore(self.datastore_handler, server_name = server['server_name'], ip_address = data['ip'], hostname = server['hostname'], manage_type = 'ssh', username = data.get('username', ''), driver_name = 'generic_driver', kwargs = {'password' : data.get('password', '')})
         db_server = yield self.datastore_handler.get_object('server', server_name = server['server_name'])
-        print ('Server is : ', db_server)
 
         if provider['provider_name'] != 'va_standalone_servers' : 
-            print ('Is not from standalone servers so managing again')
             yield apps.manage_server_type(self.datastore_handler, server_name = server['server_name'], new_type = 'provider', driver_name = 'generic_driver')
             server['managed_by'].append('provider')
 

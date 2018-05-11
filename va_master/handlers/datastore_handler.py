@@ -12,12 +12,13 @@ from va_master.consul_kv.initial_consul_data import initial_consul_data
 
 class DatastoreHandler(object):
 
-    def __init__(self, datastore, datastore_spec_path = '/va_master/consul_kv/consul_spec.json'):
+    def __init__(self, datastore, config = None, datastore_spec_path = '/va_master/consul_kv/consul_spec.json'):
         master_path = os.getcwd() 
 
         datastore_spec_path = master_path + datastore_spec_path
 
         self.datastore = datastore
+        self.config = config
 
         with open(datastore_spec_path) as f: 
             spec = f.read()
@@ -339,7 +340,7 @@ class DatastoreHandler(object):
 
 
     @tornado.gen.coroutine
-    def import_states_from_states_data(self, states = []):
+    def import_states_from_states_data(self, states = [], delete_panels = False):
         empty_panel = {'admin' : [], 'user' : []}
         states_data = yield self.get_states_data(states)
 
@@ -352,10 +353,13 @@ class DatastoreHandler(object):
                 except: 
                     old_panel = {}
 
+                servers = old_panel.get('servers', [])
+                if delete_panels:
+                    servers = []
                 panel = {
                     'name' : state['name'], 
                     'icon' : state['icon'], 
-                    'servers' : old_panel.get('servers', []),
+                    'servers' : servers,
                     'panels' : state.get('panels', empty_panel)[user_type]
                 }
                 yield self.store_panel(panel, user_type)

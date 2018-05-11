@@ -272,7 +272,6 @@ class OpenStackDriver(base.DriverBase):
                 {
                     'hostname' : x['name'], 
                     'ip' : x['addresses'][x['addresses'].keys()[0]][0].get('addr', 'n/a'),
-#                    'ip' : x['addresses'].get('private_vapps', x['addresses'].get('public', [{'addr':'n/a'}]))[0]['addr'], #[x['addresses'].keys()[0]], 
                     'size' : f['name'],
                     'used_disk' : y['local_gb'], 
                     'used_ram' : y['memory_mb'], 
