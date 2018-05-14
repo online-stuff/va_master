@@ -56,7 +56,9 @@ def get_master_ip():
     return ip
 
 def get_route_to_minion(ip_address):
+    print ('Getting route!')
     result = call_master_cmd('network.get_route', arg = [ip_address])
+    print ('Result is : ', result)
     return result['source']
 
 def call_master_cmd(fun, arg = [], kwarg = {}):
@@ -323,6 +325,7 @@ def write_pillar(data):
 @tornado.gen.coroutine
 def add_minion_to_server(server_name, ip_address, role, username = '', password = '', key_filename = ''):
 
+    minion_route = get_route_to_minion(ip_address)
     ssh = paramiko.SSHClient()
     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 
@@ -365,7 +368,7 @@ def add_minion_to_server(server_name, ip_address, role, username = '', password 
     sftp.put(bootstrap_script, server_script)
 
     ssh_call(ssh, 'chmod +x ' + server_script)
-    ssh_call(ssh, "%s %s %s" % (server_script, role, get_route_to_minion(ip_address)))
+    ssh_call(ssh, "%s %s %s" % (server_script, role, minion_route))
     ssh_call(ssh, 'echo %s > /etc/salt/minion_id' % (server_name))
 
     #If the role is defined, we also add the panel.  
