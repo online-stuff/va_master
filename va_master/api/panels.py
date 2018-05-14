@@ -28,6 +28,8 @@ def get_paths():
 
             'panels/get_panel' : {'function' : get_panel_for_user, 'args' : ['server_name', 'panel', 'provider', 'handler', 'args', 'dash_user']},
             'panels/new_panel' : {'function' : new_panel, 'args' : ['datastore_handler', 'server_name', 'role']},
+            'panels/remove_panel' : {'function' : remove_panel, 'args' : ['datastore_handler', 'server_name', 'role', 'dash_user']},
+
             'panels/action' : {'function' : panel_action, 'args' : ['handler', 'server_name', 'action', 'args', 'kwargs', 'module', 'dash_user']}, #must have server_name and action in data, 'args' : []}, ex: panels/action server_name=nino_dir action=list_users
             'panels/chart_data' : {'function' : get_chart_data, 'args' : ['server_name', 'args']},
             'panels/serve_file' : {'function' : salt_serve_file, 'args' : ['handler', 'server_name', 'action', 'args', 'kwargs', 'module']},
@@ -52,6 +54,14 @@ def new_panel(datastore_handler, server_name, role):
 
     yield datastore_handler.add_panel(server_name, role)
 
+
+@tornado.gen.coroutine
+def remove_panel(datastore_handler, server_name, dash_user, role = None):
+    server_role = role or get_minion_role(server_name)
+    panel_type = dash_user['type'] + '_panel'
+    panel = yield datastore_handler.get_object(object_type = panel_type, name = server_role)
+    panel['servers'] = [x for x in panel['servers'] if x != server_name]
+    panels = yield datastore_handler.insert_object(object_type = panel_type, name = server_role, data = panel)
 
 @tornado.gen.coroutine
 def list_panels(datastore_handler, dash_user):

@@ -17,7 +17,7 @@ PROVIDER_TEMPLATE = ""
 PROFILE_TEMPLATE = ""
 
 class GenericDriver(base.DriverBase):
-    def __init__(self, provider_name = 'generic_provider', profile_name = 'generic_profile', host_ip = '192.168.80.39', key_name = 'va_master_key', key_path = '/root/va_master_key', datastore_handler = None, driver_name = 'generic_driver'):
+    def __init__(self, provider_name = 'generic_provider', profile_name = 'generic_profile', host_ip = '192.168.80.39', key_name = 'va_master_key', key_path = '/root/va_master_key', datastore_handler = None, driver_name = 'generic_driver', flavours = []):
         kwargs = {
             'driver_name' : driver_name, 
             'provider_template' : PROVIDER_TEMPLATE, 
@@ -29,6 +29,7 @@ class GenericDriver(base.DriverBase):
             'key_path' : key_path, 
             'datastore_handler' : datastore_handler
             }
+        self.sizes = flavours
         super(GenericDriver, self).__init__(**kwargs) 
 
     @tornado.gen.coroutine
@@ -201,6 +202,7 @@ class GenericDriver(base.DriverBase):
                 'password' : field_values['password'],
                 'ip_address' : field_values['ip_address'],
                 'images' : [], 
+                'sizes' : self.sizes, 
             })
             raise tornado.gen.Return(StepResult(
                 errors = [], new_step_index = -1, option_choices = {}

@@ -38,7 +38,6 @@ class DriversHandler(object):
             self.drivers = [x(**kwargs) for x in [
                 openstack.OpenStackDriver, 
                 gce.GCEDriver,
-                generic_driver.GenericDriver,
                 aws.AWSDriver,
             ]]
             
@@ -51,6 +50,8 @@ class DriversHandler(object):
                 libvirt_driver.LibVirtDriver,
                 vmware.VMWareDriver,
                 lxc.LXCDriver,
+                generic_driver.GenericDriver,
+
             )]
 
         raise tornado.gen.Return(self.drivers)
