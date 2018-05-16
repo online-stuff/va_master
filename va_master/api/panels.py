@@ -18,6 +18,7 @@ def get_paths():
             'panels/get_all_function_groups' : {'function' : get_all_function_groups, 'args' : ['datastore_handler']},
         },
         'post' : {
+            'panels/sync_salt_minions' : {'function' : sync_salt_minions, 'args' : ['datastore_handler', 'dash_user']},
             'panels/add_user_functions' : {'function' : add_user_functions, 'args' : ['datastore_handler', 'user', 'functions']},
             'panels/create_user_group' : {'function' : create_user_group, 'args' : ['datastore_handler', 'group_name', 'functions']},
             'panels/create_user_with_group' : {'function' : create_user_with_group, 'args' : ['handler', 'user', 'password', 'user_type', 'functions', 'groups']},
@@ -41,10 +42,11 @@ def get_paths():
     return paths
 
 
-def get_minion_role(minion_name):
+def get_minion_role(minion_name = '*'):
     cl = LocalClient()
-    print ('Looking for role of : ', minion_name)
-    role = cl.cmd(minion_name, 'grains.get', arg = ['role'])[minion_name]
+    role = cl.cmd(minion_name, 'grains.get', arg = ['role'])
+    if minion_name != '*': 
+        role = role[minion_name]
     return role
 
 
@@ -54,6 +56,35 @@ def new_panel(datastore_handler, server_name, role):
 
     yield datastore_handler.add_panel(server_name, role)
 
+
+@tornado.gen.coroutine
+def sync_salt_minions(datastore_handler, dash_user):
+    minions = get_minion_role('*')
+    unresponsive_minions = []
+    for minion in minions: 
+        panel_type = dash_user['type'] + '_panel'
+        panel = yield datastore_handler.get_object(object_type = panel_type, name = minions[minion])
+
+        if not panel: 
+            unresponsive_minions.append([minion, minions[minion]])
+            continue
+
+        print ('Panel : ', panel, ' for ', minions[minion])
+        if minion not in panel['servers']: 
+            panel['servers'].append(minion)
+        yield datastore_handler.insert_object(object_type = panel_type, name = minions[minion], data = panel)
+
+    panels = yield datastore_handler.get_panels(dash_user['type'])
+    for panel in panels: 
+        for server in panel['servers']: 
+            if server not in minions: 
+                panel['servers'] = [x for x in panel['servers'] if x != server]
+
+
+    if unresponsive_minions: 
+        raise tornado.gen.Return({'success' : True, 'message' : 'There were unresponsive minions. ', 'data' : unresponsive_minions})
+    else: 
+        raise tornado.gen.Return({'success' : True, 'message' : '', 'data' : {}})
 
 @tornado.gen.coroutine
 def remove_panel(datastore_handler, server_name, dash_user, role = None):
