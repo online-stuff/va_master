@@ -247,14 +247,15 @@ class GenericDriver(base.DriverBase):
         server = {"server_name" : data["server_name"], "hostname" : data["server_name"], "ip_address" : data["ip"], "local_gb" : 0, "memory_mb" : 0, "status" : "n/a" , "managed_by" : ['ssh']}
 
         print ('Adding server to datastore with : ', self.datastore_handler, server['server_name'], data['ip'])
-        yield apps.add_server_to_datastore(self.datastore_handler, server_name = server['server_name'], ip_address = data['ip'], hostname = server['hostname'], manage_type = 'ssh', username = data.get('username', ''), driver_name = 'generic_driver', kwargs = {'password' : data.get('password', '')})
+        yield apps.add_server_to_datastore(self.datastore_handler, server_name = server['server_name'], ip_address = data['ip'], hostname = server['hostname'], manage_type = 'ssh', username = data.get('username', ''), driver_name = 'generic_driver', location = server['location'], kwargs = {'password' : data.get('password', ''), 'location' : data.get('location', '')})
         db_server = yield self.datastore_handler.get_object('server', server_name = server['server_name'])
+        print ('Server is : ', db_server)
 
         if provider['provider_name'] != 'va_standalone_servers' : 
             yield apps.manage_server_type(self.datastore_handler, server_name = server['server_name'], new_type = 'provider', driver_name = 'generic_driver')
             server['managed_by'].append('provider')
 
-
+        print ('Adding generic : ', provider, server)
         yield self.datastore_handler.add_generic_server(provider, server)
 
 

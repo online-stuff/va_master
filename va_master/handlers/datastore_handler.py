@@ -46,6 +46,7 @@ class DatastoreHandler(object):
     def get_object(self, object_type, **handle_data):
         object_spec = self.spec[object_type]
         object_handle = object_spec['consul_handle'].format(**handle_data)
+        print ('Trying to find ', object_handle)
         try:
             result = yield self.datastore.get(object_handle)
             result.update(handle_data)

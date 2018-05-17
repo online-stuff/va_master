@@ -11,6 +11,16 @@ def int_to_bytes(i):
 
     return b
 
+def bytes_to_readable(num, suffix='B'):
+    """Converts bytes integer to human readable"""
+
+    num = int(num)
+    for unit in ['','Ki','Mi','Gi','Ti','Pi','Ei','Zi']:
+        if abs(num) < 1024.0:
+            return "%3.1f%s%s" % (num, unit, suffix)
+        num /= 1024.0
+    return "%.1f%s%s" % (num, 'Yi', suffix)
+
 def bytes_to_int(b):
     if not type(b) in [str]:
         return b

@@ -234,7 +234,7 @@ def handle_init(args):
 #    cli_config.init_handler(init_vals = values)
 
 def handle_manage(args):
-    """Handles cli `manage` command. Should write proper conf and start daemon."""
+    """Handles cli `manage` command. """
     cli_config = config.Config()
     store = cli_config.datastore
     datastore_handler = DatastoreHandler(store)
