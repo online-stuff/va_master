@@ -290,7 +290,11 @@ class DatastoreHandler(object):
     @tornado.gen.coroutine
     def add_panel(self, panel_name, role):
         states = yield self.get_states_data()
-        panel_state = [x for x in states if x['name'] == role][0]
+        panel_state = [x for x in states if x['name'] == role]
+        if not panel_state: 
+            raise Exception("Was trying to find " + role + " in states " + str([x['name'] for x in states]) + " but could not find it. ")
+
+        panel_state = panel_state[0]
 
         user_panel = yield self.get_panel(role, 'user')
         admin_panel = yield self.get_panel(role, 'admin')
