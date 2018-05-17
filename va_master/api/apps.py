@@ -466,19 +466,12 @@ def add_server_to_datastore(datastore_handler, server_name, ip_address, hostname
     If the server is not in the datastore, this function will add it.
     If it is, it will simply update the server_type, managed_by and available_actions fields. 
     '''
-
-
     server = {}
     for attr in ['ip_address', 'hostname']:
         if locals()[attr]: 
             server[attr] = locals()[attr]
 
-#    server['available_actions'] = {}
-    print 'Adding ', server
-
-    print 'Looking for ', server_name 
     server = yield datastore_handler.get_object(object_type = 'server', server_name = server_name)
-    print 'And server is : ', server
     if not server:
         print ('Did not find ', server_name, ' now inserting it. ')
         yield datastore_handler.insert_object(object_type = 'server', server_name = server_name, data = server)
@@ -510,7 +503,6 @@ def handle_app(datastore_handler, server_name, role):
     else: minion_kwargs['key_filename'] = datastore_handler.config.ssh_key_path + datastore_handler.config.ssh_key_name + '.pem'
 
     yield add_minion_to_server(server_name, server['ip_address'], role, **minion_kwargs)
-    print ('Now server is : ', server)
     yield datastore_handler.insert_object(object_type = 'server', data = server, server_name = server_name)
 
     if role: 
@@ -524,7 +516,6 @@ def manage_server_type(datastore_handler, server_name, new_type, ip_address = No
 
     user_type = 'root' if username == 'root' else 'user'
     server = yield datastore_handler.get_object(object_type = 'server', server_name = server_name)
-    print ('Server location is : ', server.get('location'))
 
 
     new_subtype = None
@@ -550,9 +541,7 @@ def manage_server_type(datastore_handler, server_name, new_type, ip_address = No
     server['managed_by'] = list(set(server.get('managed_by', []) + [new_type]))
     server['available_actions'] = server.get('available_actions', {})
     server['available_actions'][new_type] = type_actions['actions']
-    print ('Updating server with : ', kwargs)
     server.update(kwargs)
 
-    print ('Inserting into datastore : ', server)
     yield datastore_handler.insert_object(object_type = 'server', data = server, server_name = server_name)
     raise tornado.gen.Return(server)
