@@ -372,7 +372,7 @@ def add_minion_to_server(datastore_handler, server_name, ip_address, role, usern
 
     cl = LocalClient()
     highstate = cl.cmd(server_name, 'state.highstate')
-
+    print ('Highstate result is : ', highstate)
 
 
 ##@auth_only
