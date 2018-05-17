@@ -35,7 +35,7 @@ def get_paths():
             'state/add' : {'function' : create_new_state,'args' : ['file', 'body', 'filename']},
             'apps/new/validate_fields' : {'function' : validate_app_fields, 'args' : ['handler']},
             'apps' : {'function' : launch_app, 'args' : ['handler']},
-            'apps/add_minion' : {'function' : add_minion_to_server, 'args' : ['datastore_handler', 'dash_user', 'server_name', 'ip_address', 'username', 'password', 'key_filename', 'role']},
+            'apps/add_minion' : {'function' : add_minion_to_server, 'args' : ['datastore_handler', 'server_name', 'ip_address', 'username', 'password', 'key_filename', 'role']},
             'apps/action' : {'function' : perform_server_action, 'args' : ['handler', 'provider_name', 'action', 'server_name', 'action_type', 'kwargs']},
             'apps/add_vpn_user': {'function' : add_openvpn_user, 'args' : ['username']},
             'apps/revoke_vpn_user': {'function' : revoke_openvpn_user, 'args' : ['username']},
@@ -299,9 +299,8 @@ def write_pillar(data):
         f.write(pillar_str)
     salt_manage_pillar.add_server(data.get('server_name'), data.get('role', ''))
 
-
 @tornado.gen.coroutine
-def add_minion_to_server(datastore_handler, dash_user, server_name, ip_address, role, username = '', password = '', key_filename = ''):
+def add_minion_to_server(datastore_handler, server_name, ip_address, role, username = '', password = '', key_filename = ''):
     '''
         Installs salt on the server, adds the master keys, runs highstate and adds a panel for that server. 
         In more details, the function does the following steps: 
@@ -365,7 +364,8 @@ def add_minion_to_server(datastore_handler, dash_user, server_name, ip_address, 
 
     #If the role is defined, we also add the panel.  
     if role: 
-        yield datastore_handler.add_panel(role, dash_user['type'])
+        print ('Adding panel for ', role)
+        yield datastore_handler.add_panel(role, 'admin')
     cl = LocalClient()
     highstate = cl.cmd(server_name, 'state.highstate')
 
@@ -490,6 +490,7 @@ def handle_app(datastore_handler, server_name, role):
         raise Exception('Tried to convert ' + str(server_name) + " to app, but the role argument is empty. ")
 
     server = yield datastore_handler.get_object(object_type = 'server', server_name = server_name)
+    print ('Server is : ', server)
     yield panels.new_panel(datastore_handler, server_name = server_name, role = role)
 
     server['type'] = 'app'
@@ -502,7 +503,7 @@ def handle_app(datastore_handler, server_name, role):
     if server.get('password'): minion_kwargs['password'] = server['password']
     else: minion_kwargs['key_filename'] = datastore_handler.config.ssh_key_path + datastore_handler.config.ssh_key_name + '.pem'
 
-    yield add_minion_to_server(server_name, server['ip_address'], role, **minion_kwargs)
+    yield add_minion_to_server(datastore_handler, server_name, server['ip_address'], role, **minion_kwargs)
     yield datastore_handler.insert_object(object_type = 'server', data = server, server_name = server_name)
 
     if role: 

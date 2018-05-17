@@ -239,17 +239,24 @@ class GenericDriver(base.DriverBase):
             import traceback
             traceback.print_exc()
             raise Exception('Failed to connect with ssh: ' + e.message)
+        try:
 
-        server = {"server_name" : data["server_name"], "hostname" : data["server_name"], "ip_address" : data["ip"], "local_gb" : 0, "memory_mb" : 0, "status" : "n/a" , "managed_by" : ['ssh'], "location" : data.get('location', '')}
+            server = {"server_name" : data["server_name"], "hostname" : data["server_name"], "ip_address" : data["ip"], "local_gb" : 0, "memory_mb" : 0, "status" : "n/a" , "managed_by" : ['ssh'], "location" : data.get('location', '')}
+            print ('Server is : ', server)
+            yield apps.add_server_to_datastore(self.datastore_handler, server_name = server['server_name'], ip_address = data['ip'], hostname = server['hostname'], manage_type = 'ssh', username = data['username'], driver_name = 'generic_driver', kwargs = {'password' : data.get('password', ''), 'location' : data.get('location', '')})
+            print ('Added server to datastore')
+            db_server = yield self.datastore_handler.get_object('server', server_name = server['server_name'])
+            print ('Db server is : ', db_server)
 
-        yield apps.add_server_to_datastore(self.datastore_handler, server_name = server['server_name'], ip_address = data['ip'], hostname = server['hostname'], manage_type = 'ssh', username = data.get('username', ''), driver_name = 'generic_driver', kwargs = {'password' : data.get('password', ''), 'location' : data.get('location', '')})
-        db_server = yield self.datastore_handler.get_object('server', server_name = server['server_name'])
+            if provider['provider_name'] != 'va_standalone_servers' : 
+                yield apps.manage_server_type(self.datastore_handler, server_name = server['server_name'], new_type = 'provider', driver_name = 'generic_driver')
+                server['managed_by'].append('provider')
 
-        if provider['provider_name'] != 'va_standalone_servers' : 
-            yield apps.manage_server_type(self.datastore_handler, server_name = server['server_name'], new_type = 'provider', driver_name = 'generic_driver')
-            server['managed_by'].append('provider')
-
-        yield self.datastore_handler.add_generic_server(provider, server)
+            yield self.datastore_handler.add_generic_server(provider, server)
+            print ('Added generic server ', server)
+        except: 
+            import traceback
+            traceback.print_exc()
 
         raise tornado.gen.Return(True)  
 
