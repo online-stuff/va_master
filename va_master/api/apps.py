@@ -316,6 +316,10 @@ def add_minion_to_server(datastore_handler, server_name, ip_address, role, usern
 
     '''
 
+
+    ip_address = call_master_cmd('dnsutil.A', arg = [ip_address])[0]
+    print ('Ip address now is : ', ip_address)
+
     minion_route = get_route_to_minion(ip_address)
     ssh = paramiko.SSHClient()
     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
@@ -364,8 +368,8 @@ def add_minion_to_server(datastore_handler, server_name, ip_address, role, usern
 
     #If the role is defined, we also add the panel.  
     if role: 
-        print ('Adding panel for ', role)
-        yield datastore_handler.add_panel(role, 'admin')
+        yield datastore_handler.add_panel(server_name, role)
+
     cl = LocalClient()
     highstate = cl.cmd(server_name, 'state.highstate')
 
@@ -466,12 +470,13 @@ def add_server_to_datastore(datastore_handler, server_name, ip_address, hostname
     If the server is not in the datastore, this function will add it.
     If it is, it will simply update the server_type, managed_by and available_actions fields. 
     '''
-    server = {}
+
+    server = yield datastore_handler.get_object(object_type = 'server', server_name = server_name)
+
     for attr in ['ip_address', 'hostname']:
         if locals()[attr]: 
             server[attr] = locals()[attr]
 
-    server = yield datastore_handler.get_object(object_type = 'server', server_name = server_name)
     if not server:
         print ('Did not find ', server_name, ' now inserting it. ')
         yield datastore_handler.insert_object(object_type = 'server', server_name = server_name, data = server)
