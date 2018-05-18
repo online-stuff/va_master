@@ -72,12 +72,3 @@ def add_minion_to_server(datastore_handler, server_name, ip_address, role, usern
     ssh_call(ssh, "%s %s %s" % (server_script, role, minion_route))
     ssh_call(ssh, 'echo %s > /etc/salt/minion_id' % (server_name))
 
-    #If the role is defined, we also add the panel.  
-    if role: 
-        yield datastore_handler.add_panel(server_name, role)
-
-    cl = LocalClient()
-    highstate = cl.cmd(server_name, 'state.highstate')
-
-    print ('Highstate status is : ', highstate)
-
