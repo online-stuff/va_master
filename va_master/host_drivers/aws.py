@@ -188,6 +188,7 @@ class AWSDriver(base.DriverBase):
                 } 
         for i in instances for p in new_pricing_data if i['InstanceType'] == p['instanceType']]
 
+        print ('servers are ', servers)
         raise tornado.gen.Return(servers)
 
     @tornado.gen.coroutine
@@ -227,10 +228,18 @@ class AWSDriver(base.DriverBase):
 
         total_cost = float("{0:.2f}".format(total_cost))
         servers = yield self.get_servers(provider)
-        
+        for server in servers: 
+            server['used_disk'] = server['used_disk'] * (2**30)
+
+
         total_memory = sum([bytes_to_int(s['used_ram']) for s in servers])
         total_memory = int_to_bytes(total_memory)
+
+        total_disk = sum([bytes_to_int(s['used_disk']) for s in servers])
+        total_disk = int_to_bytes(total_disk)
+
         provider['memory'] = total_memory
+        provider['hdd'] = total_disk
 
         servers.append({
             'hostname' : 'Other costs',

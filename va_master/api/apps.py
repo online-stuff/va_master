@@ -277,8 +277,6 @@ def write_pillar(data):
         f.write(pillar_str)
     salt_manage_pillar.add_server(data.get('server_name'), data.get('role', ''))
 
-
-##@auth_only
 @tornado.gen.coroutine
 def launch_app(handler):
     """
