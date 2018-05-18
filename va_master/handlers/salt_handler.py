@@ -48,6 +48,7 @@ def add_minion_to_server(datastore_handler, server_name, ip_address, role, usern
     else: 
         raise Exception('When adding minion to server, I expected either password or key_filename, but both values are empty. ')
 
+    print ('Doing connect with ', ip_address, connect_kwargs)
     ssh.connect(ip_address, **connect_kwargs)
     sftp = ssh.open_sftp()
 
@@ -69,6 +70,12 @@ def add_minion_to_server(datastore_handler, server_name, ip_address, role, usern
     sftp.put(bootstrap_script, server_script)
 
     ssh_call(ssh, 'chmod +x ' + server_script)
-    ssh_call(ssh, "%s %s %s" % (server_script, role, minion_route))
+
+    if role: 
+        ssh_call(ssh, "%s %s %s" % (server_script, role, minion_route))
+    else: 
+        print ('Running ', "%s %s" % (server_script, minion_route))
+        ssh_call(ssh, "%s %s" % (server_script, minion_route))
+
     ssh_call(ssh, 'echo %s > /etc/salt/minion_id' % (server_name))
 

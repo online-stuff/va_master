@@ -16,6 +16,7 @@ def handle_app(datastore_handler, server_name, role):
     server['available_actions'] = server.get('available_actions', {}) # TODO get panel actions and add here
 
     cl = LocalClient()
+    cl.cmd(server_name, 'grains.append', arg = ['role', role])
     highstate = cl.cmd(server_name, 'state.highstate')
     print ('Highstate is : ', highstate)
 
