@@ -196,7 +196,7 @@ class ApiHandler(tornado.web.RequestHandler):
             self.config.logger.error('An error occured performing request. Function was %s and data was %s. ' % (str(api_func), str(data)))
             import traceback
             traceback.print_exc()
-            result = {'success' : False, 'message' : 'There was an error performing a request : ' + str(e.message), 'data' : {}}
+            result = {'success' : False, 'message' : 'There was an error performing a request : ' + str(e) + ':' + str(e.message), 'data' : {}}
 
         if not result['success'] and not self.status: 
             self.status = 400
