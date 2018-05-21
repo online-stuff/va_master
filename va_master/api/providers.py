@@ -319,6 +319,10 @@ def get_provider_info(handler, dash_user, get_billing = True, get_servers = True
 
     standalone_default_values = {'size' : ''}
     standalone_servers = standalone_provider['servers']
+
+    for s in standalone_servers: 
+        s['ip'] = s.pop('ip_address') #specs change
+
     for v in standalone_default_values: 
         [x.update({v : x.get(v, standalone_default_values[v])}) for x in standalone_servers]
 
