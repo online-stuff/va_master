@@ -20,3 +20,4 @@ va_master/api/custom_modules/__init__.py
 va_master/host_drivers/aek_driver.py
 va_dashboard/static/logo-splash.png
 va_dashboard/static/logo.png
+static/bundle.js
