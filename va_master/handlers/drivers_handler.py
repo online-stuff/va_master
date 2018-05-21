@@ -39,6 +39,8 @@ class DriversHandler(object):
                 openstack.OpenStackDriver, 
                 gce.GCEDriver,
                 aws.AWSDriver,
+                digitalocean_driver.DigitalOceanDriver
+
             ]]
            
             kwargs['flavours'] = va_flavours
