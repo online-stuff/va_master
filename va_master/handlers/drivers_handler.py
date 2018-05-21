@@ -15,9 +15,10 @@ from pbkdf2 import crypt
 
 class DriversHandler(object):
 
-    def __init__(self, datastore_handler, ssh_key_name, ssh_key_path):
+    def __init__(self, datastore_handler, ssh_key_name, ssh_key_path, ssl_path):
         self.ssh_key_name = ssh_key_name
         self.ssh_key_path = ssh_key_path
+        self.ssl_path = ssl_path
         self.datastore_handler = datastore_handler
         self.drivers = []
 
@@ -34,7 +35,6 @@ class DriversHandler(object):
                 'key_path' : self.ssh_key_path, 
                 'datastore_handler' : self.datastore_handler,
             }
-
             self.drivers = [x(**kwargs) for x in [
                 openstack.OpenStackDriver, 
                 gce.GCEDriver,
@@ -42,20 +42,19 @@ class DriversHandler(object):
                 digitalocean_driver.DigitalOceanDriver
 
             ]]
-            
-
+           
             kwargs['flavours'] = va_flavours
-
-
             self.drivers += [x(**kwargs) for x in (
                 century_link.CenturyLinkDriver, 
                 libvirt_driver.LibVirtDriver,
                 vmware.VMWareDriver,
-                lxc.LXCDriver,
                 generic_driver.GenericDriver,
-
             )]
 
+            kwargs['ssl_path'] = self.ssl_path
+            self.drivers += [x(**kwargs) for x in (
+                lxc.LXCDriver,
+            )]
         raise tornado.gen.Return(self.drivers)
 
     @tornado.gen.coroutine
