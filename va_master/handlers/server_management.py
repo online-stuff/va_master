@@ -37,7 +37,7 @@ def handle_ssh(datastore_handler, server, ip_address, username):
     raise tornado.gen.Return(server)
 
 @tornado.gen.coroutine
-def handle_provider(datastore_handler, provider_name = None, driver_name = None):
+def handle_provider(datastore_handler, server, provider_name = None, driver_name = None):
     if provider_name: 
         provider = yield datastore_handler.get_provider(provider_name = provider_name)
         server['provider_name'] = provider_name
@@ -89,7 +89,7 @@ def manage_server_type(datastore_handler, server_name, new_type, ip_address = No
         server = yield handle_ssh(datastore_handler, server, ip_address, username)
 
     elif new_type == 'provider':
-        server = yield handle_provider(datastore_handler, provider_name = None, driver_name = None)
+        server = yield handle_provider(datastore_handler, server, provider_name = provider_name, driver_name = driver_name)
 
     elif new_type == 'salt' : 
         server = yield handle_salt(datastore_handler, server)
