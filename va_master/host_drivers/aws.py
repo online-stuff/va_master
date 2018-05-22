@@ -174,6 +174,12 @@ class AWSDriver(base.DriverBase):
             if element['instanceType'] not in [x['instanceType'] for x in new_pricing_data]: 
                 new_pricing_data.append(element)
 
+        status_map = {
+            'pending' : 'PENDING', 
+            'running' : 'ACTIVE', 
+            'stopped' : 'SHUTOFF', 
+        }
+
         servers = [{
                     'hostname' : i['PublicDnsName'],
                     'ip' : i.get('PublicIpAddress', ''),
@@ -181,7 +187,7 @@ class AWSDriver(base.DriverBase):
                     'used_disk' : instance_hdd(i),
                     'used_ram' : p['memory'],
                     'used_cpu' : int(p['vcpu']),
-                    'status' : i['State']['Name'].replace('running', 'ACTIVE').replace('stopped', 'SHUTOFF'),
+                    'status' : status_map.get(i['State']['Name'], i['State']['Name']),
                     'cost' : 0,  #TODO see if I can actually get the cost. 
                     'estimated_cost' : 0, 
                     'provider' : provider['provider_name'],
