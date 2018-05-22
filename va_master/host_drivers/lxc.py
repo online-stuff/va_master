@@ -180,9 +180,12 @@ class LXCDriver(base.DriverBase):
         """ TODO """
         try:
             cl = self.get_client(provider)
-            raise tornado.gen.Return({'success' : True, 'message' : ''})
         except Exception as e: 
+            import traceback
+            traceback.print_exc()
             raise tornado.gen.Return({'success' : False, 'message' : e.message})
+
+        raise tornado.gen.Return({'success' : True, 'message' : ''})
 
 
     @tornado.gen.coroutine
