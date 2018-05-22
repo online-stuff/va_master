@@ -189,16 +189,18 @@ def handle_store_init(cli_config, values, store, datastore_handler):
     return store_config
 
 def create_ssh_keys(cli_config, store_config):
+    key_full_path = cli_config.ssh_key_path + cli_config.ssh_key_name
+
     try: 
         os.mkdir(cli_config.ssh_key_path)
     except Exception as e: 
         import traceback
         print 'Could not create ssh path; It probably exists. Error was :' 
         traceback.print_exc()
+        if all ([os.path.isfile(key_full_path + file_type) for file_type in ['.pem', '.pub']]):
+            return 
 
     try:
-        key_full_path = cli_config.ssh_key_path + cli_config.ssh_key_name
-
         ssh_cmd = ['ssh-keygen', '-t', 'rsa', '-f', key_full_path, '-N', '']
         subprocess.call(ssh_cmd)
         subprocess.call(['mv', key_full_path, key_full_path + '.pem'])
