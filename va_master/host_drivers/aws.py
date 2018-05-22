@@ -177,11 +177,11 @@ class AWSDriver(base.DriverBase):
         servers = [{
                     'hostname' : i['PublicDnsName'],
                     'ip' : i.get('PublicIpAddress', ''),
-                    'size' : '',
+                    'size' : i['InstanceType'],
                     'used_disk' : instance_hdd(i),
                     'used_ram' : p['memory'],
                     'used_cpu' : int(p['vcpu']),
-                    'status' : i['State']['Name'],
+                    'status' : i['State']['Name'].replace('running', 'ACTIVE').replace('stopped', 'SHUTOFF'),
                     'cost' : 0,  #TODO see if I can actually get the cost. 
                     'estimated_cost' : 0, 
                     'provider' : provider['provider_name'],
