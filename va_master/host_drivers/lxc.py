@@ -168,7 +168,6 @@ class LXCDriver(base.DriverBase):
         servers = cl.containers.all()
         servers = [{'server' : x, 'state' : x.state().__dict__} for x in servers]
 
-
         servers = [self.container_to_dict(x, provider['provider_name']) for x in servers]
 
         raise tornado.gen.Return(servers)
@@ -235,18 +234,18 @@ class LXCDriver(base.DriverBase):
         get_sum = lambda x: sum([s[x] for s in servers if not type(s[x]) == str])
 
         provider_usage = {
-            'max_cpus' : 'n/a',
+            'max_cpus' : None,
             'used_cpus' : get_sum('used_cpu'), 
-            'free_cpus' : 'n/a', 
-            'max_ram' : 'n/a', 
+            'free_cpus' : None, 
+            'max_ram' : None, 
             'used_ram' : get_sum('used_ram'),
-            'free_ram' : 'n/a', 
-            'max_disk' : 'n/a', 
+            'free_ram' : None, 
+            'max_disk' : None, 
             'used_disk' : get_sum('used_disk'), 
-            'free_disk' : 'n/a',
-            'max_servers' : 'n/a', 
+            'free_disk' : None,
+            'max_servers' : None, 
             'used_servers' : len(servers), 
-            'free_servers' : 'n/a'
+            'free_servers' :None
         }
 
         provider_data = {
