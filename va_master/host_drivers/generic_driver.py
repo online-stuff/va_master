@@ -16,6 +16,14 @@ from paramiko import SSHClient, AutoAddPolicy
 PROVIDER_TEMPLATE = ""
 PROFILE_TEMPLATE = ""
 
+def check_ping(address):
+    response = os.system("ping -c 1 " + address)
+    if response == 0:
+        pingstatus = "ACTIVE"
+    else:
+        pingstatus = "SHUTOFF"
+    return pingstatus
+
 class GenericDriver(base.DriverBase):
     def __init__(self, provider_name = 'generic_provider', profile_name = 'generic_profile', host_ip = '192.168.80.39', key_name = 'va_master_key', key_path = '/root/va_master_key', datastore_handler = None, driver_name = 'generic_driver', flavours = []):
         kwargs = {
@@ -91,10 +99,10 @@ class GenericDriver(base.DriverBase):
     def server_action(self, provider, server_name, action):
         
         server_action = {
-            'delete' : self.remove_server, 
+            'remove' : self.remove_server, 
             'reboot' : 'reboot_function', 
-            'start' : 'start_function', 
-            'stop' : 'stop_function', 
+        #    'start' : 'start_function', 
+            'shutdown' : 'stop_function', 
         }
         if action not in server_action: 
             raise tornado.gen.Return({'success' : False, 'message' : 'Action not supported : ' +  action})
@@ -111,11 +119,11 @@ class GenericDriver(base.DriverBase):
             {
                 'hostname' : x['hostname'], 
                 'ip' : x['ip_address'],
-                'size' : 'n/a',
-                'used_disk' : 'n/a', 
-                'used_ram' : 'n/a', 
-                'used_cpu' : 'n/a',
-                'status' : 'n/a', 
+                'size' : '',
+                'used_disk' : 0, 
+                'used_ram' : 0, 
+                'used_cpu' : 0,
+                'status' : check_ping(x['ip_address']), 
                 'cost' : 0,  #TODO find way to calculate costs
                 'estimated_cost' : 0,
                 'managed_by' : x.get('managed_by', []), 
@@ -123,11 +131,14 @@ class GenericDriver(base.DriverBase):
             } for x in servers
         ]
 
+
         if provider['provider_name'] == 'va_standalone_servers' : 
-            provider['provider_name'] = ''
+            provider['provider_name'] = 'none'
 
         for i in servers: 
             i['provider'] = provider['provider_name']
+        print ('SERVERS STANDALONE: ', servers)
+
         raise tornado.gen.Return(servers)
         
 
