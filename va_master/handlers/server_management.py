@@ -42,7 +42,8 @@ def handle_provider(datastore_handler, server, provider_name = None, driver_name
         provider = yield datastore_handler.get_provider(provider_name = provider_name)
         server['provider_name'] = provider_name
         driver_name = provider['driver_name']
-    if not driver_name: 
+
+    if not driver_name:
         raise Exception('Tried to manage server with provider, but neither driver_name nor provider_name was sent. ')
 
     new_type = 'provider'

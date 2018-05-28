@@ -307,7 +307,7 @@ def get_provider_info(handler, dash_user, get_billing = True, get_servers = True
             server['icon'] = server_panel[0]['icon']
             datastore_server = yield datastore_handler.get_object(object_type = 'server', server_name = server.get('server_name', server.get('hostname', '')))
             if not datastore_server: 
-                print ('Did not find server', server.get('hostname'), 'in kv, inserting now. ')
+                print ('Did not find server', server.get('hostname'), 'in kv, inserting now with ', provider_kv['driver_name'], provider_kv['provider_name'])
                 datastore_server = yield apps.manage_server_type(datastore_handler, server_name = server.get('hostname'), new_type = 'provider', driver_name = provider_kv['driver_name'], provider_name = provider_kv['provider_name'])
             server.update(datastore_server)
             server['managed_by'] = server.get('managed_by', ['unmanaged'])
@@ -321,7 +321,9 @@ def get_provider_info(handler, dash_user, get_billing = True, get_servers = True
     standalone_servers = standalone_provider['servers']
 
     for s in standalone_servers: 
-        s['ip'] = s.pop("ip_address") #Changes in specs
+        datastore_server = yield datastore_handler.get_object(object_type = 'server', server_name = server.get('server_name', server.get('hostname', '')))
+        s['ip'] = s.pop('ip_address') #Change in specs
+        s.update(datastore_server)
 
     for v in standalone_default_values: 
         [x.update({v : x.get(v, standalone_default_values[v])}) for x in standalone_servers]
