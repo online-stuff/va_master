@@ -15,7 +15,8 @@ def handle_app(datastore_handler, server_name, role):
     server = yield datastore_handler.get_object(object_type = 'server', server_name = server_name)
     
     cl = LocalClient()
-    ping = cl.cmd(server_name, 'test.ping')
+    ping = cl.cmd(server_name, 'test.ping').get(server_name)
+    print ('Ping is : ', ping)
 
     if not ping:
         minion_kwargs = {'username' : server['username']}
@@ -25,6 +26,7 @@ def handle_app(datastore_handler, server_name, role):
         else: 
             minion_kwargs['key_filename'] = datastore_handler.config.ssh_key_path + datastore_handler.config.ssh_key_name + '.pem'
 
+        print ('No ping, adding minion to server ', server_name, server['ip_address'], role, minion_kwargs)
         yield add_minion_to_server(datastore_handler, server_name, server['ip_address'], role, **minion_kwargs)
 
     print ('Server is : ', server)

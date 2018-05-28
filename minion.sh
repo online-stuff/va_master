@@ -52,9 +52,7 @@ fi
 apt-get update -y
 apt-get install salt-minion -y
 if [[ $ROLE != "" ]]; then
-sed -i 's/^role:/#role:/g' /etc/salt/grains
 echo "role: $ROLE" >> /etc/salt/grains
 fi
-sed -i 's/^master:/#master:/g' /etc/salt/minion
 echo "master: $MASTER" >> /etc/salt/minion
 service salt-minion restart
