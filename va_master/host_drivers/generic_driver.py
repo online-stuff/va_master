@@ -17,7 +17,7 @@ PROVIDER_TEMPLATE = ""
 PROFILE_TEMPLATE = ""
 
 def check_ping(address):
-    response = os.system("ping -c 1 " + address)
+    response = os.system("ping -c 1 " + address + " > /dev/null")
     if response == 0:
         pingstatus = "ACTIVE"
     else:
@@ -115,31 +115,32 @@ class GenericDriver(base.DriverBase):
     def get_servers(self, provider):
         servers = yield self.datastore_handler.get_provider(provider['provider_name'])
         servers = servers['servers']
-        servers = [
-            {
-                'hostname' : x['hostname'], 
-                'ip' : x['ip_address'],
+        result = []
+        
+        if provider['provider_name'] == 'va_standalone_servers' : 
+            provider['provider_name'] = ''
+
+        for server in servers: 
+            db_server = yield self.datastore_handler.get_object(object_type = 'server', server_name = server['hostname'])
+            server = {
+                'hostname' : server['hostname'], 
+                'ip' : server['ip_address'],
                 'size' : '',
                 'used_disk' : 0, 
                 'used_ram' : 0, 
                 'used_cpu' : 0,
-                'status' : check_ping(x['ip_address']), 
+                'status' : check_ping(server['ip_address']), 
                 'cost' : 0,  #TODO find way to calculate costs
                 'estimated_cost' : 0,
-                'managed_by' : x.get('managed_by', []), 
+                'managed_by' : [],
                 'provider' : provider['provider_name'], 
-            } for x in servers
-        ]
+            }
+            server.update(db_server)
+            result.append(server)
 
+        print ('SERVERS STANDALONE: ', result)
 
-        if provider['provider_name'] == 'va_standalone_servers' : 
-            provider['provider_name'] = 'none'
-
-        for i in servers: 
-            i['provider'] = provider['provider_name']
-        print ('SERVERS STANDALONE: ', servers)
-
-        raise tornado.gen.Return(servers)
+        raise tornado.gen.Return(result)
         
 
     @tornado.gen.coroutine
@@ -244,6 +245,7 @@ class GenericDriver(base.DriverBase):
 
 
         try:
+            print ('Kwargs : ', connect_kwargs)
             cl.connect(data.get('ip'), **connect_kwargs)
         except Exception as e: 
             print ('Failed to connect with ssh to ', data.get('ip'))
@@ -252,14 +254,15 @@ class GenericDriver(base.DriverBase):
             raise Exception('Failed to connect with ssh: ' + e.message)
         try:
 
-            server = {"server_name" : data["server_name"], "hostname" : data["server_name"], "ip_address" : data["ip"], "local_gb" : 0, "memory_mb" : 0, "status" : "n/a" , "managed_by" : ['ssh'], "location" : data.get('location', '')}
+            server = {"server_name" : data["server_name"], "hostname" : data["server_name"], "ip_address" : data["ip"], "local_gb" : 0, "memory_mb" : 0, "managed_by" : ['ssh'], "location" : data.get('location', '')}
             print ('Server is : ', server)
-            yield apps.add_server_to_datastore(self.datastore_handler, server_name = server['server_name'], ip_address = data['ip'], hostname = server['hostname'], manage_type = 'ssh', username = data['username'], driver_name = 'generic_driver', kwargs = {'password' : data.get('password', ''), 'location' : data.get('location', '')})
+            yield apps.add_server_to_datastore(self.datastore_handler, server_name = server['server_name'], ip_address = data['ip'], hostname = server['hostname'], manage_type = 'ssh', username = data['username'], kwargs = {'password' : data.get('password', ''), 'location' : data.get('location', '')})
             print ('Added server to datastore')
             db_server = yield self.datastore_handler.get_object('server', server_name = server['server_name'])
             print ('Db server is : ', db_server)
 
             if provider['provider_name'] != 'va_standalone_servers' : 
+                print ('Provider name is : ', provider['provider_name'])
                 yield apps.manage_server_type(self.datastore_handler, server_name = server['server_name'], new_type = 'provider', driver_name = 'generic_driver')
                 server['managed_by'].append('provider')
 

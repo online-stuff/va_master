@@ -315,14 +315,14 @@ def get_provider_info(handler, dash_user, get_billing = True, get_servers = True
 
     providers_info = [x for x in providers_info if x['provider_name']]
 
-    standalone_provider = yield datastore_handler.get_provider('va_standalone_servers')
-
     standalone_default_values = {'size' : ''}
-    standalone_servers = standalone_provider['servers']
+
+    standalone_provider = yield datastore_handler.get_provider('va_standalone_servers')
+    standalone_driver = yield drivers_handler.get_driver_by_id('generic_driver')
+    standalone_servers = yield standalone_driver.get_servers(standalone_provider)
 
     for s in standalone_servers: 
         datastore_server = yield datastore_handler.get_object(object_type = 'server', server_name = server.get('server_name', server.get('hostname', '')))
-        s['ip'] = s.pop('ip_address') #Change in specs
         s.update(datastore_server)
 
     for v in standalone_default_values: 
