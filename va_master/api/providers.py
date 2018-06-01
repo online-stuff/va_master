@@ -290,6 +290,8 @@ def get_provider_info(handler, dash_user, get_billing = True, get_servers = True
     if required_providers: 
         providers = [provider for provider in providers if provider['provider_name'] in required_providers]
 
+    
+    print ('Looking for drivers ', [x['driver_name'] for x in providers])
     provider_drivers = yield [drivers_handler.get_driver_by_id(x['driver_name']) for x in providers]
     providers_data = [x[0].get_provider_data(provider = x[1], get_servers = get_servers, get_billing = get_billing) for x in zip(provider_drivers, providers)]
     providers_info = yield providers_data

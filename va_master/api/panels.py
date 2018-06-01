@@ -81,7 +81,7 @@ def panel_action_execute(handler, server_name, action, args = [], dash_user = ''
         module = state['module']
 
     cl = salt.client.LocalClient()
-    print ('Calling salt module ', module + '.' + action, ' on ', server_name, ' with args : ', args, ' and kwargs : ', kwargs)
+    print ('Calling salt module ', module, 'action',  action, ' on ', server_name, ' with args : ', args, ' and kwargs : ', kwargs)
     result = cl.cmd(server_name, module + '.' + action , arg = args, kwarg = kwargs, timeout = timeout)
     result = result.get(server_name)
 #    if type(result) == str:
