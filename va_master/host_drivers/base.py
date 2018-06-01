@@ -20,6 +20,14 @@ class Step(object):
         for field in list_of_fields: 
             self.add_field(*field)
 
+    def remove_fields(self, list_of_fields):
+        for field in list_of_fields: 
+            remove_field_index = [i for i in range(len(self.fields)) if self.fields[i]['id'] == field]
+            if not remove_field_index: 
+                print ('Tried to remove field ', field, ' but step does not contain it. Ignoring. ')
+            remove_field_index = remove_field_index[0]
+            self.fields.pop(remove_field_index)
+
     def add_str_field(self, id_, name):
         self.fields.append({'type': 'str', 'id': id_, 'name': name})
 
@@ -372,7 +380,8 @@ class DriverBase(object):
             self.field_values['networks'] = yield self.get_networks()
             self.field_values['sec_groups'] = yield self.get_sec_groups()
 
-            self.field_values['location'] = field_values.get('location', 'va_master')                
+            self.field_values['location'] = field_values.get('location', 'va_master')
+            self.provider_vars['VAR_LOCATION'] = field_values.get('location', '')
             options.update({
                     'network': self.field_values['networks'],
                     'sec_group': self.field_values['sec_groups'],

@@ -18,6 +18,7 @@ def get_paths():
             'panels/get_all_function_groups' : {'function' : get_all_function_groups, 'args' : ['datastore_handler']},
         },
         'post' : {
+            'panels/sync_salt_minions' : {'function' : sync_salt_minions, 'args' : ['datastore_handler', 'dash_user']},
             'panels/add_user_functions' : {'function' : add_user_functions, 'args' : ['datastore_handler', 'user', 'functions']},
             'panels/create_user_group' : {'function' : create_user_group, 'args' : ['datastore_handler', 'group_name', 'functions']},
             'panels/create_user_with_group' : {'function' : create_user_with_group, 'args' : ['handler', 'user', 'password', 'user_type', 'functions', 'groups']},
@@ -28,6 +29,8 @@ def get_paths():
 
             'panels/get_panel' : {'function' : get_panel_for_user, 'args' : ['server_name', 'panel', 'provider', 'handler', 'args', 'dash_user']},
             'panels/new_panel' : {'function' : new_panel, 'args' : ['datastore_handler', 'server_name', 'role']},
+            'panels/remove_panel' : {'function' : remove_panel, 'args' : ['datastore_handler', 'server_name', 'role', 'dash_user']},
+
             'panels/action' : {'function' : panel_action, 'args' : ['handler', 'server_name', 'action', 'args', 'kwargs', 'module', 'dash_user']}, #must have server_name and action in data, 'args' : []}, ex: panels/action server_name=nino_dir action=list_users
             'panels/chart_data' : {'function' : get_chart_data, 'args' : ['server_name', 'args']},
             'panels/serve_file' : {'function' : salt_serve_file, 'args' : ['handler', 'server_name', 'action', 'args', 'kwargs', 'module']},
@@ -39,9 +42,11 @@ def get_paths():
     return paths
 
 
-def get_minion_role(minion_name):
+def get_minion_role(minion_name = '*'):
     cl = LocalClient()
-    role = cl.cmd(minion_name, 'grains.get', arg = ['role'])[minion_name]
+    role = cl.cmd(minion_name, 'grains.get', arg = ['role'])
+    if minion_name != '*': 
+        role = role[minion_name]
     return role
 
 
@@ -51,6 +56,50 @@ def new_panel(datastore_handler, server_name, role):
 
     yield datastore_handler.add_panel(server_name, role)
 
+
+@tornado.gen.coroutine
+def sync_salt_minions(datastore_handler, dash_user):
+    minions = get_minion_role('*')
+    print ('Minions are : ', minions)
+    unresponsive_minions = []
+    for minion in minions: 
+        panel_type = dash_user['type'] + '_panel'
+        panel = yield datastore_handler.get_object(object_type = panel_type, name = minions[minion])
+
+        if not panel: 
+            unresponsive_minions.append([minion, minions[minion]])
+            continue
+
+        print ('Panel : ', panel, ' for ', minions[minion])
+        if minion not in panel['servers']: 
+            print ('Panel servers are : ', panel['servers'], ' and adding ', minion)
+            panel['servers'].append(minion)
+        yield datastore_handler.insert_object(object_type = panel_type, name = minions[minion], data = panel)
+
+    panels = yield datastore_handler.get_panels(dash_user['type'])
+    print ('Now clearing panels')
+    for panel in panels: 
+        panel_type = dash_user['type'] + '_panel'
+
+        for server in panel['servers']: 
+            if server not in minions: 
+                print (server, ' not in ', minions, ' so removing it. ')
+                panel['servers'] = [x for x in panel['servers'] if x != server]
+        yield datastore_handler.insert_object(object_type = panel_type, name = panel['name'], data = panel)
+
+
+    if unresponsive_minions: 
+        raise tornado.gen.Return({'success' : True, 'message' : 'There were unresponsive minions. ', 'data' : unresponsive_minions})
+    else: 
+        raise tornado.gen.Return({'success' : True, 'message' : '', 'data' : {}})
+
+@tornado.gen.coroutine
+def remove_panel(datastore_handler, server_name, dash_user, role = None):
+    server_role = role or get_minion_role(server_name)
+    panel_type = dash_user['type'] + '_panel'
+    panel = yield datastore_handler.get_object(object_type = panel_type, name = server_role)
+    panel['servers'] = [x for x in panel['servers'] if x != server_name]
+    panels = yield datastore_handler.insert_object(object_type = panel_type, name = server_role, data = panel)
 
 @tornado.gen.coroutine
 def list_panels(datastore_handler, dash_user):
@@ -206,11 +255,12 @@ def get_panels_stats(handler, dash_user):
     providers = [x for x in providers if x['provider_name'] != 'va_standalone_servers']
     servers = yield datastore_handler.datastore.get_recurse('server/')
     serv = yield services.list_services()
+    serv = len(serv) - 1 #One service is the default consul one, which we don't want to be counted
 #    vpn = yield apps.get_openvpn_users()
     vpn = {'users' : []}
     states = yield apps.get_states(handler, dash_user)
     
-    result = {'providers' : len(providers), 'servers' : len(servers), 'services' : len(serv), 'vpn' : len(vpn['users']), 'apps' : len(states)}
+    result = {'providers' : len(providers), 'servers' : len(servers), 'services' : serv, 'vpn' : len(vpn['users']), 'apps' : len(states)}
     raise tornado.gen.Return(result)
 
 
@@ -235,8 +285,9 @@ def get_panel_for_user(handler, panel, server_name, dash_user, args = [], provid
     if not kwargs: 
         kwargs = {x : handler.data[x] for x in handler.data if x not in ignored_kwargs}
 
+    print ('Looking for state ', state)
     state = yield datastore_handler.get_state(name = state)
-
+    print ('Staet is : ', state)
     action = 'get_panel'
     if type(args) != list and args: 
         args = [args]

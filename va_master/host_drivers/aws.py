@@ -51,7 +51,7 @@ output=json
 
 class AWSDriver(base.DriverBase):
 
-    def __init__(self, provider_name = 'aws_provider', profile_name = 'aws_profile', host_ip = '192.168.80.39', key_name = 'va_master_key', key_path = '/root/va_master_key', datastore_handler = None):
+    def __init__(self, datastore_handler = None, provider_name = 'aws_provider', profile_name = 'aws_profile', host_ip = '192.168.80.39', key_name = 'va_master_key', key_path = '/root/va_master_key'):
         kwargs = {
             'driver_name' : 'aws', 
             'provider_template' : PROVIDER_TEMPLATE, 
@@ -174,20 +174,27 @@ class AWSDriver(base.DriverBase):
             if element['instanceType'] not in [x['instanceType'] for x in new_pricing_data]: 
                 new_pricing_data.append(element)
 
+        status_map = {
+            'pending' : 'PENDING', 
+            'running' : 'ACTIVE', 
+            'stopped' : 'SHUTOFF', 
+        }
+
         servers = [{
                     'hostname' : i['PublicDnsName'],
                     'ip' : i.get('PublicIpAddress', ''),
-                    'size' : '',
+                    'size' : i['InstanceType'],
                     'used_disk' : instance_hdd(i),
                     'used_ram' : p['memory'],
                     'used_cpu' : int(p['vcpu']),
-                    'status' : i['State']['Name'],
+                    'status' : status_map.get(i['State']['Name'], i['State']['Name']),
                     'cost' : 0,  #TODO see if I can actually get the cost. 
                     'estimated_cost' : 0, 
                     'provider' : provider['provider_name'],
                 } 
         for i in instances for p in new_pricing_data if i['InstanceType'] == p['instanceType']]
 
+        print ('servers are ', servers)
         raise tornado.gen.Return(servers)
 
     @tornado.gen.coroutine
@@ -227,10 +234,18 @@ class AWSDriver(base.DriverBase):
 
         total_cost = float("{0:.2f}".format(total_cost))
         servers = yield self.get_servers(provider)
-        
+        for server in servers: 
+            server['used_disk'] = server['used_disk'] * (2**30)
+
+
         total_memory = sum([bytes_to_int(s['used_ram']) for s in servers])
         total_memory = int_to_bytes(total_memory)
+
+        total_disk = sum([bytes_to_int(s['used_disk']) for s in servers])
+        total_disk = int_to_bytes(total_disk)
+
         provider['memory'] = total_memory
+        provider['hdd'] = total_disk
 
         servers.append({
             'hostname' : 'Other costs',

@@ -1,5 +1,6 @@
 import unittest
 import sys
+print ('Importing api')
 from va_master import api
 
 from va_master.utils.va_api import APIManager

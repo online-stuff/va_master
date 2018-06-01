@@ -51,11 +51,11 @@ PROFILE_TEMPLATE = '''VAR_PROFILE_NAME:
 '''
 
 class LXCDriver(base.DriverBase):
-    def __init__(self, flavours, provider_name = 'digital_ocean_provider', profile_name = 'digital_ocean_profile', host_ip = '', key_name = 'va_master_key', key_path = '/root/va_master_key', datastore_handler = None):
+    def __init__(self, flavours, provider_name = 'digital_ocean_provider', profile_name = 'digital_ocean_profile', host_ip = '', key_name = 'va_master_key', key_path = '/root/va_master_key', datastore_handler = None, ssl_path = '/opt/va_master/ssl'):
         """ The standard issue init method. Borrows most of the functionality from the BaseDriver init method, but adds a self.regions attribute, specific for OpenStack hosts. """
 
         kwargs = {
-            'driver_name' : 'digital_ocean',
+            'driver_name' : 'lxc',
             'provider_template' : PROVIDER_TEMPLATE,
             'profile_template' : PROFILE_TEMPLATE,
             'provider_name' : provider_name,
@@ -65,13 +65,28 @@ class LXCDriver(base.DriverBase):
             'key_path' : key_path, 
             'datastore_handler' : datastore_handler
             }
-
+        self.ssl_path = ssl_path
         self.flavours = flavours
         super(LXCDriver, self).__init__(**kwargs)
 
+
+    def get_cert(self, provider):
+        cert_files = '%s/%s' % (self.ssl_path, provider['provider_name'])
+
+        if not any([os.path.isfile(cert_files + file_type) for file_type in ['.csr', 'crt', 'key']]):
+            openssl_cmd = ['openssl', 'req', '-newkey', 'rsa:2048', '-nodes', '-keyout', cert_files + '.key', '-out', cert_files  + '.csr', '-subj', '/C=MK/ST=MK/L=Skopje/O=Firma/OU=IT/CN=client']
+            sign_cmd = ['openssl', 'x509', '-signkey', cert_files + '.key', '-in', cert_files + '.csr', '-req', '-days', '365', '-out', cert_files + '.crt']
+            ssl = subprocess.call(openssl_cmd)
+            keys = subprocess.call(sign_cmd)
+        
+        return (cert_files + '.crt', cert_files + '.key')
+
     def get_client(self, provider):
-        self.cl = Client(provider['provider_ip'], verify = False)
+        cert = self.get_cert(provider)
+
+        self.cl = Client(provider['provider_ip'], cert = cert, verify = False)
         self.cl.authenticate(provider['password'])
+
         return self.cl
 
     def get_server_addresses(self, s):
@@ -115,7 +130,7 @@ class LXCDriver(base.DriverBase):
 
     @tornado.gen.coroutine
     def get_sec_groups(self):
-        """ No security groups for digital ocean.  """
+        """ No security groups for lxc.  """
         sec_groups = ['No security groups. ']
         raise tornado.gen.Return(sec_groups)
 
@@ -153,7 +168,6 @@ class LXCDriver(base.DriverBase):
         servers = cl.containers.all()
         servers = [{'server' : x, 'state' : x.state().__dict__} for x in servers]
 
-
         servers = [self.container_to_dict(x, provider['provider_name']) for x in servers]
 
         raise tornado.gen.Return(servers)
@@ -165,9 +179,12 @@ class LXCDriver(base.DriverBase):
         """ TODO """
         try:
             cl = self.get_client(provider)
-            raise tornado.gen.Return({'success' : True, 'message' : ''})
         except Exception as e: 
+            import traceback
+            traceback.print_exc()
             raise tornado.gen.Return({'success' : False, 'message' : e.message})
+
+        raise tornado.gen.Return({'success' : True, 'message' : ''})
 
 
     @tornado.gen.coroutine
@@ -217,18 +234,18 @@ class LXCDriver(base.DriverBase):
         get_sum = lambda x: sum([s[x] for s in servers if not type(s[x]) == str])
 
         provider_usage = {
-            'max_cpus' : 'n/a',
+            'max_cpus' : None,
             'used_cpus' : get_sum('used_cpu'), 
-            'free_cpus' : 'n/a', 
-            'max_ram' : 'n/a', 
+            'free_cpus' : None, 
+            'max_ram' : None, 
             'used_ram' : get_sum('used_ram'),
-            'free_ram' : 'n/a', 
-            'max_disk' : 'n/a', 
+            'free_ram' : None, 
+            'max_disk' : None, 
             'used_disk' : get_sum('used_disk'), 
-            'free_disk' : 'n/a',
-            'max_servers' : 'n/a', 
+            'free_disk' : None,
+            'max_servers' : None, 
             'used_servers' : len(servers), 
-            'free_servers' : 'n/a'
+            'free_servers' :None
         }
 
         provider_data = {
@@ -313,9 +330,6 @@ class LXCDriver(base.DriverBase):
                 }
             }
 
-            print ('My conf is : ', lxc_config)
-#            lxc_config = {'name' : data['server_name'], 'source' : {'type' : 'image', 'alias' : 'ubuntu/16.04'}}
-
             new_container = cl.containers.create(lxc_config, wait = True)
             ssh_path = '/root/.ssh'
             keys_path = ssh_path + '/authorized_keys'
@@ -329,7 +343,17 @@ class LXCDriver(base.DriverBase):
                 fm = new_container.FilesManager(cl, new_container)
                 fm.put(keys_path, key)
 
-                yield apps.add_minion_to_server(data['server_name'], self.get_server_addresses(s)[0], data['role'], key_filename = '/root/.ssh/va-master.pem')
+                ip = []
+                while not ip: 
+                    addresses = new_container.state().network['eth0']['addresses']
+                    ip = [x['address'] for x in addresses if x.get('family', '') == 'inet']
+                    print ('Network is : ', new_container.state().network)
+ 
+                new_container.execute(['apt-get', '-y', 'install', 'openssh-server'])
+  
+                ip = ip[0]
+                print ('IP is : ', ip)
+                yield apps.add_minion_to_server(data['server_name'], ip, data['role'], key_filename = '/root/.ssh/va-master.pem', username = 'root')
             new_container = self.container_to_dict(provider['provider_name'])
             raise tornado.gen.Return(new_container)
         except:

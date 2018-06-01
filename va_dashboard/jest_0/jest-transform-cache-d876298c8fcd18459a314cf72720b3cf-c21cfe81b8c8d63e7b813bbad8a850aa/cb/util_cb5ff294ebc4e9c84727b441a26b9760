@@ -1,0 +1,16 @@
+fdbfc14a58f44835a9871ddac1944f20
+'use strict';
+
+var util = require('../tabs/util');
+//import { isEmpty } from '../tabs/util';
+
+test('empty object', function () {
+  expect(util.isEmpty({})).toBe(true);
+});
+
+describe('Addition', function () {
+  it('knows that 2 and 2 make 4', function () {
+    expect(2 + 2).toBe(4);
+  });
+});
+//# sourceMappingURL=data:application/json;charset=utf-8;base64,eyJ2ZXJzaW9uIjozLCJzb3VyY2VzIjpbInV0aWwuanMiXSwibmFtZXMiOlsidXRpbCIsInJlcXVpcmUiLCJ0ZXN0IiwiZXhwZWN0IiwiaXNFbXB0eSIsInRvQmUiLCJkZXNjcmliZSIsIml0Il0sIm1hcHBpbmdzIjoiOztBQUFBLElBQU1BLE9BQU9DLFFBQVEsY0FBUixDQUFiO0FBQ0E7O0FBRUFDLEtBQUssY0FBTCxFQUFxQixZQUFNO0FBQ3pCQyxTQUFPSCxLQUFLSSxPQUFMLENBQWEsRUFBYixDQUFQLEVBQXlCQyxJQUF6QixDQUE4QixJQUE5QjtBQUNELENBRkQ7O0FBSUFDLFNBQVMsVUFBVCxFQUFxQixZQUFNO0FBQ3pCQyxLQUFHLDJCQUFILEVBQWdDLFlBQU07QUFDcENKLFdBQU8sSUFBSSxDQUFYLEVBQWNFLElBQWQsQ0FBbUIsQ0FBbkI7QUFDRCxHQUZEO0FBR0QsQ0FKRCIsImZpbGUiOiJ1dGlsLmpzIiwic291cmNlc0NvbnRlbnQiOlsiY29uc3QgdXRpbCA9IHJlcXVpcmUoJy4uL3RhYnMvdXRpbCcpO1xuLy9pbXBvcnQgeyBpc0VtcHR5IH0gZnJvbSAnLi4vdGFicy91dGlsJztcblxudGVzdCgnZW1wdHkgb2JqZWN0JywgKCkgPT4ge1xuICBleHBlY3QodXRpbC5pc0VtcHR5KHt9KSkudG9CZSh0cnVlKTtcbn0pO1xuXG5kZXNjcmliZSgnQWRkaXRpb24nLCAoKSA9PiB7XG4gIGl0KCdrbm93cyB0aGF0IDIgYW5kIDIgbWFrZSA0JywgKCkgPT4ge1xuICAgIGV4cGVjdCgyICsgMikudG9CZSg0KTtcbiAgfSk7XG59KTtcbiJdfQ==

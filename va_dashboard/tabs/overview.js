@@ -128,7 +128,7 @@ class Overview extends Component {
                 var pp = provider[key], provider_servers = [];
                 for(var kkey=0; kkey < pp.servers.length; kkey++) {
                     var ii = pp.servers[kkey];
-                    provider_servers.push( {name: ii.hostname, ip: ii.ip} );
+                    provider_servers.push( {name: ii.hostname.split('.', 1)[0], ip: ii.ip} );
                 }
                 diagram[loc].push({name: pp.provider_name, servers: provider_servers});
                 if(pp.provider_name && pp.provider_usage.used_cpus && pp.provider_usage.used_ram && pp.provider_usage.used_disk)
