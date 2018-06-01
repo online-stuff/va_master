@@ -196,7 +196,7 @@ class ApiHandler(tornado.web.RequestHandler):
             self.config.logger.error('An error occured performing request. Function was %s and data was %s. ' % (str(api_func), str(data)))
             import traceback
             traceback.print_exc()
-            result = {'success' : False, 'message' : 'There was an error performing a request : ' + str(e.message), 'data' : {}}
+            result = {'success' : False, 'message' : 'There was an error performing a request : ' + str(e) + ':' + str(e.message), 'data' : {}}
 
         if not result['success'] and not self.status: 
             self.status = 400
@@ -528,17 +528,24 @@ class LogMessagingSocket(tornado.websocket.WebSocketHandler):
 
     @tornado.gen.coroutine
     def handle_get_messages(self, message):
-        print ('In handle_get_messages')        
+        print ('In handle_get_messages', message)
         from_date = message.get('from_date')
         date_format = '%Y-%m-%d'
         if from_date:
-            from_date = datetime.datetime.strptime(from_date, date_format)
+            if type(from_date) == str:
+                from_date = datetime.datetime.strptime(from_date, date_format)
+            elif type(from_date) == int:
+                from_date = datetime.datetime.fromtimestamp(from_date/1e3)
         else: 
             from_date = datetime.datetime.now() + dateutil.relativedelta.relativedelta(days = -2)
  
         to_date = message.get('to_date')
         if to_date: 
-            to_date = datetime.datetime.strptime(to_date, date_format)
+            if type(to_date) == str:
+                to_date = datetime.datetime.strptime(to_date, date_format)
+            if type(to_date) == int:
+                to_date = datetime.datetime.fromtimestamp(to_date/1e3)
+
         else: 
             to_date = datetime.datetime.now()
  

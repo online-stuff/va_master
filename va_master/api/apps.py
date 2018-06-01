@@ -6,6 +6,11 @@ import requests, paramiko
 import zipfile, tarfile
 
 from va_master.utils.paramiko_utils import ssh_call
+from va_master.utils.va_utils import bytes_to_readable, get_route_to_minion, call_master_cmd
+
+from va_master.handlers.server_management import manage_server_type
+from va_master.handlers.salt_handler import add_minion_to_server
+
 from tornado.concurrent import run_on_executor, Future
 
 import salt_manage_pillar
@@ -33,7 +38,7 @@ def get_paths():
             'state/add' : {'function' : create_new_state,'args' : ['file', 'body', 'filename']},
             'apps/new/validate_fields' : {'function' : validate_app_fields, 'args' : ['handler']},
             'apps' : {'function' : launch_app, 'args' : ['handler']},
-            'apps/add_minion' : {'function' : add_minion_to_server, 'args' : ['handler', 'server_name', 'ip_address', 'username', 'password', 'key_filename', 'role']},
+            'apps/add_minion' : {'function' : add_minion_to_server, 'args' : ['datastore_handler', 'server_name', 'ip_address', 'username', 'password', 'key_filename', 'role']},
             'apps/action' : {'function' : perform_server_action, 'args' : ['handler', 'provider_name', 'action', 'server_name', 'action_type', 'kwargs']},
             'apps/add_vpn_user': {'function' : add_openvpn_user, 'args' : ['username']},
             'apps/revoke_vpn_user': {'function' : revoke_openvpn_user, 'args' : ['username']},
@@ -46,43 +51,6 @@ def get_paths():
     return paths
 
 
-def get_master_ip():
-    result = call_master_cmd('network.default_route')
-    gateway = [x['gateway'] for x in result if x.get('gateway', '') != '::']
-    gateway = gateway[0]
-    result = call_master_cmd('network.get_route', arg = ['10.120.155.1'])
-    ip = result['source']
-    print ('Ip is : ', ip)
-
-    return ip
-
-def call_master_cmd(fun, arg = [], kwarg = {}):
-    cl = LocalClient()
-    result = cl.cmd('G@role:va-master', fun = fun, tgt_type = 'compound', arg = arg, kwarg = kwarg)
-    print ('Executing  :', fun, arg, kwarg)
-    result = [result[i] for i in result if result[i]]
-    if not result: 
-         raise Exception('Tried to run ' + str(fun) + ' on va-master, but there was no response. arg was ' + str(arg) + ' and kwarg was ' + str(kwarg))
-    return result[0]
-
-
-def bytes_to_readable(num, suffix='B'):
-    """Converts bytes integer to human readable"""
-
-    num = int(num)
-    for unit in ['','Ki','Mi','Gi','Ti','Pi','Ei','Zi']:
-        if abs(num) < 1024.0:
-            return "%3.1f%s%s" % (num, unit, suffix)
-        num /= 1024.0
-    return "%.1f%s%s" % (num, 'Yi', suffix)
-
-@tornado.gen.coroutine
-def add_app(provider, server_name):
-    "WIP function - TODO make adding apps work properly"""
-
-    app = yield get_app_info(server_name)
-    yield handler.config.datastore_handler.store_app(app, provider)
-
 @tornado.gen.coroutine
 def get_openvpn_users():
     """Gets openvpn users and current status. Then merges users to find currently active ones and their usage data. """
@@ -91,7 +59,6 @@ def get_openvpn_users():
     openvpn_users = call_master_cmd('openvpn.list_users')
 
     if type(openvpn_users) == str: 
-        print ('Openvpn users result : ', openvpn_users)
         raise Exception("Could not get openvpn users list. Contact your administrator for more information. ")
 
     #openvpn_users returns {"revoked" : [list, of, revoked, users], "active" : [list, of, active, users], "status" : {"client_list" : [], "routing_table" : []}}
@@ -128,7 +95,6 @@ def add_openvpn_user(username):
 
     success = call_master_cmd('openvpn.add_user', kwarg = {'username' : username})
     if success:
-        print ('Adding user returned : ', success)
         raise Exception('Adding an openvpn user returned with an error. ')
     raise tornado.gen.Return({'success' : True, 'data' : None, 'message' : 'User added successfuly. '})
 
@@ -139,7 +105,6 @@ def revoke_openvpn_user(username):
     success = call_master_cmd('openvpn.revoke_user', kwarg = {'username' : username})
  
     if success:
-        print ('Revoking user returned : ', success)
         raise Exception('Revoking %s returned with an error. ' % (username))
     raise tornado.gen.Return({'success' : True, 'data' : None, 'message' : 'User revoked successfuly. '})
 
@@ -151,7 +116,6 @@ def list_user_logins(username):
 
     success = call_master_cmd('openvpn.list_user_logins', kwarg = {'username' : username})
     if type(success) == str:
-        print ('User logins returned', success)
         raise Exception('Listing user logins returned with an error. ')
     raise tornado.gen.Return(success)
 
@@ -162,7 +126,6 @@ def download_vpn_cert(username, handler):
 
     cert_has_error = yield handler.has_error(cert)
     if cert_has_error:
-        print ('Cert has an error: ', cert)
         raise Exception('Getting certificate for %s returned with an error. ' % (username))
 
     vpn_cert_path = '/tmp/' + username + '_vpn.cert'
@@ -200,15 +163,15 @@ def perform_server_action(handler, action, server_name, provider_name = '', acti
         result = {'success' : True, 'message' : '', 'data' : result}
 
 #    result['message'] = 'Action %s completed successfuly. ' % action
-    print ('Result is : ', result)
     raise tornado.gen.Return(result)
 
 
 @tornado.gen.coroutine
 def get_states(handler, dash_user):
     """
-    Gets all states from the datastore. The state data is retrieved from the appinfo.json files in their respective folders. 
-    Each appinfo has needs to have a name, description, version, icon, dependency, substate and path field. It should optionaly have a module and panels field, if the state is intended to be used with panels, but these are optional. 
+    Gets all states from the datastore. Stats can be read from the consul kv store by doing `consul kv get -recurse states/`. 
+    This data is populated when doing `python -m va_master manage --reset-state. The state data is retrieved from the appinfo.json files in their respective folders. 
+    Each appinfo has needs to have a module, panels, name, description, version, icon, dependency, substate and path field. 
     """
     
     datastore_handler = handler.datastore_handler
@@ -255,22 +218,16 @@ def create_new_state(datastore_handler, file_contents, body, filename):
     with open(salt_path + tar_ref.getnames()[0] + '/appinfo.json', 'w') as f: 
         f.write(json.dumps(new_state))
 
-#    zip_ref = zipfile.ZipFile(tmp_archive)
-#    zip_ref.extractall(salt_path)
-
     tar_ref = tarfile.TarFile(tmp_archive)
     tar_ref.extractall(salt_path)
 
     yield datastore_handler.add_state(new_state)
 
-#    zip_ref.close()
     tar_ref.close()
-#    manage_states(handler, 'append')
 
 
 @tornado.gen.coroutine
 def validate_app_fields(handler):
-    #TODO finish documentation
     """
     Creates a server by going through a validation scheme similar to that for adding providers. 
     Requires that you send a step index as an argument, whereas the specifics for the validation are based on what driver you are using. 
@@ -299,7 +256,6 @@ def get_app_info(server_name):
     """Gets mine inventory for the provided instance. """
 
     server_info = call_master_cmd('mine.get', arg = [server_name, 'inventory'])
-    print ('result is : ', server_info)
     if not server_info: 
         raise Exception('Attempted to get app info for %s but mine.get returned empty. ' % (server_name))
     raise tornado.gen.Return(server_info)
@@ -321,85 +277,16 @@ def write_pillar(data):
         f.write(pillar_str)
     salt_manage_pillar.add_server(data.get('server_name'), data.get('role', ''))
 
-
-#TODO
-@tornado.gen.coroutine
-def add_minion_to_server(handler, server_name, ip_address, role, username = '', password = '', key_filename = ''):
-
-    ssh = paramiko.SSHClient()
-    ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-
-    #local_key is where the minion keys will sit in salt
-    #init_key is where they are initially created    
-    local_key_dir = '/etc/salt/pki/master/minions/%s' % (server_name)
-    init_key_dir = '/tmp/%s' % (server_name)
-
-    #bootstrap_script is where the bootstrap script resides on the va_master
-    #server_script is where it will reside on the targeted server
-    bootstrap_script = '/opt/va_master/minion-preseed.sh'
-    server_script = '/root/minion-preseed.sh'
-#    server_script = '/root/bootstrap-salt.sh'
-
-    connect_kwargs = {'username' : username}
-    if password: 
-        connect_kwargs['password'] = password
-    elif key_filename: 
-        connect_kwargs['key_filename'] = key_filename
-    else: 
-        raise Exception('When adding minion to server, I expected either password or key_filename, but both values are empty. ')
-
-    ssh.connect(ip_address, **connect_kwargs)
-    sftp = ssh.open_sftp()
-
-    #We generate keys in /tmp, and then copy the public key  to the salt dir
-    create_key_cmd = ['salt-key', '--gen-keys=%s' % (server_name), '--gen-keys-dir=/tmp/']
-    copy_key_to_salt_cmd = ['cp', init_key_dir + '.pub', local_key_dir]
-
-    print ('Performing ', subprocess.list2cmdline(create_key_cmd))
-    subprocess.check_output(create_key_cmd)
-    print ('Performing ', subprocess.list2cmdline(copy_key_to_salt_cmd))
-    subprocess.check_output(copy_key_to_salt_cmd)
-
-    #We create the pki dir and copy the initial keys there
-    print ('Creating dir on minion')
-    ssh_call(ssh, 'mkdir -p /etc/salt/pki/minion/')
-
-    print ('Putting minion keys from ', init_key_dir, ' to /etc/salt/pki/minion/minion ')
-    sftp.put(init_key_dir + '.pem', '/etc/salt/pki/minion/minion.pem')
-    sftp.put(init_key_dir + '.pub', '/etc/salt/pki/minion/minion.pub')
-
-    #Finally, we download the bootstrap script on the remote server and run it
-    #This should install salt-minion, which along with the minion keys should make it readily available. 
-    print ('Starting wget!')
-    sftp.put(bootstrap_script, server_script)
-#    ssh_call(ssh, 'wget -O %s https://bootstrap.saltstack.com' % (server_script))
-    print ('Wget is done. ')
-#    if stderr: 
-#        raise Exception('There was an error getting bootstrap script. ' + str(stderr.read()))
-
-#    master_line = 'master: ' + str(get_master_ip())
-
-    ssh_call(ssh, 'chmod +x ' + server_script)
-    ssh_call(ssh, "bash -c '%s %s %s'" % (server_script, role, get_master_ip()))
-    ssh_call(ssh, 'echo fqdn > /etc/salt/minion_id')
-
-#    print ('stdout is : ', stdout.read())
-#    print ('Err is : ', stderr.read())
-
-#    ssh_call(ssh, 'echo %s >> /etc/salt/minion' % (master_line))
-#    if stderr: 
-#        raise Exception('There was an error executing server script. ' + str(stderr.read()))
-
-        
-##@auth_only
 @tornado.gen.coroutine
 def launch_app(handler):
     """
-    Launches a server based on the data supplied. 
+    Launches a server based on the data supplied. This is dependent on the specific data required by the providers. 
+    The default for starting servers is using salt-cloud -p <profile> <minion_name>, where the drivers are responsible for creating the configuration files. 
+    Some drivers work independent of salt though, such as libvirt. 
     If the extra_fields key is supplied, it will create a specific pillar for the server. 
     If provider_name is not sent, it will create a va_standalone server, with the invisible driver va_standalone_servers. 
+    If role is sent, then the function will try to get data for the minion using salt-call mine.get  <minion_name> inventory. If it does this successfully, it will add the server to the datastore, and add a ping service for the server. 
     """
-    #TODO finish documentation
 
     data = handler.data
     try:
@@ -407,16 +294,17 @@ def launch_app(handler):
     
         if data.get('extra_fields', {}) : 
             write_pillar(data)
-
-        print ('Launching with : ', data, ' with provider : ', provider, ' and driver : ', driver)
-        result = yield driver.create_server(provider, data)
     except: 
         import traceback
         traceback.print_exc()
 
-    yield add_server_to_datastore(handler.datastore_handler, server_name = data['server_name'], hostname = data['server_name'], manage_type = 'provider', driver_name = provider['driver_name'], ip_address = data.get('ip'))
+    result = yield driver.create_server(provider, data)
 
-    if data.get('role', True):
+    if provider.get('provider_name') and provider.get('provider_name', '') != 'va_standalone_servers': 
+        print ('Provider is : ', provider['provider_name'])
+        yield add_server_to_datastore(handler.datastore_handler, server_name = data['server_name'], hostname = data['server_name'], manage_type = 'provider', driver_name = provider['driver_name'], ip_address = data.get('ip'))
+
+    if data.get('role', False):
 
         minion_info = None
 
@@ -466,6 +354,7 @@ def add_user_salt_functions(datastore_handler, dash_user, functions):
 
 @tornado.gen.coroutine
 def set_settings(settings):
+    '''WIP function - writes a pillar using the settings. '''
     pillar_file = '/srv/pillar/nekoj.sls'
     with open(pillar_file, 'r') as f:
         a = yaml.load(f.read())
@@ -477,87 +366,31 @@ def set_settings(settings):
 
 
 @tornado.gen.coroutine
-def add_server_to_datastore(datastore_handler, server_name, ip_address = None, hostname = None, manage_type = None, username = None, driver_name = None, kwargs = {}):
-    server = {}
-    for attr in ['ip_address', 'hostname']: 
-        server[attr] = locals()[attr]
+def add_server_to_datastore(datastore_handler, server_name, ip_address, hostname = None, manage_type = None, username = None, driver_name = None, kwargs = {}):
+    ''' 
+    Main function for adding servers to the datastore. Servers are added to the `server/<server_name>` handles in the datastore, and have a server_namd and ip address. 
+    In addition, servers can be managed by ssh, winexe or provider, which defines what actions can be called on them. This is done by holding values for a "managed_by" : ["ssh", "provider", "ssh"] list, and then holding values for an "available_actions" : {"provider" : [...], "ssh" : [...]} field. 
+    If the server is not in the datastore, this function will add it.
+    If it is, it will simply update the server_type, managed_by and available_actions fields. 
+    '''
 
-    server['available_actions'] = {}
-
-    yield datastore_handler.insert_object(object_type = 'server', server_name = server_name, data = server)
-
-    if manage_type: 
-        print ('Calling with ', datastore_handler, server_name, manage_type, username, driver_name, kwargs)
-        server = yield manage_server_type(datastore_handler, server_name, manage_type, username = username, driver_name = driver_name, kwargs = kwargs)
-
-    raise tornado.gen.Return(server)
-
-
-@tornado.gen.coroutine
-def handle_app(datastore_handler, server_name, role):
-    if not role: 
-        raise Exception('Tried to convert ' + str(server_name) + " to app, but the role argument is empty. ")
+    import traceback
+    traceback.print_exc()
 
     server = yield datastore_handler.get_object(object_type = 'server', server_name = server_name)
-    yield panels.new_panel(datastore_handler, server_name = server_name, role = role)
-
-    server['type'] = 'app'
-    server['managed_by'] = list(set(server.get('managed_by', []) + ['app']))
-    server['available_actions'] = server.get('available_actions', []) + [] # TODO get panel actions and add here
-
-    yield datastore_handler.insert_object(object_type = 'server', data = server, server_name = server_name)
-
-    raise tornado.gen.Return(server)
-
-
-def test_ssh(username, ip_address, password = None, port = None):
-    cl = SSHClient()
-    cl.load_system_host_keys()
-    cl.set_missing_host_key_policy(AutoAddPolicy())
-    connect_kwargs = {
-        'username' : username, 
-    }
-    key_path = "TODO"
-
-    if data.get('port'): 
-        connect_kwargs['port'] = int(port)
-
-    if data.get('password'): 
-        connect_kwargs['password'] = password
-    else: 
-        connect_kwargs['key_filename'] = key_path + '.pem'
-
-    print ('Attempting connect with : ', connect_kwargs)
-    cl.connect(data.get('ip'), **connect_kwargs)
-
-
-@tornado.gen.coroutine
-def manage_server_type(datastore_handler, server_name, new_type, ip_address = None, username = None, driver_name = None, role = None, kwargs = {}):
-    user_type = 'root' if username == 'root' else 'user'
-    server = yield datastore_handler.get_object(object_type = 'server', server_name = server_name)
-
-    new_subtype = None
-    if new_type in ['ssh', 'winexe']:
-        new_subtype = user_type
-        server['%s_user_type' % new_type] = user_type
-        server['ip_address'] = ip_address
-    elif new_type in ['provider']: 
-        new_subtype = driver_name
-        server['drivers'] = server.get('drivers', []) + [driver_name]
-    elif new_type == 'app': 
-        server_data = yield handle_app(datastore_handler, server_name = server_name, role = role)
-        raise tornado.gen.Return(server_data)
-
-    if not new_subtype: 
-        raise Exception("Tried to change " + str(server_name) + " type to " + str(new_type) + " but could not get subtype. If managing with provider, make sure to set `driver_name`, if managing with SSH or winexe, set `ip_address` and `username`. ")
-
-    print ('New type is : ', new_type, ' subtype : ', new_subtype)
-    type_actions = yield datastore_handler.get_object(object_type = 'managed_actions', manage_type = new_type, manage_subtype = new_subtype)
-    server['type'] = 'managed'
-    server['managed_by'] = list(set(server.get('managed_by', []) + [new_type]))
-    server['available_actions'] = server.get('available_actions', {})
-    server['available_actions'][new_type] = type_actions['actions']
     server.update(kwargs)
 
-    yield datastore_handler.insert_object(object_type = 'server', data = server, server_name = server_name)
+    for attr in ['ip_address', 'hostname']:
+        if locals()[attr]: 
+            server[attr] = locals()[attr]
+
+    if not server:
+        print ('Did not find ', server_name, ' now inserting it. ')
+        yield datastore_handler.insert_object(object_type = 'server', server_name = server_name, data = server)
+
+    if manage_type: 
+        server = yield manage_server_type(datastore_handler, server_name, manage_type, username = username, driver_name = driver_name, kwargs = kwargs, ip_address = ip_address)
+
     raise tornado.gen.Return(server)
+
+

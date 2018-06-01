@@ -12,12 +12,13 @@ from va_master.consul_kv.initial_consul_data import initial_consul_data
 
 class DatastoreHandler(object):
 
-    def __init__(self, datastore, datastore_spec_path = '/va_master/consul_kv/consul_spec.json'):
+    def __init__(self, datastore, config = None, datastore_spec_path = '/va_master/consul_kv/consul_spec.json'):
         master_path = os.getcwd() 
 
         datastore_spec_path = master_path + datastore_spec_path
 
         self.datastore = datastore
+        self.config = config
 
         with open(datastore_spec_path) as f: 
             spec = f.read()
@@ -39,7 +40,6 @@ class DatastoreHandler(object):
         #TODO check data to be as designed in the spec
         new_object = data
 
-#        print ('Inserting : ', new_object, ' at : ', new_object_handle)
         yield self.datastore.insert(new_object_handle, new_object)
 
     @tornado.gen.coroutine
@@ -48,6 +48,7 @@ class DatastoreHandler(object):
         object_handle = object_spec['consul_handle'].format(**handle_data)
         try:
             result = yield self.datastore.get(object_handle)
+            result.update(handle_data)
         except KeyNotFound: 
 #            import traceback
 #            traceback.print_exc()
@@ -108,7 +109,6 @@ class DatastoreHandler(object):
     @tornado.gen.coroutine
     def get_provider(self, provider_name):
         try:
-            print ('Getting provider: ', provider_name)
             provider = yield self.get_object('provider', provider_name = provider_name)
         except: 
             if provider_name == 'va_standalone_servers' : 
@@ -290,7 +290,11 @@ class DatastoreHandler(object):
     @tornado.gen.coroutine
     def add_panel(self, panel_name, role):
         states = yield self.get_states_data()
-        panel_state = [x for x in states if x['name'] == role][0]
+        panel_state = [x for x in states if x['name'] == role]
+        if not panel_state: 
+            raise Exception("Was trying to find " + role + " in states " + str([x['name'] for x in states]) + " but could not find it. ")
+
+        panel_state = panel_state[0]
 
         user_panel = yield self.get_panel(role, 'user')
         admin_panel = yield self.get_panel(role, 'admin')
@@ -339,7 +343,7 @@ class DatastoreHandler(object):
 
 
     @tornado.gen.coroutine
-    def import_states_from_states_data(self, states = []):
+    def import_states_from_states_data(self, states = [], delete_panels = False):
         empty_panel = {'admin' : [], 'user' : []}
         states_data = yield self.get_states_data(states)
 
@@ -352,10 +356,13 @@ class DatastoreHandler(object):
                 except: 
                     old_panel = {}
 
+                servers = old_panel.get('servers', [])
+                if delete_panels:
+                    servers = []
                 panel = {
                     'name' : state['name'], 
                     'icon' : state['icon'], 
-                    'servers' : old_panel.get('servers', []),
+                    'servers' : servers,
                     'panels' : state.get('panels', empty_panel)[user_type]
                 }
                 yield self.store_panel(panel, user_type)

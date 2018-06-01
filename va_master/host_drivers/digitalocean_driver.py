@@ -8,6 +8,8 @@ except:
 from base import bytes_to_int, int_to_bytes
 
 from tornado.httpclient import AsyncHTTPClient, HTTPRequest
+import digitalocean
+from digitalocean import Manager
 import tornado.gen
 import json, datetime, subprocess, os
 
@@ -16,36 +18,34 @@ PROVIDER_TEMPLATE = '''VAR_PROVIDER_NAME:
     master: VAR_THIS_IP
     master_type: str
   # The name of the configuration profile to use on said minion
+
   driver: digitalocean 
-  personal_access_token: VAR_ACCESS_TOKEN
-  ssh_key_names: VAR_KEYPAIR_NAME
+  personal_access_token: VAR_TOKEN
+  ssh_key_names: VAR_SSH_NAME
   ssh_key_file: VAR_SSH_FILE
-  ssh_interface: private_ips
+  ssh_interface: private
+  private_networking: True
   location: VAR_LOCATION
   backups_enabled: True
   ipv6: True
-  create_dns_record: True
 '''
 
+#    userdata_file: VAR_USERDATA_FILE
 
 PROFILE_TEMPLATE = '''VAR_PROFILE_NAME:
     provider: VAR_PROVIDER_NAME
     image: VAR_IMAGE
     size: VAR_SIZE
-    userdata_file: VAR_USERDATA_FILE
 
     minion:
         master: VAR_THIS_IP
         grains:
             role: VAR_ROLE
-    networks:
-      - fixed:
-          - VAR_NETWORK_ID 
 '''
 
 class DigitalOceanDriver(base.DriverBase):
     def __init__(self, provider_name = 'digital_ocean_provider', profile_name = 'digital_ocean_profile', host_ip = '', key_name = 'va_master_key', key_path = '/root/va_master_key', datastore_handler = None):
-        """ The standard issue init method. Borrows most of the functionality from the BaseDriver init method, but adds a self.regions attribute, specific for OpenStack hosts. """
+        """ The standard issue init method. Borrows most of the functionality from the BaseDriver init method. """
 
         kwargs = {
             'driver_name' : 'digital_ocean',
@@ -58,7 +58,17 @@ class DigitalOceanDriver(base.DriverBase):
             'key_path' : key_path, 
             'datastore_handler' : datastore_handler
             }
+        #TODO get from api
+        #[x.name for x in m.get_all_regions()]
+        self.locations = [u'New York 1', u'Singapore 1', u'London 1', u'New York 3', u'Amsterdam 3', u'Frankfurt 1', u'Toronto 1', u'San Francisco 2', u'Bangalore 1']
+
         super(DigitalOceanDriver, self).__init__(**kwargs)
+
+    def get_manager(self, provider):
+
+        manager = Manager(token=provider['token'])
+        self.manager = manager
+        return manager
 
     @tornado.gen.coroutine
     def driver_id(self):
@@ -75,9 +85,13 @@ class DigitalOceanDriver(base.DriverBase):
         """ Digital Ocean requires an access token in order to generate the provider conf.  """
 
         steps = yield super(DigitalOceanDriver, self).get_steps()
+        steps[0].remove_fields(['username', 'password', 'location'])
         steps[0].add_fields([
-            ('access_token', 'Personal access token', 'str'),
+            ('token', 'Access token', 'str'),
+            ('location', 'Location', 'options'),
         ])
+
+        steps.pop(1)
         self.steps = steps
         raise tornado.gen.Return(steps)
 
@@ -85,27 +99,27 @@ class DigitalOceanDriver(base.DriverBase):
     def get_networks(self):
         """ Gets the networks the salt-cloud method, at least for the moment. """
         networks = yield super(DigitalOceanDriver, self).get_networks()
-        networks = ['test']
+        networks = ['Digital ocean has no networks. ']
         raise tornado.gen.Return(networks)
 
     @tornado.gen.coroutine
     def get_sec_groups(self):
         """ No security groups for digital ocean.  """
-        sec_groups = ['No security groups. ']
+        sec_groups = ['DigitalOcean has no security groups. ']
         raise tornado.gen.Return(sec_groups)
 
     @tornado.gen.coroutine
     def get_images(self):
         """ Gets the images using salt-cloud. """
-        images = yield super(DigitalOceanDriver, self).get_images()
-        image = ['test']
+        images = [x.name for x in self.manager.get_images()]
+        print ('Images are : ', images)
         raise tornado.gen.Return(images)
 
     @tornado.gen.coroutine
     def get_sizes(self):
         """ Gets the sizes using salt-cloud.  """
-        sizes = yield super(DigitalOceanDriver, self).get_sizes()
-        sizes = ['test']
+        sizes = [x.slug for x in self.manager.get_all_sizes()]
+        print ('Sizes are : ', sizes)
         raise tornado.gen.Return(sizes)
 
 
@@ -113,16 +127,17 @@ class DigitalOceanDriver(base.DriverBase):
     def get_servers(self, provider):
         """ TODO  """
 
-        servers = []
+        manager = self.get_manager(provider)
+        servers = manager.get_all_droplets()
         servers = [
             {
-                'hostname' : x['name'], 
-                'ip' : x['addresses'][x['addresses'].keys()[0]][0].get('addr', 'n/a'),
-                'size' : x['name'],
-                'used_disk' : x['local_gb'], 
-                'used_ram' : x['memory_mb'], 
-                'used_cpu' : x['vcpus'],
-                'status' : x['status'], 
+                'hostname' : x.name, 
+                'ip' : x.ip_address,
+                'size' : x.size['slug'],
+                'used_disk' : str(x.size['disk']) + 'GB', 
+                'used_ram' : x.memory, 
+                'used_cpu' : x.vcpus,
+                'status' : x.status, 
                 'cost' : 0,  #TODO find way to calculate costs
                 'estimated_cost' : 0,
                 'provider' : provider['provider_name'], 
@@ -135,7 +150,10 @@ class DigitalOceanDriver(base.DriverBase):
     @tornado.gen.coroutine
     def get_provider_status(self, provider):
         """ TODO """
-
+        try:
+            self.get_manager(provider)
+        except Exception as e: 
+            raise tornado.gen.Return({'success' : False, 'message' : e.message})
         raise tornado.gen.Return({'success' : True, 'message' : ''})
 
 
@@ -217,7 +235,9 @@ class DigitalOceanDriver(base.DriverBase):
     def server_action(self, provider, server_name, action):
         """ Performs server actions using a nova client. """
         try:
-            servers = yield self.get_servers() 
+            message = 'Success!'
+            manager = self.get_manager(provider)
+            servers = manager.get_all_droplets()
             server = [x for x in servers if x.name == server_name][0]
         except Exception as e:
             import traceback
@@ -225,8 +245,15 @@ class DigitalOceanDriver(base.DriverBase):
 
             raise Exception('Could not get server' + server_name + '. ' + e.message)
         try:
-            pass
-            #TODO perform action
+            server_action = {
+                'delete' : server.destroy,
+                'reboot' : server.power_off,
+                'start' : server.power_on,
+                'stop' : server.shutdown, 
+#                'suspend' : server.suspend,
+#                'resume' : server.resume,
+            }
+            server_action[action]()
         except Exception as e:
             import traceback
             traceback.print_exc()
@@ -240,11 +267,29 @@ class DigitalOceanDriver(base.DriverBase):
     @tornado.gen.coroutine
     def validate_field_values(self, step_index, field_values):
         """ Uses the base driver method, but adds the region tenant and identity_url variables, used in the configurations. """
+
+        options = {}
+
+        if step_index == -1: 
+            options = {'location' : self.locations}
+        
         if step_index == 0:
-            self.access_token = field_values['access_token']
-            self.provider_vars['VAR_ACCESS_TOKEN'] = field_values['access_token']
+            self.token = field_values['token']
+            self.get_manager({'token' : self.token})
+            self.provider_vars['VAR_TOKEN'] = field_values['token']
+
+            images = yield self.get_images()
+            sizes =yield self.get_sizes()              
+
+            self.field_values['images'] = images
+            self.field_values['sizes'] = sizes
+            options = {'image' : images, 'size' : sizes}
+
+        if step_index > 0: 
+            step_index += 1
         try:
-            step_result = yield super(DigitalOceanDriver, self).validate_field_values(step_index, field_values)
+            print ('Validating step ', step_index)
+            step_result = yield super(DigitalOceanDriver, self).validate_field_values(step_index, field_values, options = options)
         except:
             import traceback
             traceback.print_exc()

@@ -272,7 +272,6 @@ class OpenStackDriver(base.DriverBase):
                 {
                     'hostname' : x['name'], 
                     'ip' : x['addresses'][x['addresses'].keys()[0]][0].get('addr', 'n/a'),
-#                    'ip' : x['addresses'].get('private_vapps', x['addresses'].get('public', [{'addr':'n/a'}]))[0]['addr'], #[x['addresses'].keys()[0]], 
                     'size' : f['name'],
                     'used_disk' : y['local_gb'], 
                     'used_ram' : y['memory_mb'], 
@@ -325,11 +324,16 @@ class OpenStackDriver(base.DriverBase):
 
         total_memory = sum([x['used_ram'] for x in servers]) * 2**20
         total_memory = int_to_bytes(total_memory)
-        provider['memory'] = total_memory
+        total_disk = sum([x['used_disk'] for x in servers]) * 2**30
+        total_disk = int_to_bytes(total_disk)
 
+        provider['memory'] = total_memory
+        provider['hdd'] = total_disk
 
         for server in servers: 
+            pass
             server['used_ram'] = int_to_bytes(server['used_ram'] * (2 ** 20))
+            server['used_disk'] = int_to_bytes(server['used_disk'] * (2 ** 30))
 
         billing_data = {
             'provider' : provider, 

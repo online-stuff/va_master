@@ -19,7 +19,6 @@ initial_consul_data = {
     "managed_actions/ssh/user" : {
         "actions" : [
             {'name' : 'reboot', 'type' : 'confirm'}, 
-            {'name' : 'start', 'type' : 'action'}, 
             {'name' : 'stop', 'type' : 'action'}
         ]
     },
@@ -34,7 +33,6 @@ initial_consul_data = {
     "managed_actions/winexe/user" : {
         "actions" : [
             {'name' : 'reboot', 'type' : 'confirm'}, 
-            {'name' : 'start', 'type' : 'action'}, 
             {'name' : 'stop', 'type' : 'action'}
         ],
     },
@@ -55,6 +53,14 @@ initial_consul_data = {
         ],
     },
     "managed_actions/provider/lxc" : {
+        "actions" : [
+            {'name' : 'reboot', 'type' : 'confirm'}, 
+            {'name' : 'delete', 'type' : 'confirm'}, 
+            {'name' : 'start', 'type' : 'action'}, 
+            {'name' : 'stop', 'type' : 'action'}
+        ],
+    },
+    "managed_actions/provider/digital_ocean" : {
         "actions" : [
             {'name' : 'reboot', 'type' : 'confirm'}, 
             {'name' : 'delete', 'type' : 'confirm'}, 
@@ -86,7 +92,15 @@ initial_consul_data = {
             {'name' : 'start', 'type' : 'action'}, 
             {'name' : 'stop', 'type' : 'action'}
         ],
+    },
+    "managed_actions/salt/" : {
+        "actions" : [
+            {'name' : 'reboot', 'type' : 'confirm'}, 
+            {'name' : 'delete', 'type' : 'confirm'}, 
+            {'name' : 'stop', 'type' : 'action'}
+        ],
     }
+
 
 }
 

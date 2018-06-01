@@ -5,6 +5,7 @@ except:
     import base
     from base import Step, StepResult
 
+from va_master.api import apps
 from tornado.httpclient import AsyncHTTPClient, HTTPRequest
 import tornado.gen
 import json
@@ -15,8 +16,16 @@ from paramiko import SSHClient, AutoAddPolicy
 PROVIDER_TEMPLATE = ""
 PROFILE_TEMPLATE = ""
 
+def check_ping(address):
+    response = os.system("ping -c 1 " + address + " > /dev/null")
+    if response == 0:
+        pingstatus = "ACTIVE"
+    else:
+        pingstatus = "SHUTOFF"
+    return pingstatus
+
 class GenericDriver(base.DriverBase):
-    def __init__(self, provider_name = 'generic_provider', profile_name = 'generic_profile', host_ip = '192.168.80.39', key_name = 'va_master_key', key_path = '/root/va_master_key', datastore_handler = None, driver_name = 'generic_driver'):
+    def __init__(self, provider_name = 'generic_provider', profile_name = 'generic_profile', host_ip = '192.168.80.39', key_name = 'va_master_key', key_path = '/root/va_master_key', datastore_handler = None, driver_name = 'generic_driver', flavours = []):
         kwargs = {
             'driver_name' : driver_name, 
             'provider_template' : PROVIDER_TEMPLATE, 
@@ -28,6 +37,7 @@ class GenericDriver(base.DriverBase):
             'key_path' : key_path, 
             'datastore_handler' : datastore_handler
             }
+        self.sizes = flavours
         super(GenericDriver, self).__init__(**kwargs) 
 
     @tornado.gen.coroutine
@@ -89,10 +99,10 @@ class GenericDriver(base.DriverBase):
     def server_action(self, provider, server_name, action):
         
         server_action = {
-            'delete' : self.remove_server, 
+            'remove' : self.remove_server, 
             'reboot' : 'reboot_function', 
-            'start' : 'start_function', 
-            'stop' : 'stop_function', 
+        #    'start' : 'start_function', 
+            'shutdown' : 'stop_function', 
         }
         if action not in server_action: 
             raise tornado.gen.Return({'success' : False, 'message' : 'Action not supported : ' +  action})
@@ -105,31 +115,32 @@ class GenericDriver(base.DriverBase):
     def get_servers(self, provider):
         servers = yield self.datastore_handler.get_provider(provider['provider_name'])
         servers = servers['servers']
-        print ('Generic servers are : ', servers)
-        servers = [
-            {
-                'hostname' : x['hostname'], 
-                'ip' : x['ip_address'],
-                'size' : 'n/a',
-                'used_disk' : 'n/a', 
-                'used_ram' : 'n/a', 
-                'used_cpu' : 'n/a',
-                'status' : 'n/a', 
-                'cost' : 0,  #TODO find way to calculate costs
-                'estimated_cost' : 0,
-                'managed_by' : x.get('managed_by', []), 
-                'provider' : provider['provider_name'], 
-            } for x in servers
-        ]
-
-
-
+        result = []
+        
         if provider['provider_name'] == 'va_standalone_servers' : 
             provider['provider_name'] = ''
 
-        for i in servers: 
-            i['provider'] = provider['provider_name']
-        raise tornado.gen.Return(servers)
+        for server in servers: 
+            db_server = yield self.datastore_handler.get_object(object_type = 'server', server_name = server['hostname'])
+            server = {
+                'hostname' : server['hostname'], 
+                'ip' : server['ip_address'],
+                'size' : '',
+                'used_disk' : 0, 
+                'used_ram' : 0, 
+                'used_cpu' : 0,
+                'status' : check_ping(server['ip_address']), 
+                'cost' : 0,  #TODO find way to calculate costs
+                'estimated_cost' : 0,
+                'managed_by' : [],
+                'provider' : provider['provider_name'], 
+            }
+            server.update(db_server)
+            result.append(server)
+
+        print ('SERVERS STANDALONE: ', result)
+
+        raise tornado.gen.Return(result)
         
 
     @tornado.gen.coroutine
@@ -202,6 +213,7 @@ class GenericDriver(base.DriverBase):
                 'password' : field_values['password'],
                 'ip_address' : field_values['ip_address'],
                 'images' : [], 
+                'sizes' : self.sizes, 
             })
             raise tornado.gen.Return(StepResult(
                 errors = [], new_step_index = -1, option_choices = {}
@@ -217,8 +229,6 @@ class GenericDriver(base.DriverBase):
 
     @tornado.gen.coroutine
     def create_server(self, provider, data):
-        #TODO Connect to ssh://data.get('ip') -p data.get('port')[ -u data.get('user') -pass data.get('pass') || -key data.get('key')
-        print ('In create server. ', data)
         cl = SSHClient()
         cl.load_system_host_keys()
         cl.set_missing_host_key_policy(AutoAddPolicy())
@@ -234,16 +244,33 @@ class GenericDriver(base.DriverBase):
             connect_kwargs['key_filename'] = self.key_path + '.pem'
 
 
-        print ('Attempting connect with : ', connect_kwargs)
-#        cl.connect(data.get('ip'), **connect_kwargs)
+        try:
+            print ('Kwargs : ', connect_kwargs)
+            cl.connect(data.get('ip'), **connect_kwargs)
+        except Exception as e: 
+            print ('Failed to connect with ssh to ', data.get('ip'))
+            import traceback
+            traceback.print_exc()
+            raise Exception('Failed to connect with ssh: ' + e.message)
+        try:
 
-        # distro = ssh_session.cmd(['get', 'distro', 'cmd'])
-        # instal = ssh_session.cmd(['install', 'salt', 'stuff'])
-        # services are added on the api side.
-        server = {"hostname" : data["server_name"], "ip_address" : data.get("ip"), "local_gb" : 0, "memory_mb" : 0, "status" : "n/a" , "managed_by" : ['ssh']}
-        if provider['provider_name'] != 'va_standalone_servers' : 
-            server['managed_by'].append('provider')
-        yield self.datastore_handler.add_generic_server(provider, server)
+            server = {"server_name" : data["server_name"], "hostname" : data["server_name"], "ip_address" : data["ip"], "local_gb" : 0, "memory_mb" : 0, "managed_by" : ['ssh'], "location" : data.get('location', '')}
+            print ('Server is : ', server)
+            yield apps.add_server_to_datastore(self.datastore_handler, server_name = server['server_name'], ip_address = data['ip'], hostname = server['hostname'], manage_type = 'ssh', username = data['username'], kwargs = {'password' : data.get('password', ''), 'location' : data.get('location', '')})
+            print ('Added server to datastore')
+            db_server = yield self.datastore_handler.get_object('server', server_name = server['server_name'])
+            print ('Db server is : ', db_server)
+
+            if provider['provider_name'] != 'va_standalone_servers' : 
+                print ('Provider name is : ', provider['provider_name'])
+                yield apps.manage_server_type(self.datastore_handler, server_name = server['server_name'], new_type = 'provider', driver_name = 'generic_driver')
+                server['managed_by'].append('provider')
+
+            yield self.datastore_handler.add_generic_server(provider, server)
+            print ('Added generic server ', server)
+        except: 
+            import traceback
+            traceback.print_exc()
 
         raise tornado.gen.Return(True)  
 
