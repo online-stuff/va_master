@@ -100,7 +100,8 @@ class ApiHandler(tornado.web.RequestHandler):
     def fetch_func(self, method, path, data):
         try:
             api_func = self.paths[method].get(path)
-            self.config.logger.info('Getting a call at ' + str(path) + ' with data ' + str(data) + ' and will call function: ' + str(api_func))
+            logging_data = {x : str(data[x])[:50] for x in data}
+            self.config.logger.info('Getting a call at ' + str(path) + ' with data ' + str(logging_data) + ' and will call function: ' + str(api_func))
     
             if not api_func: 
                 api_func = {'function' : invalid_url, 'args' : ['path', 'method']}
@@ -193,7 +194,8 @@ class ApiHandler(tornado.web.RequestHandler):
         except tornado.gen.Return: 
             raise
         except Exception as e: 
-            self.config.logger.error('An error occured performing request. Function was %s and data was %s. ' % (str(api_func), str(data)))
+            logging_data = {x : str(data[x])[:50] for x in data}
+            self.config.logger.error('An error occured performing request. Function was %s and data was %s. ' % (str(api_func), str(logging_data)))
             import traceback
             traceback.print_exc()
             result = {'success' : False, 'message' : 'There was an error performing a request : ' + str(e) + ':' + str(e.message), 'data' : {}}
@@ -215,7 +217,6 @@ class ApiHandler(tornado.web.RequestHandler):
                 'method' :  method,
                 'path' : path
             })
-
             self.utils = {
                 'handler' : self,
                 'datastore_handler' : self.datastore_handler,
@@ -277,7 +278,7 @@ class ApiHandler(tornado.web.RequestHandler):
                 except: 
                     raise Exception('Bad json in request body : ', self.request.body)
             else:
-                data = {self.request.arguments[x][0] for x in self.request.arguments}
+                data = {x : self.request.arguments[x][0] for x in self.request.arguments}
                 data.update(self.request.files)
             yield self.exec_method('post', path, data)
 

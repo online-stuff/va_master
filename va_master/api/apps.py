@@ -10,7 +10,7 @@ from va_master.utils.va_utils import bytes_to_readable, get_route_to_minion, cal
 
 from va_master.handlers.server_management import manage_server_type
 from va_master.handlers.salt_handler import add_minion_to_server
-
+from va_master.handlers.app_handler import install_new_app
 from tornado.concurrent import run_on_executor, Future
 
 import salt_manage_pillar
@@ -38,6 +38,8 @@ def get_paths():
             'state/add' : {'function' : create_new_state,'args' : ['file', 'body', 'filename']},
             'apps/new/validate_fields' : {'function' : validate_app_fields, 'args' : ['handler']},
             'apps' : {'function' : launch_app, 'args' : ['handler']},
+            'apps/change_app_type' : {'function' : change_app_type, 'args' : ['datastore_handler', 'server_name', 'app_type']},
+            'apps/install_new_app' : {'function' : install_app, 'args' : ['datastore_handler', 'app_zip', 'app_json']},
             'apps/add_minion' : {'function' : add_minion_to_server, 'args' : ['datastore_handler', 'server_name', 'ip_address', 'username', 'password', 'key_filename', 'role']},
             'apps/action' : {'function' : perform_server_action, 'args' : ['handler', 'provider_name', 'action', 'server_name', 'action_type', 'kwargs']},
             'apps/add_vpn_user': {'function' : add_openvpn_user, 'args' : ['username']},
@@ -225,6 +227,20 @@ def create_new_state(datastore_handler, file_contents, body, filename):
 
     tar_ref.close()
 
+@tornado.gen.coroutine
+def install_app(datastore_handler, app_zip, app_json):
+
+    app_zip = app_zip[0]['body']
+    app_json = json.loads(app_json)
+    tmp_app = '/tmp/%s.tar.gz' % (app_json['name'])
+
+    with open(tmp_app, 'w') as f:
+        f.write(app_zip)
+    yield install_new_app(datastore_handler, app_json, tmp_app)
+
+@tornado.gen.coroutine
+def change_app_type(datastore_handler, server_name, app_name):
+    pass
 
 @tornado.gen.coroutine
 def validate_app_fields(handler):
