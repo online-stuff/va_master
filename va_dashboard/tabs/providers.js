@@ -106,7 +106,7 @@ class Providers extends Component {
             let { provider_name, provider_ip, servers, driver_name, status } = provider, className;
             if(status.success){
                 status = "Online";
-                className = "row-provider-Online";
+                // className = "row-provider-Online";
             }else{
                 let popover = (
                     <Bootstrap.Popover title="Error">
@@ -114,7 +114,8 @@ class Providers extends Component {
                     </Bootstrap.Popover>
                 );
                 status = (<Bootstrap.OverlayTrigger overlay={popover}><a>Offline</a></Bootstrap.OverlayTrigger>);
-                className = "danger row-provider-Offline";
+                // className = "danger row-provider-Offline"; 
+                // keep style consistency, no more custom css
             }
             return (
                 <Tr key={provider.provider_name} className={className}>
@@ -334,7 +335,7 @@ class NewProviderForm extends Component {
                 }
                 if(d.new_step_index == -1 && d.errors.length == 0){
                     setTimeout(() => {
-                         this.props.reload();
+                        this.props.reload();
                     }, 2000);
                 }else{
                     this.setState({stepIndex: d.new_step_index, optionChoices: mergeChoices, errors: d.errors, isLoading: false});
