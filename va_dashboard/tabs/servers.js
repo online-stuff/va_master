@@ -199,7 +199,7 @@ class Servers extends Component {
                         <Td column="Status">{app.status}</Td>
                         <Td column="Provider">{app.provider}</Td>
                         <Td column="Managed by"><div>{managed_by}</div></Td>
-                        <Td column="Actions">
+                        <Td column="Actions" style={{width: '5%'}}>
                             <Bootstrap.DropdownButton id={'dropdown-' + app.hostname} bsStyle='primary' title="Choose" onSelect = {this.doAction.bind(null, app.provider, app.hostname, app.managed_by)}>
                                 <Bootstrap.MenuItem eventKey="manage">Manage</Bootstrap.MenuItem>
                                 {this.getActions(app.available_actions)}
@@ -425,7 +425,7 @@ class SSHStep extends Component {
                         <div className="checkbox">
                             <label>
                                 <input type="checkbox" onChange={this.toggleAuth} />
-                                Use SSH Key Auth?
+                                Use SSH Key Auth
                             </label>
                         </div>
                     </div>
@@ -728,7 +728,7 @@ class ServerForm extends Component {
         return (
             <Bootstrap.Modal show={this.props.loaded && this.props.modal.isOpen} onHide={this.close}>
                 <Bootstrap.Modal.Header closeButton>
-                  <Bootstrap.Modal.Title>Launch new app</Bootstrap.Modal.Title>
+                <Bootstrap.Modal.Title>Launch new app</Bootstrap.Modal.Title>
                 </Bootstrap.Modal.Header>
 
                 <Bootstrap.Modal.Body>
@@ -758,7 +758,7 @@ class ServerForm extends Component {
                                         <div className="checkbox" style={{paddingLeft: "15px"}}>
                                             <label>
                                                 <input type="checkbox" defaultChecked={this.state.standalone} onChange={this.toggleStandalone} />
-                                                Standalone?
+                                                Standalone
                                             </label>
                                         </div>
                                     </div>
@@ -886,7 +886,7 @@ class DynamicPopup extends Component {
                                 <div className="checkbox">
                                     <label>
                                         <input type="checkbox" onChange={this.toggleAuth} />
-                                        Use SSH Key Auth?
+                                        Use SSH Key Auth
                                     </label>
                                 </div>
                             </div>

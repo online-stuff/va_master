@@ -74,7 +74,7 @@ class Chart extends Component {
                             hour: 'HH:mm',
                             second: 'HH:mm:ss'
                         },
-                        tooltipFormat: 'DD/MM/YYYY HH:mm'
+                        tooltipFormat: 'YYYY-MM-DD HH:mm'
                         //unit: 'minute',
                         //unitStepSize: 5
                     }
@@ -136,11 +136,11 @@ class Chart extends Component {
                     <ChartComponent type='line' name="chart" height={200} data={chartData} options={chartOptions} redraw />
                 </div>
                 <div id="chartBtns">
-                  <button className='btn btn-primary bt-sm chartBtn' onClick = {this.btn_click.bind(this, "-1h", "300", 'minute', 5)}>Last hour</button>
-                  <button className='btn btn-primary bt-sm chartBtn' onClick = {this.btn_click.bind(this, "-5h", "1500", 'hour', 1)}>Last 5 hours</button>
-                  <button className='btn btn-primary bt-sm chartBtn' onClick = {this.btn_click.bind(this, "-1d", "7200", 'hour', 4)}>Last day</button>
-                  <button className='btn btn-primary bt-sm chartBtn' onClick = {this.btn_click.bind(this, "-7d", "86400", 'day', 1)}>Last week</button>
-                  <button className='btn btn-primary bt-sm chartBtn' onClick = {this.btn_click.bind(this, "-1m", "86400", 'day', 5)}>Last month</button>
+                <button className='btn btn-primary bt-sm chartBtn' onClick = {this.btn_click.bind(this, "-1h", "300", 'minute', 5)}>Last hour</button>
+                <button className='btn btn-primary bt-sm chartBtn' onClick = {this.btn_click.bind(this, "-5h", "1500", 'hour', 1)}>Last 5 hours</button>
+                <button className='btn btn-primary bt-sm chartBtn' onClick = {this.btn_click.bind(this, "-1d", "7200", 'hour', 4)}>Last day</button>
+                <button className='btn btn-primary bt-sm chartBtn' onClick = {this.btn_click.bind(this, "-7d", "86400", 'day', 1)}>Last week</button>
+                <button className='btn btn-primary bt-sm chartBtn' onClick = {this.btn_click.bind(this, "-1m", "86400", 'day', 5)}>Last month</button>
                 </div>
             </div>
         );
@@ -737,7 +737,7 @@ class FilterForm extends Component {
                 case 'dates':
                     input = (
 						<DateRangePicker
-							displayFormat="DD/MM/YYYY"
+							displayFormat="YYYY-MM-DD"
 							startDate={this.state.startDate}
 							endDate={this.state.endDate}
 							onDatesChange={({ startDate, endDate }) => this.setState({ startDate, endDate })}
@@ -750,7 +750,7 @@ class FilterForm extends Component {
                 case 'date':
                     input = (
 						<SingleDatePicker 
-							displayFormat="DD/MM/YYYY"
+							displayFormat="YYYY-MM-DD"
 							date={this.state.date}
                             focused={this.state.focused}
 							onDateChange={date => this.setState({date})}

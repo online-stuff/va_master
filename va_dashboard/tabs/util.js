@@ -12,6 +12,21 @@ function isEmpty(obj) {
     return true;
 }
 
+var stringToColour = function(str) {
+    var hash = 0;
+    for (var i = 0; i < str.length; i++) {
+        hash = str.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    var colour = '#';
+    for (var i = 0; i < 3; i++) {
+      var value = (hash >> (i * 8)) & 0xFF;
+        colour += ('00' + value.toString(16)).substr(-2);
+    }
+    return colour;
+}
+// stringToColour("greenish");
+// -> #9bc63b
+
 function getRandomColor() {
     var letters = '0123456789ABCDEF'.split('');
     var color = '#';
@@ -54,7 +69,7 @@ function getTableRow(columns, data) {
 }
 function getTableRowWithLink(columns, data, onClick, index) {
     let result = [<Td key={columns[0]} column={columns[0]}><span className="link" onClick={onClick.bind(null, data[0], index)}>{data[0]}</span></Td>];
-	return result.concat(getTableRow(columns.slice(1), data.slice(1)));
+    return result.concat(getTableRow(columns.slice(1), data.slice(1)));
 }
 function getTableRowWithAction(columns, data, btnText, btnVal, btnClick, onLinkClick, rowIndex) {
     let rows = onLinkClick ? getTableRowWithLink(columns, data, onLinkClick, rowIndex) : getTableRow(columns, data);
@@ -75,9 +90,9 @@ function getTableRowWithActions(columns, data, actions, action, param, onLinkCli
 }
 function getModalHeader(title){
     return (
-		<Modal.Header closeButton>
+        <Modal.Header closeButton>
             <Modal.Title>{title}</Modal.Title>
-		</Modal.Header>
+        </Modal.Header>
     );
 }
 function getModalFooter(buttons){
@@ -85,11 +100,11 @@ function getModalFooter(buttons){
         let { label, bsStyle, onClick } = btn;
         return <Button key={i} onClick={onClick} bsStyle={bsStyle}>{label}</Button>;
     });
-	return (
-		<Modal.Footer>
-			{ btns }
-		</Modal.Footer>
-	);
+    return (
+        <Modal.Footer>
+            { btns }
+        </Modal.Footer>
+    );
 }
 
 function initializeFields(fields) {
@@ -126,32 +141,32 @@ function getReduxComponent(ReactComponent, reducers){
 }
 
 function callPanelAction(token, data, callbackSuccess, callbackError){
-	Network.post('/api/panels/action', token, data).done(msg => {
-		if(typeof msg === 'string'){
-			callbackSuccess(msg);
-		}
-	}).fail(msg => {
-		callbackError(msg);
-	});
+    Network.post('/api/panels/action', token, data).done(msg => {
+        if(typeof msg === 'string'){
+            callbackSuccess(msg);
+        }
+    }).fail(msg => {
+        callbackError(msg);
+    });
 }
 
 function download(url, token, data, fileWithExt, callback){
-	Network.download_file(url, token, data).done(function(d) {
-		var data = new Blob([d], {type: 'octet/stream'});
-		var url = window.URL.createObjectURL(data);
-		let tempLink = document.createElement('a');
-		tempLink.style = "display: none";
-		tempLink.href = url;
-		tempLink.setAttribute('download', fileWithExt);
-		document.body.appendChild(tempLink);
-		tempLink.click();
-		setTimeout(function(){
-			document.body.removeChild(tempLink);
-			window.URL.revokeObjectURL(url);
-		}, 100);
-	}).fail(function (msg) {
-		callback(msg);
-	});
+    Network.download_file(url, token, data).done(function(d) {
+        var data = new Blob([d], {type: 'octet/stream'});
+        var url = window.URL.createObjectURL(data);
+        let tempLink = document.createElement('a');
+        tempLink.style = "display: none";
+        tempLink.href = url;
+        tempLink.setAttribute('download', fileWithExt);
+        document.body.appendChild(tempLink);
+        tempLink.click();
+        setTimeout(function(){
+            document.body.removeChild(tempLink);
+            window.URL.revokeObjectURL(url);
+        }, 100);
+    }).fail(function (msg) {
+        callback(msg);
+    });
 }
 
 function getSpinner(style){
@@ -189,13 +204,14 @@ function getTimestamp(dateObj, seconds){
 
 module.exports = {
     isEmpty,
+    stringToColour,
     getRandomColor,
     getRandomColors,
     getTableRow,
     getTableRowWithAction,
     getTableRowWithActions,
     getModalHeader,
-	getModalFooter,
+    getModalFooter,
     initializeFields,
     initializeFieldsWithValues,
     arr2str,

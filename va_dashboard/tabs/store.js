@@ -106,7 +106,7 @@ class NewStateForm extends Component {
         return (
             <Bootstrap.Modal show={this.props.modal.isOpen} onHide={() => this.close()}>
                 <Bootstrap.Modal.Header closeButton>
-                  <Bootstrap.Modal.Title>Add new state</Bootstrap.Modal.Title>
+                <Bootstrap.Modal.Title>Add new state</Bootstrap.Modal.Title>
                 </Bootstrap.Modal.Header>
 
                 <Bootstrap.Modal.Body>

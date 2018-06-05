@@ -250,7 +250,7 @@ def add_service_with_presets(datastore_handler, presets, server, name = '', addr
 
     #If server is a string, and address is not set, we assume the server is a salt minion and we just take the data from mine. 
     minion_info = {}
-    if type(server) in [str, unicode]: 
+    if type(server) in [str, unicode] and server: 
         minion_info = yield apps.get_app_info(server)
 
     if not address: 

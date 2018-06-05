@@ -61,5 +61,5 @@ class GroupPanel extends Component {
 
 
 module.exports = connect(state => {
-	return {auth: state.auth, alert: state.alert};
+    return {auth: state.auth, alert: state.alert};
 })(GroupPanel);

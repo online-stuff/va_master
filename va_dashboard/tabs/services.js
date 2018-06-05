@@ -33,16 +33,16 @@ class Services extends Component {
         this.state = {
             services: [],
             loading: true,
-			popupShow: false,
-			popupData: {},
-			selectedServiceName: '',
-			presets: [],
-			checksTableVisible: false
+            popupShow: false,
+            popupData: {},
+            selectedServiceName: '',
+            presets: [],
+            checksTableVisible: false
         };
         this.getCurrentServices = this.getCurrentServices.bind(this);
         this.confirm_action = this.confirm_action.bind(this);
         this.deleteService = this.deleteService.bind(this);
-		this.addService = this.addService.bind(this);
+        this.addService = this.addService.bind(this);
         this.editService = this.editService.bind(this);
         this.popupClose = this.popupClose.bind(this);
         this.onLinkClick = this.onLinkClick.bind(this);
@@ -51,14 +51,14 @@ class Services extends Component {
         this.onBackClick = this.onBackClick.bind(this);
     }
 
-	getCurrentServices () {
-		Network.get('api/services/get_services_table_data', this.props.auth.token).done(data => {
+    getCurrentServices () {
+        Network.get('api/services/get_services_table_data', this.props.auth.token).done(data => {
             let { services, presets } = data;
-			this.setState({ services, presets, loading: false });
-		}).fail(msg => {
-			this.props.dispatch({ type: 'SHOW_ALERT', msg });
-		});
-	}
+            this.setState({ services, presets, loading: false });
+        }).fail(msg => {
+            this.props.dispatch({ type: 'SHOW_ALERT', msg });
+        });
+    }
 
     componentDidMount() {
         this.getCurrentServices();
@@ -86,7 +86,7 @@ class Services extends Component {
         this.props.dispatch({ type: 'OPEN_MODAL', modalType: "EDIT", args: service, rowIndex: index });
     }
 
-	editTable(type, data, i){
+    editTable(type, data, i){
         let services = Object.assign([], this.state.services);
         if(type === 'ADD'){
             services.push(data);
@@ -94,14 +94,14 @@ class Services extends Component {
             services[i] = data;
         }
         this.setState({services});
-	}
+    }
 
     popupClose() {
         this.setState({ popupShow: false });
     }
 
     onLinkClick(serviceName, index) {
-		this.setState({ checksTableVisible: true, selectedServiceName: serviceName, checks: this.state.services[index].check});
+        this.setState({ checksTableVisible: true, selectedServiceName: serviceName, checks: this.state.services[index].check});
     }
 
     onBackClick(){
@@ -119,7 +119,7 @@ class Services extends Component {
     render() {
         let { services, loading, popupShow, popupData, checksTableVisible, selectedServiceName, checks } = this.state;
         let tblRows = services.map((service, index) => {
-			let { name, address, port, tags, check } = service;
+            let { name, address, port, tags, check } = service;
             return (
                 <Tr key={name}>
                     {getTableRowWithActions(tblCols, [name, address, port, tags, objArr2str(check, 'name')], ['Edit','Delete'], this.doAction, service, this.onLinkClick, index)}
@@ -136,38 +136,38 @@ class Services extends Component {
             <div className="app-containter">
                 {loading && getSpinner()}
                 <div style={blockStyle} className="card">
-					<div className="card-body">
-						<Table className="table striped" columns={[...tblCols, 'Actions']} itemsPerPage={10} pageButtonLimit={10} noDataText="No matching records found." sortable={tblCols} filterable={tblCols} btnName="Add service" btnClick={this.addService} title="Current services" filterClassName="form-control" filterPlaceholder="Filter">
-							{tblRows}
-						</Table>
-					</div>
+                    <div className="card-body">
+                        <Table className="table striped" columns={[...tblCols, 'Actions']} itemsPerPage={10} pageButtonLimit={10} noDataText="No matching records found." sortable={tblCols} filterable={tblCols} btnName="Add service" btnClick={this.addService} title="Current services" filterClassName="form-control" filterPlaceholder="Filter">
+                            {tblRows}
+                        </Table>
+                    </div>
                 </div>
-				{ checksTableVisible && <Checks service={selectedServiceName} checks={checks} backAction={this.onBackClick} /> }
+                { checksTableVisible && <Checks service={selectedServiceName} checks={checks} backAction={this.onBackClick} /> }
                 <ModalRedux presetsOptions={this.state.presets} getCurrentServices={this.getCurrentServices} />
-				<ConfirmPopup body={"Please confirm action: delete service " + popupData.name} show={popupShow} data={[popupData]} close={this.popupClose} action={this.deleteService} />
+                <ConfirmPopup body={"Please confirm action: delete service " + popupData.name} show={popupShow} data={[popupData]} close={this.popupClose} action={this.deleteService} />
             </div> 
         );
     }
 }
 
 const Checks = (props) => {
-	let { service, checks } = props;
-	let tblRows = checks.map(check => {
-		let { name, output, status, interval } = check;
-		return (
-			<Tr key={name}>
-				{getTableRow(tblCols2, [name, status, output, interval])}     
-			</Tr>
-		);
-	});
+    let { service, checks } = props;
+    let tblRows = checks.map(check => {
+        let { name, output, status, interval } = check;
+        return (
+            <Tr key={name}>
+                {getTableRow(tblCols2, [name, status, output, interval])}     
+            </Tr>
+        );
+    });
     return (
-		<div className="card">
-			<div className="card-body">
+        <div className="card">
+            <div className="card-body">
                 <Table className="table striped" columns={tblCols2} itemsPerPage={10} pageButtonLimit={10} noDataText="No matching records found." sortable={tblCols2} filterable={tblCols2} title='Current checks for ' link={service} linkAction={props.backAction} filterClassName="form-control" filterPlaceholder="Filter">
-					{tblRows}
-				</Table>
-			</div>
-		</div>
+                    {tblRows}
+                </Table>
+            </div>
+        </div>
     );
 }
 
@@ -208,7 +208,7 @@ class Modal extends Component {
     }
 
     action() {
-		let modalType = this.props.modal.modalType;
+        let modalType = this.props.modal.modalType;
         let check = modalType === "ADD";
         let endpoint = `/api/services/${check ? 'add_service_with_presets' : 'edit_service_with_presets'}`;
         let data = Object.assign({}, this.state);
@@ -237,19 +237,19 @@ class Modal extends Component {
     }
 
     getInputGroup(type, key, label) {
-		return (
-			<Bootstrap.FormGroup key={key}>
-				<Bootstrap.ControlLabel >{label}</Bootstrap.ControlLabel>
-				{this.getInput(type, key)}
-			</Bootstrap.FormGroup>
-		);
+        return (
+            <Bootstrap.FormGroup key={key}>
+                <Bootstrap.ControlLabel >{label}</Bootstrap.ControlLabel>
+                {this.getInput(type, key)}
+            </Bootstrap.FormGroup>
+        );
     }
 
     render() {
         let { modalType, args } = this.props.modal;
         let inputs = formInputs.map(field => {
             let { type, key, label } = field;
-			return this.getInputGroup(type, key, label);
+            return this.getInputGroup(type, key, label);
         });
         return (
             <Bootstrap.Modal show={this.props.modal.isOpen} onHide={this.close}>

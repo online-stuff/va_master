@@ -211,7 +211,7 @@ var Modal = React.createClass({
         return (
             <Bootstrap.Modal show={this.props.modal.isOpen} onHide={this.close}>
             <Bootstrap.Modal.Header closeButton>
-              <Bootstrap.Modal.Title>{this.props.modal.modalType === "CREATE" ? "Create Trigger" : "Edit Trigger"}</Bootstrap.Modal.Title>
+            <Bootstrap.Modal.Title>{this.props.modal.modalType === "CREATE" ? "Create Trigger" : "Edit Trigger"}</Bootstrap.Modal.Title>
             </Bootstrap.Modal.Header>
 
             <Bootstrap.Modal.Body>
@@ -245,8 +245,8 @@ var Modal = React.createClass({
             </Bootstrap.Modal.Body>
 
             <Bootstrap.Modal.Footer>
-              <Bootstrap.Button onClick={this.close}>Cancel</Bootstrap.Button>
-              <Bootstrap.Button onClick={this.action} bsStyle = "primary">{this.props.modal.modalType === "CREATE" ? "Add trigger" : "Apply change"}</Bootstrap.Button>
+            <Bootstrap.Button onClick={this.close}>Cancel</Bootstrap.Button>
+            <Bootstrap.Button onClick={this.action} bsStyle = "primary">{this.props.modal.modalType === "CREATE" ? "Add trigger" : "Apply change"}</Bootstrap.Button>
             </Bootstrap.Modal.Footer>
 
         </Bootstrap.Modal>

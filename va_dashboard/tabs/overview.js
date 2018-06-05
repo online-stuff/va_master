@@ -440,7 +440,7 @@ class LogChart extends Component {
                             hour: 'HH:mm',
                             second: 'HH:mm:ss'
                         },
-                        tooltipFormat: 'DD/MM/YYYY HH:mm',
+                        tooltipFormat: 'YYYY-MM-DD HH:mm',
                         unit: 'minute',
                         unitStepSize: 0.5,
                         min: this.props.minDate,

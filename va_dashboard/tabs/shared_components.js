@@ -53,16 +53,16 @@ class PivotTable extends Component{
                 result[e.key] = elem[e.key];
             });
             notInList.forEach(e => {
-				result[e.key] = this.sumRows(e.type, e.key, elem.subRows);
-			});
+                result[e.key] = this.sumRows(e.type, e.key, elem.subRows);
+            });
             rows[elem[this.props.rows[0].key]] = result;
         });
         this.state = {
             selected: [],
             rows
         };
-		this.getTableData = this.getTableData.bind(this);
-		this.selectRow = this.selectRow.bind(this);
+        this.getTableData = this.getTableData.bind(this);
+        this.selectRow = this.selectRow.bind(this);
     }
 
     getTableData(source, row, result){
@@ -144,17 +144,17 @@ class PivotTable extends Component{
                                 tds = this.getTableData(this.props.data, this.state.rows[row[tblKey]], tds);
                                 trs.push(<tr key="sum" className="sumRow">{tds}</tr>);
                             }
-							return trs;
+                            return trs;
                         }else {
                             let tds = [<td colSpan="2"><span className='glyphicon glyphicon-chevron-right' onClick={this.selectRow.bind(null, row[tblKey])}></span>{row[tblKey]}</td>];
                             tds = this.getTableData(this.props.data, this.state.rows[row[tblKey]], tds);
-							return (
-								<tr key={row[tblKey]}>{tds}</tr>
-							)
+                            return (
+                                <tr key={row[tblKey]}>{tds}</tr>
+                            )
                         }
                     })}
                 </tbody>
-           </table> 
+            </table> 
         </div> 
         );
     }
@@ -163,5 +163,5 @@ class PivotTable extends Component{
 module.exports = {
     ConfirmPopup,
     PivotTable,
-	TextPopup
+    TextPopup
 };
