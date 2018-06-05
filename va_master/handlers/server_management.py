@@ -5,13 +5,31 @@ from va_master.api import panels #May result in circular imports, maybe want to 
 
 @tornado.gen.coroutine
 def handle_app(datastore_handler, server_name, role):
+
     ''' Helping function for the manage_server_type function. If a server is added as an app, it adds a panel, sets the type, calls add_minion_to_server, which installs salt and runs highstate, and then inserts the server to the datastore. '''
 
+    print ('Handling app!')
     if not role: 
         raise Exception('Tried to convert ' + str(server_name) + " to app, but the role argument is empty. ")
 
     server = yield datastore_handler.get_object(object_type = 'server', server_name = server_name)
+    
+    cl = LocalClient()
+    ping = cl.cmd(server_name, 'test.ping').get(server_name)
+    print ('Ping is : ', ping)
 
+    if not ping:
+        minion_kwargs = {'username' : server['username']}
+
+        if server.get('password'): 
+            minion_kwargs['password'] = server['password']
+        else: 
+            minion_kwargs['key_filename'] = datastore_handler.config.ssh_key_path + datastore_handler.config.ssh_key_name + '.pem'
+
+        print ('No ping, adding minion to server ', server_name, server['ip_address'], role, minion_kwargs)
+        yield add_minion_to_server(datastore_handler, server_name, server['ip_address'], role, **minion_kwargs)
+
+    print ('Server is : ', server)
     server['type'] = 'app'
     server['available_actions'] = server.get('available_actions', {}) # TODO get panel actions and add here
 

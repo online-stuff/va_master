@@ -158,7 +158,7 @@ class DateRange extends Component {
         var state = this.props.state;
         return (
             <DateRangePicker
-                displayFormat="DD/MM/YYYY"
+                displayFormat="YYYY-MM-DD"
                 startDate={this.state.startDate}
                 endDate={this.state.endDate}
                 onDatesChange={this.handleChange}

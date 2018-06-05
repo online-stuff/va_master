@@ -300,7 +300,9 @@ def launch_app(handler):
 
     result = yield driver.create_server(provider, data)
 
-    yield add_server_to_datastore(handler.datastore_handler, server_name = data['server_name'], hostname = data['server_name'], manage_type = 'provider', driver_name = provider['driver_name'], ip_address = data.get('ip'))
+    if provider.get('provider_name') and provider.get('provider_name', '') != 'va_standalone_servers': 
+        print ('Provider is : ', provider['provider_name'])
+        yield add_server_to_datastore(handler.datastore_handler, server_name = data['server_name'], hostname = data['server_name'], manage_type = 'provider', driver_name = provider['driver_name'], ip_address = data.get('ip'))
 
     if data.get('role', False):
 
@@ -372,6 +374,9 @@ def add_server_to_datastore(datastore_handler, server_name, ip_address, hostname
     If the server is not in the datastore, this function will add it.
     If it is, it will simply update the server_type, managed_by and available_actions fields. 
     '''
+
+    import traceback
+    traceback.print_exc()
 
     server = yield datastore_handler.get_object(object_type = 'server', server_name = server_name)
     server.update(kwargs)

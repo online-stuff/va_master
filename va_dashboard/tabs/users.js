@@ -436,7 +436,7 @@ class Modal extends Component {
         return (
             <Bootstrap.Modal show={this.props.isOpen} onHide={this.props.close}>
             <Bootstrap.Modal.Header closeButton>
-              <Bootstrap.Modal.Title>{ title }</Bootstrap.Modal.Title>
+                <Bootstrap.Modal.Title>{ title }</Bootstrap.Modal.Title>
             </Bootstrap.Modal.Header>
 
             <Bootstrap.Modal.Body>
@@ -452,8 +452,8 @@ class Modal extends Component {
             </Bootstrap.Modal.Body>
 
             <Bootstrap.Modal.Footer>
-              <Bootstrap.Button onClick={this.props.close}>Cancel</Bootstrap.Button>
-              <Bootstrap.Button onClick={this.action} bsStyle = "primary">{btn_text}</Bootstrap.Button>
+                <Bootstrap.Button onClick={this.props.close}>Cancel</Bootstrap.Button>
+                <Bootstrap.Button onClick={this.action} bsStyle = "primary">{btn_text}</Bootstrap.Button>
             </Bootstrap.Modal.Footer>
 
         </Bootstrap.Modal>
@@ -464,9 +464,9 @@ class Modal extends Component {
 
 module.exports = {
     Panel: connect(state => {
-      return {auth: state.auth, alert: state.alert};
+        return {auth: state.auth, alert: state.alert};
     })(UserGroupPanel),
     Group: connect(state => {
-      return {auth: state.auth, alert: state.alert};
+        return {auth: state.auth, alert: state.alert};
     })(Groups)
 };

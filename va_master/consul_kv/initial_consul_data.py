@@ -19,7 +19,6 @@ initial_consul_data = {
     "managed_actions/ssh/user" : {
         "actions" : [
             {'name' : 'reboot', 'type' : 'confirm'}, 
-            {'name' : 'start', 'type' : 'action'}, 
             {'name' : 'stop', 'type' : 'action'}
         ]
     },
@@ -34,7 +33,6 @@ initial_consul_data = {
     "managed_actions/winexe/user" : {
         "actions" : [
             {'name' : 'reboot', 'type' : 'confirm'}, 
-            {'name' : 'start', 'type' : 'action'}, 
             {'name' : 'stop', 'type' : 'action'}
         ],
     },
