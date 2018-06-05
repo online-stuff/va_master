@@ -304,6 +304,7 @@ def launch_app(handler):
 
     if data.get('role', False):
 
+        yield panels.new_panel(handler.datastore_handler, data['server_name'], data['role'])
         minion_info = None
 
         retries = 0
