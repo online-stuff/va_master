@@ -62,30 +62,35 @@ def sync_salt_minions(datastore_handler, dash_user):
     minions = get_minion_role('*')
     print ('Minions are : ', minions)
     unresponsive_minions = []
-    for minion in minions: 
-        panel_type = dash_user['type'] + '_panel'
-        panel = yield datastore_handler.get_object(object_type = panel_type, name = minions[minion])
+    for user_type in ['user', 'admin']: 
+        for minion in minions: 
+            panel_type = user_type + '_panel'
+            panel = yield datastore_handler.get_object(object_type = panel_type, name = minions[minion])
 
-        if not panel: 
-            unresponsive_minions.append([minion, minions[minion]])
-            continue
+            if not panel: 
+                print ('No panel for ', minion, minions[minion])
+                continue
 
-        print ('Panel : ', panel, ' for ', minions[minion])
-        if minion not in panel['servers']: 
-            print ('Panel servers are : ', panel['servers'], ' and adding ', minion)
-            panel['servers'].append(minion)
-        yield datastore_handler.insert_object(object_type = panel_type, name = minions[minion], data = panel)
+            if not minions[minion]: 
+                unresponsive_minions.append([minion, minions[minion]])
+                continue
 
-    panels = yield datastore_handler.get_panels(dash_user['type'])
-    print ('Now clearing panels')
-    for panel in panels: 
-        panel_type = dash_user['type'] + '_panel'
+            print ('Panel : ', panel, ' for ', minions[minion])
+            if minion not in panel['servers']: 
+                print ('Panel servers are : ', panel['servers'], ' and adding ', minion)
+                panel['servers'].append(minion)
+            yield datastore_handler.insert_object(object_type = panel_type, name = minions[minion], data = panel)
 
-        for server in panel['servers']: 
-            if server not in minions: 
-                print (server, ' not in ', minions, ' so removing it. ')
-                panel['servers'] = [x for x in panel['servers'] if x != server]
-        yield datastore_handler.insert_object(object_type = panel_type, name = panel['name'], data = panel)
+        panels = yield datastore_handler.get_panels(user_type)
+        print ('Now clearing panels')
+        for panel in panels: 
+            panel_type = user_type + '_panel'
+
+            for server in panel['servers']: 
+                if server not in minions: 
+                    print (server, ' not in ', minions, ' so removing it. ')
+                    panel['servers'] = [x for x in panel['servers'] if x != server]
+            yield datastore_handler.insert_object(object_type = panel_type, name = panel['name'], data = panel)
 
 
     if unresponsive_minions: 

@@ -347,7 +347,6 @@ class LXCDriver(base.DriverBase):
                 while not ip: 
                     addresses = new_container.state().network['eth0']['addresses']
                     ip = [x['address'] for x in addresses if x.get('family', '') == 'inet']
-                    print ('Network is : ', new_container.state().network)
  
                 new_container.execute(['apt-get', '-y', 'install', 'openssh-server'])
   

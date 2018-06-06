@@ -8,7 +8,7 @@ import { hashHistory } from 'react-router';
 import { default as ChartComponent, defaults } from "react-chartjs-2";
 var moment = require('moment');
 import { DateRangePicker, SingleDatePicker } from 'react-dates';
-import { getRandomColor, getRandomColors, getReduxComponent, getModalHeader, getModalFooter, download } from './util';
+import { stringToColour, getRandomColor, getRandomColors, getReduxComponent, getModalHeader, getModalFooter, download } from './util';
 import Select from 'react-select';
 
 const Div = (props) => {
@@ -796,7 +796,7 @@ class CustomChart extends Component {
         this.state = chartData;
     }
     parseData(props) {
-        let { table, target, xCol, xColType, datasets, column, chartType } = props, xData = [];
+        let { table, target, xCol, xColType, colorAuto, datasets, column, chartType } = props, xData = [];
         let data = Object.assign([], datasets), chartData = {};
         // TODO remove when panel template is stored in redux
         if(target in table){
@@ -826,11 +826,21 @@ class CustomChart extends Component {
 				table[target].map((row) => {
 					xData.push(row[xCol]);
 					data.forEach(elem => {
-						elem.data.push(row[elem.column]);
+                        elem.data.push(row[elem.column]);
 					});
 				});
             }
+            if(colorAuto == true){
+				data.forEach(elem => {
+                    let color = stringToColour(target);
+					elem.backgroundColor = color;
+					elem.color = color;
+					elem.borderColor = color;
+                });
+            }
         }
+        console.info(data);
+        console.info(table);
         chartData.labels = xData;
         chartData.datasets = data;
         return chartData;

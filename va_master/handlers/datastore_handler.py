@@ -347,12 +347,11 @@ class DatastoreHandler(object):
         empty_panel = {'admin' : [], 'user' : []}
         states_data = yield self.get_states_data(states)
 
-        empty_panel = {'admin' : [], 'user' : []}
-
         for state in states_data: 
             for user_type in ['admin', 'user']: 
                 try:
-                    old_panel = yield self.get_panel(name = state['name'])
+                    old_panel = yield self.get_panel(name = state['name'], user_type = user_type)
+                    print ('Got old panel : ', old_panel, ' for state : ', state['name'])
                 except: 
                     old_panel = {}
 
