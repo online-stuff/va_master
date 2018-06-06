@@ -95,5 +95,9 @@
     "managed_actions" : {
         "consul_handle" : "managed_actions/{manage_type}/{manage_subtype}",
         "actions" : []
+    },
+    "app_type" : {
+        "consul_handle" : "app_types/{app_name}",
+        "name" : ""
     }
 }
