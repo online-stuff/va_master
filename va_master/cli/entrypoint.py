@@ -44,11 +44,13 @@ def bootstrap(master_config):
     data to all the components."""
 
     if coloredlogs: 
+        print ('Instaling coloredlogs')
         coloredlogs.install(logger = master_config.logger)
+        print ('Done. ')
 
     master_config.logger.info('Bootstrap initiated. ')
     app = httpserver.get_app(master_config)
-
+    print ('Doing certs')
     if None in (master_config.https_crt, master_config.https_key):
         crt_path = os.path.join(master_config.data_path, 'https.crt')
         key_path = os.path.join(master_config.data_path, 'https.key')
@@ -69,14 +71,16 @@ def bootstrap(master_config):
 
     ssl_ctx = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
     ssl_ctx.load_cert_chain(crt_path, key_path)
-
+    print ('Importing consul. ')
     from va_master.consul_kv import consul
 #    consul.ConsulProcess(master_config).start()
     my_serv = tornado.httpserver.HTTPServer(app, ssl_options=ssl_ctx)
     my_serv.listen(master_config.https_port)
+    print ("Started server. ")
     master_config.logger.info('Server is listening at : %s. ' % str(master_config.https_port))
     master_config.logger.info('Starting server. ')
 #    try:
+    print ('Doing ioloop')
     tornado.ioloop.IOLoop.current().start()
 #    except: 
 #        master_config.logger.info('Caught exception in ioloop: ')

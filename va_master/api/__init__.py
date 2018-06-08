@@ -4,7 +4,6 @@ try:
     from custom_modules import * 
     custom_modules = glob.glob(dirname(__file__) + '/custom_modules/*.py')
 except: 
-    print ('Could not import custom modules - probably just missing the file. ')
     custom_modules = []
 
 modules = glob.glob(dirname(__file__)+"/*.py") + custom_modules 

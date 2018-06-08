@@ -14,7 +14,7 @@ import Select from 'react-select';
 const Div = (props) => {
     let redux = {};
     let { elements, classNames, div } = props;
-    let divElements = elements.map(function(element) {
+    let divElements = elements.map(element => {
         let { name, type, reducers } = element;
         element.key = name;
         redux[type] = getReduxComponent(components[type], reducers);
@@ -35,7 +35,7 @@ const MultiTable = (props) => {
     let redux = {}, tables = [];
     for(let x in props.table){
         if(x !== "path"){
-            let elements = props.elements.map((element) => {
+            let elements = props.elements.map(element => {
                 let { type, reducers } = element;
                 element.name = x;
                 element.key = type + element.name;
@@ -149,8 +149,9 @@ class Chart extends Component {
 
 class Table extends Component {
     btn_clicked(id, evtKey){
-        var checkPath = 'path' in this.props.table && this.props.table.path.length > 0;
-        if(!checkPath && 'args' in this.props.panel && this.props.panel.args !== ""){
+        let checkPath = 'path' in this.props.table && this.props.table.path.length > 0;
+        let checkSubpanel = "panels" in this.props && evtKey in this.props.panels;
+        if(!checkPath && 'args' in this.props.panel && this.props.panel.args !== "" && !checkSubpanel){
             id.unshift(this.props.panel.args);
         }
         if(checkPath){
@@ -208,7 +209,7 @@ class Table extends Component {
             modal.tableName = this.props.name;
             modal.refreshAction = this.props.source;
             this.props.dispatch({type: 'OPEN_MODAL', template: modal});
-        }else if("panels" in this.props && evtKey in this.props.panels){
+        }else if(checkSubpanel){
             hashHistory.push('/subpanel/' + this.props.panels[evtKey] + '/' + this.props.panel.server + '/' + id.join());
         }else{
             data = {"server_name": this.props.panel.server, "action": evtKey, "args": id};
@@ -217,23 +218,25 @@ class Table extends Component {
                     this.props.dispatch({type: 'SHOW_ALERT', msg, success: true});
                 }
                 let { source, panel, name, refreshActions } = this.props;
-                data.action = source;
-                data.args = [];
-                if('args' in panel && panel.args !== ""){
-                    data.args = [panel.args];
-                }
-                if(refreshActions){
-                    data.call_functions = refreshActions;
-                }
-                Network.post('/api/panels/action', this.props.auth.token, data).done(msg => {
-                    if(refreshActions){
-                        this.props.dispatch({type: 'CHANGE_MULTI_DATA', data: msg});
-                    }else if(typeof msg !== 'string'){
-                        this.props.dispatch({type: 'CHANGE_DATA', data: msg, name});
-                    }else{
-                        this.props.dispatch({type: 'SHOW_ALERT', msg, success: true});
+                if(source){
+                    data.action = source;
+                    data.args = [];
+                    if('args' in panel && panel.args !== ""){
+                        data.args = [panel.args];
                     }
-                });
+                    if(refreshActions){
+                        data.call_functions = refreshActions;
+                    }
+                    Network.post('/api/panels/action', this.props.auth.token, data).done(msg => {
+                        if(refreshActions){
+                            this.props.dispatch({type: 'CHANGE_MULTI_DATA', data: msg});
+                        }else if(typeof msg !== 'string'){
+                            this.props.dispatch({type: 'CHANGE_DATA', data: msg, name});
+                        }else{
+                            this.props.dispatch({type: 'SHOW_ALERT', msg, success: true});
+                        }
+                    });
+                }
             }).fail(msg => {
                 this.props.dispatch({type: 'SHOW_ALERT', msg});
             });
@@ -798,6 +801,7 @@ class CustomChart extends Component {
     parseData(props) {
         let { table, target, xCol, xColType, colorAuto, datasets, column, chartType } = props, xData = [];
         let data = Object.assign([], datasets), chartData = {};
+        target = target || props.name;
         // TODO remove when panel template is stored in redux
         if(target in table){
             if(xColType == 'date'){

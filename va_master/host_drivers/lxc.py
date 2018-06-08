@@ -331,6 +331,8 @@ class LXCDriver(base.DriverBase):
             }
 
             new_container = cl.containers.create(lxc_config, wait = True)
+            print ('status is ', new_container.status)
+
             ssh_path = '/root/.ssh'
             keys_path = ssh_path + '/authorized_keys'
 
@@ -347,13 +349,14 @@ class LXCDriver(base.DriverBase):
                 while not ip: 
                     addresses = new_container.state().network['eth0']['addresses']
                     ip = [x['address'] for x in addresses if x.get('family', '') == 'inet']
- 
-                new_container.execute(['apt-get', '-y', 'install', 'openssh-server'])
-  
+                try:
+                    new_container.execute(['apt-get', '-y', 'install', 'openssh-server'])
+                except : #Sometimes there is a weird and cryptic "Not Found" exception. TODO: find it and pass only on it 
+                    pass
                 ip = ip[0]
                 print ('IP is : ', ip)
-                yield apps.add_minion_to_server(data['server_name'], ip, data['role'], key_filename = '/root/.ssh/va-master.pem', username = 'root')
-            new_container = self.container_to_dict(provider['provider_name'])
+                yield apps.add_minion_to_server(self.datastore_handler, data['server_name'], ip, data['role'], key_filename = '/root/.ssh/va-master.pem', username = 'root')
+            new_container = self.container_to_dict(new_container, provider['provider_name'])
             raise tornado.gen.Return(new_container)
         except:
             import traceback

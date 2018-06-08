@@ -2,6 +2,7 @@ venv/
 *.pyc
 .*.swp
 .*.swo
+.rnd
 /id_rsa
 /id_rsa.pub
 node_modules/
@@ -20,4 +21,5 @@ va_master/api/custom_modules/__init__.py
 va_master/host_drivers/aek_driver.py
 va_dashboard/static/logo-splash.png
 va_dashboard/static/logo.png
+va_dashboard/static/bundle.js
 ssl/*

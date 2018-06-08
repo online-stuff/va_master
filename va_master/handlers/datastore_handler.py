@@ -351,7 +351,6 @@ class DatastoreHandler(object):
             for user_type in ['admin', 'user']: 
                 try:
                     old_panel = yield self.get_panel(name = state['name'], user_type = user_type)
-                    print ('Got old panel : ', old_panel, ' for state : ', state['name'])
                 except: 
                     old_panel = {}
 
