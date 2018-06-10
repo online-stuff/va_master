@@ -11,6 +11,8 @@ class Store extends Component {
         this.state = {states: []};
         this.getCurrentStates = this.getCurrentStates.bind(this);
         this.launchApp = this.launchApp.bind(this);
+        this.rebuildIndex = this.rebuildIndex.bind(this);
+        this.rebuildPanels = this.rebuildPanels.bind(this);
         this.openModal = this.openModal.bind(this);
         this.openPanel = this.openPanel.bind(this);
     }
@@ -35,6 +37,24 @@ class Store extends Component {
     }
     openModal () {
         this.props.dispatch({type: 'OPEN_MODAL'});
+    }
+    rebuildPanels () {
+        var fd = new FormData();
+        Network.post("/api/panels/sync_salt_minions", this.props.auth.token, fd).done(function(data) 
+        {
+            me.props.dispatch({type: 'SHOW_ALERT', msg: "Panels regeneration was sucessful"});
+        }).fail(function (msg) {
+            me.props.dispatch({type: 'SHOW_ALERT', msg: "Panels regeneration failed!"});
+        });
+    }
+    rebuildIndex () {
+        var fd = new FormData();
+        Network.post("/api/states/reset", this.props.auth.token, fd).done(function(data) 
+        {
+            me.props.dispatch({type: 'SHOW_ALERT', msg: "Index rebuild was sucessful"});
+        }).fail(function (msg) {
+            me.props.dispatch({type: 'SHOW_ALERT', msg: "Index rebuild failed!"});
+        });
     }
     openPanel(e){
         var index = e.target.value;
@@ -85,6 +105,14 @@ class Store extends Component {
                     <Bootstrap.Button style={{float: 'right', marginRight: '20px'}} onClick={this.openModal}>
                         <Bootstrap.Glyphicon glyph='plus' />
                         Add app 
+                    </Bootstrap.Button>
+                    <Bootstrap.Button style={{float: 'right', marginRight: '20px'}} onClick={this.rebuildIndex}>
+                        <Bootstrap.Glyphicon glyph='refresh' />
+                        Rebuild app index 
+                    </Bootstrap.Button>
+                    <Bootstrap.Button style={{float: 'right', marginRight: '20px'}} onClick={this.rebuildPanels}>
+                        <Bootstrap.Glyphicon glyph='list-alt' />
+                        Recreate app panels 
                     </Bootstrap.Button>
                 </div>
                 <div className="container-fluid">

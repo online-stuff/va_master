@@ -207,11 +207,12 @@ class ApiHandler(tornado.web.RequestHandler):
     @tornado.gen.coroutine
     def exec_method(self, method, path, data):
         try:
+            data = data or {}
             proxy_server = yield self.get_proxy_server()
             if proxy_server:
                 result = yield self.proxy_handler.handle_request(self, proxy_server, method, path, data)
                 raise tornado.gen.Return()
-
+            print ('Data is : ', data)
             self.data = data
             self.data.update({
                 'method' :  method,

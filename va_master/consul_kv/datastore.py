@@ -123,9 +123,12 @@ class ConsulStore(DataStore):
         raise tornado.gen.Return(result)
 
     @tornado.gen.coroutine
-    def delete(self, doc_id):
+    def delete(self, doc_id, params):
         try:
-            req = HTTPRequest('%s/v1/kv/%s' % (self.path, doc_id), method='DELETE')
+            url = '%s/v1/kv/%s' % (self.path, doc_id)
+            if params: 
+                url = url_concat(url, params)
+            req = HTTPRequest(url, method='DELETE')
             yield self.client.fetch(req)
         except Exception as e:
             raise StoreError(e)

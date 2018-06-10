@@ -36,6 +36,7 @@ def get_paths():
         },
         'post' : {
             'state/add' : {'function' : create_new_state,'args' : ['file', 'body', 'filename']},
+            'states/reset' : {'function' : reset_states, 'args' : ['datastore_handler']}, 
             'apps/new/validate_fields' : {'function' : validate_app_fields, 'args' : ['handler']},
             'apps' : {'function' : launch_app, 'args' : ['handler']},
             'apps/change_app_type' : {'function' : change_app_type, 'args' : ['datastore_handler', 'server_name', 'app_type']},
@@ -226,6 +227,11 @@ def create_new_state(datastore_handler, file_contents, body, filename):
     yield datastore_handler.add_state(new_state)
 
     tar_ref.close()
+
+@tornado.gen.coroutine
+def reset_states(datastore_handler):
+    yield datastore_handler.datastore.delete('states/', {'recurse' : True})
+    yield datastore_handler.import_states_from_states_data()
 
 @tornado.gen.coroutine
 def install_app(datastore_handler, app_zip, app_json):

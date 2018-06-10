@@ -801,7 +801,15 @@ class CustomChart extends Component {
     parseData(props) {
         let { table, target, xCol, xColType, colorAuto, datasets, column, chartType } = props, xData = [];
         let data = Object.assign([], datasets), chartData = {};
-        target = target || props.name;
+        // target = target || props.name;
+        // console.warn("all tables");
+        // console.warn(table);
+        // console.error(target);
+        if (target == "auto")
+            {target = props.name; 
+            console.info("Auto target for chart -"+ target+"-"); 
+            console.info(table[target]); 
+            }
         // TODO remove when panel template is stored in redux
         if(target in table){
             if(xColType == 'date'){
@@ -827,6 +835,7 @@ class CustomChart extends Component {
 					});
 				});
             }else {
+                console.info("normal chart");
 				table[target].map((row) => {
 					xData.push(row[xCol]);
 					data.forEach(elem => {
@@ -835,16 +844,18 @@ class CustomChart extends Component {
 				});
             }
             if(colorAuto == true){
+                
 				data.forEach(elem => {
                     let color = stringToColour(target);
+                    console.info("Color: " + color);
 					elem.backgroundColor = color;
 					elem.color = color;
 					elem.borderColor = color;
                 });
             }
         }
-        console.info(data);
-        console.info(table);
+        // console.info(data);
+        // console.info(table);
         chartData.labels = xData;
         chartData.datasets = data;
         return chartData;
@@ -854,7 +865,9 @@ class CustomChart extends Component {
         this.setState({ chartData });
     }
     render() {
-        let { name, height, width, chartType, xColType, options } = this.props;
+        let { height, width, chartType, options } = this.props;
+        // xcoltype and name are not used anyway
+        // let { name, height, width, chartType, xColType, options } = this.props;
         return (
             <div>
                 <ChartComponent type={chartType} height={height || 200} width={width || 200} data={this.state.chartData} options={options} redraw />
