@@ -10,6 +10,7 @@ var moment = require('moment');
 import { DateRangePicker, SingleDatePicker } from 'react-dates';
 import { stringToColour, getRandomColor, getRandomColors, getReduxComponent, getModalHeader, getModalFooter, download } from './util';
 import Select from 'react-select';
+import deepcopy from 'deepcopy';
 
 const Div = (props) => {
     let redux = {};
@@ -800,16 +801,10 @@ class CustomChart extends Component {
     }
     parseData(props) {
         let { table, target, xCol, xColType, colorAuto, datasets, column, chartType } = props, xData = [];
-        let data = Object.assign([], datasets), chartData = {};
+        let data = deepcopy(datasets), chartData = {};
         // target = target || props.name;
-        // console.warn("all tables");
-        // console.warn(table);
-        // console.error(target);
         if (target == "auto")
-            {target = props.name; 
-            console.info("Auto target for chart -"+ target+"-"); 
-            console.info(table[target]); 
-            }
+            target = props.name; 
         // TODO remove when panel template is stored in redux
         if(target in table){
             if(xColType == 'date'){
@@ -835,7 +830,6 @@ class CustomChart extends Component {
 					});
 				});
             }else {
-                console.info("normal chart");
 				table[target].map((row) => {
 					xData.push(row[xCol]);
 					data.forEach(elem => {
@@ -844,18 +838,14 @@ class CustomChart extends Component {
 				});
             }
             if(colorAuto == true){
-                
 				data.forEach(elem => {
                     let color = stringToColour(target);
-                    console.info("Color: " + color);
 					elem.backgroundColor = color;
 					elem.color = color;
 					elem.borderColor = color;
                 });
             }
         }
-        // console.info(data);
-        // console.info(table);
         chartData.labels = xData;
         chartData.datasets = data;
         return chartData;
