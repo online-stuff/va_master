@@ -840,7 +840,7 @@ class CustomChart extends Component {
             if(colorAuto == true){
 				data.forEach(elem => {
                     let color = stringToColour(target);
-					elem.backgroundColor = color;
+					elem.backgroundColor = color+"88";
 					elem.color = color;
 					elem.borderColor = color;
                 });
