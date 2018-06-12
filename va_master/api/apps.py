@@ -152,7 +152,8 @@ def perform_server_action(handler, action, server_name, provider_name = '', acti
 
     result = None
     if action_type == 'ssh' : 
-        result = yield handle_ssh_action(action = action, ip_addr = server['ip_address'], port = server.get('port'), username = server.get('username'), password = server.get('password'))
+        kwargs = {'server_name' : server_name, 'handler' : handler}
+        result = yield handle_ssh_action(handler = handler, action = action, ip_addr = server['ip_address'], port = server.get('port'), username = server.get('username'), password = server.get('password'), kwargs = kwargs)
     elif action_type == 'app' : 
         result = yield handle_app_action(action = action, server_name = server_name)
     else: 

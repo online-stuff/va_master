@@ -8,7 +8,7 @@ initial_consul_data = {
         "actions" : [
             {'name' : 'reboot', 'type' : 'confirm'},
             {'name' : 'delete', 'type' : 'confirm'}, 
-            {'name' : 'start', 'type' : 'action'}, 
+            {'name' : 'remove_server', 'type' : 'confirm', 'kwargs' : ['handler', 'server_name']},
             {'name' : 'stop', 'type' : 'action'},
             {'name' : 'show_processes', 'type' : 'text', 'label' : 'Show processes'}, 
             {'name' : 'show_usage', 'type' : 'text', 'label' : 'Show usage'}, 

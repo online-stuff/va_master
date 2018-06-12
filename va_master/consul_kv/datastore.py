@@ -123,7 +123,7 @@ class ConsulStore(DataStore):
         raise tornado.gen.Return(result)
 
     @tornado.gen.coroutine
-    def delete(self, doc_id, params):
+    def delete(self, doc_id, params = None):
         try:
             url = '%s/v1/kv/%s' % (self.path, doc_id)
             if params: 

@@ -103,6 +103,7 @@ def manage_server_type(datastore_handler, server_name, new_type, ip_address = No
 
     server = yield datastore_handler.get_object(object_type = 'server', server_name = server_name)
     server.update(kwargs)
+    server['server_name'] = server.get('server_name') or server_name
 
     if new_type == 'ssh':
         server = yield handle_ssh(datastore_handler, server, ip_address, username)

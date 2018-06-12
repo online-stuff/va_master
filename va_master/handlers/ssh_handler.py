@@ -118,13 +118,39 @@ def show_services():
     raise tornado.gen.Return(services)
 
 @tornado.gen.coroutine
-def handle_ssh_action(action, ip_addr, username = '', password = '', port = None, kwargs = {}):
+def remove_server(handler, server_name):
+    server = yield handler.datastore_handler.get_object(object_type = 'server', server_name = server_name)
+    provider_name = server.get('provider_name', 'va_standalone_servers')
+
+    provider = yield handler.datastore_handler.get_object(object_type = 'provider', provider_name = provider_name)
+    provider['servers'] = [x for x in provider['servers'] if x['server_name'] != server_name]
+
+    yield handler.datastore_handler.insert_object(object_type = 'provider', provider_name = provider_name, data = provider)
+    yield handler.datastore_handler.delete_object(object_type = 'server', server_name = server_name)
+
+@tornado.gen.coroutine
+def handle_ssh_action(handler, action, ip_addr, username = '', password = '', port = None, kwargs = {}):
+
+    user_type = 'root' if username == 'root' else 'user'
+    consul_ssh_actions = yield handler.datastore_handler.get_object('managed_actions', manage_type = 'ssh', manage_subtype = user_type)
+
+    consul_action = [x for x in consul_ssh_actions['actions'] if x['name'] == action]
+    if not consul_action: 
+        raise Exception("No action " + action + "found.")
+    consul_action = consul_action[0]
+    print ('Consul is : ', consul_action)
+    ssh_kwargs = consul_action.get('kwargs', [])
+    print ('My kwarsg ar e: ', ssh_kwargs)
+
+    ssh_kwargs = {x : kwargs[x] for x in ssh_kwargs}
+    print ('Now are : ', ssh_kwargs)
+
     connect_kwargs = {}
     key_path = '/root/.ssh/va-master.pem'
 
+    connect_kwargs['username'] = username
 
-    if username or password: 
-        connect_kwargs['username'] = username
+    if password: 
         connect_kwargs['password'] = password
     else: 
         connect_kwargs['key_filename'] = key_path
@@ -136,5 +162,5 @@ def handle_ssh_action(action, ip_addr, username = '', password = '', port = None
     print ('Kwargs are : ', connect_kwargs)
     ssh_cl.connect(ip_addr, **connect_kwargs)
     ssh_func = globals()[action]
-    result = yield ssh_func(**kwargs)
+    result = yield ssh_func(**ssh_kwargs)
     raise tornado.gen.Return(result)

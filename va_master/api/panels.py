@@ -19,6 +19,7 @@ def get_paths():
         },
         'post' : {
             'panels/sync_salt_minions' : {'function' : sync_salt_minions, 'args' : ['datastore_handler', 'dash_user']},
+            'panels/remove_orphaned_servers' : {'function' : remove_orphaned_servers, 'args' : ['datastore_handler']},
             'panels/add_user_functions' : {'function' : add_user_functions, 'args' : ['datastore_handler', 'user', 'functions']},
             'panels/create_user_group' : {'function' : create_user_group, 'args' : ['datastore_handler', 'group_name', 'functions']},
             'panels/create_user_with_group' : {'function' : create_user_with_group, 'args' : ['handler', 'user', 'password', 'user_type', 'functions', 'groups']},
@@ -55,6 +56,18 @@ def new_panel(datastore_handler, server_name, role):
     """ Adds the panel_name to the list of servers for the specified role. """
 
     yield datastore_handler.add_panel(server_name, role)
+
+
+@tornado.gen.coroutine
+def remove_orphaned_servers(datastore_handler):
+    servers = yield datastore_handler.datastore.get_recurse('server/')
+    providers = yield datastore_handler.datastore.get_recurse('providers/')
+    providers = [x['provider_name'] for x in providers]
+
+    for server in servers: 
+        if server.get('provider_name', '') not in providers: 
+            print ('Server ', server['server_name'], ' has : ', server.get('provider_name'), ' not in ', providers, ' deleting. ')
+            yield datastore_handler.delete_object(object_type = 'server', server_name = server['server_name'])
 
 
 @tornado.gen.coroutine
