@@ -48,6 +48,7 @@ class Servers extends Component {
         this.doAction = this.doAction.bind(this);
         this.popupClose = this.popupClose.bind(this);
         this.openModal = this.openModal.bind(this);
+        this.rebuildIndex = this.rebuildIndex.bind(this);
         this.dynamicPopupClose = this.dynamicPopupClose.bind(this);
         this.reloadTable = this.reloadTable.bind(this);
         this.getActions = this.getActions.bind(this);
@@ -151,6 +152,16 @@ class Servers extends Component {
         this.props.dispatch({type: 'OPEN_MODAL'});
     }
 
+    rebuildIndex () {
+        var fd = new FormData();
+        Network.post("/api/panels/remove_orphaned_servers", this.props.auth.token, fd).done(function(data) 
+        {
+            me.props.dispatch({type: 'SHOW_ALERT', msg: "Index rebuild was sucessful"});
+        }).fail(function (msg) {
+            me.props.dispatch({type: 'SHOW_ALERT', msg: "Index rebuild failed!"});
+        });
+    }
+
     dynamicPopupClose () {
         this.setState({dynamicPopup: {isOpen: false, title: '', fields: {}, type: ''}});
     }
@@ -233,7 +244,7 @@ class Servers extends Component {
                     <ServerFormRedux loaded={loaded} providers = {this.state.providers} states = {this.state.states} provider_name = {this.state.hostname} role = {this.state.role} defaults = {this.state.defaults} options = {this.state.options} provider_usage = {this.state.provider_usage} getData = {this.getData} onChange = {this.onChange} onChangeRole = {this.onChangeRole} />
                     <div style={blockStyle} className="card">
                         <div className="card-body">
-                            <Table className="table striped" columns={['Hostname', 'IP', 'Size', 'Status', 'Provider', 'Managed by', 'Actions']} itemsPerPage={10} pageButtonLimit={10} noDataText="No matching records found." sortable={sf_cols} filterable={sf_cols} btnName="Create server" btnClick={this.openModal} title="Current servers" filterClassName="form-control" filterPlaceholder="Filter">
+                            <Table className="table striped" columns={['Hostname', 'IP', 'Size', 'Status', 'Provider', 'Managed by', 'Actions']} itemsPerPage={10} pageButtonLimit={10} noDataText="No matching records found." sortable={sf_cols} filterable={sf_cols}  btnName="Rebuild server index" btnClick={this.rebuildIndex} btnName="Create server" btnClick={this.openModal} title="Current servers" filterClassName="form-control" filterPlaceholder="Filter">
                                 {app_rows}
                             </Table>
                         </div>
