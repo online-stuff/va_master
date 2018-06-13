@@ -439,7 +439,6 @@ class OpenStackDriver(base.DriverBase):
 
             raise Exception('Action ' + action + ' was not performed on ' + server_name + '. Reason: ' + e.message)
 
-        print ('All is well!')
         raise tornado.gen.Return({'success' : True, 'message' : message, 'data' : {}})
 
 

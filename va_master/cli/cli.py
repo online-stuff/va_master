@@ -184,7 +184,7 @@ def handle_store_init(cli_config, values, store, datastore_handler):
     store_config  = generate_store_config(values)
     store_config = {x : store_config[x] for x in store_config if x not in ['admin_pass']}
     run_sync(functools.partial(datastore_handler.insert_init_vals, store_config))
-    run_sync(functools.partial(datastore_handler.create_standalone_provider))
+#    run_sync(functools.partial(datastore_handler.create_standalone_provider))
 
     return store_config
 

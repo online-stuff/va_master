@@ -236,8 +236,8 @@ const Provider = (props) => {
         cpuData.push(server.used_cpu);
         ramData.push(server.used_ram);
         diskData.push(server.used_disk);
-        cost += server.month_to_date;
-        e_cost += server.monthly_estimate;
+        cost += server.cost;
+        e_cost += server.estimated_cost;
         return server.hostname;
     });
     labels.push("Free");

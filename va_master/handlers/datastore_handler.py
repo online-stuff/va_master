@@ -72,14 +72,23 @@ class DatastoreHandler(object):
         old_vals.update(init_vals)
         yield self.datastore.insert('init_vals', old_vals)
 
-
-        for key in initial_consul_data:
+        for key in initial_consul_data['overwrite']:
             try: 
                 old_data = yield self.datastore.get(key)
             except: 
                 old_data = {}
             if rewrite or not old_data:
-                yield self.datastore.insert(key, initial_consul_data[key])
+                yield self.datastore.insert(key, initial_consul_data['overwrite'][key])
+
+        for key in initial_consul_data['update']: 
+            key_data = initial_consul_data['update'][key]
+            old_data = yield self.datastore.get(key)
+            if not old_data:  
+                continue
+            for key in key_data: 
+                if key_data[key]:
+                    old_data[key] = key_data[key]
+            yield self.datastore.insert(key, old_data)
 
     @tornado.gen.coroutine
     def get_init_vals(self):
