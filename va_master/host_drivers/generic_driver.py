@@ -113,7 +113,9 @@ class GenericDriver(base.DriverBase):
 
     @tornado.gen.coroutine
     def get_servers(self, provider):
+        print ('Getting provider ', provider['provider_name'])
         servers = yield self.datastore_handler.get_provider(provider['provider_name'])
+        print ('Provider is : ', servers)
         servers = servers['servers']
         result = []
         
@@ -122,7 +124,7 @@ class GenericDriver(base.DriverBase):
 
         for server in servers: 
             db_server = yield self.datastore_handler.get_object(object_type = 'server', server_name = server['hostname'])
-            server = {
+            server_template = {
                 'hostname' : server['hostname'], 
                 'ip' : server['ip_address'],
                 'size' : '',
@@ -135,8 +137,9 @@ class GenericDriver(base.DriverBase):
                 'managed_by' : [],
                 'provider' : provider['provider_name'], 
             }
-            server.update(db_server)
-            result.append(server)
+            server_template.update(server)
+            server_template.update(db_server)
+            result.append(server_template)
 
         print ('SERVERS STANDALONE: ', result)
 
@@ -254,7 +257,7 @@ class GenericDriver(base.DriverBase):
             raise Exception('Failed to connect with ssh: ' + e.message)
         try:
 
-            server = {"server_name" : data["server_name"], "hostname" : data["server_name"], "ip_address" : data["ip"], "local_gb" : 0, "memory_mb" : 0, "managed_by" : ['ssh'], "location" : data.get('location', '')}
+            server = {"username" : data['username'], "server_name" : data["server_name"], "hostname" : data["server_name"], "ip_address" : data["ip"], "local_gb" : 0, "memory_mb" : 0, "managed_by" : ['ssh'], "location" : data.get('location', '')}
             print ('Server is : ', server)
             yield apps.add_server_to_datastore(self.datastore_handler, server_name = server['server_name'], ip_address = data['ip'], hostname = server['hostname'], manage_type = 'ssh', username = data['username'], kwargs = {'password' : data.get('password', ''), 'location' : data.get('location', '')})
             print ('Added server to datastore')

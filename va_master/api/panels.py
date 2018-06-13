@@ -69,7 +69,6 @@ def remove_orphaned_servers(datastore_handler):
             print ('Server ', server['server_name'], ' has : ', server.get('provider_name'), ' not in ', providers, ' deleting. ')
             yield datastore_handler.delete_object(object_type = 'server', server_name = server['server_name'])
 
-
 @tornado.gen.coroutine
 def sync_salt_minions(datastore_handler, dash_user):
     minions = get_minion_role('*')
