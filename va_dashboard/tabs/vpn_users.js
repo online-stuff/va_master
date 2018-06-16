@@ -136,7 +136,7 @@ class VpnUsers extends Component {
                 <div style={blockStyle} className="container-block">
                     <div className="block card">
                         <div className="card-body">
-                            <Table className="table table-striped" columns={['Name', 'Connected', 'Actions']} itemsPerPage={rowNum} pageButtonLimit={10} noDataText="No matching records found." sortable={sf_cols} filterable={sf_cols} btnName="Add user" btnClick={this.openModal} title="Active users" filterClassName="form-control custpm-filter-input" filterPlaceholder="Filter">
+                            <Table className="table table-striped" columns={['Name', 'Connected', 'Actions']} itemsPerPage={rowNum} pageButtonLimit={10} noDataText="No matching records found." sortable={sf_cols} filterable={sf_cols} buttons={[{name: "Add user", onClick: this.openModal, icon: 'glyphicon glyphicon-plus'}]} title="Active users" filterClassName="form-control custpm-filter-input" filterPlaceholder="Filter">
                                 {active_rows}
                             </Table>
                         </div>

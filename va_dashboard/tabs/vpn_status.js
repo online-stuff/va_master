@@ -46,7 +46,7 @@ class VpnStatus extends Component {
         });
         var loading = this.state.loading;
         const blockStyle = {
-            visibility: loading ? "hidden": "visible",
+            visibility: loading ? "hidden": "visible"
         };
 
         return (
@@ -64,8 +64,6 @@ class VpnStatus extends Component {
     }
 }
 
-VpnStatus = connect(function(state){
+module.exports = connect(function(state){
     return {auth: state.auth, alert: state.alert};
 })(VpnStatus);
-
-module.exports = VpnStatus;

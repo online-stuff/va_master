@@ -154,11 +154,10 @@ class Servers extends Component {
 
     rebuildIndex () {
         var fd = new FormData();
-        Network.post("/api/panels/remove_orphaned_servers", this.props.auth.token, fd).done(function(data) 
-        {
-            me.props.dispatch({type: 'SHOW_ALERT', msg: "Index rebuild was sucessful"});
-        }).fail(function (msg) {
-            me.props.dispatch({type: 'SHOW_ALERT', msg: "Index rebuild failed!"});
+        Network.post("/api/panels/remove_orphaned_servers", this.props.auth.token, fd).done(data => { 
+            this.props.dispatch({type: 'SHOW_ALERT', msg: "Index rebuild was sucessful"});
+        }).fail(msg => {
+            this.props.dispatch({type: 'SHOW_ALERT', msg: "Index rebuild failed!"});
         });
     }
 
@@ -244,7 +243,7 @@ class Servers extends Component {
                     <ServerFormRedux loaded={loaded} providers = {this.state.providers} states = {this.state.states} provider_name = {this.state.hostname} role = {this.state.role} defaults = {this.state.defaults} options = {this.state.options} provider_usage = {this.state.provider_usage} getData = {this.getData} onChange = {this.onChange} onChangeRole = {this.onChangeRole} />
                     <div style={blockStyle} className="card">
                         <div className="card-body">
-                            <Table className="table striped" columns={['Hostname', 'IP', 'Size', 'Status', 'Provider', 'Managed by', 'Actions']} itemsPerPage={10} pageButtonLimit={10} noDataText="No matching records found." sortable={sf_cols} filterable={sf_cols}  btnName="Rebuild server index" btnClick={this.rebuildIndex} btnName="Create server" btnClick={this.openModal} title="Current servers" filterClassName="form-control" filterPlaceholder="Filter">
+                            <Table className="table striped" columns={['Hostname', 'IP', 'Size', 'Status', 'Provider', 'Managed by', 'Actions']} itemsPerPage={10} pageButtonLimit={10} noDataText="No matching records found." sortable={sf_cols} filterable={sf_cols} buttons={[{name: "Rebuild server index", onClick: this.rebuildIndex}, {name: "Create server", onClick: this.openModal, icon: 'glyphicon glyphicon-plus'}]} title="Current servers" filterClassName="form-control" filterPlaceholder="Filter">
                                 {app_rows}
                             </Table>
                         </div>
@@ -364,7 +363,7 @@ class SSHStep extends Component {
         Network.post('/api/apps/new/validate_fields', this.props.auth.token, data).done(data => {
             //this.setState({status: 'launched'});
             this.props.launchServer();
-        }).fail(function (msg) {
+        }).fail(msg => {
             this.props.dispatch({type: 'SHOW_ALERT', msg: msg});
         });
     }
@@ -654,7 +653,7 @@ class ServerForm extends Component {
 
     close() {
         this.props.dispatch({type: 'CLOSE_MODAL'});
-        this.setState({stepIndex: 1});
+        this.state.stepIndex > 1 && this.setState({stepIndex: 1});
     }
 
     goToNextStep () {
@@ -662,7 +661,7 @@ class ServerForm extends Component {
     }
 
     launchServer () {
-        //this.close();
+        setTimeout(() => this.close(), 3000);
         this.setState({btnDisable: true, status: 'launched'});
     }
 

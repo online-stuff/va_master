@@ -131,7 +131,7 @@ class Providers extends Component {
             {loading && getSpinner()}
             <div style={blockStyle} className="card">
                 <div className="card-body">
-                    <Table className="table striped" columns={[...tblCols, 'Actions']} itemsPerPage={10} pageButtonLimit={10} noDataText="No matching records found." sortable={tblCols} filterable={tblCols} btnName="Add provider" btnClick={this.addProvider} title="Current providers" filterClassName="form-control" filterPlaceholder="Filter">
+                    <Table className="table striped" columns={[...tblCols, 'Actions']} itemsPerPage={10} pageButtonLimit={10} noDataText="No matching records found." sortable={tblCols} filterable={tblCols} buttons={[{name: "Add provider", onClick: this.addProvider, icon: 'glyphicon glyphicon-plus'}]} title="Current providers" filterClassName="form-control" filterPlaceholder="Filter">
                         {provider_rows}
                     </Table>
                 </div>

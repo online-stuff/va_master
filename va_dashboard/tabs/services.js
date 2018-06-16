@@ -137,7 +137,7 @@ class Services extends Component {
                 {loading && getSpinner()}
                 <div style={blockStyle} className="card">
                     <div className="card-body">
-                        <Table className="table striped" columns={[...tblCols, 'Actions']} itemsPerPage={10} pageButtonLimit={10} noDataText="No matching records found." sortable={tblCols} filterable={tblCols} btnName="Add service" btnClick={this.addService} title="Current services" filterClassName="form-control" filterPlaceholder="Filter">
+                        <Table className="table striped" columns={[...tblCols, 'Actions']} itemsPerPage={10} pageButtonLimit={10} noDataText="No matching records found." sortable={tblCols} filterable={tblCols} buttons={[{name: "Add service", onClick: this.addService, icon: 'glyphicon glyphicon-plus'}]} title="Current services" filterClassName="form-control" filterPlaceholder="Filter">
                             {tblRows}
                         </Table>
                     </div>
