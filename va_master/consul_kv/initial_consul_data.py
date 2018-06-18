@@ -11,7 +11,7 @@ initial_consul_data = {
             "actions" : [
                 {'name' : 'reboot', 'type' : 'confirm'},
                 {'name' : 'delete', 'type' : 'confirm'}, 
-                {'name' : 'remove_server', 'type' : 'confirm', 'kwargs' : ['handler', 'server_name'], 'requires_ssh' : False},
+                {'name' : 'remove_server', 'type' : 'confirm', 'kwargs' : ['datastore_handler', 'server_name'], 'requires_ssh' : False},
                 {'name' : 'stop', 'type' : 'action'},
                 {'name' : 'show_processes', 'type' : 'text', 'label' : 'Show processes'}, 
                 {'name' : 'show_usage', 'type' : 'text', 'label' : 'Show usage'}, 
@@ -19,10 +19,16 @@ initial_consul_data = {
                 {'name' : 'restart_service', 'type' : 'form', 'label' : 'Restart process'}
             ]
         },
-        "managed_actions/ssh/user" : {
+        "managed_actions/ssh/user" : {  #Temporarily, we have all functions avialable for non-root users but we may change this in the future. 
             "actions" : [
-                {'name' : 'reboot', 'type' : 'confirm'}, 
-                {'name' : 'stop', 'type' : 'action'}
+                {'name' : 'reboot', 'type' : 'confirm'},
+                {'name' : 'delete', 'type' : 'confirm'}, 
+                {'name' : 'remove_server', 'type' : 'confirm', 'kwargs' : ['datastore_handler', 'server_name'], 'requires_ssh' : False},
+                {'name' : 'stop', 'type' : 'action'},
+                {'name' : 'show_processes', 'type' : 'text', 'label' : 'Show processes'}, 
+                {'name' : 'show_usage', 'type' : 'text', 'label' : 'Show usage'}, 
+                {'name' : 'get_users', 'type' : 'text', 'label' : 'Get users'}, 
+                {'name' : 'restart_service', 'type' : 'form', 'label' : 'Restart process'}
             ]
         },
         "managed_actions/winexe/administrator" : {
