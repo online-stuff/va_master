@@ -160,7 +160,8 @@ def handle_ssh_action(handler, action, ip_addr, username = '', password = '', po
 
 
     print ('Kwargs are : ', connect_kwargs)
-    ssh_cl.connect(ip_addr, **connect_kwargs)
+    if consul_action.get('requires_ssh', True):
+        ssh_cl.connect(ip_addr, **connect_kwargs)
     ssh_func = globals()[action]
     result = yield ssh_func(**ssh_kwargs)
     raise tornado.gen.Return(result)
