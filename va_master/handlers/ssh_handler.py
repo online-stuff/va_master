@@ -11,8 +11,9 @@ ssh_cl.set_missing_host_key_policy(AutoAddPolicy())
 
 def get_ssh_result(cmd):
     result = ssh_cl.exec_command(cmd)
-    if result[2].read():
-        raise Exception('Error performing SSH command. Command is: ' + cmd + '. Error is : ' + result[2].read())
+    error = result[2].read()
+    if error:
+        raise Exception('Error performing SSH command. Command is: ' + cmd + '. Error is : ' + error)
     return result[1].read()
 
 
