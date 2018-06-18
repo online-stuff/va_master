@@ -10,13 +10,13 @@ initial_consul_data = {
         "managed_actions/ssh/root" : {
             "actions" : [
                 {'name' : 'reboot', 'type' : 'confirm'},
-                {'name' : 'delete', 'type' : 'confirm'}, 
+             #   {'name' : 'delete', 'type' : 'confirm'}, 
                 {'name' : 'remove_server', 'type' : 'confirm', 'kwargs' : ['datastore_handler', 'server_name'], 'requires_ssh' : False},
-                {'name' : 'stop', 'type' : 'action'},
+                {'name' : 'stop', 'type' : 'confirm'},
                 {'name' : 'show_processes', 'type' : 'text', 'label' : 'Show processes'}, 
                 {'name' : 'show_usage', 'type' : 'text', 'label' : 'Show usage'}, 
                 {'name' : 'get_users', 'type' : 'text', 'label' : 'Get users'}, 
-                {'name' : 'restart_service', 'type' : 'form', 'label' : 'Restart process'}
+                {'name' : 'restart_service', 'type' : 'form', 'label' : 'Restart service'}
             ]
         },
         "managed_actions/ssh/user" : {  #Temporarily, we have all functions avialable for non-root users but we may change this in the future. 

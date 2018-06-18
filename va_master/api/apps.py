@@ -162,7 +162,7 @@ def perform_server_action(handler, action, server_name, provider_name = '', acti
     if type(result) != dict: 
         result = {'success' : True, 'message' : '', 'data' : result}
 
-#    result['message'] = 'Action %s completed successfuly. ' % action
+    result['message'] = 'Action %s completed successfuly. ' % action
     print ('ACtino result is : ', result)
     raise tornado.gen.Return(result)
 

@@ -145,7 +145,7 @@ def reboot():
 
 @tornado.gen.coroutine
 def stop():
-    result = get_ssh_result('stop')
+    result = get_ssh_result('poweroff')
     raise tornado.gen.Return(True)
 
 @tornado.gen.coroutine
