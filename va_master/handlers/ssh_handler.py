@@ -118,21 +118,31 @@ def show_services():
     raise tornado.gen.Return(services)
 
 @tornado.gen.coroutine
-def remove_server(handler, server_name):
-    server = yield handler.datastore_handler.get_object(object_type = 'server', server_name = server_name)
+def remove_server(datastore_handler, server_name):
+    server = yield datastore_handler.get_object(object_type = 'server', server_name = server_name)
     provider_name = server.get('provider_name', 'va_standalone_servers')
 
-    provider = yield handler.datastore_handler.get_object(object_type = 'provider', provider_name = provider_name)
+    provider = yield datastore_handler.get_object(object_type = 'provider', provider_name = provider_name)
     provider['servers'] = [x for x in provider['servers'] if x['server_name'] != server_name]
 
-    yield handler.datastore_handler.insert_object(object_type = 'provider', provider_name = provider_name, data = provider)
-    yield handler.datastore_handler.delete_object(object_type = 'server', server_name = server_name)
+    yield datastore_handler.insert_object(object_type = 'provider', provider_name = provider_name, data = provider)
+    yield datastore_handler.delete_object(object_type = 'server', server_name = server_name)
 
 @tornado.gen.coroutine
-def handle_ssh_action(handler, action, ip_addr, username = '', password = '', port = None, kwargs = {}):
+def reboot_server():
+    result = get_ssh_result('reboot')
+    raise tornado.gen.Return(True)
+
+@tornado.gen.coroutine
+def stop_server():
+    result = get_ssh_result('stop')
+    raise tornado.gen.Return(True)
+
+@tornado.gen.coroutine
+def handle_ssh_action(datastore_handler, action, ip_addr, username = '', password = '', port = None, kwargs = {}):
 
     user_type = 'root' if username == 'root' else 'user'
-    consul_ssh_actions = yield handler.datastore_handler.get_object('managed_actions', manage_type = 'ssh', manage_subtype = user_type)
+    consul_ssh_actions = yield datastore_handler.get_object('managed_actions', manage_type = 'ssh', manage_subtype = user_type)
 
     consul_action = [x for x in consul_ssh_actions['actions'] if x['name'] == action]
     if not consul_action: 

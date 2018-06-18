@@ -13,6 +13,10 @@ import subprocess
 import os
 from paramiko import SSHClient, AutoAddPolicy
 
+from va_master.handlers.ssh_handler import handle_ssh_action
+from va_master.utils.paramiko_utils import ssh_call
+
+
 PROVIDER_TEMPLATE = ""
 PROFILE_TEMPLATE = ""
 
@@ -39,6 +43,35 @@ class GenericDriver(base.DriverBase):
             }
         self.sizes = flavours
         super(GenericDriver, self).__init__(**kwargs) 
+
+
+    def get_cl(self, data):
+        cl = SSHClient()
+        cl.load_system_host_keys()
+        cl.set_missing_host_key_policy(AutoAddPolicy())
+        connect_kwargs = {
+            'username' : data.get('username', ''), 
+        }
+        if data.get('port'): 
+            connect_kwargs['port'] = int(data.get('port'))
+
+        if data.get('password'): 
+            connect_kwargs['password'] = data['password']
+        else: 
+            connect_kwargs['key_filename'] = self.key_path + '.pem'
+
+
+        try:
+            print ('Kwargs : ', connect_kwargs)
+            cl.connect(data.get('ip'), **connect_kwargs)
+        except Exception as e: 
+            print ('Failed to connect with ssh to ', data.get('ip'))
+            import traceback
+            traceback.print_exc()
+            raise Exception('Failed to connect with ssh: ' + e.message)
+
+        self.cl = cl
+        return cl
 
     @tornado.gen.coroutine
     def driver_id(self):
@@ -96,18 +129,36 @@ class GenericDriver(base.DriverBase):
         yield self.datastore_handler.edit_provider(provider_datastore)
 
     @tornado.gen.coroutine
+    def reboot_server(self, provider, server):
+        cl = self.get_cl(server)
+        ssh_call(cl, 'reboot')
+        raise tornado.gen.Return(True)
+
+    @tornado.gen.coroutine
+    def stop_server(self, provider, server):
+        cl = self.get_cl(server)
+        ssh_call(cl, 'poweroff')
+        raise tornado.gen.Return(True)
+ 
+    @tornado.gen.coroutine
     def server_action(self, provider, server_name, action):
-        
+
+        server = yield self.datastore_handler.get_object(object_type = 'server', server_name = server_name)
+        ssh_kwargs = {'server_name' : server_name, 'datastore_handler' :  self.datastore_handler}
+
+
+        result = yield handle_ssh_action(datastore_handler = self.datastore_handler, action = action, ip_addr = server['ip_address'], port = server.get('port'), username = server.get('username'), password = server.get('password'), kwargs = ssh_kwargs)
+
         server_action = {
             'remove' : self.remove_server, 
-            'reboot' : 'reboot_function', 
-        #    'start' : 'start_function', 
-            'shutdown' : 'stop_function', 
+            'reboot' : self.reboot_server, 
+            'shutdown' : self.stop_server, 
         }
+
         if action not in server_action: 
             raise tornado.gen.Return({'success' : False, 'message' : 'Action not supported : ' +  action})
 
-        success = yield server_action[action](provider, server_name)
+        success = yield server_action[action](provider, server)
         raise tornado.gen.Return({'success' : True, 'message' : ''})
 
 
@@ -232,29 +283,7 @@ class GenericDriver(base.DriverBase):
 
     @tornado.gen.coroutine
     def create_server(self, provider, data):
-        cl = SSHClient()
-        cl.load_system_host_keys()
-        cl.set_missing_host_key_policy(AutoAddPolicy())
-        connect_kwargs = {
-            'username' : data.get('username', ''), 
-        }
-        if data.get('port'): 
-            connect_kwargs['port'] = int(data.get('port'))
-
-        if data.get('password'): 
-            connect_kwargs['password'] = data['password']
-        else: 
-            connect_kwargs['key_filename'] = self.key_path + '.pem'
-
-
-        try:
-            print ('Kwargs : ', connect_kwargs)
-            cl.connect(data.get('ip'), **connect_kwargs)
-        except Exception as e: 
-            print ('Failed to connect with ssh to ', data.get('ip'))
-            import traceback
-            traceback.print_exc()
-            raise Exception('Failed to connect with ssh: ' + e.message)
+        cl = self.get_cl(data)
         try:
 
             server = {"username" : data['username'], "server_name" : data["server_name"], "hostname" : data["server_name"], "ip_address" : data["ip"], "local_gb" : 0, "memory_mb" : 0, "managed_by" : ['ssh'], "location" : data.get('location', '')}

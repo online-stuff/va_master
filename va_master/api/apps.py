@@ -151,14 +151,10 @@ def perform_server_action(handler, action, server_name, provider_name = '', acti
     server = yield handler.datastore_handler.get_object('server', server_name = server_name)
 
     result = None
-    if action_type == 'ssh' : 
-        kwargs = {'server_name' : server_name, 'handler' : handler}
-        result = yield handle_ssh_action(handler = handler, action = action, ip_addr = server['ip_address'], port = server.get('port'), username = server.get('username'), password = server.get('password'), kwargs = kwargs)
-    elif action_type == 'app' : 
+    if action_type == 'app' : 
         result = yield handle_app_action(action = action, server_name = server_name)
     else: 
-        if not provider_name: 
-            raise Exception('Called action ' + str(action) + ' on ' + str(server_name) + ' with action type ' + str(action_type) + ' and provider name ' + str(provider_name) + '. Expected action type to be ssh, app or provider. If type is provider, then provider_name cannot be empty. ')
+        provider_name = provider_name or 'va_standalone_servers'
         
         provider, driver = yield providers.get_provider_and_driver(handler, provider_name) 
         result = yield driver.server_action(provider, server_name, action)
