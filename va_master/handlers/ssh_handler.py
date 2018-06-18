@@ -129,12 +129,12 @@ def remove_server(datastore_handler, server_name):
     yield datastore_handler.delete_object(object_type = 'server', server_name = server_name)
 
 @tornado.gen.coroutine
-def reboot_server():
+def reboot():
     result = get_ssh_result('reboot')
     raise tornado.gen.Return(True)
 
 @tornado.gen.coroutine
-def stop_server():
+def stop():
     result = get_ssh_result('stop')
     raise tornado.gen.Return(True)
 

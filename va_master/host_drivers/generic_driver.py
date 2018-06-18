@@ -148,17 +148,6 @@ class GenericDriver(base.DriverBase):
 
 
         result = yield handle_ssh_action(datastore_handler = self.datastore_handler, action = action, ip_addr = server['ip_address'], port = server.get('port'), username = server.get('username'), password = server.get('password'), kwargs = ssh_kwargs)
-
-        server_action = {
-            'remove' : self.remove_server, 
-            'reboot' : self.reboot_server, 
-            'shutdown' : self.stop_server, 
-        }
-
-        if action not in server_action: 
-            raise tornado.gen.Return({'success' : False, 'message' : 'Action not supported : ' +  action})
-
-        success = yield server_action[action](provider, server)
         raise tornado.gen.Return({'success' : True, 'message' : ''})
 
 
