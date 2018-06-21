@@ -159,6 +159,7 @@ class LXCDriver(base.DriverBase):
             'cost' : 0,  #TODO find way to calculate costs
             'estimated_cost' : 0,
             'provider' : provider_name, 
+            'provider_name' : provider_name, #Probably a bugfix
         }
         return server
 
@@ -234,25 +235,27 @@ class LXCDriver(base.DriverBase):
         get_sum = lambda x: sum([s[x] for s in servers if not type(s[x]) == str])
 
         provider_usage = {
-            'max_cpus' : None,
+            'max_cpus' : 0,
             'used_cpus' : get_sum('used_cpu'), 
-            'free_cpus' : None, 
-            'max_ram' : None, 
+            'free_cpus' : 0, 
+            'max_ram' : 0, 
             'used_ram' : get_sum('used_ram'),
-            'free_ram' : None, 
-            'max_disk' : None, 
+            'free_ram' : 0, 
+            'max_disk' : 0, 
             'used_disk' : get_sum('used_disk'), 
-            'free_disk' : None,
-            'max_servers' : None, 
+            'free_disk' : 0,
+            'max_servers' : 0, 
             'used_servers' : len(servers), 
-            'free_servers' :None
+            'free_servers' :0
         }
 
+        print ('Provider usage is : ', provider_usage)
         provider_data = {
             'servers' : servers, 
             'provider_usage' : provider_usage,
             'status' : {'success' : True, 'message': ''}
         }
+        print ('And my data is : ', provider_data)
         raise tornado.gen.Return(provider_data)
 
 

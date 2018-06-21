@@ -490,7 +490,6 @@ class LogMessagingSocket(tornado.websocket.WebSocketHandler):
 
     @tornado.gen.coroutine
     def on_message(self, message): 
-        print ('I am in on_message!')
         self.config.logger.info('Received websocket message : %s' % (str(message)))
         try:
             message = json.loads(message)
@@ -554,10 +553,8 @@ class LogMessagingSocket(tornado.websocket.WebSocketHandler):
         messages = self.get_messages(from_date, to_date)
         messages = {'type' : 'init', 'logs' : messages}
         hosts = list(set([x.get('host') for x in messages['logs'] if x.get('host')]))
-        print ('Before set: ', hosts)
         hosts = [{'value' : x, 'label' : x} for x in hosts]
         messages['hosts'] = hosts
-        print ('Messages hosts are : ', messages['hosts'])
 
         raise tornado.gen.Return(messages)
 

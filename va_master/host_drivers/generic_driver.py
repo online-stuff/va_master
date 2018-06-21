@@ -181,8 +181,6 @@ class GenericDriver(base.DriverBase):
             server_template.update(db_server)
             result.append(server_template)
 
-        print ('SERVERS STANDALONE: ', result)
-
         raise tornado.gen.Return(result)
         
 
@@ -221,18 +219,18 @@ class GenericDriver(base.DriverBase):
         servers = yield self.get_servers(provider)
 
         provider_usage = {
-            'max_cpus' : None,
-            'used_cpus' : None, # TODO calculate cpus from servers
-            'free_cpus' : None,
-            'max_ram' : None,
-            'used_ram' : None, # TODO calculate ram from servers
-            'free_ram' : None,
-            'max_disk' : None,
-            'used_disk' : None, # TODO calculate disk from servers
-            'free_disk' : None,
-            'max_servers' : None,
+            'max_cpus' : 0,
+            'used_cpus' : 0, # TODO calculate cpus from servers
+            'free_cpus' : 0,
+            'max_ram' : 0,
+            'used_ram' : 0, # TODO calculate ram from servers
+            'free_ram' : 0,
+            'max_disk' : 0,
+            'used_disk' : 0, # TODO calculate disk from servers
+            'free_disk' : 0,
+            'max_servers' : 0,
             'used_servers' : len(servers),
-            'free_servers' : None
+            'free_servers' : 0
         }
 
         provider_data = {
