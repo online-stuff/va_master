@@ -212,7 +212,6 @@ class ApiHandler(tornado.web.RequestHandler):
             if proxy_server:
                 result = yield self.proxy_handler.handle_request(self, proxy_server, method, path, data)
                 raise tornado.gen.Return()
-            print ('Data is : ', data)
             self.data = data
             self.data.update({
                 'method' :  method,
@@ -529,7 +528,6 @@ class LogMessagingSocket(tornado.websocket.WebSocketHandler):
 
     @tornado.gen.coroutine
     def handle_get_messages(self, message):
-        print ('In handle_get_messages', message)
         from_date = message.get('from_date')
         date_format = '%Y-%m-%d'
         if from_date:
