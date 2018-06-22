@@ -212,7 +212,6 @@ class ApiHandler(tornado.web.RequestHandler):
             if proxy_server:
                 result = yield self.proxy_handler.handle_request(self, proxy_server, method, path, data)
                 raise tornado.gen.Return()
-            print ('Data is : ', data)
             self.data = data
             self.data.update({
                 'method' :  method,
@@ -490,7 +489,6 @@ class LogMessagingSocket(tornado.websocket.WebSocketHandler):
 
     @tornado.gen.coroutine
     def on_message(self, message): 
-        print ('I am in on_message!')
         self.config.logger.info('Received websocket message : %s' % (str(message)))
         try:
             message = json.loads(message)
@@ -530,7 +528,6 @@ class LogMessagingSocket(tornado.websocket.WebSocketHandler):
 
     @tornado.gen.coroutine
     def handle_get_messages(self, message):
-        print ('In handle_get_messages', message)
         from_date = message.get('from_date')
         date_format = '%Y-%m-%d'
         if from_date:
@@ -554,10 +551,8 @@ class LogMessagingSocket(tornado.websocket.WebSocketHandler):
         messages = self.get_messages(from_date, to_date)
         messages = {'type' : 'init', 'logs' : messages}
         hosts = list(set([x.get('host') for x in messages['logs'] if x.get('host')]))
-        print ('Before set: ', hosts)
         hosts = [{'value' : x, 'label' : x} for x in hosts]
         messages['hosts'] = hosts
-        print ('Messages hosts are : ', messages['hosts'])
 
         raise tornado.gen.Return(messages)
 
