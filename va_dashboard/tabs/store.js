@@ -42,18 +42,18 @@ class Store extends Component {
         var fd = new FormData();
         Network.post("/api/panels/sync_salt_minions", this.props.auth.token, fd).done(function(data) 
         {
-            me.props.dispatch({type: 'SHOW_ALERT', msg: "Panels regeneration was sucessful"});
+            this.props.dispatch({type: 'SHOW_ALERT', msg: "Panels regeneration was sucessful"});
         }).fail(function (msg) {
-            me.props.dispatch({type: 'SHOW_ALERT', msg: "Panels regeneration failed!"});
+            this.props.dispatch({type: 'SHOW_ALERT', msg: "Panels regeneration failed!"});
         });
     }
     rebuildIndex () {
         var fd = new FormData();
         Network.post("/api/states/reset", this.props.auth.token, fd).done(function(data) 
         {
-            me.props.dispatch({type: 'SHOW_ALERT', msg: "Index rebuild was sucessful"});
+            this.props.dispatch({type: 'SHOW_ALERT', msg: "Index rebuild was sucessful"});
         }).fail(function (msg) {
-            me.props.dispatch({type: 'SHOW_ALERT', msg: "Index rebuild failed!"});
+            this.props.dispatch({type: 'SHOW_ALERT', msg: "Index rebuild failed!"});
         });
     }
     openPanel(e){

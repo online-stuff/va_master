@@ -151,9 +151,9 @@ def panel_action_execute(handler, server_name, action, args = [], dash_user = ''
     cl = salt.client.LocalClient()
     print ('Calling salt module ', module + '.' + action, ' on ', server_name, ' with args : ', args, ' and kwargs : ', kwargs)
     result = cl.cmd(server_name, module + '.' + action , arg = args, kwarg = kwargs, timeout = timeout)
+    print ('Result returned : ', result)
+
     result = result.get(server_name)
-#    if type(result) == str:
-#        print ('Result returned : ', result)
 #        raise Exception('Calling %s on %s returned an error. ' % (module + '.' + action, server_name))
 
     raise tornado.gen.Return(result)

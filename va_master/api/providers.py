@@ -23,7 +23,7 @@ def get_paths():
         },
         'post' : {
             'providers' : {'function' : list_providers, 'args' : ['handler']},
-            'providers/info' : {'function' : get_provider_info, 'args' : ['handler', 'dash_user', 'required_providers', 'get_billing', 'get_servers', 'sort_by_location']},
+            'providers/info' : {'function' : get_providers_info, 'args' : ['handler', 'dash_user', 'required_providers', 'get_billing', 'get_servers', 'sort_by_location']},
             'providers/new/validate_fields' : {'function' : validate_new_provider_fields, 'args' : ['handler', 'driver_id', 'field_values', 'step_index', 'provider_name']},
             'providers/delete' : {'function' : delete_provider, 'args' : ['datastore_handler', 'provider_name']},
             'providers/add_provider' : {'function' : add_provider, 'args' : ['datastore_handler', 'field_values', 'driver_name']},
@@ -270,7 +270,7 @@ def get_providers_billing(handler):
     raise tornado.gen.Return(result)
 
 @tornado.gen.coroutine
-def get_provider_info(handler, dash_user, get_billing = True, get_servers = True, required_providers = [], sort_by_location = False):
+def get_providers_info(handler, dash_user, get_billing = True, get_servers = True, required_providers = [], sort_by_location = False):
     """
     Gets all info for all providers - servers and their usages, the provider usage, images, sizes, networks, security groups, billing info and all provider datastore data. 
     If get_billing is false, then the billing data will be empty. Same for get_servers. 
@@ -289,7 +289,7 @@ def get_provider_info(handler, dash_user, get_billing = True, get_servers = True
     provider_drivers = yield [drivers_handler.get_driver_by_id(x['driver_name']) for x in providers]
     providers_data = [x[0].get_provider_data(provider = x[1], get_servers = get_servers, get_billing = get_billing) for x in zip(provider_drivers, providers)]
     providers_info = yield providers_data
-    
+   
     states = yield panels.get_panels(handler, dash_user)
 
     for p_info in zip(providers_info, providers):
