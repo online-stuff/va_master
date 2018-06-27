@@ -16,7 +16,7 @@ def handle_app(datastore_handler, server_name, role):
     
     cl = LocalClient()
     ping = cl.cmd(server_name, 'test.ping').get(server_name)
-    print ('Ping is : ', ping)
+    print ('Salt ping is : ', ping)
 
     if not ping:
         minion_kwargs = {'username' : server['username']}
