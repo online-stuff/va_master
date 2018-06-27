@@ -98,8 +98,10 @@ def sync_salt_minions(datastore_handler, dash_user):
         for panel in panels: 
             panel_type = user_type + '_panel'
 
-            for server in panel['servers']: 
-                if server not in minions: 
+            for server in panel['servers']:
+                server_role = minions.get(server, '')
+
+                if server not in minions or server_role != panel['name']: 
                     print (server, ' not in ', minions, ' so removing it. ')
                     panel['servers'] = [x for x in panel['servers'] if x != server]
             yield datastore_handler.insert_object(object_type = panel_type, name = panel['name'], data = panel)
@@ -149,9 +151,9 @@ def panel_action_execute(handler, server_name, action, args = [], dash_user = ''
     cl = salt.client.LocalClient()
     print ('Calling salt module ', module + '.' + action, ' on ', server_name, ' with args : ', args, ' and kwargs : ', kwargs)
     result = cl.cmd(server_name, module + '.' + action , arg = args, kwarg = kwargs, timeout = timeout)
+    print ('Result returned : ', result)
+
     result = result.get(server_name)
-#    if type(result) == str:
-#        print ('Result returned : ', result)
 #        raise Exception('Calling %s on %s returned an error. ' % (module + '.' + action, server_name))
 
     raise tornado.gen.Return(result)

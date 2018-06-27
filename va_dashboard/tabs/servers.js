@@ -155,7 +155,7 @@ class Servers extends Component {
     rebuildIndex () {
         var fd = new FormData();
         Network.post("/api/panels/remove_orphaned_servers", this.props.auth.token, fd).done(data => { 
-            this.props.dispatch({type: 'SHOW_ALERT', msg: "Index rebuild was sucessful"});
+            this.props.dispatch({type: 'SHOW_ALERT', className: 'action.success', msg: "Index rebuild was sucessful"});
         }).fail(msg => {
             this.props.dispatch({type: 'SHOW_ALERT', msg: "Index rebuild failed!"});
         });
