@@ -82,8 +82,9 @@ class DatastoreHandler(object):
 
         for key in initial_consul_data['update']: 
             key_data = initial_consul_data['update'][key]
-            old_data = yield self.datastore.get(key)
-            if not old_data:  
+            try:
+                old_data = yield self.datastore.get(key)
+            except:
                 continue
             for key in key_data: 
                 if key_data[key]:
