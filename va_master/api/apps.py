@@ -47,7 +47,7 @@ def get_paths():
             'apps/revoke_vpn_user': {'function' : revoke_openvpn_user, 'args' : ['username']},
             'apps/list_user_logins': {'function' : list_user_logins, 'args' : ['username']},
             'apps/download_vpn_cert': {'function' : download_vpn_cert, 'args' : ['username', 'handler']},
-            'servers/add_server' :  {'function' : add_server_to_datastore, 'args' : ['datastore_handler', 'server_name', 'ip_address', 'hostname', 'manage_type', 'user_type', 'driver_name']},
+            'servers/add_server' :  {'function' : add_server_to_datastore, 'args' : ['datastore_handler', 'server_name', 'ip_address', 'hostname', 'manage_type', 'user_type', 'driver_name', 'app_type', 'role', 'kwargs']},
             'servers/manage_server' : {'function' : manage_server_type, 'args' : ['datastore_handler', 'server_name', 'new_type', 'username', 'driver_name', 'role', 'ip_address']},
         }
     }
@@ -139,7 +139,7 @@ def download_vpn_cert(username, handler):
     raise tornado.gen.Return({'data_type' : 'file'})
 
 @tornado.gen.coroutine
-def perform_server_action(handler, action, server_name, provider_name = '', action_type = '', kwargs = {}): 
+def perform_server_action(handler, action, server_name, provider_name = '', action_type = '', args = [], kwargs = {}): 
     """Calls required action on the server through the driver. """
 
     #Either we expect {action_type: ssh, action: some_action} or action: ssh/some_action  (or provider | app for the action type)
@@ -150,9 +150,10 @@ def perform_server_action(handler, action, server_name, provider_name = '', acti
 
     server = yield handler.datastore_handler.get_object('server', server_name = server_name)
 
+
     result = None
     if action_type == 'app' : 
-        result = yield handle_app_action(action = action, server_name = server_name)
+        result = yield handle_app_action(server = server, action = action, args = args, kwargs = kwargs)
     else: 
         provider_name = provider_name or 'va_standalone_servers'
         
@@ -176,7 +177,7 @@ def get_states(handler, dash_user):
     """
     
     datastore_handler = handler.datastore_handler
-    states_data = yield datastore_handler.get_states()
+    states_data = yield datastore_handler.get_states_and_apps()
     panels_data = yield panels.get_panels(handler, dash_user)
 
     default_panels = {'admin' : [], 'user' : []}
@@ -235,6 +236,8 @@ def reset_states(datastore_handler):
 def install_app(datastore_handler, app_zip, app_json):
 
     app_zip = app_zip[0]['body']
+    app_json = app_json[0]['body']
+    print (app_json)
     app_json = json.loads(app_json)
     tmp_app = '/tmp/%s.tar.gz' % (app_json['name'])
 
@@ -351,7 +354,7 @@ def launch_app(handler):
 def get_all_salt_functions(datastore_handler):
     """ Gets all salt functions for all minions. """
     cl = LocalClient()
-    states = yield datastore_handler.get_states()
+    states = yield datastore_handler.get_states_and_apps()
 
     functions = cl.cmd('*', 'sys.doc')
     result = {
@@ -387,7 +390,7 @@ def set_settings(settings):
 
 
 @tornado.gen.coroutine
-def add_server_to_datastore(datastore_handler, server_name, ip_address, hostname = None, manage_type = None, username = None, driver_name = None, kwargs = {}):
+def add_server_to_datastore(datastore_handler, server_name, ip_address, hostname = None, manage_type = None, username = None, driver_name = None, role = None, app_type = 'salt', kwargs = {}):
     ''' 
     Main function for adding servers to the datastore. Servers are added to the `server/<server_name>` handles in the datastore, and have a server_namd and ip address. 
     In addition, servers can be managed by ssh, winexe or provider, which defines what actions can be called on them. This is done by holding values for a "managed_by" : ["ssh", "provider", "ssh"] list, and then holding values for an "available_actions" : {"provider" : [...], "ssh" : [...]} field. 
@@ -399,18 +402,25 @@ def add_server_to_datastore(datastore_handler, server_name, ip_address, hostname
     traceback.print_exc()
 
     server = yield datastore_handler.get_object(object_type = 'server', server_name = server_name)
+
+    to_add_server = False
+    if not server: 
+        to_add_server = True
+
     server.update(kwargs)
+    print ('Server is : ', server)
 
     for attr in ['ip_address', 'hostname']:
         if locals()[attr]: 
             server[attr] = locals()[attr]
 
-    if not server:
+    if to_add_server:
         print ('Did not find ', server_name, ' now inserting it. ')
+        print ('Server is : ', server, 'kwargs were : ', kwargs)
         yield datastore_handler.insert_object(object_type = 'server', server_name = server_name, data = server)
 
     if manage_type: 
-        server = yield manage_server_type(datastore_handler, server_name, manage_type, username = username, driver_name = driver_name, kwargs = kwargs, ip_address = ip_address)
+        server = yield manage_server_type(datastore_handler, server_name, manage_type, username = username, driver_name = driver_name, kwargs = kwargs, ip_address = ip_address, role = role, app_type = app_type)
 
     raise tornado.gen.Return(server)
 

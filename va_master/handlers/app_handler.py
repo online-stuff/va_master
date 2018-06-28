@@ -1,4 +1,4 @@
-import tornado, sys, subprocess
+import tornado, sys, subprocess, importlib
 
 
 @tornado.gen.coroutine
@@ -23,7 +23,16 @@ def change_app_type(datastore_handler, app_name, app_type):
 
 @tornado.gen.coroutine
 def add_app_to_store(datastore_handler, app_json):
-    yield datastore_handler.insert_object(object_type = 'app_type', app_name = app_json['name'], data = app_json)
+    yield datastore_handler.insert_object(object_type = 'app', app_name = app_json['name'], data = app_json)
+    empty_panel = {'admin' : [], 'user' : []}
+    for user_type in ['user', 'admin']: 
+        panel = {
+            'name' : app_json['name'],
+            'icon' : app_json['icon'],
+            'servers' : [],
+            'panels' : app_json.get('panels', empty_panel)[user_type]
+        }
+        yield datastore_handler.store_panel(panel, user_type)
 
 @tornado.gen.coroutine
 def remove_app_from_store(datastore_handler, app_name):
@@ -54,3 +63,17 @@ def handle_app_package(path_to_app, action = 'install'):
 
     raise tornado.gen.Return(True)
 
+
+@tornado.gen.coroutine
+def handle_app_action(datastore_handler, server, action, args, kwargs):
+    app = yield datastore_handler.get_object('app', app_name = server['role'])
+    app_action = app['functions'][action]
+    app_kwargs = {x : server[x] for x in app_action['args']}
+    print (kwargs, app_kwargs)
+    kwargs.update(app_kwargs)
+
+    app_module = app['module']
+    app_module = importlib.import_module(app_module)
+
+    result = getattr(app_module, action)(*args, **kwargs)
+    raise tornado.gen.Return(result)

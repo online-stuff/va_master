@@ -298,7 +298,7 @@ class DatastoreHandler(object):
 
     @tornado.gen.coroutine
     def add_panel(self, panel_name, role):
-        states = yield self.get_states_data()
+        states = yield self.get_states_and_apps()
         panel_state = [x for x in states if x['name'] == role]
         if not panel_state: 
             raise Exception("Was trying to find " + role + " in states " + str([x['name'] for x in states]) + " but could not find it. ")
@@ -389,8 +389,10 @@ class DatastoreHandler(object):
 
 
     @tornado.gen.coroutine
-    def get_states(self, get_states_without_modules = False):
+    def get_states_and_apps(self, get_states_without_modules = False):
         states = yield self.datastore.get_recurse('states/')
+        apps = yield self.datastore.get_recurse('apps/')
+        states += apps
         if not get_states_without_modules: 
             states = [x for x in states if x.get('module')]
         raise tornado.gen.Return(states)

@@ -5,6 +5,7 @@ import tornado.gen
 import login, apps, services
 
 from login import auth_only, create_user_api
+from va_master.handlers.app_handler import handle_app_action
 from salt.client import LocalClient 
 
 def get_paths():
@@ -135,26 +136,32 @@ def panel_action_execute(handler, server_name, action, args = [], dash_user = ''
     """
     datastore_handler = handler.datastore_handler
 
-    state = get_minion_role(server_name) 
+    server = yield datastore_handler.get_object(object_type = 'server', server_name = server_name)
 
-    if dash_user.get('username'):
-        user_funcs = yield datastore_handler.get_user_salt_functions(dash_user['username'])
-        if action not in user_funcs and dash_user['type'] != 'admin':
-            print ('Function not supported')
-            raise Exception('User attempting to execute a salt function but does not have permission. ')
+    if server.get('app_type', 'salt') == 'salt': 
+        state = get_minion_role(server_name) 
 
-    if not module:
-        state = yield datastore_handler.get_state(name = state)
-        if not state: state = {'module' : 'openvpn'}
-        module = state['module']
+        if dash_user.get('username'):
+            user_funcs = yield datastore_handler.get_user_salt_functions(dash_user['username'])
+            if action not in user_funcs and dash_user['type'] != 'admin':
+                print ('Function not supported')
+                raise Exception('User attempting to execute a salt function but does not have permission. ')
 
-    cl = salt.client.LocalClient()
-    print ('Calling salt module ', module + '.' + action, ' on ', server_name, ' with args : ', args, ' and kwargs : ', kwargs)
-    result = cl.cmd(server_name, module + '.' + action , arg = args, kwarg = kwargs, timeout = timeout)
-    print ('Result returned : ', result)
+        if not module:
+            state = yield datastore_handler.get_state(name = state)
+            if not state: state = {'module' : 'openvpn'}
+            module = state['module']
 
-    result = result.get(server_name)
-#        raise Exception('Calling %s on %s returned an error. ' % (module + '.' + action, server_name))
+        cl = salt.client.LocalClient()
+        print ('Calling salt module ', module + '.' + action, ' on ', server_name, ' with args : ', args, ' and kwargs : ', kwargs)
+        result = cl.cmd(server_name, module + '.' + action , arg = args, kwarg = kwargs, timeout = timeout)
+        print ('Result returned : ', result)
+
+        result = result.get(server_name)
+    #        raise Exception('Calling %s on %s returned an error. ' % (module + '.' + action, server_name))
+
+    else: 
+        result = yield handle_app_action(datastore_handler, server, action, args, kwargs)
 
     raise tornado.gen.Return(result)
 
@@ -165,7 +172,7 @@ def salt_serve_file(handler, server_name, action, args = [], dash_user = '', kwa
     server_info = yield apps.get_app_info(server_name)
     state = server_info['role']
 
-    states = yield datastore_handler.get_states()
+    states = yield datastore_handler.get_states_and_apps()
     state = [x for x in states if x['name'] == state] or [{'module' : 'openvpn'}]
     state = state[0]
 
@@ -183,7 +190,7 @@ def salt_serve_file_get(handler, server_name, action, hostname, backupnumber, sh
     server_info = yield apps.get_app_info(server_name)
     state = server_info['role']
 
-    states = yield datastore_handler.get_states()
+    states = yield datastore_handler.get_states_and_apps()
     state = [x for x in states if x['name'] == state] or [{'module' : 'openvpn'}]
     state = state[0]
 
@@ -216,7 +223,7 @@ def url_serve_file(handler, server_name, url_function, module = None, args = [],
     server_info = yield apps.get_app_info(server_name)
     state = server_info['role']
 
-    states = yield datastore_handler.get_states()
+    states = yield datastore_handler.get_states_and_apps()
     state = [x for x in states if x['name'] == state] or [{'module' : 'openvpn'}]
     state = state[0]
 
@@ -277,7 +284,7 @@ def get_panels_stats(handler, dash_user):
     serv = len(serv) - 1 #One service is the default consul one, which we don't want to be counted
 #    vpn = yield apps.get_openvpn_users()
     vpn = {'users' : []}
-    states = yield apps.get_states(handler, dash_user)
+    states = yield apps.get_states_and_apps(handler, dash_user)
     
     result = {'providers' : len(providers), 'servers' : len(servers), 'services' : serv, 'vpn' : len(vpn['users']), 'apps' : len(states)}
     raise tornado.gen.Return(result)
@@ -363,7 +370,7 @@ def get_users(handler, user_type = 'users'):
 def get_all_functions(handler):
     """Gets all functions returned by the get_functions methods for all the api modules and formats them properly for the dashboard. """
     functions = {m : handler.paths[m] for m in ['post', 'get']}
-    states = yield handler.datastore_handler.get_states()
+    states = yield handler.datastore_handler.get_states_and_apps()
 
     cl = LocalClient()
 

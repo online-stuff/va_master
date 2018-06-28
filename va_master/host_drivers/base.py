@@ -490,7 +490,7 @@ class DriverBase(object):
         self.app_fields.update(fields)
     
         if fields.get('role'): 
-            states = yield self.datastore_handler.get_states()
+            states = yield self.datastore_handler.get_states_and_apps()
             state = [x for x in states if x['name'] == fields.get('role')][0]
             self.app_fields['state'] = state
             state_fields = [x['name'] for x in state.get('fields', [])]
