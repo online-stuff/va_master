@@ -388,7 +388,6 @@ def entry():
         'test_api' : handle_test_api,
         'stop': lambda x: None
     }
-    print ('Doing ', handlers[args.sub](vars(args)))
     # Call the proper handler based on the subparser argument
     handlers[args.sub](vars(args))
 
