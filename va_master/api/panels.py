@@ -284,7 +284,7 @@ def get_panels_stats(handler, dash_user):
     serv = len(serv) - 1 #One service is the default consul one, which we don't want to be counted
 #    vpn = yield apps.get_openvpn_users()
     vpn = {'users' : []}
-    states = yield apps.get_states_and_apps(handler, dash_user)
+    states = yield apps.get_states(handler, dash_user)
     
     result = {'providers' : len(providers), 'servers' : len(servers), 'services' : serv, 'vpn' : len(vpn['users']), 'apps' : len(states)}
     raise tornado.gen.Return(result)
