@@ -148,7 +148,10 @@ class DatastoreHandler(object):
 
     @tornado.gen.coroutine
     def list_providers(self):
-        providers = yield self.datastore.get_recurse('providers/')
+        try:
+            providers = yield self.datastore.get_recurse('providers/')
+        except: 
+            return []
         raise tornado.gen.Return(providers)
 
     @tornado.gen.coroutine
