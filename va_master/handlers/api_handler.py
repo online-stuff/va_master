@@ -530,6 +530,7 @@ class LogMessagingSocket(tornado.websocket.WebSocketHandler):
     def handle_get_messages(self, message):
         from_date = message.get('from_date')
         date_format = '%Y-%m-%d'
+
         if from_date:
             if type(from_date) == str:
                 from_date = datetime.datetime.strptime(from_date, date_format)
@@ -537,17 +538,16 @@ class LogMessagingSocket(tornado.websocket.WebSocketHandler):
                 from_date = datetime.datetime.fromtimestamp(from_date/1e3)
         else: 
             from_date = datetime.datetime.now() + dateutil.relativedelta.relativedelta(days = -2)
- 
+     
         to_date = message.get('to_date')
         if to_date: 
             if type(to_date) == str:
                 to_date = datetime.datetime.strptime(to_date, date_format)
             if type(to_date) == int:
                 to_date = datetime.datetime.fromtimestamp(to_date/1e3)
-
         else: 
             to_date = datetime.datetime.now()
- 
+
         messages = self.get_messages(from_date, to_date)
         messages = {'type' : 'init', 'logs' : messages}
         hosts = list(set([x.get('host') for x in messages['logs'] if x.get('host')]))

@@ -247,6 +247,11 @@ def get_chart_data(server_name, args = ['va-directory', 'Ping']):
 @tornado.gen.coroutine
 def panel_action(handler, actions_list = [], server_name = '', action = '', args = [], kwargs = {}, module = None, dash_user = {}, call_functions = []):
     """Performs a list of actions on multiple servers. If actions_list is not supplied, will use the rest of the arguments to call a single function on one server. """
+    #NOTE temporary fix for a bug - some forms return action as a list of one value, for example ['add_multiple_user_recipients'], where it should just be a string. 
+    if type(action) == list: 
+        if len(action) == 1: 
+            action = action[0]
+
     if not actions_list: 
         actions_list = [{"server_name" : server_name, "action" : action, "args" : args, 'kwargs' : kwargs, 'module' : module}]
 
