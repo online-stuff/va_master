@@ -379,7 +379,7 @@ def get_all_functions(handler):
 
     cl = LocalClient()
 
-    all_salt_functions = cl.cmd('va-master', 'sys.doc')['va-master']
+    all_salt_functions = cl.cmd('G@role:va-master', fun = 'sys.doc', tgt_type = 'compound')
     states_functions = {
         state['module'] : {x.split('.')[1] : {'doc' : all_salt_functions[x] or 'No description available. '} for x in all_salt_functions if x.startswith(state['module'])}
     for state in states}
