@@ -1,0 +1,103 @@
+{
+    "admin" : {
+        "consul_handle" : "admins/{username}", 
+        "username" : "",
+        "timestamp_created" : 0,
+        "password_hash" : ""
+    },
+    "by_token" : {
+        "consul_handle" : "tokens/{user_type}/by_token/{token}",
+        "username": "", 
+        "token": ""
+    },
+    "by_username" : {
+        "consul_handle" : "tokens/{user_type}/by_username/{username}",
+        "username": "", 
+        "token": ""
+    },
+    "generic_provider" : {
+        "consul_handle" : "{provider_name}_instances",
+        "servers": [
+                {
+                    "memory_mb": 0, 
+                    "ip": "127.0.0.1", 
+                    "local_gb": 0, 
+                    "status": "n/a", 
+                    "hostname": "", 
+                    "location" : ""
+                }
+            ]
+    },
+    "provider" : {
+        "consul_handle" : "providers/{provider_name}",
+        "username" : "", 
+        "sizes" : [], 
+        "servers" : [], 
+        "images" : [], 
+        "networks" : [], 
+        "driver_name" : "",
+        "location" : "va_master", 
+        "defaults" : {}, 
+        "sec_groups" : [], 
+        "provider_name" : "", 
+        "password" : ""
+    },
+    "user" :{ 
+        "consul_handle" : "users/{username}",
+        "username" : "",
+        "timestamp_created" : 0,
+        "password_hash" : "",
+        "allowed_functions" : []
+    }, 
+    "admin_panel" : {
+        "consul_handle" : "panels/admin/{name}", 
+        "name" : "", 
+        "icon" : "", 
+        "servers" : [], 
+        "panels" : []
+    }, 
+    "user_panel" : {
+        "consul_handle" : "panels/user/{name}", 
+        "name" : "", 
+        "icon" : "", 
+        "servers" : [], 
+        "panels" : []
+    }, 
+    "user_group" : {
+        "consul_handle" : "user_groups/{group_name}", 
+        "functions" : [], 
+        "group_name" : ""
+    }, 
+    "state" : {
+        "consul_handle" : "states/{name}", 
+        "name": "", 
+        "description": "", 
+        "module": "",
+        "dependency": "",
+        "version": "", 
+        "path": "", 
+        "salt_functions" : []
+    }, 
+    "service_preset" : {
+        "consul_handle" : "service_presets/{name}",
+        "name" : "Health check name", 
+        "script" : "Some script to execute, or empty",
+        "**kwargs" : "Any other keyword arguments"
+    },
+    "server" : {
+        "consul_handle" : "server/{server_name}",
+        "managed_by" : "unmanaged/ssh/provider/winexe/app",
+        "provider_name" : "some_provider",
+        "ip_address" : "127.0.0.1",
+        "available_actions" : [],
+        "hostname" : ""
+    },
+    "managed_actions" : {
+        "consul_handle" : "managed_actions/{manage_type}/{manage_subtype}",
+        "actions" : []
+    },
+    "app" : {
+        "consul_handle" : "apps/{app_name}",
+        "name" : ""
+    }
+}

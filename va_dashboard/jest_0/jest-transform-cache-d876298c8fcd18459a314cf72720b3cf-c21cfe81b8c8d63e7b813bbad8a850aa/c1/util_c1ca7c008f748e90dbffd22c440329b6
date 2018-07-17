@@ -1,0 +1,9 @@
+504886b7eb4b779a7bbacefcd05bcb6a
+'use strict';
+
+var util = require('../tabs/util');
+
+test('empty object', function () {
+  expect(util.isEmpty({})).toBe(true);
+});
+//# sourceMappingURL=data:application/json;charset=utf-8;base64,eyJ2ZXJzaW9uIjozLCJzb3VyY2VzIjpbInV0aWwuanMiXSwibmFtZXMiOlsidXRpbCIsInJlcXVpcmUiLCJ0ZXN0IiwiZXhwZWN0IiwiaXNFbXB0eSIsInRvQmUiXSwibWFwcGluZ3MiOiI7O0FBQUEsSUFBTUEsT0FBT0MsUUFBUSxjQUFSLENBQWI7O0FBRUFDLEtBQUssY0FBTCxFQUFxQixZQUFNO0FBQ3pCQyxTQUFPSCxLQUFLSSxPQUFMLENBQWEsRUFBYixDQUFQLEVBQXlCQyxJQUF6QixDQUE4QixJQUE5QjtBQUNELENBRkQiLCJmaWxlIjoidXRpbC5qcyIsInNvdXJjZXNDb250ZW50IjpbImNvbnN0IHV0aWwgPSByZXF1aXJlKCcuLi90YWJzL3V0aWwnKTtcblxudGVzdCgnZW1wdHkgb2JqZWN0JywgKCkgPT4ge1xuICBleHBlY3QodXRpbC5pc0VtcHR5KHt9KSkudG9CZSh0cnVlKTtcbn0pO1xuIl19
