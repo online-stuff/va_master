@@ -156,20 +156,28 @@ class LXCDriver(base.DriverBase):
         return number_cpus 
 
     def container_to_dict(self, container, provider_name):
+        print ('Doing : ', container['server'].name)
+        status_map = {
+            'Running' : 'ACTIVE', 
+            'Stopped' : 'SHUTOFF',
+        }
         server = {
             'hostname' : container['server'].name,
             'ip' : self.get_server_addresses(container)[0],
             'size' : container['server'].name,
             'used_disk' : self.get_server_usage(container, 'disk') / float(2**20) or 1,
             'used_ram' : self.get_server_usage(container, 'memory') / float(2**20),
-            'used_cpu' : self.get_cpus(container), 
-#            'used_cpu' : self.get_server_usage(container, 'cpu') / int(2**40), #TODO calculate CPU usage - current value is CPU time in seconds, we need to find total uptime and divide by it. 
-            'status' : container['server'].status, 
+            'status' : status_map.get(container['server'].status, container['server'].status),  #We try to get the status from the mapping, otherwise we just return the original status
             'cost' : 0,  #TODO find way to calculate costs
             'estimated_cost' : 0,
             'provider' : provider_name, 
             'provider_name' : provider_name, #Probably a bugfix
         }
+        if server['status'] == 'ACTIVE': 
+            server['used_cpu'] = self.get_cpus(container)
+        else: 
+            server['used_cpu'] = 0
+
         return server
 
     @tornado.gen.coroutine
