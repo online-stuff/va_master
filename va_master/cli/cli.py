@@ -322,6 +322,7 @@ def handle_test_api(args):
         all_tests = [x for x in all_tests for t in tests if t in str(x)]
 
     for t in all_tests: 
+        t.set_password(args.get('password', 'admin'))
         api_test_suite.addTest(unittest.TestLoader().loadTestsFromTestCase(t))
 
     unittest.TextTestRunner(verbosity=5).run(api_test_suite)
@@ -374,6 +375,7 @@ def entry():
 
     test_api = subparsers.add_parser('test-api', help='Runs through (some of) the API endpoints and tests their results. ')
     test_api.add_argument('--tests', nargs = '+', help = 'List of test_modules to run, example --tests va_vpn_tests va_provider_tests', default = [])
+    test_api.add_argument('--password', default = 'admin')
     test_api.set_defaults(sub='test_api')
 
     args = parser.parse_args()

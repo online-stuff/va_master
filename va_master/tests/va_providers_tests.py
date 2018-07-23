@@ -2,10 +2,12 @@ import unittest
 import time
 import sys
 from va_api import APIManager
+from va_test_base import VATestClass
+
 import warnings
 
 
-class VAProvidersTests(unittest.TestCase):
+class VAProvidersTests(VATestClass):
 #    api = APIManager(va_url='https://127.0.0.1/api',token='1a882c9e22c2462d95dcadb8a127bb8d', verify=False)
     api = APIManager(va_url='https://127.0.0.1:443', va_user='admin', va_pass='admin', verify=False)
     warnings = []
