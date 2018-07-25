@@ -18,7 +18,7 @@ def get_paths():
         },
         'post' : {
             'login' : {'function' : user_login, 'args' : ['handler', 'username', 'password']},
-            'new_user' : {'function' : create_user_api, 'args' : ['user', 'password', 'user_type']}
+            'new_user' : {'function' : create_user_api, 'args' : ['handler', 'user', 'password', 'user_type']}
         }
     }
     return paths
