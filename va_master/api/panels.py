@@ -17,6 +17,7 @@ def get_paths():
             'panels/users' : {'function' : get_users, 'args' : ['handler', 'users_type']},
             'panels/get_all_functions' : {'function' : get_all_functions, 'args' : ['handler']},
             'panels/get_all_function_groups' : {'function' : get_all_function_groups, 'args' : ['datastore_handler']},
+            'panels/get_services_and_logs' : {'function' : get_services_and_logs, 'args' : ['datastore_handler']},
         },
         'post' : {
             'panels/sync_salt_minions' : {'function' : sync_salt_minions, 'args' : ['datastore_handler', 'dash_user']},
@@ -277,6 +278,29 @@ def panel_action(handler, actions_list = [], server_name = '', action = '', args
     if len(results.keys()) == 1: 
         results = results[results.keys()[0]]
     raise tornado.gen.Return(results)
+
+
+@tornado.gen.coroutine
+def get_services_and_logs(datastore_handler):
+    serv = yield services.list_services()
+    serv = len(serv) - 1 #One service is the default consul one, which we don't want to be counted
+    logfile = '/var/log/vapourapps/va-master.log'
+
+    info_severities = ['info', 'notices', 'debug', 'warning']
+    crit_severities = ['err', 'crit', 'alert', 'emerg']
+
+    with open(logfile) as f:
+        logs = f.read().split('\n')
+        info_logs, critical_logs = 0, 0
+        for log in logs: 
+            if not log: continue
+            log = json.loads(log)
+            if log['severity'] in info_severities: 
+                info_logs += 1
+            elif log['severity'] in crit_severities: 
+                critical_logs += 1
+
+    raise tornado.gen.Return({"services" : serv, "critical_logs" : critical_logs, "info_logs" : info_logs})
 
 
 @tornado.gen.coroutine

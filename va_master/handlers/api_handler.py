@@ -501,6 +501,8 @@ class LogMessagingSocket(tornado.websocket.WebSocketHandler):
                         'init' : self.handle_init_message, 
                         'get_messages' : self.handle_get_messages, 
                         'observer_status' : self.handle_observer, 
+                        'get_notifications' : self.handle_notifications,
+                        'mark_notification_read' : self.mark_notification_read, 
                     }
             msg_type = message.get('type', '')
             if msg_type not in message_handlers: 
@@ -519,6 +521,16 @@ class LogMessagingSocket(tornado.websocket.WebSocketHandler):
         except: 
             import traceback
             traceback.print_exc()
+
+    @tornado.gen.coroutine
+    def handle_notifications(self, message):
+        notifications = [{"message" : "Sample notification message", "read" : False, "timestamp" : i1533919149}]
+
+        raise tornado.gen.Return(notifications)
+
+    @tornado.gen.coroutine
+    def mark_notification_read(self, message):
+        raise tornado.gen.Return('Marked notification read with message : ', message)
 
     @tornado.gen.coroutine
     def handle_init_message(self, message):
