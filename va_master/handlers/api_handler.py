@@ -314,7 +314,7 @@ class ApiHandler(tornado.web.RequestHandler):
             'result' : result,
         })
         try:
-            syslog.syslog(syslog.LOG_INFO | syslog.LOG_LOCAL0, message)
+            syslog.syslog(syslog.LOG_DEBUG | syslog.LOG_LOCAL0, message)
         except: 
             import traceback
             traceback.print_exc()
@@ -397,13 +397,16 @@ class ApiHandler(tornado.web.RequestHandler):
 class LogHandler(FileSystemEventHandler):
     def __init__(self, socket):
         self.socket = socket
-        self.stopped = False
+        self.stopped = True 
+
+        #TODO maybe get this from a conf file, or from datastore? 
+        #This is a quick fix, shouldn't stay like this for long (famous last words)
+        self.notification_paths = ['apps/install_new_app', 'apps/add_minion', 'apps/action', 'apps/add_vpn_user', 'apps/revoke_vpn_user', 'apps/download_vpn_cert', 'servers/add_server', 'servers/manage_server', 'login', 'new_user', 'panels/create_user_group', 'panels/create_user_with_group', 'panels/delete_user', 'panels/update_user', 'panels/delete_group', 'providers/delete', 'providers/add_provider', 'services/add_service_with_presets', 'services/add', 'providers']
+
         super(LogHandler, self).__init__()
 
     def on_modified(self, event):
         log_file = event.src_path
-#        log_file = log_file.replace('~', '')
-#        print ('Log file is : ', log_file, ' and event is : ', event.__dict__)
         with open(log_file) as f: 
             log_file = [x for x in f.read().split('\n') if x]
         try:
@@ -411,15 +414,31 @@ class LogHandler(FileSystemEventHandler):
             last_line = json.loads(last_line)
 
             msg = {"type" : "update", "message" : last_line}
-            if not self.stopped: 
-                try:
-                    self.socket.write_message(json.dumps(msg))
-                except : #TODO except socketclosederror
-                    pass
+            notification_msg = {"type" : "update_notifications", "message" : [last_line['message']]}
+            if not self.stopped:
+                print ('Sending log message. ')
+                self.socket.write_message(json.dumps(last_line))
+            else: 
+                print ('Log stopped, not sending logs. ')
+            self.send_notification(last_line)
+#                    self.socket.write_message(json.dumps(notification_msg))
+
         except: 
             import traceback
             traceback.print_exc()
 
+
+    def send_notification(self, json_msg):
+        if json_msg['severity'] == 'debug' : 
+            va_msg = json.loads(json_msg['message'])
+            if va_msg['path'] in self.notification_paths: 
+                notification_msg = "{user} ({user_type}) made a call to {path}".format(**va_msg)
+                notification_msg = {'type' : 'update_notifications', 'message' : notification_msg, 'severity' : 'debug', 'timestamp' : json_msg.get('timestamp', '')}
+#                print ('Writing : ', notification_msg)
+                self.socket.write_message(json.dumps(notification_msg))
+        else: 
+#            print ('Want to send : ', json_msg)
+            self.socket.write_message(json.dumps(json_msg))
 
 class LogMessagingSocket(tornado.websocket.WebSocketHandler):
 
@@ -433,6 +452,9 @@ class LogMessagingSocket(tornado.websocket.WebSocketHandler):
     def open(self, config = None, no_messages = 0, log_path = '/var/log/vapourapps/', log_file = 'va-master.log'):
         self.config.logger.info('Opening socket. ')
         try: 
+            self.log_handler = LogHandler(self)
+            self.log_handler.stopped = True 
+
             self.logfile = log_path + log_file
             try:
                 with open(self.logfile) as f: 
@@ -452,24 +474,14 @@ class LogMessagingSocket(tornado.websocket.WebSocketHandler):
                 json_msgs.append(j_msg)
 
             self.messages = json_msgs 
-            self.config.logger.info('Got %s messages. ' % (len(self.messages, )))
-#            yesterday = datetime.datetime.now() + dateutil.relativedelta.relativedelta(hours = -1)
-#
-#            init_messages = self.get_messages(yesterday, datetime.datetime.now())
-#
-#            hosts = list(set([x.get('host') for x in init_messages if x.get('host')]))
-#            hosts = [{'value': x, 'label': x} for x in hosts]
-#            msg = {"type" : "init", "logs" : init_messages, 'hosts' : hosts}
-#            print ('Writing message : ', {'type' : msg['type'], 'logs' : '...', 'hosts' : msg['hosts']})
-#            self.write_message(json.dumps(msg))
 
-            self.log_handler = LogHandler(self)
-            self.log_handler.stopped = False
+            init_notifications = yield self.handle_notifications({})
+            self.write_message(json.dumps(init_notifications))
+
             observer = Observer()
             observer.schedule(self.log_handler, path = log_path)
             observer.start()
             self.config.logger.info('Socket started log handler and observer. ')
-            self.write_message(json.dumps({'type' : 'connected'}))
 
         except: 
             import traceback
@@ -499,6 +511,7 @@ class LogMessagingSocket(tornado.websocket.WebSocketHandler):
         try:
             message_handlers = {
                         'init' : self.handle_init_message, 
+                        'init_notifications' : self.handle_notifications,
                         'get_messages' : self.handle_get_messages, 
                         'observer_status' : self.handle_observer, 
                         'get_notifications' : self.handle_notifications,
@@ -524,9 +537,21 @@ class LogMessagingSocket(tornado.websocket.WebSocketHandler):
 
     @tornado.gen.coroutine
     def handle_notifications(self, message):
-        notifications = [{"message" : "Sample notification message", "read" : False, "timestamp" : i1533919149}]
+#        message['from_date'] = get_last_read_date()
+        raw_notifications = yield self.handle_get_messages(message)
+        raw_notifications = raw_notifications['logs']
+        notifications = {'notice' : [], 'critical' : [], 'warning' : []}
+        crit_severities = ['crit', 'err', 'alert', 'emerg']
+        allowed_severities = ['critical', 'warning', 'notice']
 
-        raise tornado.gen.Return(notifications)
+        for n in raw_notifications: 
+            if n['severity'] in crit_severities: 
+                n['severity'] = 'critical'
+            if n['severity'] in allowed_severities: 
+                notifications[n['severity']].append(n)
+
+        message = {"type" : "init_notifications", "notifications" : notifications}
+        raise tornado.gen.Return(message)
 
     @tornado.gen.coroutine
     def mark_notification_read(self, message):
@@ -534,12 +559,15 @@ class LogMessagingSocket(tornado.websocket.WebSocketHandler):
 
     @tornado.gen.coroutine
     def handle_init_message(self, message):
-        print ('Getting init messages')
         messages = yield self.handle_get_messages(message)
         raise tornado.gen.Return(messages)
 
     @tornado.gen.coroutine
     def handle_get_messages(self, message):
+        
+        if message.get('type', '') == 'get_messages':
+
+            self.log_handler.stopped = False
         from_date = message.get('from_date')
         date_format = '%Y-%m-%d'
 

@@ -280,27 +280,40 @@ def panel_action(handler, actions_list = [], server_name = '', action = '', args
     raise tornado.gen.Return(results)
 
 
+
 @tornado.gen.coroutine
 def get_services_and_logs(datastore_handler):
-    serv = yield services.list_services()
-    serv = len(serv) - 1 #One service is the default consul one, which we don't want to be counted
     logfile = '/var/log/vapourapps/va-master.log'
+    with open(logfile) as f:
+        logs = f.read().split('\n')
+
+    serv = yield services.get_all_checks()
+    passing_services, crit_services, warn_services = 0, 0, 0
+    info_logs, critical_logs = 0, 0
 
     info_severities = ['info', 'notices', 'debug', 'warning']
     crit_severities = ['err', 'crit', 'alert', 'emerg']
 
-    with open(logfile) as f:
-        logs = f.read().split('\n')
-        info_logs, critical_logs = 0, 0
-        for log in logs: 
-            if not log: continue
-            log = json.loads(log)
-            if log['severity'] in info_severities: 
-                info_logs += 1
-            elif log['severity'] in crit_severities: 
-                critical_logs += 1
+    for service in serv: 
+        for check in serv[service]: 
+            if check.get('Status', '') in ['passing']: 
+                passing_services += 1
+            elif check.get('Status', '') in ['critical']: 
+                crit_services += 1
+            elif check.get('Status') in ['warning']: 
+                warn_services += 1
 
-    raise tornado.gen.Return({"services" : serv, "critical_logs" : critical_logs, "info_logs" : info_logs})
+    for log in logs: 
+        if not log: continue
+        log = json.loads(log)
+        if log['severity'] in info_severities: 
+            info_logs += 1
+        elif log['severity'] in crit_severities: 
+            critical_logs += 1
+
+    warning_logs = 10
+
+    raise tornado.gen.Return({"critical_logs" : critical_logs, "info_logs" : info_logs, "warning_logs" : warning_logs, "passing_services" : passing_services, "critical_services" : crit_services, "warning_services" : warn_services})
 
 
 @tornado.gen.coroutine

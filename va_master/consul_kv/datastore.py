@@ -117,8 +117,8 @@ class ConsulStore(DataStore):
         try:
             result = yield self.get_exec(doc_id, params = {"recurse" : True})
         except: 
-            import traceback
-            traceback.print_exc()
+#            import traceback
+#            traceback.print_exc()
             result = []
         raise tornado.gen.Return(result)
 
