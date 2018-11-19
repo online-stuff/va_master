@@ -55,7 +55,7 @@ def handle_app_package(path_to_app, action = 'install'):
     if action not in ['install', 'uninstall']:
         raise Exception('Attempted to handle app package with action: ' + str(action))
 
-    install_cmd = [sys.executable, '-m', 'pip', 'install', path_to_app]
+    install_cmd = [sys.executable, '-m', 'pip', 'install', path_to_app, '--upgrade']
     try:
         subprocess.call(install_cmd)
     except:
