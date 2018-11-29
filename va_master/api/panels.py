@@ -1,4 +1,4 @@
-import json
+import json, yaml
 
 import salt.client
 import tornado.gen
@@ -410,38 +410,96 @@ def get_users(handler, user_type = 'users'):
         result.append(user_data)
     raise tornado.gen.Return(result)
 
-@tornado.gen.coroutine
-def get_all_functions(handler):
-    """Gets all functions returned by the get_functions methods for all the api modules and formats them properly for the dashboard. """
-    functions = {m : handler.paths[m] for m in ['post', 'get']}
-    states = yield handler.datastore_handler.get_states_and_apps()
 
+def function_is_documented(doc):
+    """
+        description: Checks if a function is documented properly. In order for it to be so, it needs to have a __doc__ string which is yaml formatted, and it should be a dictionary with 'description', 'output' and 'arguments' keys, plus any others you want, where 'description' and 'output' are strings, and 'arguments' is a list of dictionaries where the key is the name of the argument, and the value is its description. 
+        arguments: 
+          - f: The function for whih the check is done
+        output: Boolean, whether the function is formatted. 
+        
+    """
+
+    #Sometimes we straight up pass the docstring to this function. 
+    if callable(doc): 
+        doc = doc.__doc__
+
+    #Make sure doc is not empty
+    if doc:
+        #Check if doc is yaml
+        try:
+            doc = yaml.load(doc)
+            #And dict
+            if type(doc) == dict:
+                #It needs to have the 'description', 'output' and 'arguments' keys
+                if all([x in doc.keys() for x in ['description', 'output', 'arguments']]):
+                    #description and output should be strings, arguments should be a list of dictionaries. 
+                    if type(doc['description']) == str and type(doc['output']) == str and type(doc['arguments']) == list and all([type(x) == dict for x in doc['arguments']]):
+                        return True
+        except yaml.parser.ParserError:
+            pass
+        except yaml.parser.ScannerError:
+            pass
+        except Exception: 
+            print (doc)
+            raise
+    return False
+
+
+def get_master_functions(handler):
+    functions = {
+        method : [
+            [path, yaml.load(handler.paths[method][path]['function'].__doc__)] for path in handler.paths[method] if function_is_documented(handler.paths[method][path]['function'])
+        ] for method in ['post', 'get']
+    }
+    return functions
+
+def get_salt_functions():
     cl = LocalClient()
 
-    all_salt_functions = cl.cmd('G@role:va-master', fun = 'sys.doc', tgt_type = 'compound')
-    states_functions = {
-        state['module'] : {x.split('.')[1] : {'doc' : all_salt_functions[x] or 'No description available. '} for x in all_salt_functions if x.startswith(state['module'])}
-    for state in states}
+    salt_functions = cl.cmd('G@role:va-master', fun = 'va_utils.get_documented_module_functions', tgt_type = 'compound')
+    salt_functions = salt_functions.items()[0][1]
+
+    print (salt_functions)
+    salt_functions = {
+        method : [[function[0], yaml.load(function[1])] for function in salt_functions[method] if function_is_documented(function[1])]
+    for method in salt_functions}
+
+    return salt_functions   
 
 
-    salt_functions = {state['module'] : {
-        x : states_functions[state['module']][x] for x in states_functions[state['module']] if x in state.get('salt_functions', [])
-    } for state in states}
-
-
-    functions.update(salt_functions)
-
+def format_functions_for_dashboard(functions):
     functions = [
         { 
                 'label' : f, 
                 'options' : [
                     {
-                        'label' : i, 
-                        'value' : i, 
-                        'description' : functions[f][i].get('doc') or functions[f][i]['function'].__doc__}
+                        'label' : i[0], 
+                        'value' : i[0], 
+                        'description' : i[1]['description'],
+                        'documentation' : i[1],
+                    }
                     for i in functions[f]
                 ] 
         } for f in functions]
+
+    return functions
+
+@tornado.gen.coroutine
+def get_all_functions(handler):
+    """
+        description: Returns all functions that should be visible to the user from the dashboard. This is done by determining which functions are documented properly. Check the function_is_defined() function for more information. 
+        arguments: 
+          - handler: Generic argument inserted by the api_handler. Provides various utilities and data from va_master. 
+        output: "Data formatted so as to be displayed by the dashboard directly. The format is: [{'label' : 'method/module', 'options' : [{'label' : 'func_name', 'value' : 'func_name', 'description' : 'description', 'documentation' : 'documentation'}, ...]}, ...]"
+    """
+
+    functions = get_master_functions(handler)
+    salt_functions = get_salt_functions()
+
+    functions.update(salt_functions)
+
+    functions = format_functions_for_dashboard(functions)
 
     raise tornado.gen.Return(functions)
 
