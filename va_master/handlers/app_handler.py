@@ -40,6 +40,7 @@ def remove_app_from_store(datastore_handler, app_name):
 
 @tornado.gen.coroutine
 def install_app_package(path_to_app):
+    print ('Path : ', path_to_app)
     result = yield handle_app_package(path_to_app, 'install')
     raise tornado.gen.Return(result)
 
@@ -55,7 +56,9 @@ def handle_app_package(path_to_app, action = 'install'):
     if action not in ['install', 'uninstall']:
         raise Exception('Attempted to handle app package with action: ' + str(action))
 
+    print ('App is : ', path_to_app)
     install_cmd = [sys.executable, '-m', 'pip', 'install', path_to_app, '--upgrade']
+    print ('Installing with : ', subprocess.list2cmdline(install_cmd))
     try:
         subprocess.call(install_cmd)
     except:
@@ -73,6 +76,6 @@ def handle_app_action(datastore_handler, server, action, args, kwargs):
 
     app_module = app['module']
     app_module = importlib.import_module(app_module)
-
+    print (args, kwargs, app_module, action)
     result = getattr(app_module, action)(*args, **kwargs)
     raise tornado.gen.Return(result)
