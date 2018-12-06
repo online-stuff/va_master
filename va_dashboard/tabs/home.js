@@ -64,6 +64,7 @@ class Home extends Component {
         this.navbar_click = this.navbar_click.bind(this);
         this.handleAlertDismiss = this.handleAlertDismiss.bind(this);
         this.collapse = this.collapse.bind(this);
+        this.togglePanels = this.togglePanels.bind(this);
     }
     show_tabs(key){
         this.props.dispatch({type: 'SHOW_TABS', key: key});
@@ -112,6 +113,9 @@ class Home extends Component {
             this.props.dispatch({type: 'SHOW_TABS', key: 'users'});
             hashHistory.push('/users_users');
         }
+        else if(key === 'api'){
+            hashHistory.push('/api');
+        }
     }
     collapse() {
         this.setState({collapse: !this.state.collapse});
@@ -123,6 +127,16 @@ class Home extends Component {
     handleAlertDismiss() {
         this.props.dispatch({type: 'HIDE_ALERT'});
     }
+
+    togglePanels(id) {
+        var x = document.getElementById(id);
+        console.log(id);
+        if (x.style.display === "none") {
+            x.style.display = "block";
+        } else {
+            x.style.display = "none";
+        }
+}
     render() {
         var me = this;
         var panels = this.state.data.filter(function(panel) {
@@ -132,7 +146,7 @@ class Home extends Component {
             return false;
         }).map(function(panel, i) {
             var header = (
-                <span><i className={'fa ' + panel.icon} /> {panel.name} <i className='fa fa-angle-down pull-right' /></span>
+                <a className="noselect" onClick={() => me.togglePanels("collapse"+i)} style={{cursor: 'pointer'}}> <i className={'fa ' + panel.icon} /> {panel.name} <i className='fa fa-angle-down pull-right' /></a>
             )
             var servers = panel.servers.map((server) => {
                 var subpanels = panel.panels.map((panel) => {
@@ -144,17 +158,19 @@ class Home extends Component {
                 });
                 return (
                     <div key={server}>
-                        <span className="panels-title">{server}</span>
+                        {header}
+                        <div id={"collapse"+i} style={{display:'none'}}>
                         <ul className='left-menu'>
                             {subpanels}
                         </ul>
+                        </div>
                     </div>
                 );
             });
             return (
-                <Bootstrap.Panel key={panel.name} header={header} eventKey={i}>
+                <div>
                     {servers}
-                </Bootstrap.Panel>
+                </div>
             );
         });
         var key = this.props.menu.showTabs || window.location.hash.split('_')[0].slice(2);
@@ -182,6 +198,7 @@ class Home extends Component {
                         <Bootstrap.Nav pullRight>
                             <Bootstrap.NavDropdown title={this.props.auth.username} onSelect={this.navbar_click} id="nav-dropdown" pullRight>
                                     <Bootstrap.MenuItem eventKey='users'>Users</Bootstrap.MenuItem>
+                                    <Bootstrap.MenuItem eventKey='api'>API</Bootstrap.MenuItem>
                                     <li role="presentation"><a role="menuitem" href="https://github.com/VapourApps/va_master/tree/master/docs" target="_blank">Help</a></li>
                                     <Bootstrap.MenuItem eventKey='logout'>Logout</Bootstrap.MenuItem>
                             </Bootstrap.NavDropdown>
@@ -225,9 +242,7 @@ class Home extends Component {
                             <li role="separator" className="divider-vertical"></li>
                             <li className="panels-title">Admin panels</li>
                             <li>
-                                <Bootstrap.Accordion key={this.state.activeKey} defaultActiveKey={this.state.activeKey}>
                                     {panels}
-                                </Bootstrap.Accordion>
                             </li>
                         </ul>
                     </div>
