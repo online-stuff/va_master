@@ -52,7 +52,7 @@ def get_current_user(handler):
         token_valid = yield is_token_valid(handler.datastore_handler, token, t)
         if token_valid: 
             user = yield datastore_handler.get_object('by_token', user_type = t, token = token)
-            raise tornado.gen.Return({'username' : user['username'], 'type' : t})
+            raise tornado.gen.Return({'username' : user['username'], 'type' : t, 'token' : token})
     raise tornado.gen.Return(None)
 
 

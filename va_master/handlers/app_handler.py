@@ -25,11 +25,19 @@ def change_app_type(datastore_handler, app_name, app_type):
 def add_app_to_store(datastore_handler, app_json):
     yield datastore_handler.insert_object(object_type = 'app', app_name = app_json['name'], data = app_json)
     empty_panel = {'admin' : [], 'user' : []}
+   
     for user_type in ['user', 'admin']: 
+        panel_type = user_type + '_panel'
+        panel = yield datastore_handler.get_object(object_type = panel_type, name = app_json['name'])
+
+        servers = []
+        if panel: 
+            servers = panel['servers']
+ 
         panel = {
             'name' : app_json['name'],
             'icon' : app_json['icon'],
-            'servers' : [],
+            'servers' : servers,
             'panels' : app_json.get('panels', empty_panel)[user_type]
         }
         yield datastore_handler.store_panel(panel, user_type)
