@@ -6,6 +6,7 @@ import {findDOMNode} from 'react-dom';
 import Select from 'react-select-plus';
 import {Table, Tr, Td} from 'reactable';
 import { getSpinner } from './util';
+import { hashHistory } from 'react-router';
 
 class UserGroupPanel extends Component {
     constructor (props) {
@@ -122,6 +123,7 @@ class Users extends Component {
     }
 
     btn_clicked(index, evtKey){
+        var tt=this;
         var users = Object.assign([], this.state.users);
         var user = users[index];
         if(evtKey === "remove"){
@@ -132,13 +134,19 @@ class Users extends Component {
             }).fail(function (msg) {
                 me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
             });
-        }else{
+        }else if(evtKey === "update"){
             this.setState({modal_open: true, update: index, selected_user: user});
+        }
+        else{
+            console.log('Permissions per user', user);
+            tt.props.dispatch({type: 'USER_PERMISSIONS', permUser: user});
+            hashHistory.push('/users_permissions');
         }
     }
 
     render() {
         var user_rows = this.state.users.map(function(user, index) {
+            console.log(user);
             var groups = user.groups.join(', ');
             var funcs = user.functions.join(', ');
             return (
@@ -150,6 +158,7 @@ class Users extends Component {
                         <Bootstrap.DropdownButton bsStyle='primary' title="Choose" onSelect = {this.btn_clicked.bind(null, index)}>
                             <Bootstrap.MenuItem eventKey="remove">Remove</Bootstrap.MenuItem>
                             <Bootstrap.MenuItem eventKey="update">Update</Bootstrap.MenuItem>
+                            <Bootstrap.MenuItem eventKey="permissions">Permissions</Bootstrap.MenuItem>
                         </Bootstrap.DropdownButton>
                     </Td>
                 </Tr>
