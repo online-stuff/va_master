@@ -368,7 +368,21 @@ function notifications(state, action) {
     return newState;
 }
 
-var mainReducer = combineReducers({ auth, table, filter, modal, apps, div, panel, alert, form, sidebar, logs, hosts, notifications, menu });
+function permissions(state, action) {
+    if (typeof state === 'undefined') {
+        return {
+            permUser: {}
+        };
+    }
+
+    var newState = Object.assign({}, state);
+    if (action.type == 'USER_PERMISSIONS') {
+        newState.permUser = action.permUser;
+    }
+    return newState;
+}
+
+var mainReducer = combineReducers({ auth, table, filter, modal, apps, div, panel, alert, form, sidebar, logs, hosts, notifications, menu, permissions });
 var store = createStore(mainReducer);
 
 var Home = require('./tabs/home');
@@ -391,6 +405,7 @@ var Services = require('./tabs/services');
 var Users = require('./tabs/users').Panel;
 var Groups = require('./tabs/users_groups');
 var API = require('./tabs/api');
+var UsersPermissions = require('./tabs/users_permissions');
 
 var Login = require('./login');
 class App extends Component {
@@ -417,6 +432,7 @@ class App extends Component {
                 <Route path='/subpanel/:id/:server/:args' component={Subpanel} />
                 <Route path='/chart_panel/:server/:provider/:service' component={ChartPanel} />
                 <Route path='/api' component={API} />
+                <Route path='/users_permissions' component={UsersPermissions} />
             </Route>
             <Route path='/login' component={Login} />
         </Router>
