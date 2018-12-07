@@ -227,7 +227,7 @@ def get_states(handler, dash_user):
     for state in states_data: 
         state_panel = [x for x in panels_data if x['name'] == state['name']]
         if not state_panel: 
-            raise Exception('%s was not found in the list of states : %s', (state['name'], str([x['name'] for x in panels_data])))
+            raise Exception(state['name'] + 'was not found in the list of states : ' + str([x['name'] for x in panels_data]))
         state_panel = state_panel[0]
         state['servers'] = state_panel['servers']
         state['panels'] = state.get('panels', default_panels)[dash_user['type']]

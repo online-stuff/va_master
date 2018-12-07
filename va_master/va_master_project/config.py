@@ -27,7 +27,7 @@ class Config(object):
         ch.setFormatter(logging.Formatter('[%(asctime)-15s] %(message)s'))
         self.logger.addHandler(ch)
         self.server_port = 80
-        self.https_port = 443
+        self.https_port = 7443
         self.server_static_path = get_server_static()
         self.deploy_pool_count = 3
         self.ssh_key_path = os.path.expanduser('~/.ssh/')

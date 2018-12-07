@@ -507,10 +507,10 @@ def get_users(handler, user_type = 'users'):
     for u in users: 
         u_all_functions = yield datastore_handler.get_user_functions(u)
         u_groups = [x.get('func_name') for x in u_all_functions if x.get('func_type', '') == 'function_group']
-        u_functions = [x.get('func_path') for x in u_all_functions if x.get('func_path')]
+#        u_functions = [x.get('func_path') for x in u_all_functions if x.get('func_path')]
         user_data = {
             'user' : u, 
-            'functions' : u_functions, 
+            'functions' : u_all_functions, 
             'groups' : u_groups
         }
         result.append(user_data)
@@ -567,7 +567,6 @@ def get_salt_functions():
     salt_functions = cl.cmd('G@role:va-master', fun = 'va_utils.get_documented_module_functions', tgt_type = 'compound')
     salt_functions = salt_functions.items()[0][1]
 
-    print (salt_functions)
     salt_functions = {
         method : [[function[0], yaml.load(function[1])] for function in salt_functions[method] if function_is_documented(function[1])]
     for method in salt_functions}
@@ -580,7 +579,6 @@ def func_group_is_method(func_group):
 def get_func_group(func_group):
     return 'core' if func_group_is_method(func_group) else func_group
 
-#TODO make this work
 def get_master_domain():
     return socket.getfqdn()
 
@@ -588,7 +586,6 @@ def generate_url_for_func(func_doc, func_group):
     func_endpoint = func_doc[0] if func_group_is_method(func_group) else 'panels/action' 
     master_domain = get_master_domain()
     url = 'https://{master_domain}/api/{func_endpoint}'.format(master_domain = master_domain, func_endpoint = func_endpoint)
-    print ("URL ", url)
     return url
 
 def generate_example_input_for_func(func_doc):
@@ -597,7 +594,6 @@ def generate_example_input_for_func(func_doc):
         if argument.get("example") and argument.get("name"):
             data[argument['name']] = argument['example']
 
-    print ("INPUT : ", data)
     return data
 
 def generate_example_cli_for_func(func_doc, func_group, dash_user):
@@ -615,17 +611,10 @@ def generate_example_cli_for_func(func_doc, func_group, dash_user):
         url_params = '?' + '='.join(['&'.join(x) for x in data.items()])
         url += url_params
     else: 
-        print ("INPUT GENERATED ", data)
         cmd += ['-H', 'Content-type: application/json', '-d', json.dumps(data)]
 
     cmd += [url]
-    print ('LIST', cmd)
     cmd = subprocess.list2cmdline(cmd)
-
-#    if func_group in ['post', 'put', 'delete']:
-#        cmd += "-d '" + json.dumps(data) + "'"
-
-    print ("CMD ", cmd)
 
     return cmd
 
@@ -637,7 +626,6 @@ def format_functions_for_dashboard(functions, dash_user):
                     {
                         'label' : func_doc[0], 
                         'value' : func_doc[0], 
-#                        'description' : i[1]['description'],
                         'documentation' : func_doc[1],
                         'example_url' : generate_url_for_func(func_doc, func_group),
                         'example_data' : generate_example_input_for_func(func_doc),
@@ -665,12 +653,9 @@ def get_api_functions(datastore_handler):
     apps = yield datastore_handler.datastore.get_recurse('apps/')
     all_functions = {}
     for app in apps:
-        print ('Checking out ', app)
-#        if app.get('type', 'salt') == 'app':
         imported_module = importlib.import_module(app['module'])
         module_functions = inspect.getmembers(imported_module, inspect.isfunction)
         module_functions = [[x[0], yaml.load(x[1].__doc__)] for x in module_functions if function_is_documented(x[1])]
-        print ('All my functions are : ', module_functions)
         all_functions[app['name']] = module_functions
 
     raise tornado.gen.Return(all_functions)
@@ -685,8 +670,6 @@ def get_all_functions(handler, dash_user):
         output: "Data formatted so as to be displayed by the dashboard directly. The format is: [{'label' : 'method/module', 'options' : [{'label' : 'func_name', 'value' : 'func_name', 'description' : 'description', 'documentation' : 'documentation'}, ...]}, ...]"
         hide: True
     """
-
-    print(dash_user)
 
     functions = get_master_functions(handler)
     salt_functions = get_salt_functions()

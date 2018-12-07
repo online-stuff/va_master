@@ -129,7 +129,7 @@ class ApiHandler(tornado.web.RequestHandler):
                     self.json({'success' : False, 'message' : 'User ' + user['username'] + ' tried to access ' + path + ' but it is not in their allowed functions : ' + str(user_functions)})
                     auth_successful = False
 
-                self.json({'success' : False, 'message' : 'User does not have appropriate privileges. ', 'data' : {}})
+#                self.json({'success' : False, 'message' : 'User does not have appropriate privileges. ', 'data' : {}})
         except Exception as e:
             import traceback
             traceback.print_exc()
@@ -416,10 +416,7 @@ class LogHandler(FileSystemEventHandler):
             msg = {"type" : "update", "message" : last_line}
             notification_msg = {"type" : "update_notifications", "message" : [last_line['message']]}
             if not self.stopped:
-                print ('Sending log message. ')
                 self.socket.write_message(json.dumps(last_line))
-            else:
-                print ('Log stopped, not sending logs. ')
             self.send_notification(last_line)
 #                    self.socket.write_message(json.dumps(notification_msg))
 
@@ -438,8 +435,10 @@ class LogHandler(FileSystemEventHandler):
                 self.socket.write_message(json.dumps(notification_msg))
         else:
             notification_msg = {'type' : 'update_notifications', 'message' : json_msg['message'], 'severity' : json_msg['severity'], 'timestamp' : json_msg['timestamp']}
-            print ('Sending ', notification_msg)
-            self.socket.write_message(json.dumps(notification_msg))
+            try:
+                self.socket.write_message(json.dumps(notification_msg))
+            except: 
+                pass
 
 class LogMessagingSocket(tornado.websocket.WebSocketHandler):
 
