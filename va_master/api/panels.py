@@ -371,7 +371,10 @@ def get_services_and_logs(datastore_handler):
 
     for log in logs: 
         if not log: continue
-        log = json.loads(log)
+        try:
+            log = json.loads(log)
+        except: 
+            continue
         if log['severity'] in info_severities: 
             info_logs += 1
         elif log['severity'] in crit_severities: 

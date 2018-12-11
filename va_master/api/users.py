@@ -22,6 +22,7 @@ def get_paths():
             'panels/update_user' : {'function' : update_user, 'args' : ['datastore_handler', 'user', 'functions', 'groups', 'password']}, 
 
             'panels/delete_group' : {'function' : delete_user_group, 'args' : ['datastore_handler', 'group_name']},
+            'panels/add_args' : {'function' : add_predefined_argument_to_func, 'args' : ['datastore_handler', 'username', 'func_path', 'arg', 'value']},
         }
     }
     return paths
@@ -124,3 +125,28 @@ def create_user_with_group(handler, user, password, user_type, functions = [], g
 def delete_user(datastore_handler, user):
     """Deletes the user from the datastore. """
     yield datastore_handler.delete_user(user)
+
+
+@tornado.gen.coroutine
+def add_predefined_argument_to_func(datastore_handler, username, func_path, arg, value):
+    user = yield datastore_handler.get_object(object_type = 'user', username = username)
+    print ('User is : ', user)
+    user_function = [x for x in user.get('functions', []) if x['func_path'] == func_path]
+    if not user_function: 
+        raise Exception('User does not have permissions to use ' + func_path)
+
+    user_function = user_function[0]
+    predef_args = user_function.get('predefined_arguments', {})
+    predef_args[arg] = value
+    user_function['predefined_arguments'] = predef_args
+    print ('Predef is : ', predef_args)
+    print ('Inserting ', user)
+    yield datastore_handler.insert_object(object_type = 'user', username = username, data = user) 
+
+
+@tornado.gen.coroutine
+def get_predefined_arguments(datastore_handler, dash_user, func_name):
+    user_func = [x for x in user.get('functions', []) if x.get('func_name', x['func_path']) == func_name][0]
+    predef_args = user_func.get('predefined_arguments', {})
+
+    raise tornado.gen.Return(predef_args)

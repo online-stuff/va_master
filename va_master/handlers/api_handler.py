@@ -87,7 +87,6 @@ class ApiHandler(tornado.web.RequestHandler):
             result = (set (result.keys()) == set(result_fields))
             return result
         except:
-#            print ('Error with testing formatted result - probably is ok. ')
             return False
 
     @tornado.gen.coroutine
@@ -105,12 +104,12 @@ class ApiHandler(tornado.web.RequestHandler):
 
             if not api_func:
                 api_func = {'function' : invalid_url, 'args' : ['path', 'method']}
-
         except:
             import traceback
             traceback.print_exc()
             raise
         return api_func
+
 
     @tornado.gen.coroutine
     def handle_user_auth(self, path):
@@ -123,13 +122,10 @@ class ApiHandler(tornado.web.RequestHandler):
             elif user['type'] == 'user' :
                 user_functions = yield self.datastore_handler.get_user_functions(user.get('username'))
                 user_functions = [x.get('func_path', '') for x in user_functions]
-
                 user_functions += self.paths.get('user_allowed', [])
                 if path not in user_functions:
                     self.json({'success' : False, 'message' : 'User ' + user['username'] + ' tried to access ' + path + ' but it is not in their allowed functions : ' + str(user_functions)})
                     auth_successful = False
-
-#                self.json({'success' : False, 'message' : 'User does not have appropriate privileges. ', 'data' : {}})
         except Exception as e:
             import traceback
             traceback.print_exc()
@@ -233,6 +229,10 @@ class ApiHandler(tornado.web.RequestHandler):
                 auth_successful = yield self.handle_user_auth(path)
                 if not auth_successful:
                     raise tornado.gen.Return({"success" : False, "message" : "Authentication not successful for " + api_func['function'].func_name, "data" : {}})
+
+                if user['type'] == 'user' : 
+                    predef_args = yield get_predefined_arguments(self.datastore_handler, user, data.get('action', path))
+                    data.update(predef_args)
 
             result = yield self.handle_func(api_func, data)
             status = self.status or 200
@@ -411,7 +411,10 @@ class LogHandler(FileSystemEventHandler):
             log_file = [x for x in f.read().split('\n') if x]
         try:
             last_line = log_file[-1]
-            last_line = json.loads(last_line)
+            try:
+               last_line = json.loads(last_line)
+            except ValueError: 
+                return 
 
             msg = {"type" : "update", "message" : last_line}
             notification_msg = {"type" : "update_notifications", "message" : [last_line['message']]}
@@ -468,7 +471,7 @@ class LogMessagingSocket(tornado.websocket.WebSocketHandler):
                 try:
                     j_msg = json.loads(message)
                 except:
-                    self.config.logger.warning('Found a non-json message in log : %s; Will ignore it. ' % (message))
+                    self.config.logger.warning('Found a non-json message in log : %s...; Will ignore it. ' % (message[:30]))
                     continue
 
                 json_msgs.append(j_msg)

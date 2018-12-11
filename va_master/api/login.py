@@ -52,7 +52,10 @@ def get_current_user(handler):
         token_valid = yield is_token_valid(handler.datastore_handler, token, t)
         if token_valid: 
             user = yield datastore_handler.get_object('by_token', user_type = t, token = token)
-            raise tornado.gen.Return({'username' : user['username'], 'type' : t, 'token' : token})
+            user = yield datastore_handler.get_object('user', username = user['username'])
+            user['token'] = token
+            user['type'] = t
+            raise tornado.gen.Return(user)
     raise tornado.gen.Return(None)
 
 
@@ -117,7 +120,6 @@ def create_user(datastore_handler, username, password, user_type = 'user'):
 @tornado.gen.coroutine
 def create_user_api(handler, user, password, user_type = 'user'):
     """Creates a user with the specified user_type if it doesn't exist yet. Returns the user's token. """
-    print ('Handler is : ', handler, ' datastore is : ', handler.datastore_handler)
     token = yield create_user(handler.datastore_handler, user, password, user_type) 
     raise tornado.gen.Return(token)
 
@@ -147,6 +149,7 @@ def user_login(handler, username, password):
             'timestamp_created': 0
         }
     pw_hash = account_info['password_hash']
+
     if crypt(password, pw_hash) == pw_hash:
         token = yield get_or_create_token(datastore_handler, username, user_type = account_info['user_type'])
         print ('SHould be fine. Token is : ', token)

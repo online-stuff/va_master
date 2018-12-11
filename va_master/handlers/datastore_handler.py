@@ -223,7 +223,7 @@ class DatastoreHandler(object):
         edited_user = yield self.get_object('user', username = user)
 
         crypted_pass = crypt(password)
-        edited_user['password'] = crypted_pass
+        edited_user['password_hash'] = crypted_pass
         yield self.insert_object('user', data = edited_user, username = user) 
 
     @tornado.gen.coroutine
@@ -266,7 +266,7 @@ class DatastoreHandler(object):
             user = yield self.get_object(user_type, username = username)
         except: 
             user = None
-
+        print ('Tried to get ', user_type, ' found ', user)
         raise tornado.gen.Return(user)
 
     @tornado.gen.coroutine
