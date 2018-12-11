@@ -99,5 +99,8 @@
     "app" : {
         "consul_handle" : "apps/{app_name}",
         "name" : ""
+    }, 
+    "function_doc": {
+        "consul_handle" : "function_doc/{func_group}/{func_name}"
     }
 }

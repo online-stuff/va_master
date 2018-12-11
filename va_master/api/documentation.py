@@ -7,9 +7,11 @@ from salt.client import LocalClient
 def get_paths():
     paths = {
         'get' : {
-            'panels/get_all_function_groups' : {'function' : get_all_function_groups, 'args' : ['datastore_handler']},
+            'panels/get_all_functions' : {'function' : get_all_functions_dashboard, 'args' : ['handler', 'dash_user']},
         },
         'post' : {
+            'panels/add_functions_to_datastore' : {'function' : add_functions_to_datastore, 'args' : ['handler']},
+
         }
     }
     return paths
@@ -36,6 +38,7 @@ def function_is_documented(doc):
             #And dict
             if type(doc) == dict:
                 #description should be string, arguments should be a list of dictionaries. 
+
                 if type(doc['description']) == str and type(doc.get('arguments', [])) == list and all([type(x) == dict for x in doc.get('arguments', [])]):
                     #Finally, the function needs to actually be visible.
                     if doc.get('visible'): 
@@ -116,6 +119,13 @@ def generate_example_cli_for_func(func_doc, func_group, dash_user):
     return cmd
 
 def format_functions_for_dashboard(functions, dash_user):
+    #TODO this shouldn't be done on the backend
+    function_groups = list(set([x['func_group'] for x in functions]))
+
+    functions = {
+        func_group : [[x['func_name'], x] for x in functions if x['func_group'] == func_group]
+    for func_group in function_groups}
+
     functions = [
         { 
                 'label' : get_func_group(func_group), 
@@ -142,7 +152,7 @@ def format_functions_for_dashboard(functions, dash_user):
         else: 
             result.append(func_group)
 
-    return result
+    raise tornado.gen.Return(result)
 
 
 @tornado.gen.coroutine
@@ -159,13 +169,12 @@ def get_api_functions(datastore_handler):
 
 
 @tornado.gen.coroutine
-def get_all_functions(handler, dash_user):
+def gather_all_functions(handler):
     """
         description: Returns all functions that should be visible to the user from the dashboard. This is done by determining which functions are documented properly. Check the function_is_defined() function for more information. 
         arguments: 
           - handler: Generic argument inserted by the api_handler. Provides various utilities and data from va_master. 
         output: "Data formatted so as to be displayed by the dashboard directly. The format is: [{'label' : 'method/module', 'options' : [{'label' : 'func_name', 'value' : 'func_name', 'description' : 'description', 'documentation' : 'documentation'}, ...]}, ...]"
-        hide: True
     """
 
     functions = get_master_functions(handler)
@@ -175,18 +184,36 @@ def get_all_functions(handler, dash_user):
     functions.update(salt_functions)
     functions.update(api_functions)
 
-    functions = format_functions_for_dashboard(functions, dash_user)
-
     raise tornado.gen.Return(functions)
 
 
 @tornado.gen.coroutine
-def get_all_function_groups(datastore_handler):
-    """Returns all user function groups from the datastore. """
-    groups = yield datastore_handler.get_user_groups()
-    print ('Groups are : ', groups)
-    for g in groups:
-        g['functions'] = [x.get('value') for x in g['functions']]
-    raise tornado.gen.Return(groups)
+def get_all_functions(handler):
+    """
+        description: Gets all functions from consul. TODO finish doc
+    """
+
+    functions = yield handler.datastore_handler.datastore.get_recurse('function_doc')
+    raise tornado.gen.Return(functions)
 
 
+@tornado.gen.coroutine
+def add_functions_to_datastore(handler):
+    """
+        description: Calls gather_all_functions() and puts all function documentations that way into consul. Functions are stored in a key formatted as `function_doc/<func_group>/<func_name>`, for example `function_doc/core/api/providers`. 
+    """
+    functions = yield gather_all_functions(handler)
+    for function_group in functions: 
+        for function in functions[function_group]:
+            function[1]['func_name'] = function[0]
+            print ('Adding ', function[0])
+            function[1]['func_group'] = function_group
+            yield handler.datastore_handler.insert_object(object_type = 'function_doc', func_group = function_group, func_name = function[0], data = function[1])
+
+@tornado.gen.coroutine
+def get_all_functions_dashboard(handler, dash_user):
+    functions = yield get_all_functions(handler)
+    print ('Got functions.')
+    result = yield format_functions_for_dashboard(functions, dash_user)
+    print ('Got result')
+    raise tornado.gen.Return(result)

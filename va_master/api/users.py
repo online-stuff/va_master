@@ -2,7 +2,7 @@ import json, yaml, subprocess, importlib, inspect, socket
 
 import salt.client
 import tornado.gen
-import login, apps, services
+import login, apps, services, documentation
 
 from login import auth_only, create_user_api
 from va_master.handlers.app_handler import handle_app_action
@@ -11,7 +11,7 @@ from salt.client import LocalClient
 def get_paths():
     paths = {
         'get' : {
-            'panels/users' : {'function' : get_users, 'args' : ['handler', 'users_type']},
+            'panels/users' : {'function' : get_users, 'args' : ['handler', 'dash_user', 'users_type']},
             'panels/get_all_function_groups' : {'function' : get_all_function_groups, 'args' : ['datastore_handler']},
         },
         'post' : {
@@ -35,13 +35,22 @@ def get_minion_role(minion_name = '*'):
     return role
 
 @tornado.gen.coroutine
-def get_users(handler, user_type = 'users'):
+def get_users(handler, dash_user, user_type = 'users'):
     """Returns a list of users along with their allowed functions and user groups. """
     datastore_handler = handler.datastore_handler
     users = yield datastore_handler.get_users(user_type)
     result = []
+    documented_functions = yield documentation.get_all_functions(handler)
+    documented_functions = {
+        func['func_name'] : func
+    for func in documented_functions}
+    print (documented_functions.keys())
     for u in users: 
         u_all_functions = yield datastore_handler.get_user_functions(u)
+
+        for u_func in u_all_functions: 
+            u_func.update(documented_functions.get(u_func['func_path'], {}))
+
         u_groups = [x.get('func_name') for x in u_all_functions if x.get('func_type', '') == 'function_group']
 #        u_functions = [x.get('func_path') for x in u_all_functions if x.get('func_path')]
         user_data = {
@@ -50,6 +59,7 @@ def get_users(handler, user_type = 'users'):
             'groups' : u_groups
         }
         result.append(user_data)
+
     raise tornado.gen.Return(result)
 
 
