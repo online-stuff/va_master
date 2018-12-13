@@ -10,6 +10,7 @@ from concurrent.futures import ThreadPoolExecutor   # `pip install futures` for 
 
 from va_master.api import url_handler
 from va_master.api.login import get_current_user, user_login
+from va_master.api.users import get_predefined_arguments
 from va_master.handlers.drivers_handler import DriversHandler
 from proxy_handler import ProxyHandler
 
@@ -99,8 +100,8 @@ class ApiHandler(tornado.web.RequestHandler):
     def fetch_func(self, method, path, data):
         try:
             api_func = self.paths[method].get(path)
-            logging_data = {x : str(data[x])[:50] for x in data}
-            self.config.logger.info('Getting a call at ' + str(path) + ' with data ' + str(logging_data) + ' and will call function: ' + str(api_func))
+#            logging_data = {x : str(data[x])[:50] for x in data}
+            self.config.logger.info('Getting a call at ' + str(path) + ' with data ' + str(data) + ' and will call function: ' + str(api_func))
 
             if not api_func:
                 api_func = {'function' : invalid_url, 'args' : ['path', 'method']}
@@ -222,7 +223,7 @@ class ApiHandler(tornado.web.RequestHandler):
 
             user = yield get_current_user(self)
             data['dash_user'] = user
-
+            print ('I am ', user)
             api_func = self.fetch_func(method, path, data)
 
             if api_func['function'] not in [user_login]:
@@ -231,9 +232,13 @@ class ApiHandler(tornado.web.RequestHandler):
                     raise tornado.gen.Return({"success" : False, "message" : "Authentication not successful for " + api_func['function'].func_name, "data" : {}})
 
                 if user['type'] == 'user' : 
+                    print ('I am user')
                     predef_args = yield get_predefined_arguments(self.datastore_handler, user, data.get('action', path))
+                    print ('My args are : ', predef_args)
+                    print ('But also ', user['functions'])
                     data.update(predef_args)
 
+            print ('Caling with ', data)
             result = yield self.handle_func(api_func, data)
             status = self.status or 200
             yield self.log_message(path = path, data = data, func = api_func['function'], result = {})#log_result)

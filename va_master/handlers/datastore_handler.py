@@ -1,4 +1,4 @@
-import json, glob, yaml, datetime, os
+import json, glob, yaml, datetime, os, time
 import requests
 import subprocess
 import traceback
@@ -212,6 +212,8 @@ class DatastoreHandler(object):
     def get_users(self, user_type = 'users'):
         try:
             users = yield self.datastore.get_recurse(user_type + '/')
+            #TODO remove this, this is kind of for testing since we got users without usernames a few times
+            users = [x for x in users if 'username' in x.keys()]
         except Exception: 
             users = []
         users = [x['username'] for x in users]
@@ -412,8 +414,19 @@ class DatastoreHandler(object):
         raise tornado.gen.Return(state)
 
     @tornado.gen.coroutine
-    def create_user(self, user_data, user_type = 'user'):
-        yield self.insert_object(user_type, data = user_data, username = user_data['username'])
+    def create_user(self, username, password, user_type = 'user'):
+        user = yield self.find_user(username)
+        if user:
+            raise Exception('Username ' + username + ' is already taken ')
+
+        crypted_pass = crypt(password)
+        user = {
+            'username': username,
+            'password_hash': crypted_pass,
+            'timestamp_created': long(time.time())
+        }
+
+        yield self.insert_object(user_type, data = user, username = user['username'])
 
     @tornado.gen.coroutine
     def get_user_groups(self):

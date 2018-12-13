@@ -18,7 +18,7 @@ def get_paths():
         },
         'post' : {
             'login' : {'function' : user_login, 'args' : ['handler', 'username', 'password']},
-            'new_user' : {'function' : create_user_api, 'args' : ['handler', 'user', 'password', 'user_type']}
+            'new_user' : {'function' : create_user, 'args' : ['datastore_handler', 'user', 'password', 'user_type']}
         }
     }
     return paths
@@ -102,26 +102,20 @@ def auth_only(*args, **kwargs):
 
 
 @tornado.gen.coroutine
-def create_user(datastore_handler, username, password, user_type = 'user'):
-    user = yield datastore_handler.find_user(username)
-    if user: 
-        raise Exception('Username ' + username + ' is already taken ')
-    crypted_pass = crypt(password)
-    user = {
-        'username': username,
-        'password_hash': crypted_pass,
-        'timestamp_created': long(time.time())
-    }
-    yield datastore_handler.create_user(user, user_type)
-    token = yield get_or_create_token(datastore_handler, username, user_type = user_type)
+def create_user(datastore_handler, user, password, user_type = 'user'):
+    yield datastore_handler.create_user(user, password, user_type) 
+
+    token = yield get_or_create_token(datastore_handler, user, user_type = user_type)
 
     raise tornado.gen.Return(token)
 
-@tornado.gen.coroutine
-def create_user_api(handler, user, password, user_type = 'user'):
-    """Creates a user with the specified user_type if it doesn't exist yet. Returns the user's token. """
-    token = yield create_user(handler.datastore_handler, user, password, user_type) 
-    raise tornado.gen.Return(token)
+
+create_user_api = create_user
+#@tornado.gen.coroutine
+#def create_user_api(handler, user, password, user_type = 'user'):
+#    """Creates a user with the specified user_type if it doesn't exist yet. Returns the user's token. """
+#    token = yield create_user(handler.datastore_handler, user, password, user_type) 
+#    raise tornado.gen.Return(token)
 
 
 

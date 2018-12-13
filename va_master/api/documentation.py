@@ -26,21 +26,38 @@ def function_is_documented(doc):
         
     """
 
+
+    #This is kind of a testing thing, if I'm creating a function and it appears not to be documented, just put the functino name here and it will print out stuff which may be useful. 
+    test_function = ''
+
+    testing = False
     #Sometimes we straight up pass the docstring to this function. 
     if callable(doc): 
+        if doc.func_name == test_function: 
+            print ('Testing function ', test_function)
+            testing = True
         doc = doc.__doc__
 
     #Make sure doc is not empty
     if doc:
+        if testing: 
+            print ('It has doc')
         #Check if doc is yaml
         try:
             doc = yaml.load(doc)
+            if testing:
+                print ('It has yaml')
             #And dict
             if type(doc) == dict:
+                if testing: 
+                    print ('It is a dict')
+                    print ('Description is ;', doc['description'], ' and arguments are : ', doc.get('arguments'))
                 #description should be string, arguments should be a list of dictionaries. 
 
                 if type(doc['description']) == str and type(doc.get('arguments', [])) == list and all([type(x) == dict for x in doc.get('arguments', [])]):
                     #Finally, the function needs to actually be visible.
+                    if testing: 
+                        print ('And visible: ', doc.get('visible'))
                     if doc.get('visible'): 
                         return True
         except yaml.parser.ParserError:

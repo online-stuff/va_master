@@ -13,6 +13,7 @@ def get_paths():
         'get' : {
             'panels/users' : {'function' : get_users, 'args' : ['handler', 'dash_user', 'users_type']},
             'panels/get_all_function_groups' : {'function' : get_all_function_groups, 'args' : ['datastore_handler']},
+            'panels/get_user' : {'function' : get_user, 'args' : ['datastore_handler', 'username']},
         },
         'post' : {
             'panels/add_user_functions' : {'function' : add_user_functions, 'args' : ['datastore_handler', 'user', 'functions']},
@@ -22,7 +23,7 @@ def get_paths():
             'panels/update_user' : {'function' : update_user, 'args' : ['datastore_handler', 'user', 'functions', 'groups', 'password']}, 
 
             'panels/delete_group' : {'function' : delete_user_group, 'args' : ['datastore_handler', 'group_name']},
-            'panels/add_args' : {'function' : add_predefined_argument_to_func, 'args' : ['datastore_handler', 'username', 'func_path', 'arg', 'value']},
+            'panels/add_args' : {'function' : add_predefined_argument_to_func, 'args' : ['datastore_handler', 'username', 'func_path', 'kwargs']},
         }
     }
     return paths
@@ -65,6 +66,15 @@ def get_users(handler, dash_user, user_type = 'users'):
 
 
 @tornado.gen.coroutine
+def get_user(datastore_handler, username):
+    user = yield datastore_handler.get_object(object_type = 'user', username = username)
+    functions = yield datastore_handler.datastore.get_recurse('function_doc')
+    functions = {x['func_name'] : x for x in functions}
+    for function in user['functions']:
+        function['doc'] = functions[function['func_path']]
+    raise tornado.gen.Return(user)
+
+@tornado.gen.coroutine
 def get_all_function_groups(datastore_handler):
     """Returns all user function groups from the datastore. """
     groups = yield datastore_handler.get_user_groups()
@@ -78,6 +88,9 @@ def update_user(datastore_handler, user, functions = [], groups = [], password =
     """Updates a user, allowing an admin to change the password or set functions / user groups for the user. """
     if password: 
         yield datastore_handler.update_user(user, password)
+
+    #If functions are pure strings, we convert them to {'func_path' : endpoint} dicts
+    functions = [{'func_path' : x} if type(x) in [str, unicode] else x for x in functions]
     group_funcs = [datastore_handler.get_user_group(x) for x in groups]
     group_funcs = yield group_funcs
     [x.update({'func_type' : 'function_group'}) for x in group_funcs]
@@ -110,7 +123,7 @@ def delete_user_group(datastore_handler, group_name):
 def create_user_with_group(handler, user, password, user_type, functions = [], groups = []):
     """Creates a new user and adds the functions and user groups to the user's allowed functions. """
     datastore_handler = handler.datastore_handler
-    yield create_user_api(handler, user, password, user_type)
+    yield create_user_api(datastore_handler, user, password, user_type)
     all_groups = yield datastore_handler.get_user_groups()
     for g in groups: 
         if g: 
@@ -128,25 +141,27 @@ def delete_user(datastore_handler, user):
 
 
 @tornado.gen.coroutine
-def add_predefined_argument_to_func(datastore_handler, username, func_path, arg, value):
+def add_predefined_argument_to_func(datastore_handler, username, func_path, kwargs):
     user = yield datastore_handler.get_object(object_type = 'user', username = username)
-    print ('User is : ', user)
     user_function = [x for x in user.get('functions', []) if x['func_path'] == func_path]
     if not user_function: 
         raise Exception('User does not have permissions to use ' + func_path)
 
     user_function = user_function[0]
     predef_args = user_function.get('predefined_arguments', {})
-    predef_args[arg] = value
+    predef_args.update(kwargs)
     user_function['predefined_arguments'] = predef_args
-    print ('Predef is : ', predef_args)
-    print ('Inserting ', user)
     yield datastore_handler.insert_object(object_type = 'user', username = username, data = user) 
 
 
 @tornado.gen.coroutine
 def get_predefined_arguments(datastore_handler, dash_user, func_name):
-    user_func = [x for x in user.get('functions', []) if x.get('func_name', x['func_path']) == func_name][0]
+    user_func = [x for x in dash_user.get('functions', []) if x.get('func_name', x['func_path']) == func_name]
+    if not user_func: 
+        #Function is not in user_allowed functions but we assume it is in user_allowed. Maybe we need a better way to deal with this? 
+        #TODO potentially find a betetr way to check this. 
+        raise tornado.gen.Return({})
+    user_func = user_func[0]
     predef_args = user_func.get('predefined_arguments', {})
 
     raise tornado.gen.Return(predef_args)
