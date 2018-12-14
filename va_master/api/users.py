@@ -88,15 +88,16 @@ def update_user(datastore_handler, user, functions = [], groups = [], password =
     """Updates a user, allowing an admin to change the password or set functions / user groups for the user. """
     if password: 
         yield datastore_handler.update_user(user, password)
+    if functions: 
+        #If functions are pure strings, we convert them to {'func_path' : endpoint} dicts
+        functions = [{'func_path' : x} if type(x) in [str, unicode] else x for x in functions]
 
-    #If functions are pure strings, we convert them to {'func_path' : endpoint} dicts
-    functions = [{'func_path' : x} if type(x) in [str, unicode] else x for x in functions]
-    group_funcs = [datastore_handler.get_user_group(x) for x in groups]
-    group_funcs = yield group_funcs
-    [x.update({'func_type' : 'function_group'}) for x in group_funcs]
-    functions += group_funcs
+        group_funcs = [datastore_handler.get_user_group(x) for x in groups]
+        group_funcs = yield group_funcs
+        [x.update({'func_type' : 'function_group'}) for x in group_funcs]
+        functions += group_funcs
 
-    yield datastore_handler.set_user_functions(user, functions)
+        yield datastore_handler.set_user_functions(user, functions)
 
 
 #functions should have format [{"func_path" : "/panels/something", "func_type" : "salt"}, ...]

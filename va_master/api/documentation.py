@@ -16,7 +16,7 @@ def get_paths():
     }
     return paths
 
-def function_is_documented(doc):
+def function_is_documented(doc, func_name = ''):
     """
         description: Checks if a function is documented properly. In order for it to be so, it needs to have a __doc__ string which is yaml formatted, and it should be a dictionary with 'description', 'output' and 'arguments' keys, plus any others you want, where 'description' and 'output' are strings, and 'arguments' is a list of dictionaries where the key is the name of the argument, and the value is its description. 
         arguments: 
@@ -28,45 +28,53 @@ def function_is_documented(doc):
 
 
     #This is kind of a testing thing, if I'm creating a function and it appears not to be documented, just put the functino name here and it will print out stuff which may be useful. 
-    test_function = ''
-
+    test_function = 'mysql.speedtests'
     testing = False
+
+    if func_name == test_function: 
+        print ('Testing ', func_name)
+        print ('It has ', doc)
+        testing = True
+
     #Sometimes we straight up pass the docstring to this function. 
     if callable(doc): 
-        if doc.func_name == test_function: 
-            print ('Testing function ', test_function)
-            testing = True
         doc = doc.__doc__
 
+    if testing: 
+        print ('Testing doc ')
     #Make sure doc is not empty
     if doc:
+
         if testing: 
             print ('It has doc')
-        #Check if doc is yaml
-        try:
-            doc = yaml.load(doc)
-            if testing:
-                print ('It has yaml')
-            #And dict
-            if type(doc) == dict:
-                if testing: 
-                    print ('It is a dict')
-                    print ('Description is ;', doc['description'], ' and arguments are : ', doc.get('arguments'))
-                #description should be string, arguments should be a list of dictionaries. 
 
-                if type(doc['description']) == str and type(doc.get('arguments', [])) == list and all([type(x) == dict for x in doc.get('arguments', [])]):
-                    #Finally, the function needs to actually be visible.
-                    if testing: 
-                        print ('And visible: ', doc.get('visible'))
-                    if doc.get('visible'): 
-                        return True
-        except yaml.parser.ParserError:
-            pass
-        except yaml.parser.ScannerError:
-            pass
-        except Exception: 
-            print (doc)
-            raise
+        #Check if it is a dict already
+        if type(doc) != dict:
+            #If it isn't, try and get it form yaml. 
+            try:
+                doc = yaml.load(doc)
+
+            except yaml.parser.ParserError:
+                pass
+            except yaml.parser.ScannerError:
+                pass
+            except Exception: 
+                print (doc)
+                raise
+
+        #Should be a dict
+        if type(doc) == dict:
+            if testing: 
+                print ('It is a dict')
+                print ('Description is ;', doc['description'], ' and arguments are : ', doc.get('arguments'))
+            #description should be string, arguments should be a list of dictionaries. 
+
+            if type(doc['description']) == str and type(doc.get('arguments', [])) == list and all([type(x) == dict for x in doc.get('arguments', [])]):
+                #Finally, the function needs to actually be visible.
+                if testing: 
+                    print ('And visible: ', doc.get('visible'))
+                if doc.get('visible'): 
+                    return True
     return False
 
 
@@ -83,9 +91,9 @@ def get_salt_functions():
 
     salt_functions = cl.cmd('G@role:va-master', fun = 'va_utils.get_documented_module_functions', tgt_type = 'compound')
     salt_functions = salt_functions.items()[0][1]
-
+    print ('Salt : ', salt_functions)
     salt_functions = {
-        method : [[function[0], yaml.load(function[1])] for function in salt_functions[method] if function_is_documented(function[1])]
+        method : [[function[0], yaml.load(function[1])] for function in salt_functions[method] if function_is_documented(function[1], func_name = function[0])]
     for method in salt_functions}
 
     return salt_functions   

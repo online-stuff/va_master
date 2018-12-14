@@ -235,12 +235,21 @@ class DatastoreHandler(object):
     @tornado.gen.coroutine
     def set_user_functions(self, user, functions):
         edited_user = yield self.get_object('user', username = user)
+        old_functions = {x['func_path'] : x for x in edited_user.get('functions', [])}
         all_functions = []
         for f in functions: 
+
             if f.get('func_type', '') == 'function_group' : 
                 all_functions += f['functions']
-            elif f.get('value'): 
-                all_functions.append({'func_path' : f['value']})
+            elif f.get('value'):
+                #This is kind of workaround-ish, as the dashboard does some weird things with the output. 
+                new_func = {"func_path" : f['value']}
+                print ('Old functions are : ', old_functions)
+                if f['value'] in old_functions.keys():
+                    print ('Will add ', old_functions[f['value']].get('predefined_arguments', {})) 
+                    new_func['predefined_arguments'] = old_functions[f['value']].get('predefined_arguments', {}) 
+
+                all_functions.append(new_func)
             else: 
                 all_functions.append(f)
 
@@ -281,6 +290,7 @@ class DatastoreHandler(object):
 
     @tornado.gen.coroutine
     def get_panels(self, user_type):
+        print ('Getting recurse panels/' + user_type)
         panels = yield self.datastore.get_recurse('panels/' + user_type)
         raise tornado.gen.Return(panels)
 

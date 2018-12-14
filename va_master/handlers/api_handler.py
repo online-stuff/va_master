@@ -223,7 +223,6 @@ class ApiHandler(tornado.web.RequestHandler):
 
             user = yield get_current_user(self)
             data['dash_user'] = user
-            print ('I am ', user)
             api_func = self.fetch_func(method, path, data)
 
             if api_func['function'] not in [user_login]:
@@ -232,13 +231,10 @@ class ApiHandler(tornado.web.RequestHandler):
                     raise tornado.gen.Return({"success" : False, "message" : "Authentication not successful for " + api_func['function'].func_name, "data" : {}})
 
                 if user['type'] == 'user' : 
-                    print ('I am user')
                     predef_args = yield get_predefined_arguments(self.datastore_handler, user, data.get('action', path))
-                    print ('My args are : ', predef_args)
-                    print ('But also ', user['functions'])
                     data.update(predef_args)
 
-            print ('Caling with ', data)
+            print ('Calling ', api_func, ' with data ', data, ' where keys are : ', data.keys())
             result = yield self.handle_func(api_func, data)
             status = self.status or 200
             yield self.log_message(path = path, data = data, func = api_func['function'], result = {})#log_result)

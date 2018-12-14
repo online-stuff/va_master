@@ -172,9 +172,10 @@ def panel_action_execute(handler, server_name, action, args = [], dash_user = ''
         state = get_minion_role(server_name) 
 
         if dash_user.get('username'):
-            user_funcs = yield datastore_handler.get_user_salt_functions(dash_user['username'])
+            user_funcs = [x['func_path'] for x in dash_user['functions']]
+#            user_funcs = yield datastore_handler.get_user_salt_functions(dash_user['username'])
             if action not in user_funcs and dash_user['type'] != 'admin':
-                print ('Function not supported')
+                print ('Function not supported', action)
                 raise Exception('User attempting to execute a salt function but does not have permission. ')
 
         if not module:
@@ -411,6 +412,7 @@ def get_panels(handler, dash_user):
     """ 
         description: Returns a list of the panels for the logged in user. Panels are retrieved from the panels/<user_type>/<role> key in the datastore, with user_type being user/admin and is retrieved from the auth token, and role being one of the apps added to the datastore. See the apps documentation for more info. 
         output: '[{"servers": [], "panels": [{"name": "User-friendly name", "key": "module.panel_name"}], "name": "role_name", "icon": "fa-icon"}]'
+        visible: True
     """
     datastore_handler = handler.datastore_handler
     panels = yield list_panels(datastore_handler, dash_user)
@@ -421,6 +423,8 @@ def get_panels(handler, dash_user):
 def get_panel_for_user(handler, panel, server_name, dash_user, args = [], kwargs = {}):
     """
         description: Returns the required panel from the server for the logged in user. This is done by calling module.get_panel, if that module has a defined get_panel function, otherwise from va_utils.get_panel. 
+        output: TODO
+        visible: True
         arguments: 
           - name: panel
             description: The name of the panel to show the user
@@ -449,6 +453,17 @@ def get_panel_for_user(handler, panel, server_name, dash_user, args = [], kwargs
     ignored_kwargs = ['datastore', 'handler', 'datastore_handler', 'drivers_handler', 'panel', 'instance_name', 'dash_user', 'method', 'server_name', 'path', 'args']
     if not kwargs: 
         kwargs = {x : handler.data[x] for x in handler.data if x not in ignored_kwargs}
+
+    if not dash_user['type'] == 'admin': 
+        panel_func = [x for x in dash_user.get('functions', []) if  x.get('func_path', '') == panel]
+        if not panel_func: 
+            raise Exception("User tried to open panel " + str(panel) + " but it is not in their allowed functions. ")
+
+        print ('Panel func is : ', panel_func)
+        panel_func = panel_func[0]
+        kwargs.update(panel_func.get('predefined_arguments', {}))
+        print ('My kwargs are : ', kwargs)
+
     action = 'get_panel'
     if type(args) != list and args: 
         args = [args]
@@ -458,11 +473,10 @@ def get_panel_for_user(handler, panel, server_name, dash_user, args = [], kwargs
 
     if server.get('app_type', 'salt') == 'salt':
         state = get_minion_role(server_name) 
-        print ('State is :', state, server_name)
         state = yield datastore_handler.get_state(name = state)
-        print ('Stat : ', state)
         args = [state['module']] + args
 
+    print ('Will get salt with ', kwargs)
     panel  = yield panel_action_execute(handler, server_name, action, args, dash_user, kwargs = kwargs, module = 'va_utils')
     raise tornado.gen.Return(panel)
 
