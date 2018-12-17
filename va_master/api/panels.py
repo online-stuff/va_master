@@ -478,6 +478,7 @@ def get_panel_for_user(handler, panel, server_name, dash_user, args = [], kwargs
 
     print ('Will get salt with ', kwargs)
     panel  = yield panel_action_execute(handler, server_name, action, args, dash_user, kwargs = kwargs, module = 'va_utils')
+    print ('Panel : ', panel)
     raise tornado.gen.Return(panel)
 
 @tornado.gen.coroutine
