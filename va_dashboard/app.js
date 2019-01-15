@@ -406,6 +406,7 @@ var Users = require('./tabs/users').Panel;
 var Groups = require('./tabs/users_groups');
 var API = require('./tabs/api');
 var UsersPermissions = require('./tabs/users_permissions');
+var Integrations=require('./tabs/integrations');
 
 var Login = require('./login');
 class App extends Component {
@@ -433,6 +434,7 @@ class App extends Component {
                 <Route path='/chart_panel/:server/:provider/:service' component={ChartPanel} />
                 <Route path='/api' component={API} />
                 <Route path='/users_permissions' component={UsersPermissions} />
+                <Route path='/integrations' component={Integrations} />
             </Route>
             <Route path='/login' component={Login} />
         </Router>

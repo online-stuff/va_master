@@ -198,6 +198,7 @@ class API extends Component {
                         <div className="card-body">
                             <h2>API Documentation</h2>
                             <br/>
+                            {/*<iframe src="http://127.0.0.1:1880" width="100%" height="1200px"></iframe>*/}
                             <div className="col-container">
                             <div className="sidebar-width">
                                 <Bootstrap.ButtonGroup vertical block>

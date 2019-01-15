@@ -229,6 +229,11 @@ class Home extends Component {
                                 <Bootstrap.Glyphicon glyph='cloud' /> Services <span className="badge">{this.state.stats.services}</span></NavLink>
                             </li>
                             <li>
+                            <NavLink to='integrations' reset_tabs={this.reset_tabs}>
+                                <i className="fa fa-exchange" aria-hidden="true"/> Integrations </NavLink>
+                            </li>
+
+                            <li>
                             <NavLink to='vpn_status' tabs='vpn' show_tabs={this.show_tabs}>
                                 <span><i className='fa fa-lock' /> VPN <span className="badge">{this.state.stats.vpn}</span></span>
                             </NavLink>

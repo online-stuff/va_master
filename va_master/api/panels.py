@@ -179,7 +179,6 @@ def panel_action_execute(handler, server_name, action, args = [], dash_user = ''
     server = yield datastore_handler.get_object(object_type = 'server', server_name = server_name)
 
     if server.get('app_type', 'salt') == 'salt': 
-        state = get_minion_role(server_name) 
 
         if dash_user.get('username'):
             user_funcs = yield datastore_handler.get_user_salt_functions(dash_user['username'])
@@ -188,6 +187,8 @@ def panel_action_execute(handler, server_name, action, args = [], dash_user = ''
                 raise Exception('User attempting to execute a salt function but does not have permission. ')
 
         if not module:
+            state = get_minion_role(server_name) 
+
             state = yield datastore_handler.get_state(name = state)
             if not state: state = {'module' : 'openvpn'}
             module = state['module']
