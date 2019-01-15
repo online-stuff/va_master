@@ -28,7 +28,7 @@ def function_is_documented(doc, func_name = ''):
 
 
     #This is kind of a testing thing, if I'm creating a function and it appears not to be documented, just put the functino name here and it will print out stuff which may be useful. 
-    test_function = 'mysql.speedtests'
+    test_function = 'mysql.ipranges'
     testing = False
 
     if func_name == test_function: 
