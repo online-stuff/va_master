@@ -160,40 +160,59 @@ class Home extends Component {
         console.log('User type: ', this.state.userType);
         if(this.state.userType == 'admin'){
            return (<div>
-                        <li>
+                            <li>
                             <IndexLink to='' activeClassName='active' onClick={this.reset_tabs}>
                                 <Bootstrap.Glyphicon glyph='home' /> Overview</IndexLink>
                             </li>
+                            
                             <li>
                             <NavLink to='providers' reset_tabs={this.reset_tabs}>
                                 <Bootstrap.Glyphicon glyph='hdd' /> Infrastructure <span className="badge">{this.state.stats.providers}</span></NavLink>
                             </li>
+                            
+                            <li>
                             <NavLink to='servers' reset_tabs={this.reset_tabs}>
                                 <span><i className='fa fa-server' /> Servers <span className="badge">{this.state.stats.servers}</span></span>
                             </NavLink>
-                          <div>{ /*<li>
+                            </li>
+                            
+                            <li>
                             <NavLink to='store' reset_tabs={this.reset_tabs}>
                                 <Bootstrap.Glyphicon glyph='th' /> Apps <span className="badge">{this.state.stats.apps}</span></NavLink>
                             </li>
+
                             <li>
                             <NavLink to='services' reset_tabs={this.reset_tabs}>
                                 <Bootstrap.Glyphicon glyph='cloud' /> Services <span className="badge">{this.state.stats.services}</span></NavLink>
-                            </li>*/}</div>
-                            <li>
-                            <div>{ /*<NavLink to='vpn_status' tabs='vpn' show_tabs={this.show_tabs}>
-                                <span><i className='fa fa-lock' /> VPN <span className="badge">{this.state.stats.vpn}</span></span>
-                            </NavLink>*/}</div>
+                            </li>
+                            
 
+                            <li>
+                            <NavLink to='integrations' tabs='integrations' show_tabs={this.show_tabs}>
+                                <span><i className='fa fa-exchange' /> Integrations </span>
+                            </NavLink>
+                            </li>
+
+                            <li>
+                            <NavLink to='vpn_status' tabs='vpn' show_tabs={this.show_tabs}>
+                                <span><i className='fa fa-lock' /> VPN <span className="badge">{this.state.stats.vpn}</span></span>
+                            </NavLink>
+                            </li>
+
+                            <li>
                             <NavLink to='log' reset_tabs={this.reset_tabs}>
                                 <span><i className='fa fa-bar-chart' /> Log</span>
                             </NavLink>
-                            <div>{ /* <NavLink to='billing' reset_tabs={this.reset_tabs}>
-                                <span><i className='fa fa-credit-card' /> Billing</span>
-                            </NavLink>*/}</div>
                             </li>
+
+                            <li>
+                            <NavLink to='billing' reset_tabs={this.reset_tabs}>
+                                <span><i className='fa fa-credit-card' /> Billing</span>
+                            </NavLink>
+                            </li>
+
                             <li role="separator" className="divider-vertical"></li>
                             <li className="panels-title">Admin panels</li>
-
                     </div>);
         }
 

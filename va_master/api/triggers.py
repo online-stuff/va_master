@@ -66,7 +66,7 @@ def get_paths():
 
 
 # Triggers used to be saved for a specific provider. So for instance, providers/va_clc would have a triggers key, as so - `providers/va_clc: {"provider_name" : "va_clc", ..., "triggers" : [{...}, ...]}. 
-# Granted, this was in the old-styled datastore, which we've abandoned since. Anyway, we will now have different keys for all the triggers, as so - `triggers/bamboo_new_user: {}` or `triggers/someID123: {}`
+# Granted, this was in the old-styled datastore, which we've abandoned since. Anyway, we will now have different keys for all the triggers, as so - `event_triggers/va_bamboo.new_user: {"triggers" : [], "name" : ""}`
 # Triggers are triggered based on their event name, so a call at `/api/triggers/event/va_bamboo.add_user` will trigger all Triggers with `va_bamboo.add_user` as their event name. 
 # Potentially also maybe have a list of events? 
 
@@ -100,7 +100,6 @@ def get_paths():
 #            }
 #        ]
 #    }
-
     
 @tornado.gen.coroutine
 def add_trigger(datastore_handler, new_trigger):
@@ -137,12 +136,20 @@ def list_triggers(handler):
     events = yield datastore_handler.datastore.get_recurse('triggers/')
     raise tornado.gen.Return(events)
 
+@tornado.gen.coroutine
+def handle_trigger_kwargs(request_data, args_map, event_data_prefix = ''):
+    prefix_keys = event_data_prefix.split('.')
+    for prefix_key in prefix_keys: 
+        request_data = request_data[prefix_key]
+
+    kwargs = {key: request_data[args_map[key]] for key in args_map}
+    raise tornado.gen.Return(kwargs)        
 
 @tornado.gen.coroutine
 def receive_trigger(handler):
 
     event_name = handler.data['event_name']
-    triggers = yield handler.datastore_handler.get_object('event_triggers', event_name = event_name)
+    event_triggers = yield handler.datastore_handler.get_object('event_triggers', event_name = event_name)
 
     results = []
     for trigger in triggers: 
@@ -151,7 +158,7 @@ def receive_trigger(handler):
             pass #TODO check condition
         if conditions_satisfied: 
             for action in trigger['actions']: 
-                kwargs = handle_trigger_kwargs(handler.data, action['args_map'])
+                kwargs = handle_trigger_kwargs(handler.data, action['args_map'], )
                 kwargs.update(action['extra_args'])
                 new_result = yield perform_server_action(server_name = action['server_name'], kwargs = kwargs)
                 results.append(new_result)
