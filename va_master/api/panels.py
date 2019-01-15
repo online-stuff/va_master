@@ -14,21 +14,11 @@ def get_paths():
             'panels' : {'function' : get_panels, 'args' : ['handler', 'dash_user']}, 
             'panels/stats' : {'function' : get_panels_stats, 'args' : ['handler', 'dash_user']},
             'panels/get_panel' : {'function' : get_panel_for_user, 'args' : ['handler', 'server_name', 'panel', 'provider', 'handler', 'args', 'dash_user']},
-            'panels/users' : {'function' : get_users, 'args' : ['handler', 'users_type']},
-            'panels/get_all_functions' : {'function' : get_all_functions, 'args' : ['handler', 'dash_user']},
-            'panels/get_all_function_groups' : {'function' : get_all_function_groups, 'args' : ['datastore_handler']},
             'panels/get_services_and_logs' : {'function' : get_services_and_logs, 'args' : ['datastore_handler']},
         },
         'post' : {
             'panels/sync_salt_minions' : {'function' : sync_salt_minions, 'args' : ['datastore_handler', 'dash_user']},
             'panels/remove_orphaned_servers' : {'function' : remove_orphaned_servers, 'args' : ['datastore_handler']},
-            'panels/add_user_functions' : {'function' : add_user_functions, 'args' : ['datastore_handler', 'user', 'functions']},
-            'panels/create_user_group' : {'function' : create_user_group, 'args' : ['datastore_handler', 'group_name', 'functions']},
-            'panels/create_user_with_group' : {'function' : create_user_with_group, 'args' : ['handler', 'user', 'password', 'user_type', 'functions', 'groups']},
-            'panels/delete_user' : {'function' : delete_user, 'args' : ['datastore_handler', 'user']}, 
-            'panels/update_user' : {'function' : update_user, 'args' : ['datastore_handler', 'user', 'functions', 'groups', 'password']}, 
-
-            'panels/delete_group' : {'function' : delete_user_group, 'args' : ['datastore_handler', 'group_name']},
 
             'panels/get_panel' : {'function' : get_panel_for_user, 'args' : ['server_name', 'panel', 'provider', 'handler', 'args', 'dash_user']},
             'panels/new_panel' : {'function' : new_panel, 'args' : ['datastore_handler', 'server_name', 'role']},
@@ -181,9 +171,10 @@ def panel_action_execute(handler, server_name, action, args = [], dash_user = ''
     if server.get('app_type', 'salt') == 'salt': 
 
         if dash_user.get('username'):
-            user_funcs = yield datastore_handler.get_user_salt_functions(dash_user['username'])
+            user_funcs = [x['func_path'] for x in dash_user['functions']]
+#            user_funcs = yield datastore_handler.get_user_salt_functions(dash_user['username'])
             if action not in user_funcs and dash_user['type'] != 'admin':
-                print ('Function not supported')
+                print ('Function not supported', action)
                 raise Exception('User attempting to execute a salt function but does not have permission. ')
 
         if not module:
@@ -194,9 +185,7 @@ def panel_action_execute(handler, server_name, action, args = [], dash_user = ''
             module = state['module']
 
         cl = salt.client.LocalClient()
-        print ('Calling salt module ', module + '.' + action, ' on ', server_name, ' with args : ', args, ' and kwargs : ', kwargs)
         result = cl.cmd(server_name, module + '.' + action , arg = args, kwarg = kwargs, timeout = timeout)
-        print ('Result returned : ', result)
 
         result = result.get(server_name)
     #        raise Exception('Calling %s on %s returned an error. ' % (module + '.' + action, server_name))
@@ -290,6 +279,7 @@ def panel_action(handler, actions_list = [], server_name = '', action = '', args
     """
         description: Performs a list of actions on multiple servers. If actions_list is not supplied, will use the rest of the arguments to call a single function on one server.
         output: Whatever the actions return. If calling multiple actions on multiple servers, the results are filtetred by server. 
+        visible: True
         arguments: 
           - name: actions_list
             description: A list of actions to be taken. Each action should have the same arguments as the base functions. If the other arguments are empty, then this argument must have at least one value. 
@@ -383,7 +373,10 @@ def get_services_and_logs(datastore_handler):
 
     for log in logs: 
         if not log: continue
-        log = json.loads(log)
+        try:
+            log = json.loads(log)
+        except: 
+            continue
         if log['severity'] in info_severities: 
             info_logs += 1
         elif log['severity'] in crit_severities: 
@@ -420,6 +413,7 @@ def get_panels(handler, dash_user):
     """ 
         description: Returns a list of the panels for the logged in user. Panels are retrieved from the panels/<user_type>/<role> key in the datastore, with user_type being user/admin and is retrieved from the auth token, and role being one of the apps added to the datastore. See the apps documentation for more info. 
         output: '[{"servers": [], "panels": [{"name": "User-friendly name", "key": "module.panel_name"}], "name": "role_name", "icon": "fa-icon"}]'
+        visible: True
     """
     datastore_handler = handler.datastore_handler
     panels = yield list_panels(datastore_handler, dash_user)
@@ -430,6 +424,8 @@ def get_panels(handler, dash_user):
 def get_panel_for_user(handler, panel, server_name, dash_user, args = [], kwargs = {}):
     """
         description: Returns the required panel from the server for the logged in user. This is done by calling module.get_panel, if that module has a defined get_panel function, otherwise from va_utils.get_panel. 
+        output: TODO
+        visible: True
         arguments: 
           - name: panel
             description: The name of the panel to show the user
@@ -458,6 +454,17 @@ def get_panel_for_user(handler, panel, server_name, dash_user, args = [], kwargs
     ignored_kwargs = ['datastore', 'handler', 'datastore_handler', 'drivers_handler', 'panel', 'instance_name', 'dash_user', 'method', 'server_name', 'path', 'args']
     if not kwargs: 
         kwargs = {x : handler.data[x] for x in handler.data if x not in ignored_kwargs}
+
+    if not dash_user['type'] == 'admin': 
+        panel_func = [x for x in dash_user.get('functions', []) if  x.get('func_path', '') == panel]
+        if not panel_func: 
+            raise Exception("User tried to open panel " + str(panel) + " but it is not in their allowed functions. ")
+
+        print ('Panel func is : ', panel_func)
+        panel_func = panel_func[0]
+        kwargs.update(panel_func.get('predefined_arguments', {}))
+        print ('My kwargs are : ', kwargs)
+
     action = 'get_panel'
     if type(args) != list and args: 
         args = [args]
@@ -470,7 +477,9 @@ def get_panel_for_user(handler, panel, server_name, dash_user, args = [], kwargs
         state = yield datastore_handler.get_state(name = state)
         args = [state['module']] + args
 
+    print ('Will get salt with ', kwargs)
     panel  = yield panel_action_execute(handler, server_name, action, args, dash_user, kwargs = kwargs, module = 'va_utils')
+    print ('Panel : ', panel)
     raise tornado.gen.Return(panel)
 
 @tornado.gen.coroutine
@@ -499,266 +508,3 @@ def get_panel_pdf(handler, panel, server_name, dash_user, pdf_file = '/tmp/table
         raise tornado.gen.Return({'data_type' : 'file'})
     raise Exception('PDF returned a value - probably because of an error. ')
 
-@tornado.gen.coroutine
-def get_users(handler, user_type = 'users'):
-    """Returns a list of users along with their allowed functions and user groups. """
-    datastore_handler = handler.datastore_handler
-    users = yield datastore_handler.get_users(user_type)
-    result = []
-    for u in users: 
-        u_all_functions = yield datastore_handler.get_user_functions(u)
-        u_groups = [x.get('func_name') for x in u_all_functions if x.get('func_type', '') == 'function_group']
-        u_functions = [x.get('func_path') for x in u_all_functions if x.get('func_path')]
-        user_data = {
-            'user' : u, 
-            'functions' : u_functions, 
-            'groups' : u_groups
-        }
-        result.append(user_data)
-    raise tornado.gen.Return(result)
-
-
-def function_is_documented(doc):
-    """
-        description: Checks if a function is documented properly. In order for it to be so, it needs to have a __doc__ string which is yaml formatted, and it should be a dictionary with 'description', 'output' and 'arguments' keys, plus any others you want, where 'description' and 'output' are strings, and 'arguments' is a list of dictionaries where the key is the name of the argument, and the value is its description. 
-        arguments: 
-          - f: The function for whih the check is done
-        output: Boolean, whether the function is formatted. 
-        hide: True
-        
-    """
-
-    #Sometimes we straight up pass the docstring to this function. 
-    if callable(doc): 
-        doc = doc.__doc__
-
-    #Make sure doc is not empty
-    if doc:
-        #Check if doc is yaml
-        try:
-            doc = yaml.load(doc)
-            #And dict
-            if type(doc) == dict:
-                #description should be string, arguments should be a list of dictionaries. 
-                if type(doc['description']) == str and type(doc.get('arguments', [])) == list and all([type(x) == dict for x in doc.get('arguments', [])]):
-                    #Finally, the function needs to actually be visible.
-                    if doc.get('visible'): 
-                        return True
-        except yaml.parser.ParserError:
-            pass
-        except yaml.parser.ScannerError:
-            pass
-        except Exception: 
-            print (doc)
-            raise
-    return False
-
-
-def get_master_functions(handler):
-    functions = {
-        method : [
-            [path, yaml.load(handler.paths[method][path]['function'].__doc__)] for path in handler.paths[method] if function_is_documented(handler.paths[method][path]['function'])
-        ] for method in ['post', 'get']
-    }
-    return functions
-
-def get_salt_functions():
-    cl = LocalClient()
-
-    salt_functions = cl.cmd('G@role:va-master', fun = 'va_utils.get_documented_module_functions', tgt_type = 'compound')
-    salt_functions = salt_functions.items()[0][1]
-
-    print (salt_functions)
-    salt_functions = {
-        method : [[function[0], yaml.load(function[1])] for function in salt_functions[method] if function_is_documented(function[1])]
-    for method in salt_functions}
-
-    return salt_functions   
-
-def func_group_is_method(func_group):
-    return func_group in ['get', 'post', 'put', 'delete']
-
-def get_func_group(func_group):
-    return 'core' if func_group_is_method(func_group) else func_group
-
-#TODO make this work
-def get_master_domain():
-    return socket.getfqdn()
-
-def generate_url_for_func(func_doc, func_group):
-    func_endpoint = func_doc[0] if func_group_is_method(func_group) else 'panels/action' 
-    master_domain = get_master_domain()
-    url = 'https://{master_domain}/api/{func_endpoint}'.format(master_domain = master_domain, func_endpoint = func_endpoint)
-    print ("URL ", url)
-    return url
-
-def generate_example_input_for_func(func_doc):
-    data = {}
-    for argument in func_doc[1].get('arguments', []):
-        if argument.get("example") and argument.get("name"):
-            data[argument['name']] = argument['example']
-
-    print ("INPUT : ", data)
-    return data
-
-def generate_example_cli_for_func(func_doc, func_group, dash_user):
-    data = generate_example_input_for_func(func_doc)
-    if not func_group_is_method(func_group): 
-        data['server_name'] = 'va-server' #TODO get actual server_name somehow, or see how to get a server
-        data['action'] = func_doc[0]
-
-    method = func_group if func_group_is_method(func_group) else 'post'
-    method = method.upper()
-
-    cmd = ['curl', '-k', '-X', method, '-H', 'Authorization: ' + dash_user['token']]
-    url = generate_url_for_func(func_doc, func_group)
-    if func_group == 'get':
-        url_params = '?' + '='.join(['&'.join(x) for x in data.items()])
-        url += url_params
-    else: 
-        print ("INPUT GENERATED ", data)
-        cmd += ['-H', 'Content-type: application/json', '-d', json.dumps(data)]
-
-    cmd += [url]
-    print ('LIST', cmd)
-    cmd = subprocess.list2cmdline(cmd)
-
-#    if func_group in ['post', 'put', 'delete']:
-#        cmd += "-d '" + json.dumps(data) + "'"
-
-    print ("CMD ", cmd)
-
-    return cmd
-
-def format_functions_for_dashboard(functions, dash_user):
-    functions = [
-        { 
-                'label' : get_func_group(func_group), 
-                'options' : [
-                    {
-                        'label' : func_doc[0], 
-                        'value' : func_doc[0], 
-#                        'description' : i[1]['description'],
-                        'documentation' : func_doc[1],
-                        'example_url' : generate_url_for_func(func_doc, func_group),
-                        'example_data' : generate_example_input_for_func(func_doc),
-                        'example_cli' : generate_example_cli_for_func(func_doc, func_group, dash_user),
-                        'method' : func_group if func_group_is_method(func_group) else 'post',
-                    }
-                    for func_doc in functions[func_group]
-                ] 
-        } for func_group in functions]
-
-    result = []
-    for func_group in functions: 
-        existing_group = [x for x in result if x['label'] == func_group['label']]
-        if existing_group: 
-            existing_group = existing_group[0]
-            existing_group['options'] += func_group['options']
-        else: 
-            result.append(func_group)
-
-    return result
-
-
-@tornado.gen.coroutine
-def get_api_functions(datastore_handler):
-    apps = yield datastore_handler.datastore.get_recurse('apps/')
-    all_functions = {}
-    for app in apps:
-        print ('Checking out ', app)
-#        if app.get('type', 'salt') == 'app':
-        imported_module = importlib.import_module(app['module'])
-        module_functions = inspect.getmembers(imported_module, inspect.isfunction)
-        module_functions = [[x[0], yaml.load(x[1].__doc__)] for x in module_functions if function_is_documented(x[1])]
-        print ('All my functions are : ', module_functions)
-        all_functions[app['name']] = module_functions
-
-    raise tornado.gen.Return(all_functions)
-
-
-@tornado.gen.coroutine
-def get_all_functions(handler, dash_user):
-    """
-        description: Returns all functions that should be visible to the user from the dashboard. This is done by determining which functions are documented properly. Check the function_is_defined() function for more information. 
-        arguments: 
-          - handler: Generic argument inserted by the api_handler. Provides various utilities and data from va_master. 
-        output: "Data formatted so as to be displayed by the dashboard directly. The format is: [{'label' : 'method/module', 'options' : [{'label' : 'func_name', 'value' : 'func_name', 'description' : 'description', 'documentation' : 'documentation'}, ...]}, ...]"
-        hide: True
-    """
-
-    print(dash_user)
-
-    functions = get_master_functions(handler)
-    salt_functions = get_salt_functions()
-    api_functions = yield get_api_functions(handler.datastore_handler)
-
-    functions.update(salt_functions)
-    functions.update(api_functions)
-
-    functions = format_functions_for_dashboard(functions, dash_user)
-
-    raise tornado.gen.Return(functions)
-
-
-@tornado.gen.coroutine
-def get_all_function_groups(datastore_handler):
-    """Returns all user function groups from the datastore. """
-    groups = yield datastore_handler.get_user_groups()
-    print ('Groups are : ', groups)
-    for g in groups:
-        g['functions'] = [x.get('value') for x in g['functions']]
-    raise tornado.gen.Return(groups)
-
-@tornado.gen.coroutine
-def update_user(datastore_handler, user, functions = [], groups = [], password = ''):
-    """Updates a user, allowing an admin to change the password or set functions / user groups for the user. """
-    if password: 
-        yield datastore_handler.update_user(user, password)
-    group_funcs = [datastore_handler.get_user_group(x) for x in groups]
-    group_funcs = yield group_funcs
-    [x.update({'func_type' : 'function_group'}) for x in group_funcs]
-    functions += group_funcs
-
-    yield datastore_handler.set_user_functions(user, functions)
-
-
-#functions should have format [{"func_path" : "/panels/something", "func_type" : "salt"}, ...]
-@tornado.gen.coroutine
-def add_user_functions(datastore_handler, user, functions):
-    """Adds the list of functions to the list of functions already in the datastore. """
-    for i in range(len(functions)): 
-        f = functions[i]
-        if not type(f) == dict: 
-            functions[i] = {'func_path' : f}
-
-    yield datastore_handler.add_user_functions(user, functions)
-    
-@tornado.gen.coroutine
-def create_user_group(datastore_handler, group_name, functions):
-    """Creates a new user group with the specified group_name and list of functions. """
-    yield datastore_handler.create_user_group(group_name, functions)
-
-@tornado.gen.coroutine
-def delete_user_group(datastore_handler, group_name):
-    yield datastore_handler.delete_object('user_group', group_name = group_name)
-
-@tornado.gen.coroutine
-def create_user_with_group(handler, user, password, user_type, functions = [], groups = []):
-    """Creates a new user and adds the functions and user groups to the user's allowed functions. """
-    datastore_handler = handler.datastore_handler
-    yield create_user_api(handler, user, password, user_type)
-    all_groups = yield datastore_handler.get_user_groups()
-    for g in groups: 
-        if g: 
-            required_group = [x for x in all_groups if x.get('func_name', '') == g]
-            functions += required_group
-        required_group = [x for x in all_groups if x.get('func_name', '') == g]
-        functions += required_group
-
-    yield add_user_functions(datastore_handler, user, functions)
-
-@tornado.gen.coroutine
-def delete_user(datastore_handler, user):
-    """Deletes the user from the datastore. """
-    yield datastore_handler.delete_user(user)

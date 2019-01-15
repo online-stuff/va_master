@@ -19,18 +19,19 @@ function auth(state, action) {
 
     var newState = Object.assign({}, state);
     if (action.type == 'LOGIN_START' || action.type === 'LOGOUT' || action.type == 'LOGIN_ERROR') {
-        newState.username = null;
-        newState.token = null;
-        newState.loginError = false;
-        newState.inProgress = false;
+        newState['username'] = null;
+        newState['token'] = null;
+        newState['loginError'] = false;
+        newState['inProgress'] = false;
     }
-    if (action.type === 'LOGIN_START') newState.inProgress = true;
-    if (action.type === 'LOGIN_ERROR') newState.loginError = true;
+    if (action.type === 'LOGIN_START') newState['inProgress'] = true;
+    if (action.type === 'LOGIN_ERROR') newState['loginError'] = true;
     if (action.type === 'LOGIN_GOOD') {
-        newState.username = action.username;
-        newState.token = action.token;
-        newState.loginError = false;
-        newState.inProgress = false;
+        newState['username'] = action.username;
+        newState['token'] = action.token;
+        newState['userType']=action.userType;
+        newState['loginError'] = false;
+        newState['inProgress'] = false;
     }
     // Add into session
     window.localStorage.setItem('auth', JSON.stringify(newState));
@@ -254,7 +255,7 @@ function sidebar(state, action) {
     return newState;
 }
 
-let ws;
+/*let ws;
 
 function initSocket() {
     var host = window.location.host;
@@ -284,7 +285,7 @@ function initSocket() {
     };
 }
 
-initSocket()
+initSocket()*/
 
 function logs(state, action) {
     if (typeof state === 'undefined') {
@@ -342,7 +343,7 @@ function hosts(state, action) {
     return newState;
 }
 
-function notifications(state, action) {
+/*function notifications(state, action) {
     if (typeof state === 'undefined') {
         return {
             notifications: [],
@@ -367,7 +368,7 @@ function notifications(state, action) {
 
     return newState;
 }
-
+*/
 function permissions(state, action) {
     if (typeof state === 'undefined') {
         return {
@@ -382,7 +383,7 @@ function permissions(state, action) {
     return newState;
 }
 
-var mainReducer = combineReducers({ auth, table, filter, modal, apps, div, panel, alert, form, sidebar, logs, hosts, notifications, menu, permissions });
+var mainReducer = combineReducers({ auth, table, filter, modal, apps, div, panel, alert, form, sidebar, logs, hosts, menu, permissions });
 var store = createStore(mainReducer);
 
 var Home = require('./tabs/home');
@@ -447,9 +448,7 @@ var font2 = new FontFaceObserver('FontAwesome');
 
 (function() {
     var el = document.getElementById('body-wrapper');
-    Promise.all([font1.load(), font2.load()]).then(function() {
         render(<Provider store={store}>
             <App/>
         </Provider>, el);
-    });
 })();

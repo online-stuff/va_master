@@ -51,10 +51,11 @@ def bootstrap(master_config):
     master_config.logger.info('Bootstrap initiated. ')
     app = httpserver.get_app(master_config)
     print ('Doing certs')
-    if None in (master_config.https_crt, master_config.https_key):
-        crt_path = os.path.join(master_config.data_path, 'https.crt')
-        key_path = os.path.join(master_config.data_path, 'https.key')
-        master_config.logger.info('No certificate found, will generate at %s' % (master_config.data_path))
+    if True: 
+#    if None in (master_config.https_crt, master_config.https_key):
+        crt_path = os.path.join(master_config.ssl_folder, 'https.crt')
+        key_path = os.path.join(master_config.ssl_folder, 'https.key')
+        master_config.logger.info('No certificate found, will generate at %s' % (master_config.ssl_folder))
 
         try:
             with open(crt_path):
