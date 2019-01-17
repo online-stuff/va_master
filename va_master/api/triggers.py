@@ -1,15 +1,17 @@
 import uuid
 import tornado.gen
 
+import documentation
+
 def get_paths():
     paths = {
         'get' : {
-#            'triggers' : {'function' : list_triggers, 'args' : []},
+            'triggers' : {'function' : list_triggers, 'args' : ['datastore_handler']},
 #            'triggers/clear' : {'function' : clear_triggers, 'args' : ['provider_name']}, #Just for resting!!!
         },
         'post' : {
-#            'triggers/add_trigger':  {'function' : add_trigger_api, 'args' : ['datastore_handler', 'new_trigger', 'provider_name']},
-#            'triggers/triggered': {'function' : receive_trigger, 'args' : ['handler', 'provider_name', 'service', 'level', 'extra_kwargs']},
+            'triggers/add_trigger':  {'function' : add_trigger, 'args' : ['datastore_handler', 'new_trigger']},
+            'triggers/triggered': {'function' : receive_trigger, 'args' : ['handler', 'event_name']},
 #            'triggers/load_triggers' : {'function' : load_triggers, 'args' : ['provider_name', 'triggers']},
 #            'triggers/edit_trigger' : {'function' : edit_trigger, 'args' : ['provider_name', 'trigger_id', 'trigger']},
         },
@@ -19,28 +21,34 @@ def get_paths():
     }
     return paths
 
-#   This is the current form, check blow for how this will look. 
-#   Example trigger: 
-#    new_trigger = { 
-#        "service" : "CPU", 
-#        "status" : "OK", 
-#        "conditions" : [
-#            {
-#                "func" : "stats_cmp", #driver function
-#                "kwargs" : {"cpu" : 8, "cpu_operator" : "lt", "memory" : 8, "memory_operator" : "ge"}
-#            }, {
-#                "func" : "domain_full", 
-#                "kwargs" : {}
-#            }
-#        ],
-#        "actions" : [
-#            {
-#                "func" : "add_stats", #driver function
-#                "kwargs" : {"cpu" : 1, "add" : True}
-#            },
-#        ]
-#    }
+#   This is the current form, check below for how this will look. 
 
+# {
+#     "new_trigger" : 
+#     {
+#             "donor_app": "bamboo",
+#             "receiver_app": "deputy",
+#             "event": {
+#                 "name": "bamboo.create_employee",
+#                 "data_prefix": "payload.employee"
+#             },
+#             "conditions": [{
+#                 "args_map": {
+#                     "DateOfBirth": "bornDate",
+#                     "MainAddress": "address1"
+#                 },
+#                 "func_name": "user_birth_valid"
+#             }],
+#             "actions": [{
+#                 "args_map": {
+#                     "FirstName": "firstName",
+#                     "LastName": "lastName",
+#                     "DisplayName" : "displayName"
+#                 },
+#                 "func_name": "create_employee"
+#             }]
+#     }
+# }
 
 # So this is getting an overhaul, this is some pseudocode of how it's gonna work and all that jazz. 
 # Concept: App A triggers an Event. This Event is part of a Trigger; Each Trigger having an Event, Conditions and Actions. 
@@ -104,10 +112,12 @@ def get_paths():
 @tornado.gen.coroutine
 def add_trigger(datastore_handler, new_trigger):
     event_name = new_trigger['event']['name']
-    event_triggers = yield datastore.get_object('event_triggers', event_name = event_name) or {'triggers' : {}}
+    event_triggers = yield datastore_handler.get_object('event_triggers', event_name = event_name)
+    event_triggers = event_triggers or {'triggers' : []}
     new_trigger['id'] = str(uuid.uuid4()).split('-')[0]
+    print ('Event : ', event_triggers)
     event_triggers['triggers'].append(new_trigger)
-    yield datastore_handler.add_object('trigger', trigger_event = trigger_event, data = event_triggers)
+    yield datastore_handler.insert_object('event_triggers', event_name = event_name, trigger_id = new_trigger['id'], data = event_triggers)
 
 @tornado.gen.coroutine
 def delete_trigger(datastore_handler, event_name, trigger_id):
@@ -131,37 +141,54 @@ def edit_trigger(datastore_handler, provider_name, trigger_id, trigger):
 
 
 @tornado.gen.coroutine
-def list_triggers(handler):
+def list_triggers(datastore_handler):
     """Returns an object with all providers and their respective triggers. """
     events = yield datastore_handler.datastore.get_recurse('triggers/')
     raise tornado.gen.Return(events)
 
 @tornado.gen.coroutine
-def handle_trigger_kwargs(request_data, args_map, event_data_prefix = ''):
+def get_trigger_kwargs_from_data(handler, trigger, request_data, args_map, event_data_prefix = ''):
+    func_group, func_name = trigger['event']['name'].split('.')
+    event_func = yield documentation.get_function(handler, func_name, func_group)
+    data_prefix = event_func.get('event_data_prefix', '')
+    print ('map : ', args_map)
     prefix_keys = event_data_prefix.split('.')
-    for prefix_key in prefix_keys: 
-        request_data = request_data[prefix_key]
+    for prefix_key in prefix_keys:
+        if prefix_key: 
+            request_data = request_data[prefix_key]
 
+    print (args_map, request_data)
     kwargs = {key: request_data[args_map[key]] for key in args_map}
     raise tornado.gen.Return(kwargs)        
 
 @tornado.gen.coroutine
-def receive_trigger(handler):
+def receive_trigger(handler, event_name):
 
-    event_name = handler.data['event_name']
     event_triggers = yield handler.datastore_handler.get_object('event_triggers', event_name = event_name)
 
+    triggers = event_triggers['triggers']
     results = []
     for trigger in triggers: 
+        donor_app = trigger['donor_app']
+        receiver_app = trigger['receiver_app']
+        all_servers = yield handler.datastore.get_recurse('server/')
+        servers_to_call = [x for x in all_servers if x.get('role', '') == receiver_app] 
+
         conditions_satisfied = True
-        for condition in trigger['conditions']: 
+        for condition in trigger.get('conditions', []): 
             pass #TODO check condition
+        print ('Conditions good. ')
         if conditions_satisfied: 
-            for action in trigger['actions']: 
-                kwargs = handle_trigger_kwargs(handler.data, action['args_map'], )
-                kwargs.update(action['extra_args'])
-                new_result = yield perform_server_action(server_name = action['server_name'], kwargs = kwargs)
-                results.append(new_result)
+            for server_name in servers_to_call:
+                for action in trigger['actions']: 
+                    print ('Getting kwargs. ')
+                    kwargs = yield get_trigger_kwargs_from_data(handler, trigger, handler.data, action['args_map'], trigger['event']['data_prefix'])
+                    print ('Got em : ', kwargs)
+                    kwargs.update(action.get('extra_args', {}))
+                    print ('Calling trigger ', server_name, action['func_name'], ' with ', kwargs)
+                    #new_result = yield perform_server_action(server_name = action['server_name'], kwargs = kwargs)
+                    new_result = ''
+                    results.append(new_result)
 
     raise tornado.gen.Return(results)
 

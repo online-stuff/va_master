@@ -102,5 +102,11 @@
     }, 
     "function_doc": {
         "consul_handle" : "function_doc/{func_group}/{func_name}"
+    }, 
+    "event_triggers" : {
+        "consul_handle" : "triggers/{event_name}"
+    },
+    "trigger" : {
+        "consul_handle" : "triggers/{event_name}/{trigger_id}"
     }
 }

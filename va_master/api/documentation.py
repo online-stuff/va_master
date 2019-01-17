@@ -7,6 +7,7 @@ from salt.client import LocalClient
 def get_paths():
     paths = {
         'get' : {
+            'panels/get_functions' : {'function' : get_all_functions, 'args' : ['handler']},
             'panels/get_all_functions' : {'function' : get_all_functions_dashboard, 'args' : ['handler', 'dash_user']},
         },
         'post' : {
@@ -242,3 +243,11 @@ def get_all_functions_dashboard(handler, dash_user):
     result = yield format_functions_for_dashboard(functions, dash_user)
     print ('Got result')
     raise tornado.gen.Return(result)
+
+@tornado.gen.coroutine
+def get_function(handler, func_name, func_group):
+    all_functions = yield get_all_functions(handler)
+    for function in all_functions: 
+        print ('Checking ', function['func_name'])
+        if function['func_group'] == func_group and function['func_name']  == func_name: 
+            raise tornado.gen.Return(function)
