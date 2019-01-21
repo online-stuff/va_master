@@ -15,12 +15,12 @@ class Integrations extends Component {
             showModal: false,
             stepIndex: 1,
             apps:[],
-            events: [],
+            functions: [],
             eventsPerApp: [],
             actionsPerApp: [],
             selectedDonorApp: '',
             selectedReceiverApp: '',
-            selectedEvent: '',
+            selectedEvent: {},
             selectedAction: ''
         };
         this.openTriggerModal=this.openTriggerModal.bind(this);
@@ -29,12 +29,13 @@ class Integrations extends Component {
         this.addTrigger=this.addTrigger.bind(this);
         this.showModalButtons=this.showModalButtons.bind(this);
         this.getApps=this.getApps.bind(this);
-        this.getEvents=this.getEvents.bind(this);
+        this.getFunctions=this.getFunctions.bind(this);
         this.getEventsPerApp=this.getEventsPerApp.bind(this);
         this.getAppPerName=this.getAppPerName.bind(this);
         this.reloadModal=this.reloadModal.bind(this);
         this.showEventsSelect=this.showEventsSelect.bind(this);
         this.showActionsSelect=this.showActionsSelect.bind(this);
+        this.getFunctionPerName=this.getFunctionPerName.bind(this);
     }
 
     componentDidMount() {
@@ -49,7 +50,7 @@ class Integrations extends Component {
         console.log('Apps', this.state.apps);
         this.getEventsPerApp(this.state.apps[0].name);
         this.getActionsPerApp(this.state.apps[0].name);
-        this.setState({selectedDonorApp: '', selectedReceiverApp: '', selectedEvent: '', selectedAction: ''});
+        this.setState({selectedDonorApp: '', selectedReceiverApp: '', selectedEvent: {}, selectedAction: ''});
     }
 
     openTriggerModal(){
@@ -58,6 +59,10 @@ class Integrations extends Component {
 
     getAppPerName(appName){
         return this.state.apps.filter(app => app.name == appName)[0];
+    }
+
+    getFunctionPerName(funcName){
+        return this.state.functions.filter(func => func.func_name == funcName)[0];
     }
 
     getApps(){
@@ -71,26 +76,26 @@ class Integrations extends Component {
                 app_list.push(appObject);
             });
             if(app_list.length > 0){
-                me.setState({selectedDonorApp: app_list[0]});
+                me.setState({selectedDonorApp: app_list[0].name, selectedReceiverApp: app_list[0].name});
             }
             me.setState({apps: app_list});
-            me.getEvents();
+            me.getFunctions();
         })
         .fail(function (msg) {
             me.props.dispatch({type: 'SHOW_ALERT', msg: msg});
         });
     }
 
-    getEvents(){
+    getFunctions(){
         var me=this;
         Network.get('/api/panels/get_functions', this.props.auth.token)
         .done(function (data){
             var result = data;
-            var event_list=[];
+            var functions_list=[];
             result.forEach(function(functionObject){
-                event_list.push(functionObject);
+                functions_list.push(functionObject);
             });
-            me.setState({events: event_list});
+            me.setState({functions: functions_list});
             me.getEventsPerApp(me.state.apps[0].name);
             me.getActionsPerApp(me.state.apps[0].name);
             me.setState({loading: false});
@@ -104,7 +109,7 @@ class Integrations extends Component {
         var app = this.getAppPerName(appName);
         var me=this;
         var event_list=[];
-        var result=me.state.events;
+        var result=me.state.functions;
         result.forEach(function(functionObject){
             if(functionObject.event == true && functionObject.func_group == app.module){
                 event_list.push(functionObject.func_name);
@@ -113,7 +118,7 @@ class Integrations extends Component {
         
         if(event_list.length > 0){
             //document.getElementById("selectEvent").disabled = false;
-            me.setState({selectedEvent: event_list[0]});
+            me.setState({selectedEvent: me.getFunctionPerName(event_list[0])});
         }
         me.setState({eventsPerApp: event_list});
     }
@@ -122,7 +127,7 @@ class Integrations extends Component {
         var app = this.getAppPerName(appName);
         var me=this;
         var action_list=[];
-        var result=me.state.events;
+        var result=me.state.functions;
         result.forEach(function(functionObject){
             if(functionObject.func_group == app.module){
                 action_list.push(functionObject.func_name);
@@ -159,7 +164,8 @@ class Integrations extends Component {
 
     handleSelectEventChange(){
         var select_element_value=document.getElementById('selectEvent').value;
-        this.setState({selectedEvent: select_element_value});
+        var event = this.getFunctionPerName(selected_element_value);      
+        this.setState({selectedEvent: event});
     }
 
     handleSelectReceiverAppChange(){
@@ -311,6 +317,8 @@ class Integrations extends Component {
                                         </Bootstrap.Tab>
                                         <Bootstrap.Tab eventKey={3} title="Step 3">
                                             <h4>Arguments</h4>
+                                            <h4>Donor: {this.state.selectedDonorApp}</h4>
+                                            <h4>Event: {JSON.stringify(this.state.selectedEvent)}</h4>
                                             <h4>Action: {this.state.selectedAction}</h4>
                                         </Bootstrap.Tab>
                                     </Bootstrap.Tabs>
