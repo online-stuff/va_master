@@ -11,6 +11,8 @@ from concurrent.futures import ThreadPoolExecutor   # `pip install futures` for 
 from va_master.api import url_handler
 from va_master.api.login import get_current_user, user_login
 from va_master.api.users import get_predefined_arguments
+from va_master.api.panels import panel_action, get_panel_for_user
+from va_master.api.triggers import handle_app_trigger 
 from va_master.handlers.drivers_handler import DriversHandler
 from proxy_handler import ProxyHandler
 
@@ -201,6 +203,16 @@ class ApiHandler(tornado.web.RequestHandler):
             self.status = 400
         raise tornado.gen.Return(result)
 
+
+    # NOTE: This is kind of a temporary thing. We're doing triggers now which we're still in the middle of defining
+    # The way triggers work would be fine if the they were actually triggered where they're supposed to be. But they're not. 
+    # So I'm working around it. If the call comes from an app, I pass it to the triggers/triggered call. 
+    # It probably shouldn't work like that, but from past experience, I feel it's gonna stay this way. 
+    @tornado.gen.coroutine
+    def check_and_resolve_trigger(self, api_func, dash_user):
+        if api_func['function'] == panel_action:
+            yield handle_app_trigger(self, dash_user)
+
     @tornado.gen.coroutine
     def exec_method(self, method, path, data):
         try:
@@ -236,6 +248,8 @@ class ApiHandler(tornado.web.RequestHandler):
 
             print ('Calling ', api_func, ' with data ', data, ' where keys are : ', data.keys())
             result = yield self.handle_func(api_func, data)
+            yield self.check_and_resolve_trigger(api_func, data['dash_user'])
+
             status = self.status or 200
             yield self.log_message(path = path, data = data, func = api_func['function'], result = {})#log_result)
             self.json(result, status)

@@ -1,5 +1,6 @@
 import uuid
 import tornado.gen
+from va_master.api.panels import panel_action_execute
 
 import documentation
 
@@ -11,7 +12,7 @@ def get_paths():
         },
         'post' : {
             'triggers/add_trigger':  {'function' : add_trigger, 'args' : ['datastore_handler', 'new_trigger']},
-            'triggers/triggered': {'function' : receive_trigger, 'args' : ['handler', 'event_name']},
+            'triggers/triggered': {'function' : receive_trigger, 'args' : ['handler', 'event_name', 'dash_user']},
 #            'triggers/load_triggers' : {'function' : load_triggers, 'args' : ['provider_name', 'triggers']},
 #            'triggers/edit_trigger' : {'function' : edit_trigger, 'args' : ['provider_name', 'trigger_id', 'trigger']},
         },
@@ -150,7 +151,6 @@ def list_triggers(datastore_handler):
 def get_trigger_kwargs_from_data(handler, trigger, request_data, args_map, event_data_prefix = ''):
     func_group, func_name = trigger['event']['name'].split('.')
     event_func = yield documentation.get_function(handler, func_name, func_group)
-    data_prefix = event_func.get('event_data_prefix', '')
     print ('map : ', args_map)
     prefix_keys = event_data_prefix.split('.')
     for prefix_key in prefix_keys:
@@ -161,12 +161,32 @@ def get_trigger_kwargs_from_data(handler, trigger, request_data, args_map, event
     kwargs = {key: request_data[args_map[key]] for key in args_map}
     raise tornado.gen.Return(kwargs)        
 
+
 @tornado.gen.coroutine
-def receive_trigger(handler, event_name):
+def handle_app_trigger(handler, dash_user):
+    print ('Handling ')
+    server_name = handler.data['server_name']
+    server = yield handler.datastore_handler.get_object('server', server_name = server_name)
+    print ('For ', server_name, server)
+    if server.get('role'):
+        server_state = yield handler.datastore_handler.get_object('state', name = server['role'])
+
+        module = server_state['module']
+
+        event_name = module + '.' + handler.data['action']
+
+        result = yield receive_trigger(handler, dash_user, event_name)
+        raise tornado.gen.Return(result)
+
+
+@tornado.gen.coroutine
+def receive_trigger(handler, dash_user, event_name):
 
     event_triggers = yield handler.datastore_handler.get_object('event_triggers', event_name = event_name)
 
-    triggers = event_triggers['triggers']
+    print ('I AM IN TRIGGER WITH ', event_triggers)
+    
+    triggers = event_triggers.get('triggers', [])
     results = []
     for trigger in triggers: 
         donor_app = trigger['donor_app']
@@ -179,15 +199,16 @@ def receive_trigger(handler, event_name):
             pass #TODO check condition
         print ('Conditions good. ')
         if conditions_satisfied: 
-            for server_name in servers_to_call:
+            for server in servers_to_call:
                 for action in trigger['actions']: 
                     print ('Getting kwargs. ')
-                    kwargs = yield get_trigger_kwargs_from_data(handler, trigger, handler.data, action['args_map'], trigger['event']['data_prefix'])
+                    kwargs = yield get_trigger_kwargs_from_data(handler, trigger, handler.data, action['args_map'], trigger['event'].get('data_prefix', ''))
                     print ('Got em : ', kwargs)
                     kwargs.update(action.get('extra_args', {}))
-                    print ('Calling trigger ', server_name, action['func_name'], ' with ', kwargs)
-                    #new_result = yield perform_server_action(server_name = action['server_name'], kwargs = kwargs)
-                    new_result = ''
+                    print ('Calling trigger ')
+                    print ('salt ' +  server['server_name'] + ' ' + action['func_name']  + ' ' + str(handler.data.get('args', [])) + ' ' + str(kwargs))
+                    new_result = yield panel_action_execute(handler, dash_user = dash_user, server_name = server['server_name'], action = action['func_name'], kwargs = kwargs, args = handler.data.get('args', []))
+                    print ('Result : ', new_result)
                     results.append(new_result)
 
     raise tornado.gen.Return(results)

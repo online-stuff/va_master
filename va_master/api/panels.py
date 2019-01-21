@@ -131,7 +131,7 @@ def list_panels(datastore_handler, dash_user):
     raise tornado.gen.Return(panels)
 
 @tornado.gen.coroutine
-def panel_action_execute(handler, server_name, action, args = [], dash_user = '', kwargs = {}, module = None, timeout = 30):
+def panel_action_execute(handler, server_name, action, args = [], dash_user = {}, kwargs = {}, module = None, timeout = 30):
     """ 
         description: Executes the function from the action key on the minion specified by server_name by passing the args and kwargs. If module is not passed, looks up the panels and retrieves the module from there. 
         output: Whatever the action returns. 

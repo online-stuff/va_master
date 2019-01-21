@@ -224,6 +224,7 @@ def get_states(handler, dash_user):
 
     default_panels = {'admin' : [], 'user' : []}
 
+    print (state['name'] for x in states_data)
     for state in states_data: 
         state_panel = [x for x in panels_data if x['name'] == state['name']]
         if not state_panel: 
