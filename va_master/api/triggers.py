@@ -148,17 +148,20 @@ def list_triggers(datastore_handler):
     raise tornado.gen.Return(events)
 
 @tornado.gen.coroutine
-def get_trigger_kwargs_from_data(handler, trigger, request_data, args_map, event_data_prefix = ''):
+def get_trigger_kwargs_from_data(handler, trigger, request_data, args_map, event_data_prefix = None):
     func_group, func_name = trigger['event']['name'].split('.')
+
     event_func = yield documentation.get_function(handler, func_name, func_group)
-    print ('map : ', args_map)
+    event_func_prefix = event_func.get('data_prefix')
+    event_data_prefix =  event_data_prefix or event_func_prefix
+
     prefix_keys = event_data_prefix.split('.')
     for prefix_key in prefix_keys:
         if prefix_key: 
             request_data = request_data[prefix_key]
 
-    print (args_map, request_data)
     kwargs = {key: request_data[args_map[key]] for key in args_map}
+    print ('FInal kwargs are : ', kwargs)
     raise tornado.gen.Return(kwargs)        
 
 
@@ -202,7 +205,7 @@ def receive_trigger(handler, dash_user, event_name):
             for server in servers_to_call:
                 for action in trigger['actions']: 
                     print ('Getting kwargs. ')
-                    kwargs = yield get_trigger_kwargs_from_data(handler, trigger, handler.data, action['args_map'], trigger['event'].get('data_prefix', ''))
+                    kwargs = yield get_trigger_kwargs_from_data(handler, trigger, handler.data, action['args_map'])
                     print ('Got em : ', kwargs)
                     kwargs.update(action.get('extra_args', {}))
                     print ('Calling trigger ')
