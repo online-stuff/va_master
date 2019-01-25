@@ -76,7 +76,6 @@ def sync_salt_minions(datastore_handler, dash_user):
         output: A list of unresponsive minions.
     """
     minions = get_minion_role('*')
-    print ('Minions are : ', minions)
     unresponsive_minions = []
     for user_type in ['user', 'admin']: 
         for minion in minions: 
@@ -460,10 +459,8 @@ def get_panel_for_user(handler, panel, server_name, dash_user, args = [], kwargs
         if not panel_func: 
             raise Exception("User tried to open panel " + str(panel) + " but it is not in their allowed functions. ")
 
-        print ('Panel func is : ', panel_func)
         panel_func = panel_func[0]
         kwargs.update(panel_func.get('predefined_arguments', {}))
-        print ('My kwargs are : ', kwargs)
 
     action = 'get_panel'
     if type(args) != list and args: 
@@ -479,7 +476,6 @@ def get_panel_for_user(handler, panel, server_name, dash_user, args = [], kwargs
 
     print ('Will get salt with ', kwargs)
     panel  = yield panel_action_execute(handler, server_name, action, args, dash_user, kwargs = kwargs, module = 'va_utils')
-    print ('Panel : ', panel)
     raise tornado.gen.Return(panel)
 
 @tornado.gen.coroutine
@@ -492,7 +488,6 @@ def export_table(handler, panel, server_name, dash_user, export_type = 'pdf', ta
     panel = yield get_panel_for_user(handler = handler, panel = panel, server_name = server_name, dash_user = dash_user, args = args, provider = provider, kwargs = kwargs)
     print ('Getting ', export_type, '  with filter : ', filter_field)
     result = cl.cmd('G@role:va-master', fun = table_func, tgt_type = 'compound', kwarg = {'panel' : panel, 'table_file' : table_file, 'filter_field' : filter_field})
-    print ('Result is : ', result)
     yield handler.serve_file(table_file)
 
 

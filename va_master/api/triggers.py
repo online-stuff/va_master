@@ -7,12 +7,12 @@ import documentation
 def get_paths():
     paths = {
         'get' : {
-            'triggers' : {'function' : list_triggers, 'args' : ['datastore_handler']},
+            'integrations' : {'function' : list_integrations, 'args' : ['datastore_handler']},
 #            'triggers/clear' : {'function' : clear_triggers, 'args' : ['provider_name']}, #Just for resting!!!
         },
         'post' : {
-            'triggers/add_trigger':  {'function' : add_trigger, 'args' : ['datastore_handler', 'new_trigger']},
-            'triggers/triggered': {'function' : receive_trigger, 'args' : ['handler', 'event_name', 'dash_user']},
+            'integrations/add_trigger':  {'function' : add_trigger, 'args' : ['datastore_handler', 'receiver_app', 'donor_app', 'trigger']},
+            'integrations/triggered': {'function' : receive_trigger, 'args' : ['handler', 'event_name', 'receiver_app', 'donor_app', 'dash_user']},
 #            'triggers/load_triggers' : {'function' : load_triggers, 'args' : ['provider_name', 'triggers']},
 #            'triggers/edit_trigger' : {'function' : edit_trigger, 'args' : ['provider_name', 'trigger_id', 'trigger']},
         },
@@ -110,47 +110,81 @@ def get_paths():
 #        ]
 #    }
     
-@tornado.gen.coroutine
-def add_trigger(datastore_handler, new_trigger):
-    event_name = new_trigger['event']['name']
-    event_triggers = yield datastore_handler.get_object('event_triggers', event_name = event_name)
-    event_triggers = event_triggers or {'triggers' : []}
-    new_trigger['id'] = str(uuid.uuid4()).split('-')[0]
-    print ('Event : ', event_triggers)
-    event_triggers['triggers'].append(new_trigger)
-    yield datastore_handler.insert_object('event_triggers', event_name = event_name, trigger_id = new_trigger['id'], data = event_triggers)
+
+
+# Update: Previous trigger is out, now we have a differnet type of logic. Instead of focusing on triggers or events, we focus on integrations. So an integration is an object consisting of a donor app, receiver app, and a list of triggers. 
+
+
+#{
+#    "donor_app": "va-email",
+#    "receiver_app": "va-cloudshare",
+#    "events": [{
+#            "event_name": "va_email.add_user_recipient",
+#            "conditions": [{
+#                "func_name": "check_user_legit"
+#            }, {
+#                "func_name": "check_user_in_ldap"
+#            }],
+#            "actions": [{
+#                "func_name": "add_contact_vcard"
+#            }]
+#        },
+#        {
+#            "event_name": "va_email.add_user",
+#            "conditions": [{
+#                "func_name": "check_user_legit"
+#            }, {
+#                "func_name": "check_user_not_in_cloudshare"
+#            }],
+#            "actions": [{
+#                "func_name": "add_cloudshare_user"
+#            }]
+#        }
+#    ]
+#}
+
+
 
 @tornado.gen.coroutine
-def delete_trigger(datastore_handler, event_name, trigger_id):
-    event_triggers = yield datastore.get_objects('event_triggers', event_name = event_name)
-    event_triggers = {'triggers' : [x for x in event_triggers['triggers'] if x['id'] != trigger_id]}
-    yield datastore_handler.insert_object('event_triggers', event_name = event_name, data = event_triggers)
+def add_trigger(datastore_handler, donor_app, receiver_app, trigger):
+    integration = yield datastore_handler.get_object('app_integration', donor_app = donor_app, receiver_app = receiver_app)
+    integration = integration or {'receiver_app' : receiver_app, 'donor_app' : donor_app, 'triggers' : []}
+    trigger['id'] = str(uuid.uuid4()).split('-')[0]
+    integration['triggers'].append(trigger)
+    yield datastore_handler.insert_object('app_integration', donor_app = donor_app, receiver_app = receiver_app, data = integration)
+
+@tornado.gen.coroutine
+def delete_integration(datastore_handler, event_name, integration_id):
+    event_integrations = yield datastore.get_objects('event_integrations', event_name = event_name)
+    event_integrations = {'integrations' : [x for x in event_integrations['integrations'] if x['id'] != integration_id]}
+    yield datastore_handler.insert_object('event_integrations', event_name = event_name, data = event_integrations)
 
 
 #TODO
 @tornado.gen.coroutine
-def edit_trigger(datastore_handler, provider_name, trigger_id, trigger):
-    """Finds the trigger by the id and sets it to the new trigger's data. """
+def edit_integration(datastore_handler, provider_name, integration_id, integration):
+    """Finds the integration by the id and sets it to the new integration's data. """
 
     provider = yield datastore_handler.get_provider(provider_name) 
 
-    edited_trigger_index = provider['triggers'].index([x for x in provider['triggers'] if x['id'] == trigger_id][0])    
-    trigger['id'] = provider['triggers'][edited_trigger_index]['id']
-    provider['triggers'][edited_trigger_index] = trigger
+    edited_integration_index = provider['integrations'].index([x for x in provider['integrations'] if x['id'] == integration_id][0])    
+    integration['id'] = provider['integrations'][edited_integration_index]['id']
+    provider['integrations'][edited_integration_index] = integration
 
     yield datastore_handler.create_provider(provider)
 
 
 @tornado.gen.coroutine
-def list_triggers(datastore_handler):
-    """Returns an object with all providers and their respective triggers. """
-    events = yield datastore_handler.datastore.get_recurse('triggers/')
+def list_integrations(datastore_handler):
+    """Returns an object with all providers and their respective integrations. """
+    events = yield datastore_handler.datastore.get_recurse('app_integration/')
     raise tornado.gen.Return(events)
 
 @tornado.gen.coroutine
 def get_trigger_kwargs_from_data(handler, trigger, request_data, args_map, event_data_prefix = None):
-    func_group, func_name = trigger['event']['name'].split('.')
-
+    print ('Getting ', trigger['event_name'].split('.'))
+    func_group, func_name = trigger['event_name'].split('.')
+    
     event_func = yield documentation.get_function(handler, func_name, func_group)
     event_func_prefix = event_func.get('data_prefix')
     event_data_prefix =  event_data_prefix or event_func_prefix
@@ -165,8 +199,13 @@ def get_trigger_kwargs_from_data(handler, trigger, request_data, args_map, event
     raise tornado.gen.Return(kwargs)        
 
 
+
+# This was used as a proof of concept to test out some stuff with the triggers
+# But we've changed the logic since, so this won't work. 
+
 @tornado.gen.coroutine
 def handle_app_trigger(handler, dash_user):
+    raise tornado.gen.Return()
     print ('Handling ')
     server_name = handler.data['server_name']
     server = yield handler.datastore_handler.get_object('server', server_name = server_name)
@@ -177,29 +216,35 @@ def handle_app_trigger(handler, dash_user):
         module = server_state['module']
 
         event_name = module + '.' + handler.data['action']
-
-        result = yield receive_trigger(handler, dash_user, event_name)
+        donor_app = server_state['role']
+        receiver_app = 'nesho'
+        print ('Event is : ', event_name)
+        result = yield receive_integration(handler, dash_user, event_name)
         raise tornado.gen.Return(result)
 
 
 @tornado.gen.coroutine
-def receive_trigger(handler, dash_user, event_name):
+def receive_trigger(handler, dash_user, donor_app, receiver_app, event_name):
 
-    event_triggers = yield handler.datastore_handler.get_object('event_triggers', event_name = event_name)
+    app_integrations = yield handler.datastore_handler.get_object('app_integration', donor_app = donor_app, receiver_app = receiver_app)
+    donor_app = app_integrations['donor_app']
+    receiver_app = app_integrations['receiver_app']
 
-    print ('I AM IN TRIGGER WITH ', event_triggers)
+    print ('I AM IN TRIGGER WITH ', app_integrations)
     
-    triggers = event_triggers.get('triggers', [])
+    triggers = app_integrations.get('triggers', [])
     results = []
     for trigger in triggers: 
-        donor_app = trigger['donor_app']
-        receiver_app = trigger['receiver_app']
+        if trigger['event_name'] != event_name: 
+            print('Expecting ', event_name, ' but receiving : ', trigger['event_name'])
+            continue
         all_servers = yield handler.datastore.get_recurse('server/')
         servers_to_call = [x for x in all_servers if x.get('role', '') == receiver_app] 
 
         conditions_satisfied = True
         for condition in trigger.get('conditions', []): 
             pass #TODO check condition
+
         print ('Conditions good. ')
         if conditions_satisfied: 
             for server in servers_to_call:
@@ -208,9 +253,10 @@ def receive_trigger(handler, dash_user, event_name):
                     kwargs = yield get_trigger_kwargs_from_data(handler, trigger, handler.data, action['args_map'])
                     print ('Got em : ', kwargs)
                     kwargs.update(action.get('extra_args', {}))
-                    print ('Calling trigger ')
+                    print ('Calling integration ')
                     print ('salt ' +  server['server_name'] + ' ' + action['func_name']  + ' ' + str(handler.data.get('args', [])) + ' ' + str(kwargs))
-                    new_result = yield panel_action_execute(handler, dash_user = dash_user, server_name = server['server_name'], action = action['func_name'], kwargs = kwargs, args = handler.data.get('args', []))
+                    new_result = ''
+#                    new_result = yield panel_action_execute(handler, dash_user = dash_user, server_name = server['server_name'], action = action['func_name'], kwargs = kwargs, args = handler.data.get('args', []))
                     print ('Result : ', new_result)
                     results.append(new_result)
 
