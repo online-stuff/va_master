@@ -20,12 +20,12 @@ sudo easy_install pip
 
 For 32bit server:
 ```bash
-sudo curl https://releases.hashicorp.com/consul/0.7.0/consul_0.7.0_linux_386.zip > consul.zip && sudo unzip -d /usr/bin -o consul.zip consul"
+sudo curl https://releases.hashicorp.com/consul/0.7.0/consul_0.7.0_linux_386.zip > consul.zip && sudo unzip -d /usr/bin -o consul.zip consul
 ```
 
 For 64bit server:
 ```bash
-sudo curl https://releases.hashicorp.com/consul/0.7.0/consul_0.7.0_linux_amd64.zip > consul.zip && sudo unzip -d /usr/bin -o consul.zip consul"
+sudo curl https://releases.hashicorp.com/consul/0.7.0/consul_0.7.0_linux_amd64.zip > consul.zip && sudo unzip -d /usr/bin -o consul.zip consul
 ```
 
 **The software itself:** Install the software.
