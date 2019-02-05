@@ -31,6 +31,8 @@ sudo curl https://releases.hashicorp.com/consul/0.7.0/consul_0.7.0_linux_amd64.z
 **The software itself:** Install the software.
 
 ```bash
+sudo pip install pyzmq==17.1.0
+sudo pip install tornado==4.5.3
 pip install vapourapps
 vapourapps init
 ```
